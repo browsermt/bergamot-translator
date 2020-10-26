@@ -1,78 +1,72 @@
 # Unified (C++) API of Bergamot Translator
 
-/* A Translation model interface that translates a plain utf-8 encoded text (without any markups and emojis). The model supports translation from 1 source language to 1 target language. There can be different implementations of this interface. */
+/* A Translation model interface for translating a plain utf-8 encoded text (without any markups and emojis). The model supports translation from 1 source language to 1 target language. There can be different implementations of this interface. */
 
 class **AbstractTranslationModel** {
 
     public:
 
-	/* Constructor that takes model configuration (path of the model file, source and target language vocabulary files and other options) that is required by the model to perform translation. The information provided by the configuration stays constant during the lifetime of the model instance. The model supports translation from 1 source language to 1 target language.
-	*/
-	AbstractTranslationModel(const TranslationModelConfiguration& config);
+	AbstractTranslationModel();
 
-	virtual ~AbstractTranslationModel() = 0;
+	virtual ~AbstractTranslationModel() {};
 
-	/* This method performs translation on a list of texts (utf-8) and returns a list of results. The text to be translated along with other optional requests is provided via TranslationRequest. The translated text along with the optional information corresponding to the optional requests is returned in TranslationResult.
-	The text to be translated can either be a word, a phrase, a sentence or a list of sentences and should be plain (without any markups or emojis). The API splits each text entry into sentences internally, which are then translated independent of each other and then joined together to be returned as the translation result for that entry.
-	Please refer to the TranslationRequest class for all possible optional requests. The alignment information can only be requested if the model supports it (check isAlignmentSupported() API).
+	/* This method performs translation on a list of (utf-8) texts and returns a list of results in the same order. Each text entry can either be a word, a phrase, a sentence or a list of sentences and should contain plain text (without any markups or emojis). Additional information related to the translated text can be requested via TranslationRequest which is applied equally to each text entry. The translated text corresponding to each text entry and the additional information (as specified in the TranslationRequest) is encapsulated and returned in TranslationResult.
+	The API splits each text entry into sentences internally, which are then translated independent of each other. The translated sentences are then joined together and returned in TranslationResult.
+	Please refer to the TranslationRequest class to find out what additional information can be requested. The alignment information can only be requested if the model supports it (check isAlignmentSupported() API).
 	*/
-	virtual vector<std::future<TranslationResult>> translate(const vector<TranslationRequest>& requests) = 0;
+	virtual std::vector<std::future<TranslationResult>> translate(std::vector<std::string> texts, TranslationRequest request) = 0;
 
 	/* Check if the model can provide alignment information b/w original and translated text. */
-	virtual boolean isAlignmentSupported() const;
+	virtual bool isAlignmentSupported() const = 0;
 }
 
-/* A class that defines a translation request. It encapsulates the text to be translated and other optional requests. The optional requests represent the additional information related to the translated text (e.g. quality of the translation etc.). These optional requests are set/unset independent of each other i.e. setting any one of them doesn’t have the side effect of setting any of the others. */
+/* This class specifies the additional information related to the translated text (e.g. quality of the translation etc.) that can be requested to be included in the TranslationResult. These optional requests are set/unset independent of each other i.e. setting any one of them doesn’t have the side effect of setting any of the others. */
 
 class **TranslationRequest** {
 
     private:
 
-	// The text (utf-8) to be translated
-	string originalText;
-
-	// Optional request. The granularity for which Quality scores of the translated text will be returned in TranslationResult. By default (QualityScoreGranularity::NONE), scores are not returned.
+	// Optional request. The granularity for which Quality scores of the translated text will be included in TranslationResult. By default (QualityScoreGranularity::NONE), scores are not included.
 	QualityScoreGranularity qualityScore = QualityScoreGranularity::NONE;
 
-	// Optional request. The alignment information b/w original and translated text. By default (i.e. Alignment::NONE), alignment is not returned.
-	Alignment alignment = Alignment::NONE;
+	// Optional request. The type of the alignment b/w original and translated text that will be included in TranslationResult. By default (AlignmentType::NONE), alignment is not included.
+	AlignmentType alignmentType = AlignmentType::NONE;
 
-	// Optional request. If set to true, the original text will be included in the TranslationResult. By default (false), the original text will not be returned.
-	boolean returnOriginalTextInResult = false;
+	// Optional request. A true/false value will include/exclude the original text in the TranslationResult. By default (false), the original text is not included.
+	bool includeOriginalText = false;
 
-	// Optional request. If set to true, mapping b/w each sentence (in the original text) and the corresponding translated sentence (in the translated text) will be included in the TranslationResult. By default (false), this info will not be included.
-	boolean originalToTranslatedSentenceMapping = false;
+	// Optional request. A true/false value will include/exclude the information regarding how individual sentences of original text map to corresponding translated sentences in joined translated text in the TranslationResult. By default (false), this information is not included.
+	bool includeSentenceMapping = false;
 
     public:
 
-	/* Create the translation request by providing the (utf-8) plain text (without any markups). Text can be a single word, a phrase, a sentence or multiple sentences. */
-	TranslationRequest(const string& text);
+	explicit TranslationRequest();
 
 	~TranslationRequest();
 
-	/* Set the granularity for which the Quality scores of translated text should be included in the TranslationResult. */
+	/* Set the granularity for which the Quality scores of translated text should be included in the TranslationResult. By default (QualityScoreGranularity::NONE), scores are not included. */
 	void setQualityScoreGranularity(QualityScoreGranularity granularity);
 
-	/* Set the Alignment b/w original and translated text to be included in the TranslationResult. */
-	void setAlignment(Alignment alignment);
+	/* Set the type of Alignment b/w original and translated text to be included in the TranslationResult. By default (AlignmentType::NONE), alignment is not included. */
+	void setAlignmentType(AlignmentType alignmentType);
 
-	/* Set to true/false to include/exclude the original text in the TranslationResult. */
-	void setOriginalTextInResult(boolean originalTextInResult);
+	/* Set to true/false to include/exclude the original text in the TranslationResult. By default (false), the original text is not included. */
+	void includeOriginalText(bool originalText);
 
-	/* Set to true/false to include/exclude the mapping b/w each sentence (in the original text) and the corresponding translated sentence (in the joined translated text) in the TranslationResult. */
-	void setOriginalToTranslatedSentenceMapping(boolean sentenceMapping);
+	/* Set to true/false to include/exclude the information regarding how individual sentences of original text map to corresponding translated sentences in joined translated text in the TranslationResult. By default (false), this information is not included. */
+	void includeSentenceMapping(bool sentenceMapping);
 
-	/* Return the granularity for which the Quality scores are requested. */
-	QualityScoreGranularity getQualityScoreRequest() const;
+	/* Return the granularity for which the Quality scores of the translated text will be included in TranslationResult. QualityScoreGranularity::NONE means the scores will not be included. */
+	QualityScoreGranularity getQualityScoreGranularity() const;
 
-	/* Return the alignment to be included in the TranslationResult. */
-	Alignment getAlignment() const;
+	/* Return the type of Alignment b/w original and translated text that should be included in the TranslationResult. AlignmentType::NONE means the alignment will not be included. */
+	AlignmentType getAlignmentType() const;
 
-	/* Return whether the original text is requested to be included in the TranslationResult. */
-	boolean isOriginalTextInResult() const;
+	/* Return whether the original text should be included in the TranslationResult. False means the original text will not be included. */
+	bool includeOriginalText() const;
 
-	/* Return whether the mapping b/w each sentence in the original text and the corresponding translated sentence (in the joined translated text) is requested to be included in the TranslationResult. */
-	boolean isOriginalToTranslatedSentenceMapping() const;
+	/* Return whether the information regarding how individual sentences of original text map to corresponding translated sentences in joined translated text should be included in the TranslationResult. False means this information will not be included. */
+	bool includeSentenceMapping() const;
 }
 
 /* This class represents the result of translation on a TranslationRequest. */
@@ -82,19 +76,19 @@ class **TranslationResult** {
     private:
 
 	// Original text (utf-8) that was supposed to be translated; An optional result (it will be an empty string if not requested in TranslationRequest).
-	string originalText;
+	std::string originalText;
 
 	// Translation (in utf-8 format) of the originalText
-	string translatedText;
+	std::string translatedText;
 
-	// Quality score of the translated text at the granularity; An optional result (it will have no information if not requested in TranslationRequest)
-	QualityScoreResult qualityScoreResult;
+	// Quality score of the translated text at the granularity specified in TranslationRequest; An optional result (it will have no information if not requested in TranslationRequest)
+	QualityScore qualityScore;
 
-	// Alignment information b/w original and translated text; An optional result (it will have no information if not requested in TranslationRequest)
-	AlignmentResult alignment;
+	// Alignment information b/w original and translated text for AlignmentType specified in TranslationRequest; An optional result (it will have no information if not requested in TranslationRequest)
+	Alignment alignment;
 
-	// Mapping information b/w each sentence (in originalText) and corresponding translated sentence (in translatedText); An optional result (it will have no information if not requested in TranslationRequest); ToDo: Decide TextSpan: Byte offset or CodePoint count or something else
-	map<TextSpan, TextSpan> originalToTranslatedSentenceSpans;
+	// Information regarding how individual sentences of originalText map to corresponding translated sentences in joined translated text (translatedText); An optional result (it will be empty if not requested in TranslationRequest);
+	std::vector<std::pair<std::string_view, std::string_view>> sentenceMappings;
 
     public:
 	// ToDo: Public Methods
@@ -107,72 +101,86 @@ class **TranslationModelConfiguration** {
     private:
 
 	// Path to the translation model file
-	const string modelPath;
+	const std::string modelPath;
 
 	// Path to the source vocabulary file to be used by the model
-	const string sourceLanguageVocabPath;
+	const std::string sourceLanguageVocabPath;
 
 	// Path to the target vocabulary file to be used by the model	
-	const string targetLanguageVocabPath;
+	const std::string targetLanguageVocabPath;
 
 	// ToDo: Add all possible user configurable options (e.g. min batch size, max batch size) that are relevant for translation
 
     public:
 
 	// Provide the path to the model file along with the source and target vocabulary files
-	TranslationModelConfiguration(const string& modelFilePath,
-	const string& sourceVocabPath,
-	const string& targetVocabPath);
+	TranslationModelConfiguration(const std::string& modelFilePath,
+					const std::string& sourceVocabPath,
+					const std::string& targetVocabPath);
 
 	// Return the path of the model file
-	const string& getModelFilePath() const;
+	const std::string& getModelFilePath() const;
 
 	// Return the path of the source language vocabulary file
-	const string& getSourceVocabularyPath() const;
+	const std::string& getSourceVocabularyPath() const;
 
 	// Return the path of the target language vocabulary file
-	const string& getSourceVocabularyPath() const;
+	const std::string& getSourceVocabularyPath() const;
 }
 
 // All possible granularities for which Quality Scores can be returned for translated (utf-8) text
 
 enum class QualityScoreGranularity {
 
-	WORD = 0,
+	WORD,
 	SENTENCE,
 	NONE,
 }
 
-// All possible supported alignments between a text and its translation
+// All possible supported alignment types between a text and its translation
 
-enum class Alignment {
+enum class AlignmentType {
 
-	SOFT = 0,
+	SOFT,
 	NONE,
 }
 
-class QualityScoreResult {
+// This class represents the Quality Scores for various spans of the translated text at a specific granularity
+
+class QualityScore {
 
       private:
 
-	// Container for the span of the translated text and the corresponding Quality Scores; ToDo: Decide TextSpan: Byte offset or CodePoint count or something else
-	map<TextSpan, float> translatedTextSpanToQualityScore;
+	// Sections of a text for the Quality Scores
+	std::vector<std::string_view> textViews;
 
-	// Granularity of the translated text for the Quality scores above
-	QualityScoreGranularity granularity;
+	// Quality Scores corresponding to each section of the text in textViews in the same order
+	std::vector<float> textScores;
+
+        // Granularity of the text for the Quality scores above
+	QualityScoreGranularity textGranularity;
 
       public:
 	// ToDo: Public Methods
 }
 
-class AlignmentResult {
+// This class encapsulates a translated text, all the sections of the original text that align to this translated text and the corresponding alignments for each of these sections of original text.
+
+class Alignment {
 
       private:
 
-	typedef map<TextSpan, float> OriginalTextSpanToAlignments;
+        // A list of sections of a translated text
+	std::vector<std::string_view> translatedTextViews;
 
-	// Alignments b/w different spans of translated text and original text; ToDo: Decide TextSpan: Byte offset or CodePoint count or something else
-	map<TextSpan, OriginalTextSpanToAlignments> translatedToOriginalTextSpanAlignments;
+        // Each ith entry of this container corresponds to a list of all the sections of the original text that align to the ith entry of translatedTextView
+	std::vector<std::vector<std::string_view>> originalTextViews;
+
+        // Each ith entry of this container corresponds to the alignments of all the sections of the original text (ith entry of originalTextViews) that align to the ith entry of translatedTextViews
+	std::vector<std::vector<float>> alignments;
+
+        // Type of the alignment b/w original and translated text above
+	AlignmentType alignmentType;
 
       public:
 	// ToDo: Public Methods

@@ -87,7 +87,16 @@ class **TranslationResult** {
 	// Alignment information b/w original and translated text for AlignmentType specified in TranslationRequest; An optional result (it will have no information if not requested in TranslationRequest)
 	Alignment alignment;
 
-	// Information regarding how individual sentences of originalText map to corresponding translated sentences in joined translated text (translatedText); An optional result (it will be empty if not requested in TranslationRequest);
+	// Information regarding how individual sentences of originalText map to corresponding translated sentences
+        // in joined translated text (translatedText); An optional result (it will be empty if not requested in TranslationRequest);
+        //       An example:
+        //       originalText (contains 2 sentences)              = "What is your name? My name is Abc."
+        //       translatedText (contains 2 translated sentences) = "Was ist dein Name? Mein Name ist Abc."
+        //       sentenceMappings = [
+        //                   {"What is your name?", "Was ist dein Name?"},  // A pair of Sentence 1 of originalText (originalText[0]) and corresponding translated sentence in translatedText (translatedText[0])
+        //                   {"My name is Abc", "Mein Name ist Abc."}       // A pair of Sentence 2 of originalText (originalText[1]) and corresponding translated sentence in translatedText (translatedText[1])
+        //                 ]
+        //
 	std::vector<std::pair<std::string_view, std::string_view>> sentenceMappings;
 
     public:
@@ -171,12 +180,28 @@ class Alignment {
       private:
 
         // A list of sections of a translated text
+        // An example: originalText   = "What do you need"
+        //             translatedText = "Was brauchst du"
+        //             translatedTextViews = ["Was ", "brauchst", "du"]
 	std::vector<std::string_view> translatedTextViews;
 
         // Each ith entry of this container corresponds to a list of all the sections of the original text that align to the ith entry of translatedTextView
+        // For the example above:
+        //             translatedTextViews = ["Was ", "brauchst", "du"]
+        //             originalTextViews   = [
+        //                                      ["What"],         // originalTextViews[0] = All sections of original text that align with translatedTextViews[0] i.e. "Was"
+        //                                      ["you", "need"],  // originalTextViews[1] = All sections of original text that align with translatedTextViews[1] i.e. "brauchst"
+        //                                      ["you"]           // originalTextViews[2] = All sections of original text that align with translatedTextViews[2] i.e. "du"
+        //                                   ]
 	std::vector<std::vector<std::string_view>> originalTextViews;
 
         // Each ith entry of this container corresponds to the alignments of all the sections of the original text (ith entry of originalTextViews) that align to the ith entry of translatedTextViews
+        // For the example above:
+        //             alignments          = [
+        //                                      [0.90],         // alignments[0] = Alignments of all sections of original text (i.e. originalTextViews[0]) to translatedTextViews[0] i.e. "Was"
+        //                                      [0.3, 0.7],     // alignments[1] = Alignments of all sections of original text (i.e. originalTextViews[1]) to translatedTextViews[1] i.e. "brauchst"
+        //                                      [0.9]           // alignments[2] = Alignments of all sections of original text (i.e. originalTextViews[2]) to translatedTextViews[2] i.e. "du"
+        //                                   ]
 	std::vector<std::vector<float>> alignments;
 
         // Type of the alignment b/w original and translated text above

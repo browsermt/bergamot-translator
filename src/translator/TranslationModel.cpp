@@ -19,7 +19,6 @@ std::future<std::vector<TranslationResult>> TranslationModel::translate(
 	//ToDo: Replace this code with the actual implementation
 	return std::async([]() {
 		std::vector<TranslationResult> results;
-		results.emplace_back(TranslationResult{"a","d"});
 		return results;
 	});
 }

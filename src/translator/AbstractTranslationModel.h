@@ -24,14 +24,16 @@
 class AbstractTranslationModel {
 public:
 
-	/* A Factory method to create and return an instance of AbstractTranslationModel implementation. The instance is
-	 * created using translation model configuration (TranslationModelConfiguration).
+	/* A Factory method to create and return an instance of an implementation of
+	 * AbstractTranslationModel. The instance is created using translation model configuration
+	 * (TranslationModelConfiguration).
 	 */
-	static std::shared_ptr<AbstractTranslationModel> createInstance(const TranslationModelConfiguration& config);
+	static std::shared_ptr<AbstractTranslationModel>
+	createInstance(const TranslationModelConfiguration& config);
 
-	AbstractTranslationModel();
+	AbstractTranslationModel() = default;
 
-	virtual ~AbstractTranslationModel();
+	virtual ~AbstractTranslationModel() = default;
 
 	/* This method performs translation on a list of (UTF-8 encoded) texts and returns a list of results in the same order.
 	 * Each text entry can either be a word, a phrase, a sentence or a list of sentences and should contain plain text

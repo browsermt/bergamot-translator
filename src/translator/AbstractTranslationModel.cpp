@@ -7,7 +7,6 @@
 #include "AbstractTranslationModel.h"
 #include "TranslationModel.h"
 
-AbstractTranslationModel::~AbstractTranslationModel() {}
 
 std::shared_ptr<AbstractTranslationModel>
 AbstractTranslationModel::createInstance(const TranslationModelConfiguration& config) {

@@ -20,9 +20,11 @@ class TranslationResult {
 public:
 	typedef std::vector<std::pair<std::string_view, std::string_view>> SentenceMappings;
 
-	TranslationResult(const std::string &original, const std::string &translation);
+	TranslationResult(const std::string &original, const std::string &translation) :
+		originalText(original), translatedText(translation) {}
 
-	TranslationResult(std::string &&original, std::string &&translation);
+	TranslationResult(std::string &&original, std::string &&translation) :
+		originalText(std::move(original)), translatedText(std::move(translation)) {}
 
 	/* Return the original text. */
 	const std::string& getOriginalText() const {

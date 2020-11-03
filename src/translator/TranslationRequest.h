@@ -31,9 +31,14 @@ private:
 	bool includeSentenceMapping = false;
 
 public:
-	explicit TranslationRequest();
+	TranslationRequest() {}
 
-	~TranslationRequest();
+	TranslationRequest(const TranslationRequest& request) :
+		qualityScoreGranularity(request.qualityScoreGranularity),
+		includeSentenceMapping(request.includeSentenceMapping) {
+	}
+
+	~TranslationRequest() {}
 
 	/* Set the granularity for which the Quality scores of translated text should be included in the TranslationResult.
 	 * By default (QualityScoreGranularity::NONE), scores are not included.

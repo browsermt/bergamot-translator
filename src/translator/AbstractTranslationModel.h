@@ -12,7 +12,9 @@
 #include <vector>
 #include <string>
 #include <future>
+#include <memory>
 
+#include "TranslationModelConfiguration.h"
 #include "TranslationRequest.h"
 #include "TranslationResult.h"
 
@@ -21,6 +23,11 @@
  */
 class AbstractTranslationModel {
 public:
+
+	/* A Factory method to create and return an instance of AbstractTranslationModel implementation. The instance is
+	 * created using translation model configuration (TranslationModelConfiguration).
+	 */
+	static std::shared_ptr<AbstractTranslationModel> createInstance(const TranslationModelConfiguration& config);
 
 	AbstractTranslationModel();
 

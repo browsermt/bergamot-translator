@@ -1,0 +1,3 @@
+[submodule "3rd_party/ssplit-cpp"]
+	path = 3rd_party/ssplit-cpp
+	url = https://github.com/ugermann/ssplit-cpp

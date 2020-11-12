@@ -10,11 +10,12 @@
 // All local includes
 #include "AbstractTranslationModel.h"
 #include "TranslationModel.h"
+#include "TranslationModelConfigToOptionsAdaptor.h"
 
 
 std::shared_ptr<AbstractTranslationModel>
 AbstractTranslationModel::createInstance(const TranslationModelConfiguration& config) {
-	// ToDo: Write an adaptor for adapting TranslationModelConfiguration to marian::Options
-	auto options = std::make_shared<marian::Options>();
+	TranslationModelConfigToOptionsAdaptor adaptor;
+	auto options = adaptor.adapt(config);
 	return std::make_shared<TranslationModel>(options);
 }

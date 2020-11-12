@@ -11,6 +11,10 @@
 #include <string>
 #include <future>
 
+// All 3rd party includes
+#include "common/options.h"
+
+// All local project includes
 #include "AbstractTranslationModel.h"
 #include "TranslationModelConfiguration.h"
 
@@ -19,12 +23,9 @@
  */
 class TranslationModel: public AbstractTranslationModel {
 public:
-	/* Construct the model using the model configuration. The model configuration specifies options
-	 * that are required by a translation model to perform translation. It stays constant during the
-	 * lifetime of the model instance. Please refer to TranslationModelConfiguration class
-	 * for details regarding configuration.
+	/* Construct the model using the model configuration options.
 	 */
-	TranslationModel(const TranslationModelConfiguration &modelConfiguration);
+	TranslationModel(std::shared_ptr<marian::Options> options);
 
 	~TranslationModel();
 
@@ -56,8 +57,8 @@ public:
 	bool isAlignmentSupported() const override;
 
 private:
-	// Model configuration
-	const TranslationModelConfiguration modelConfiguration;
+	// Model configuration options
+	std::shared_ptr<marian::Options> configOptions;
 };
 
 #endif /* SRC_TRANSLATOR_TRANSLATIONMODEL_H_ */

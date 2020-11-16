@@ -12,7 +12,7 @@
 #include <future>
 
 // All 3rd party includes
-#include "common/options.h"
+#include "3rd_party/marian-dev/src/common/options.h"
 
 // All local project includes
 #include "AbstractTranslationModel.h"

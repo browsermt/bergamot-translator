@@ -5,7 +5,7 @@
 #include <memory>
 
 // All 3rd party includes
-#include "common/options.h"
+#include "3rd_party/marian-dev/src/common/options.h"
 
 // All local includes
 #include "AbstractTranslationModel.h"

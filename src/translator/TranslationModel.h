@@ -12,7 +12,7 @@
 #include <future>
 
 // All 3rd party includes
-#include "3rd_party/marian-dev/src/common/options.h"
+//#include "3rd_party/marian-dev/src/common/options.h"
 
 // All local project includes
 #include "AbstractTranslationModel.h"
@@ -25,7 +25,7 @@ class TranslationModel: public AbstractTranslationModel {
 public:
 	/* Construct the model using the model configuration options.
 	 */
-	TranslationModel(std::shared_ptr<marian::Options> options);
+	TranslationModel(const TranslationModelConfiguration& config);
 
 	~TranslationModel();
 
@@ -58,7 +58,7 @@ public:
 
 private:
 	// Model configuration options
-	std::shared_ptr<marian::Options> configOptions;
+	TranslationModelConfiguration configOptions;
 };
 
 #endif /* SRC_TRANSLATOR_TRANSLATIONMODEL_H_ */

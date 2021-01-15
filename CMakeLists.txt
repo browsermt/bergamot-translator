@@ -15,6 +15,6 @@ option(COMPILE_CUDA "Compile GPU version" OFF)
 option(USE_SENTENCEPIECE "Download and compile SentencePiece" ON)
 option(USE_STATIC_LIBS "Link statically against non-system libs" ON)
 
-add_subdirectory(3rd_party)
+#add_subdirectory(3rd_party)
 add_subdirectory(src)
 add_subdirectory(app)

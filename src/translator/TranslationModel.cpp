@@ -8,8 +8,8 @@
 
 #include "TranslationModel.h"
 
-TranslationModel::TranslationModel(std::shared_ptr<marian::Options> options) :
-		configOptions(std::move(options)), AbstractTranslationModel() {
+TranslationModel::TranslationModel(const TranslationModelConfiguration& config) :
+		configOptions(config), AbstractTranslationModel() {
 }
 
 TranslationModel::~TranslationModel() {}

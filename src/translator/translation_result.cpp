@@ -68,30 +68,5 @@ TranslationResult::TranslationResult(std::string &&source, Segments &&segments,
   }
 }
 
-std::vector<int> TranslationResult::getAlignment(unsigned int index) {
-  Ptr<History> history = histories_[index];
-  NBestList onebest = history->nBest(1);
-  Result &result = onebest[0]; // Expecting only one result;
-  Words &words = std::get<0>(result);
-  auto &hypothesis = std::get<1>(result);
-
-  // soft alignment = P(src pos|trg pos) for each beam and batch index, stored
-  // in a flattened CPU-side array
-  //
-  // Also used on QuickSAND boundary where beam and batch size is 1. Then it is
-  // simply [t][s] -> P(s|t)
-  //
-  // typedef std::vector<std::vector<float>> SoftAlignment;
-  // [trg pos][beam depth * max src length * batch size]
-
-  auto softAlignment = hypothesis->tracebackAlignment();
-  auto hardAlignment = data::ConvertSoftAlignToHardAlign(softAlignment);
-  std::vector<int> alignment(words.size(), -1);
-  for (auto &p : hardAlignment) {
-    alignment[p.tgtPos] = p.srcPos;
-  }
-  return alignment;
-}
-
 } // namespace bergamot
 } // namespace marian

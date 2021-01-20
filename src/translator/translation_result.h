@@ -18,11 +18,9 @@ public:
                     Histories &&histories,
                     std::vector<Ptr<Vocab const>> &vocabs);
 
-  const Histories &getHistories() const { return histories_; }
-
-  // https://github.com/browsermt/bergamot-translator/blob/0200843ed7e5366f4143422c64fcd1837d9baca7/src/TranslationResult.h
   const std::string &getOriginalText() const { return source_; }
   const std::string &getTranslatedText() const { return translation_; }
+
   typedef std::vector<std::pair<string_view, string_view>> SentenceMappings;
   const SentenceMappings &getSentenceMappings() const {
     return sentenceMappings_;
@@ -32,8 +30,8 @@ public:
   // Not implemented currently, commenting out.
   // const QualityScore &getQualityScore() const { return qualityScore; }
 
-  // Provides a hard alignment between source and target words.
-  std::vector<int> getAlignment(unsigned int index);
+  // For development use to benchmark with marian-decoder.
+  const Histories &getHistories() const { return histories_; }
 
 private:
   std::string source_;
@@ -41,6 +39,7 @@ private:
 
   // Histories are currently required for interoperability with OutputPrinter
   // and OutputCollector and hence comparisons with marian-decoder.
+  // Future hook to gain alignments.
   Histories histories_;
 
   // Can be removed eventually.

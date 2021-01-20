@@ -27,9 +27,6 @@ int main(int argc, char** argv) {
 	std::vector<std::string> texts;
 	auto result = model->translate(std::move(texts), req);
 
-	// Resolve the future and get the actual result
-	std::vector<TranslationResult> res = result.get();
-
-	std::cout << "Count is: " << res.size() << std::endl;
+	std::cout << "Count is: " << result.size() << std::endl;
 	return 0;
 }

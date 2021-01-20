@@ -51,7 +51,7 @@ public:
 	 * The texts argument will become empty after the execution of this API (each entry of texts list will be moved to its
 	 * corresponding TranslationResult object).
 	 */
-	virtual std::future<std::vector<TranslationResult>> translate(
+	virtual std::vector<TranslationResult> translate(
 			std::vector<std::string> &&texts, TranslationRequest request) = 0;
 
 	/* Check if the model can provide alignment information b/w original and translated text. */

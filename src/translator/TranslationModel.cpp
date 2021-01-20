@@ -18,8 +18,9 @@ std::vector<TranslationResult> TranslationModel::translate(
 		std::vector<std::string> &&texts, TranslationRequest request) {
 	//ToDo: Replace this code with the actual implementation
 	std::vector<TranslationResult> results;
-	results.emplace_back("original1","translated1");
-	results.emplace_back("original2","translated2");
+	for (auto count=0; count < texts.size(); count++) {
+		results.emplace_back(std::move(texts[count]), "TRANSLATION" + std::to_string(count));
+	}
 	return results;
 }
 

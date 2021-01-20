@@ -15,6 +15,15 @@ option(COMPILE_CUDA "Compile GPU version" OFF)
 option(USE_SENTENCEPIECE "Download and compile SentencePiece" ON)
 option(USE_STATIC_LIBS "Link statically against non-system libs" ON)
 
+# cmake option to compile the project for WASM
+option(COMPILE_WASM "Compile for WASM" OFF)
+
 #add_subdirectory(3rd_party)
 add_subdirectory(src)
-add_subdirectory(app)
+if (NOT COMPILE_WASM)
+  add_subdirectory(app)
+endif()
+
+if (COMPILE_WASM)
+  add_subdirectory(wasm)
+endif()

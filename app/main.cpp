@@ -22,11 +22,24 @@ int main(int argc, char** argv) {
 	std::shared_ptr<AbstractTranslationModel> model =
 			AbstractTranslationModel::createInstance(config);
 
-	// Call to translate a dummy (empty) texts with a dummy (empty) translation request
+	// Call to translate texts with a dummy (empty) translation request
 	TranslationRequest req;
-	std::vector<std::string> texts;
+	std::vector<std::string> texts = {"Hola", "Mundo"};
+	std::cout << "Input size: " << texts.size() << std::endl;
+	for (auto count = 0; count < texts.size(); count++) {
+        std::cout << " val:" << texts[count] << std::endl;
+	}
+
 	auto result = model->translate(std::move(texts), req);
 
-	std::cout << "Count is: " << result.size() << std::endl;
+	std::cout << "Input size after translation: " << texts.size() << std::endl;
+	for (auto count = 0; count < texts.size(); count++) {
+        std::cout << " val:" << texts[count] << std::endl;
+	}
+	std::cout << "Result size: " << result.size() << std::endl;
+	for (auto count = 0; count < result.size(); count++) {
+        std::cout << " Original:" << result[count].getOriginalText() <<
+        ", Translated:" << result[count].getTranslatedText() << std::endl;
+	}
 	return 0;
 }

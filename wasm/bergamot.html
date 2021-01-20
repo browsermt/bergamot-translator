@@ -1,0 +1,37 @@
+<!doctype html>
+<html>
+  <script>
+    var Module = {
+      onRuntimeInitialized: function() {
+        var modelConfig = new Module.TranslationModelConfiguration("aa", "bb", "cc");
+        console.log('Model Path:', modelConfig.getModelFilePath());
+
+        var model = new Module.TranslationModel(modelConfig);
+        console.log('Alignment:', model.isAlignmentSupported());
+
+        var request = new Module.TranslationRequest();
+        let input = new Module.VectorString; input.push_back("Hola"); input.push_back("Mundo");
+        console.log('Input size=', input.size());
+        for (let i = 0; i < input.size(); i++) {
+          console.log(' val:' + input.get(i));
+        }
+        var result = model.translate(input, request);
+
+        console.log('Input size after translate API call =', input.size());
+        for (let i = 0; i < input.size(); i++) {
+          console.log(' val:' + input.get(i));
+        }
+        console.log('Result size=', result.size());
+        for (let i = 0; i < result.size(); i++) {
+          console.log(' original={' + result.get(i).getOriginalText() + '}, translation={' + result.get(i).getTranslatedText() + '}');
+        }
+
+        modelConfig.delete();
+        model.delete();
+        request.delete();
+        input.delete();
+      }
+    };
+  </script>
+  <script src="bergamot-translator-wasm.js"></script>
+</html>

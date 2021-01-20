@@ -26,17 +26,22 @@ class Service {
   //  service = Service(options);
   //  std::string input_blob = "Hello World";
   //  std::future<TranslationResult>
-  //      response = service.translate(std::move(input)_blob);
+  //      response = service.translate(std::move(input_blob));
   //  response.wait();
   //  TranslationResult result = response.get();
 
 public:
   explicit Service(Ptr<Options> options);
+
+  // Constructs new string copying, calls translate internally.
   std::future<TranslationResult> translateWithCopy(std::string input);
   std::future<TranslationResult> translate(std::string &&input);
+
   void stop();
+
   Ptr<Vocab const> sourceVocab() const { return vocabs_.front(); }
   Ptr<Vocab const> targetVocab() const { return vocabs_.back(); }
+
   ~Service();
 
 private:
@@ -44,16 +49,23 @@ private:
   unsigned int batchNumber_;
   int numWorkers_;
 
+  // vocabs are used to construct a Request, which later uses it to construct
+  // TranslationResult (decode from words to string).
+  std::vector<Ptr<Vocab const>> vocabs_;
+
   // Consists of:
-  // 1. an instance of text-processing class (TextProcessor),
-  // 2. a Batcher // class which handles efficient batching by minimizing
+  //
+  // 1. text-processing class (TextProcessor), which handles breaking a blob of
+  //    text into sentences and providing them representated by finite
+  //    vocabulary for further processing by hte neural machine translation.
+  // 2. a Batcher class which handles efficient batching by minimizing
   //    padding wasting compute.
   // 3. Multiple workers - which are instances of BatchTranslators are
-  //    spawned in threads. The Batcher acts as a producer for a
-  //    producer-consumer queue, with idle BatchTranslators requesting batches
-  //    as they're ready.
+  //    spawned in separate threads.
+  //
+  // Batcher acts as a producer for a producer-consumer queue (pcqueue_), with
+  // idle BatchTranslators being consumers requesting batches as they're ready.
 
-  std::vector<Ptr<Vocab const>> vocabs_;
   TextProcessor text_processor_;
   Batcher batcher_;
   PCQueue<PCItem> pcqueue_;

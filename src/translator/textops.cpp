@@ -74,8 +74,8 @@ void TextProcessor::query_to_segments(const string_view &query,
                                       Segments &segments,
                                       std::vector<TokenRanges> &sourceRanges) {
   auto buf = sentence_splitter_.createSentenceStream(query);
-  // pcrecpp::StringPiece snt;
-  string_view snt;
+  pcrecpp::StringPiece snt;
+  // string_view snt;
 
   int sentencesProcessed{0};
 

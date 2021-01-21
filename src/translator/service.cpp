@@ -42,7 +42,7 @@ std::future<TranslationResult> Service::translate(std::string &&input) {
 
   Segments segments;
   std::vector<TokenRanges> sourceAlignments;
-  text_processor_.query_to_segments(input, segments, sourceAlignments);
+  text_processor_.process(input, segments, sourceAlignments);
 
   std::promise<TranslationResult> translationResultPromise;
   auto future = translationResultPromise.get_future();

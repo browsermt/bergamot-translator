@@ -20,6 +20,10 @@ namespace marian {
 namespace bergamot {
 
 class SentenceSplitter {
+  // A wrapper around @ugermann's ssplit-cpp compiled from several places in
+  // mts. Constructed based on options. Used in TextProcessor below to create
+  // sentence-streams, which provide access to one sentence from blob of text at
+  // a time.
 public:
   explicit SentenceSplitter(Ptr<Options> options);
   ug::ssplit::SentenceStream createSentenceStream(string_view const &input);
@@ -32,14 +36,29 @@ private:
 };
 
 class TextProcessor {
+  // TextProcessor handles loading the sentencepiece vocabulary and also
+  // contains an instance of sentence-splitter based on ssplit.
+  //
+  // Used in Service to convert an incoming blog of text to a vector of
+  // sentences (vector of words). In addition, the ByteRanges of the
+  // source-tokens in unnormalized text are provided as string_views.
 public:
   explicit TextProcessor(std::vector<Ptr<Vocab const>> &vocabs, Ptr<Options>);
-  void query_to_segments(const string_view &query, Segments &segments,
-                         std::vector<TokenRanges> &sourceRanges);
+
+  void process(const string_view &query, Segments &segments,
+               std::vector<TokenRanges> &sourceRanges);
 
 private:
+  // Tokenizes an input string, returns Words corresponding. Loads the
+  // corresponding byte-ranges into tokenRanges.
   Segment tokenize(const string_view &input, TokenRanges &tokenRanges);
-  Word sourceEosId() { return vocabs_->front()->getEosId(); }
+
+  // Truncate sentence into max_input_size segments.
+  void truncate(Segment &sentence, TokenRanges &tokenRanges, Segments &segments,
+                std::vector<TokenRanges> &sourceRanges);
+
+  // shorthand, used only in truncate()
+  const Word sourceEosId() const { return vocabs_->front()->getEosId(); }
 
   std::vector<Ptr<Vocab const>> *vocabs_;
   SentenceSplitter sentence_splitter_;

@@ -52,7 +52,6 @@ SentenceSplitter::string2splitmode(const std::string &m) {
 
 Segment TextProcessor::tokenize(const string_view &snt,
                                 TokenRanges &tokenRanges) {
-  // TODO(jerin): Bunch of hardcode here, 1, 0, need to get rid off somehow.
   return vocabs_->front()->encodePreservingSource(
       snt, tokenRanges, /*addEOS=*/false, /*inference=*/true);
 }
@@ -60,70 +59,64 @@ Segment TextProcessor::tokenize(const string_view &snt,
 TextProcessor::TextProcessor(std::vector<Ptr<Vocab const>> &vocabs,
                              Ptr<Options> options)
     : vocabs_(&vocabs), sentence_splitter_(options) {
+
   max_input_sentence_tokens_ = options->get<int>("max-input-sentence-tokens");
-  max_input_sentence_tokens_ =
-      max_input_sentence_tokens_ - 1; // Account for EOS
-  // Dirty assert, should do at configparse
-  assert(max_input_sentence_tokens_ > 0);
+  max_input_sentence_tokens_ = max_input_sentence_tokens_ - 1;
+  ABORT_IF(max_input_sentence_tokens < 0,
+           "max-input-sentence-tokens cannot be < 0");
 }
 
-void TextProcessor::query_to_segments(const string_view &query,
-                                      Segments &segments,
-                                      std::vector<TokenRanges> &sourceRanges) {
-  auto buf = sentence_splitter_.createSentenceStream(query);
-  pcrecpp::StringPiece snt;
-  // string_view snt;
+void TextProcessor::process(const string_view &query, Segments &segments,
+                            std::vector<TokenRanges> &sourceRanges) {
 
-  int sentencesProcessed{0};
+  auto sentenceStream = sentence_splitter_.createSentenceStream(query);
+  pcrecpp::StringPiece sentenceStringPiece;
 
-  while (buf >> snt) {
-    // LOG(info, "SNT: {}", snt);
-    string_view snt_string_view(snt.data(), snt.size());
-    TokenRanges snt_alignment;
-    timer::Timer spiece_timer;
-    Segment tokenized_sentence = tokenize(snt_string_view, snt_alignment);
+  while (sentenceStream >> sentenceStringPiece) {
+    string_view sentence(sentenceStringPiece.data(),
+                         sentenceStringPiece.size());
+    TokenRanges tokenRanges;
+    Segment segment = tokenize(sentence, tokenRanges);
 
-    // LOG(info, "Tokenization took {:.5f} seconds", spiece_timer.elapsed());
-    if (tokenized_sentence.size() > 0) {
-      if (tokenized_sentence.size() > max_input_sentence_tokens_) {
-        int offset;
-        for (offset = 0;
-             offset + max_input_sentence_tokens_ < tokenized_sentence.size();
-             offset += max_input_sentence_tokens_) {
-          auto start = tokenized_sentence.begin() + offset;
-          Segment segment(start, start + max_input_sentence_tokens_);
-          segment.push_back(sourceEosId());
-          segments.push_back(segment);
-
-          auto astart = snt_alignment.begin() + offset;
-          TokenRanges segment_alignment(astart,
-                                        astart + max_input_sentence_tokens_);
-          sourceRanges.push_back(segment_alignment);
-        }
-
-        if (offset < max_input_sentence_tokens_) {
-          auto start = tokenized_sentence.begin() + offset;
-          Segment segment(start, tokenized_sentence.end());
-          segment.push_back(sourceEosId());
-          segments.push_back(segment);
-
-          auto astart = snt_alignment.begin() + offset;
-          TokenRanges segment_alignment(astart, snt_alignment.end());
-          sourceRanges.push_back(segment_alignment);
-        }
-
-      } else {
-        timer::Timer push_timer;
-        tokenized_sentence.push_back(sourceEosId());
-        segments.push_back(tokenized_sentence);
-        sourceRanges.push_back(snt_alignment);
-        // LOG(info, "Push took {:.5f} seconds", push_timer.elapsed());
-      }
+    // There are some cases where SentencePiece or vocab returns no words
+    // after normalization. 0 prevents any empty entries from being added.
+    if (segment.size() > 0) {
+      // Truncate segment into max_input_size segments.
+      truncate(segment, tokenRanges, segments, sourceRanges);
     }
-    ++sentencesProcessed;
-    if (sentencesProcessed % 10000 == 0) {
-      LOG(info, "Processed {}", sentencesProcessed);
+  }
+}
+
+void TextProcessor::truncate(Segment &segment, TokenRanges &tokenRanges,
+                             Segments &segments,
+                             std::vector<TokenRanges> &sourceRanges) {
+  if (segment.size() > max_input_sentence_tokens_) {
+    int offset;
+    // Loop as long as I can grab max_input_sentence_tokens_
+    for (offset = 0; offset + max_input_sentence_tokens_ < segment.size();
+         offset += max_input_sentence_tokens_) {
+      auto start = segment.begin() + offset;
+
+      segments.emplace_back(start, start + max_input_sentence_tokens_);
+      segments.back().push_back(sourceEosId());
+
+      auto astart = tokenRanges.begin() + offset;
+      sourceRanges.emplace_back(astart, astart + max_input_sentence_tokens_);
     }
+
+    if (offset < max_input_sentence_tokens_) {
+      auto start = segment.begin() + offset;
+      segments.emplace_back(start, segment.end());
+      segments.back().push_back(sourceEosId());
+
+      auto astart = tokenRanges.begin() + offset;
+      sourceRanges.emplace_back(astart, tokenRanges.end());
+    }
+
+  } else {
+    segments.emplace_back(segment);
+    segments.back().push_back(sourceEosId());
+    sourceRanges.emplace_back(tokenRanges);
   }
 }
 

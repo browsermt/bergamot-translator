@@ -62,7 +62,7 @@ TextProcessor::TextProcessor(std::vector<Ptr<Vocab const>> &vocabs,
 
   max_input_sentence_tokens_ = options->get<int>("max-input-sentence-tokens");
   max_input_sentence_tokens_ = max_input_sentence_tokens_ - 1;
-  ABORT_IF(max_input_sentence_tokens < 0,
+  ABORT_IF(max_input_sentence_tokens_ < 0,
            "max-input-sentence-tokens cannot be < 0");
 }
 

@@ -18,8 +18,15 @@ public:
                     Histories &&histories,
                     std::vector<Ptr<Vocab const>> &vocabs);
 
+  // Returns const references to source and translated texts, for external
+  // consumption.
+
   const std::string &getOriginalText() const { return source_; }
   const std::string &getTranslatedText() const { return translation_; }
+
+  // A mapping of string_views in the source_ and translation_ are provide as a
+  // pair for external consumption. Each entry corresponding
+  // to a (source-sentence, target-sentence).
 
   typedef std::vector<std::pair<string_view, string_view>> SentenceMappings;
   const SentenceMappings &getSentenceMappings() const {
@@ -53,8 +60,9 @@ private:
   std::vector<string_view> sourceMappings_;
   std::vector<string_view> targetMappings_;
 
-  // Adding the following to complete bergamot-translator spec, redundant with
-  // sourceMappings_ and targetMappings_.
+  // Adding the following to complete bergamot-translator spec, redundant while
+  // sourceMappings_ and targetMappings_ exists or vice-versa.
+
   SentenceMappings sentenceMappings_;
 };
 } // namespace bergamot

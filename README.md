@@ -45,4 +45,8 @@ $ emmake make -j
 ```
 
 ## Using Bergamot Translator
-The builds generate library that can be integrated to any project. All the public header files are specified in `src` folder.
+### Using Native version
+The builds generate library that can be integrated to any project. All the public header files are specified in `src` folder. A short example of how to use the APIs is provided in `app/main.cpp` file
+
+### Using WASM version
+Please follow the `README` inside the `wasm` folder of this respository that demonstrates how to use the translator in JavaScript.

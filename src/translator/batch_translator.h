@@ -23,7 +23,7 @@ class BatchTranslator {
 
 public:
   BatchTranslator(DeviceId const device, PCQueue<PCItem> &pcqueue,
-                  Ptr<Options> options);
+                  std::vector<Ptr<Vocab const>> &vocabs, Ptr<Options> options);
   void join();
 
   // convenience function for logging. TODO(jerin)
@@ -37,7 +37,7 @@ private:
   Ptr<Options> options_;
 
   DeviceId device_;
-  std::vector<Ptr<Vocab const>> vocabs_;
+  std::vector<Ptr<Vocab const>> *vocabs_;
   Ptr<ExpressionGraph> graph_;
   std::vector<Ptr<Scorer>> scorers_;
   Ptr<data::ShortlistGenerator const> slgen_;

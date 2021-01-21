@@ -51,7 +51,7 @@ private:
 
   // vocabs are used to construct a Request, which later uses it to construct
   // TranslationResult (decode from words to string).
-  std::vector<Ptr<Vocab const>> vocabs_;
+  std::vector<Ptr<Vocab const>> vocabs_; // ORDER DEPENDENCY
 
   // Consists of:
   //
@@ -66,11 +66,13 @@ private:
   // Batcher acts as a producer for a producer-consumer queue (pcqueue_), with
   // idle BatchTranslators being consumers requesting batches as they're ready.
 
-  TextProcessor text_processor_;
+  TextProcessor text_processor_; // ORDER DEPENDENCY
   Batcher batcher_;
   PCQueue<PCItem> pcqueue_;
   std::vector<BatchTranslator> workers_;
 };
+
+std::vector<Ptr<const Vocab>> loadVocabularies(Ptr<Options> options);
 
 } // namespace bergamot
 } // namespace marian

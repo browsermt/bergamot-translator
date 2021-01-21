@@ -31,28 +31,19 @@ private:
   ug::ssplit::SentenceStream::splitmode string2splitmode(const std::string &m);
 };
 
-class Tokenizer {
-private:
-  std::vector<Ptr<Vocab const>> vocabs_;
-  bool inference_;
-  bool addEOS_;
-
-public:
-  explicit Tokenizer(Ptr<Options>);
-  Segment tokenize(const string_view &input, TokenRanges &tokenRanges);
-  Word sourceEosId() { return vocabs_.front()->getEosId(); };
-};
-
 class TextProcessor {
-private:
-  Tokenizer tokenizer_;
-  SentenceSplitter sentence_splitter_;
-  unsigned int max_input_sentence_tokens_;
-
 public:
-  explicit TextProcessor(Ptr<Options>);
+  explicit TextProcessor(std::vector<Ptr<Vocab const>> &vocabs, Ptr<Options>);
   void query_to_segments(const string_view &query, Segments &segments,
                          std::vector<TokenRanges> &sourceRanges);
+
+private:
+  Segment tokenize(const string_view &input, TokenRanges &tokenRanges);
+  Word sourceEosId() { return vocabs_->front()->getEosId(); }
+
+  std::vector<Ptr<Vocab const>> *vocabs_;
+  SentenceSplitter sentence_splitter_;
+  unsigned int max_input_sentence_tokens_;
 };
 
 } // namespace bergamot

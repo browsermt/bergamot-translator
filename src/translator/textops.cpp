@@ -1,6 +1,5 @@
 #include "textops.h"
 #include "common/timer.h"
-#include "utils.h"
 #include <pcrecpp.h>
 #include <string>
 #include <unordered_map>
@@ -51,18 +50,16 @@ SentenceSplitter::string2splitmode(const std::string &m) {
   return splitmode::wrapped_text;
 }
 
-Tokenizer::Tokenizer(Ptr<Options> options) : inference_(true), addEOS_(false) {
-  vocabs_ = loadVocabularies(options);
-}
-
-Segment Tokenizer::tokenize(const string_view &snt, TokenRanges &tokenRanges) {
+Segment TextProcessor::tokenize(const string_view &snt,
+                                TokenRanges &tokenRanges) {
   // TODO(jerin): Bunch of hardcode here, 1, 0, need to get rid off somehow.
-  return vocabs_[0]->encodePreservingSource(snt, tokenRanges, addEOS_,
-                                            inference_);
+  return vocabs_->front()->encodePreservingSource(
+      snt, tokenRanges, /*addEOS=*/false, /*inference=*/true);
 }
 
-TextProcessor::TextProcessor(Ptr<Options> options)
-    : tokenizer_(options), sentence_splitter_(options) {
+TextProcessor::TextProcessor(std::vector<Ptr<Vocab const>> &vocabs,
+                             Ptr<Options> options)
+    : vocabs_(&vocabs), sentence_splitter_(options) {
   max_input_sentence_tokens_ = options->get<int>("max-input-sentence-tokens");
   max_input_sentence_tokens_ =
       max_input_sentence_tokens_ - 1; // Account for EOS
@@ -84,8 +81,7 @@ void TextProcessor::query_to_segments(const string_view &query,
     string_view snt_string_view(snt.data(), snt.size());
     TokenRanges snt_alignment;
     timer::Timer spiece_timer;
-    Segment tokenized_sentence =
-        tokenizer_.tokenize(snt_string_view, snt_alignment);
+    Segment tokenized_sentence = tokenize(snt_string_view, snt_alignment);
 
     // LOG(info, "Tokenization took {:.5f} seconds", spiece_timer.elapsed());
     if (tokenized_sentence.size() > 0) {
@@ -96,7 +92,7 @@ void TextProcessor::query_to_segments(const string_view &query,
              offset += max_input_sentence_tokens_) {
           auto start = tokenized_sentence.begin() + offset;
           Segment segment(start, start + max_input_sentence_tokens_);
-          segment.push_back(tokenizer_.sourceEosId());
+          segment.push_back(sourceEosId());
           segments.push_back(segment);
 
           auto astart = snt_alignment.begin() + offset;
@@ -108,7 +104,7 @@ void TextProcessor::query_to_segments(const string_view &query,
         if (offset < max_input_sentence_tokens_) {
           auto start = tokenized_sentence.begin() + offset;
           Segment segment(start, tokenized_sentence.end());
-          segment.push_back(tokenizer_.sourceEosId());
+          segment.push_back(sourceEosId());
           segments.push_back(segment);
 
           auto astart = snt_alignment.begin() + offset;
@@ -118,7 +114,7 @@ void TextProcessor::query_to_segments(const string_view &query,
 
       } else {
         timer::Timer push_timer;
-        tokenized_sentence.push_back(tokenizer_.sourceEosId());
+        tokenized_sentence.push_back(sourceEosId());
         segments.push_back(tokenized_sentence);
         sourceRanges.push_back(snt_alignment);
         // LOG(info, "Push took {:.5f} seconds", push_timer.elapsed());

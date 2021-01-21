@@ -4,26 +4,27 @@
 #include "data/text_input.h"
 #include "sanelogging.h"
 #include "translator/beam_search.h"
-#include "utils.h"
 
 namespace marian {
 namespace bergamot {
 
 BatchTranslator::BatchTranslator(DeviceId const device,
-                                 PCQueue<PCItem> &pcqueue, Ptr<Options> options)
-    : device_(device), options_(options), pcqueue_(&pcqueue) {
+                                 PCQueue<PCItem> &pcqueue,
+                                 std::vector<Ptr<Vocab const>> &vocabs,
+                                 Ptr<Options> options)
+    : device_(device), options_(options), pcqueue_(&pcqueue), vocabs_(&vocabs) {
 
   thread_ = std::thread([this] { this->mainloop(); });
 }
 
 void BatchTranslator::initGraph() {
-  vocabs_ = loadVocabularies(options_);
   if (options_->hasAndNotEmpty("shortlist")) {
     Ptr<data::ShortlistGenerator const> slgen;
     int srcIdx = 0, trgIdx = 1;
-    bool shared_vcb = vocabs_.front() == vocabs_.back();
-    slgen_ = New<data::LexicalShortlistGenerator>(
-        options_, vocabs_.front(), vocabs_.back(), srcIdx, trgIdx, shared_vcb);
+    bool shared_vcb = vocabs_->front() == vocabs_->back();
+    slgen_ = New<data::LexicalShortlistGenerator>(options_, vocabs_->front(),
+                                                  vocabs_->back(), srcIdx,
+                                                  trgIdx, shared_vcb);
   }
 
   graph_ = New<ExpressionGraph>(true); // always optimize
@@ -72,7 +73,8 @@ void BatchTranslator::translate(RequestSentences &requestSentences,
 
   std::vector<Ptr<SubBatch>> subBatches;
   for (size_t j = 0; j < maxDims.size(); ++j) {
-    subBatches.emplace_back(New<SubBatch>(batchSize, maxDims[j], vocabs_[j]));
+    subBatches.emplace_back(
+        New<SubBatch>(batchSize, maxDims[j], vocabs_->at(j)));
   }
 
   std::vector<size_t> words(maxDims.size(), 0);
@@ -92,7 +94,7 @@ void BatchTranslator::translate(RequestSentences &requestSentences,
   auto batch = Ptr<CorpusBatch>(new CorpusBatch(subBatches));
   batch->setSentenceIds(sentenceIds);
 
-  auto trgVocab = vocabs_.back();
+  auto trgVocab = vocabs_->back();
   auto search = New<BeamSearch>(options_, scorers_, trgVocab);
 
   histories = std::move(search->search(graph_, batch));

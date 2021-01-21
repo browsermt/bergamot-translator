@@ -3,29 +3,43 @@
   <script>
     var Module = {
       onRuntimeInitialized: function() {
-        var modelConfig = new Module.TranslationModelConfiguration("aa", "bb", "cc");
+        // Instantiate the TranslationModelConfiguration
+        var modelConfig = new Module.TranslationModelConfiguration("dummy_modelFilePath","dummy_sourceVocabPath","dummy_targetVocabPath");
         console.log('Model Path:', modelConfig.getModelFilePath());
 
+        // Instantiate the TranslationModel
         var model = new Module.TranslationModel(modelConfig);
         console.log('Alignment:', model.isAlignmentSupported());
 
+        // Instantiate the arguments of translate() API i.e. TranslationRequest and input (vector<string>)
         var request = new Module.TranslationRequest();
-        let input = new Module.VectorString; input.push_back("Hola"); input.push_back("Mundo");
+        let input = new Module.VectorString;
+
+        // Initialize the input
+        input.push_back("Hola"); input.push_back("Mundo");
+
+        // Access input (just for debugging)
         console.log('Input size=', input.size());
         for (let i = 0; i < input.size(); i++) {
           console.log(' val:' + input.get(i));
         }
+
+        // translate the input; the result is a vector<TranslationResult>
         var result = model.translate(input, request);
 
+        // Access input after translation (just for debugging)
         console.log('Input size after translate API call =', input.size());
         for (let i = 0; i < input.size(); i++) {
           console.log(' val:' + input.get(i));
         }
+
+        // Access original and translated text from each entry of vector<TranslationResult>
         console.log('Result size=', result.size());
         for (let i = 0; i < result.size(); i++) {
           console.log(' original={' + result.get(i).getOriginalText() + '}, translation={' + result.get(i).getTranslatedText() + '}');
         }
 
+        // Clean up the instances
         modelConfig.delete();
         model.delete();
         request.delete();

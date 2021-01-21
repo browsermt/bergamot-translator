@@ -19,7 +19,6 @@ BatchTranslator::BatchTranslator(DeviceId const device,
 
 void BatchTranslator::initGraph() {
   if (options_->hasAndNotEmpty("shortlist")) {
-    Ptr<data::ShortlistGenerator const> slgen;
     int srcIdx = 0, trgIdx = 1;
     bool shared_vcb = vocabs_->front() == vocabs_->back();
     slgen_ = New<data::LexicalShortlistGenerator>(options_, vocabs_->front(),

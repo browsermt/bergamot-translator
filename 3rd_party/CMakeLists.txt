@@ -9,3 +9,9 @@ target_include_directories(marian PUBLIC ${INCDIRS})
 
 get_property(INCLUDE_DIRECTORIES DIRECTORY ssplit-cpp/src PROPERTY INCLUDE_DIRECTORIES)
 target_include_directories(ssplit PUBLIC ${INCLUDE_DIRECTORIES})
+
+# Compilation flags 
+get_directory_property(CMAKE_C_FLAGS DIRECTORY marian-dev DEFINITION CMAKE_C_FLAGS) 
+get_directory_property(CMAKE_CXX_FLAGS DIRECTORY marian-dev DEFINITION CMAKE_CXX_FLAGS) 
+set(CMAKE_C_FLAGS ${CMAKE_C_FLAGS} PARENT_SCOPE)    
+set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} PARENT_SCOPE)    

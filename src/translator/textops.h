@@ -9,7 +9,7 @@
 #include "data/sentencepiece_vocab.h"
 #include "data/shortlist.h"
 #include "definitions.h"
-#include "ssplit/ssplit.h"
+#include "ssplit.h"
 
 #include <cassert>
 #include <iostream>

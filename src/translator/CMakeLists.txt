@@ -13,7 +13,7 @@ add_library(bergamot-translator STATIC
     translation_result.cpp
 )
 
-target_link_libraries(bergamot-translator marian)
+target_link_libraries(bergamot-translator marian ${MARIAN_CUDA_LIB} ${EXT_LIBS} ssplit pcrecpp.a pcre.a)
 target_include_directories(bergamot-translator
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
     PRIVATE ${CMAKE_SOURCE_DIR}

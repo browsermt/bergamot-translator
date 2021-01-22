@@ -50,12 +50,12 @@ public:
   }
 
   void wait() {
-    ABORT_IF(KERN_SUCCESS != semaphore_wait(back_), Exception,
+    ABORT_IF(KERN_SUCCESS != semaphore_wait(back_),
              "Wait for semaphore failed");
   }
 
   void post() {
-    ABORT_IF(KERN_SUCCESS != semaphore_signal(back_), Exception,
+    ABORT_IF(KERN_SUCCESS != semaphore_signal(back_),
              "Could not post to semaphore");
   }
 

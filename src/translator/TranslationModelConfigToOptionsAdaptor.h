@@ -1,8 +1,9 @@
 /*
- * This class adapts the TranslationModelConfiguration object to marian::Options object.
- * marian::Options is a class that is specific to Marian and is used heavily inside it
- * as configuration options (even for translation workflow). It makes sense to work with
- * this class internally in the implementation files.
+ * This class adapts the TranslationModelConfiguration object to marian::Options
+ * object. marian::Options is a class that is specific to Marian and is used
+ * heavily inside it as configuration options (even for translation workflow).
+ * It makes sense to work with this class internally in the implementation
+ * files.
  */
 
 #ifndef SRC_TRANSLATOR_TRANSLATIONMODELCONFIGTOOPTIONSADAPTOR_H_
@@ -16,17 +17,16 @@
 // All local includes
 #include "TranslationModelConfiguration.h"
 
-
 class TranslationModelConfigToOptionsAdaptor {
 public:
+  TranslationModelConfigToOptionsAdaptor();
 
-	TranslationModelConfigToOptionsAdaptor();
+  ~TranslationModelConfigToOptionsAdaptor();
 
-	~TranslationModelConfigToOptionsAdaptor();
-
-	/* Create an Options object from the translation model configuration object.
-	 */
-	std::shared_ptr<marian::Options> adapt(const TranslationModelConfiguration& config);
+  /* Create an Options object from the translation model configuration object.
+   */
+  std::shared_ptr<marian::Options>
+  adapt(const TranslationModelConfiguration &config);
 };
 
 #endif /* SRC_TRANSLATOR_TRANSLATIONMODELCONFIGTOOPTIONSADAPTOR_H_ */

@@ -7,29 +7,29 @@
 
 #include <iostream>
 
-#include "TranslationModelConfiguration.h"
 #include "AbstractTranslationModel.h"
+#include "TranslationModelConfiguration.h"
 #include "TranslationRequest.h"
 #include "TranslationResult.h"
 
+int main(int argc, char **argv) {
 
-int main(int argc, char** argv) {
+  // Create an instance of AbstractTranslationModel with a dummy model
+  // configuration
+  TranslationModelConfiguration config(
+      "dummy_modelFilePath", "dummy_sourceVocabPath", "dummy_targetVocabPath");
+  std::shared_ptr<AbstractTranslationModel> model =
+      AbstractTranslationModel::createInstance(config);
 
-	// Create an instance of AbstractTranslationModel with a dummy model configuration
-	TranslationModelConfiguration config("dummy_modelFilePath",
-				"dummy_sourceVocabPath",
-				"dummy_targetVocabPath");
-	std::shared_ptr<AbstractTranslationModel> model =
-			AbstractTranslationModel::createInstance(config);
+  // Call to translate a dummy (empty) texts with a dummy (empty) translation
+  // request
+  TranslationRequest req;
+  std::vector<std::string> texts;
+  auto result = model->translate(std::move(texts), req);
 
-	// Call to translate a dummy (empty) texts with a dummy (empty) translation request
-	TranslationRequest req;
-	std::vector<std::string> texts;
-	auto result = model->translate(std::move(texts), req);
+  // Resolve the future and get the actual result
+  std::vector<TranslationResult> res = result.get();
 
-	// Resolve the future and get the actual result
-	std::vector<TranslationResult> res = result.get();
-
-	std::cout << "Count is: " << res.size() << std::endl;
-	return 0;
+  std::cout << "Count is: " << res.size() << std::endl;
+  return 0;
 }

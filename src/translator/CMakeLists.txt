@@ -1,7 +1,6 @@
 add_library(bergamot-translator STATIC
     AbstractTranslationModel.cpp
-    TranslationModel.cpp
-    TranslationModelConfigToOptionsAdaptor.cpp)
+    TranslationModel.cpp)
 
 target_link_libraries(bergamot-translator marian)
 

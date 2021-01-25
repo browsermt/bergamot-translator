@@ -16,7 +16,6 @@
 
 // All local project includes
 #include "AbstractTranslationModel.h"
-#include "TranslationModelConfiguration.h"
 
 /* A Translation model that translates a plain (without any markups and emojis) UTF-8 encoded text.
  * This implementation supports translation from 1 source language to 1 target language.

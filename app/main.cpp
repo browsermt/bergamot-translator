@@ -7,18 +7,14 @@
 
 #include <iostream>
 
-#include "TranslationModelConfiguration.h"
 #include "AbstractTranslationModel.h"
 #include "TranslationRequest.h"
 #include "TranslationResult.h"
 
 
 int main(int argc, char** argv) {
-
-	// Create an instance of AbstractTranslationModel with a dummy model configuration
-	TranslationModelConfiguration config("dummy_modelFilePath",
-				"dummy_sourceVocabPath",
-				"dummy_targetVocabPath");
+	// Create AbstractTranslationModel instance with a configuration (as yaml-formatted string)
+	std::string config("{workspace: 1024, cpu-threads: 2}");
 	std::shared_ptr<AbstractTranslationModel> model =
 			AbstractTranslationModel::createInstance(config);
 

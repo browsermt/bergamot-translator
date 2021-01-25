@@ -14,7 +14,6 @@
 #include <future>
 #include <memory>
 
-#include "TranslationModelConfiguration.h"
 #include "TranslationRequest.h"
 #include "TranslationResult.h"
 
@@ -26,10 +25,12 @@ public:
 
 	/* A Factory method to create and return an instance of an implementation of
 	 * AbstractTranslationModel. The instance is created using translation model configuration
-	 * (TranslationModelConfiguration).
+	 * provided as a yaml-formatted string. Please refer to:
+	 * https://marian-nmt.github.io/docs/cmd/marian-decoder/ for a complete list of configuration
+	 * options.
 	 */
 	static std::shared_ptr<AbstractTranslationModel>
-	createInstance(const TranslationModelConfiguration& config);
+	createInstance(const std::string& config);
 
 	AbstractTranslationModel() = default;
 

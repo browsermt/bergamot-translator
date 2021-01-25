@@ -17,6 +17,7 @@
 // All local project includes
 #include "AbstractTranslationModel.h"
 #include "TranslationModelConfiguration.h"
+#include "translator/service.h"
 
 /* A Translation model that translates a plain (without any markups and emojis)
  * UTF-8 encoded text. This implementation supports translation from 1 source
@@ -26,7 +27,7 @@ class TranslationModel : public AbstractTranslationModel {
 public:
   /* Construct the model using the model configuration options.
    */
-  TranslationModel(std::shared_ptr<marian::Options> options);
+  TranslationModel(const std::string &config);
 
   ~TranslationModel();
 
@@ -64,7 +65,8 @@ public:
 
 private:
   // Model configuration options
-  std::shared_ptr<marian::Options> configOptions;
+  std::shared_ptr<marian::Options> configOptions_; // ORDER DEPENDECNY
+  marian::bergamot::Service service_;              // ORDER DEPENDENCY
 };
 
 #endif /* SRC_TRANSLATOR_TRANSLATIONMODEL_H_ */

@@ -13,9 +13,8 @@
 #include "TranslationModelConfigToOptionsAdaptor.h"
 
 std::shared_ptr<AbstractTranslationModel>
-AbstractTranslationModel::createInstance(
-    const TranslationModelConfiguration &config) {
-  TranslationModelConfigToOptionsAdaptor adaptor;
-  auto options = adaptor.adapt(config);
-  return std::make_shared<TranslationModel>(options);
+AbstractTranslationModel::createInstance(const std::string &config) {
+  // TranslationModelConfigToOptionsAdaptor adaptor;
+  // auto options = adaptor.adapt(config);
+  return std::make_shared<TranslationModel>(config);
 }

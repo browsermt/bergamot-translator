@@ -21,12 +21,16 @@ public:
   typedef std::vector<std::pair<std::string_view, std::string_view>>
       SentenceMappings;
 
-  TranslationResult(const std::string &original, const std::string &translation)
-      : originalText(original), translatedText(translation) {}
+  TranslationResult(const std::string &original, const std::string &translation,
+                    SentenceMappings &sentenceMappings)
+      : originalText(original), translatedText(translation),
+        sentenceMappings(sentenceMappings) {}
 
-  TranslationResult(std::string &&original, std::string &&translation)
+  TranslationResult(std::string &&original, std::string &&translation,
+                    SentenceMappings &&sentenceMappings)
       : originalText(std::move(original)),
-        translatedText(std::move(translation)) {}
+        translatedText(std::move(translation)),
+        sentenceMappings(std::move(sentenceMappings)) {}
 
   /* Return the original text. */
   const std::string &getOriginalText() const { return originalText; }

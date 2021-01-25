@@ -30,7 +30,7 @@ public:
    * configuration (TranslationModelConfiguration).
    */
   static std::shared_ptr<AbstractTranslationModel>
-  createInstance(const TranslationModelConfiguration &config);
+  createInstance(const std::string &config);
 
   AbstractTranslationModel() = default;
 

@@ -40,10 +40,14 @@ public:
   // For development use to benchmark with marian-decoder.
   const Histories &getHistories() const { return histories_; }
 
-private:
   std::string source_;
   std::string translation_;
+  // Adding the following to complete bergamot-translator spec, redundant while
+  // sourceMappings_ and targetMappings_ exists or vice-versa.
 
+  SentenceMappings sentenceMappings_;
+
+private:
   // Histories are currently required for interoperability with OutputPrinter
   // and OutputCollector and hence comparisons with marian-decoder.
   // Future hook to gain alignments.
@@ -59,11 +63,6 @@ private:
   // string_views at the sentence-level.
   std::vector<string_view> sourceMappings_;
   std::vector<string_view> targetMappings_;
-
-  // Adding the following to complete bergamot-translator spec, redundant while
-  // sourceMappings_ and targetMappings_ exists or vice-versa.
-
-  SentenceMappings sentenceMappings_;
 };
 } // namespace bergamot
 } // namespace marian

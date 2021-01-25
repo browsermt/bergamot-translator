@@ -1,7 +1,6 @@
 add_library(bergamot-translator STATIC
     AbstractTranslationModel.cpp
     TranslationModel.cpp
-    TranslationModelConfigToOptionsAdaptor.cpp
 
     # Following files added from browsermt/mts@nuke
     textops.cpp

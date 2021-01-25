@@ -6,11 +6,14 @@
 #include <future>
 #include <vector>
 
+// All 3rd party includes
 #include "3rd_party/marian-dev/src/3rd_party/yaml-cpp/yaml.h"
 #include "3rd_party/marian-dev/src/common/config_parser.h"
-#include "TranslationModel.h"
 #include "common/config_validator.h"
 #include "common/options.h"
+
+// All local project includes
+#include "TranslationModel.h"
 #include "translator/service.h"
 
 std::shared_ptr<marian::Options> parseOptions(const std::string &config) {

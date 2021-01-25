@@ -15,7 +15,6 @@
 #include <string>
 #include <vector>
 
-#include "TranslationModelConfiguration.h"
 #include "TranslationRequest.h"
 #include "TranslationResult.h"
 
@@ -27,7 +26,7 @@ class AbstractTranslationModel {
 public:
   /* A Factory method to create and return an instance of an implementation of
    * AbstractTranslationModel. The instance is created using translation model
-   * configuration (TranslationModelConfiguration).
+   * configuration provided as yaml-formatted string.
    */
   static std::shared_ptr<AbstractTranslationModel>
   createInstance(const std::string &config);

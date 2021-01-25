@@ -8,7 +8,6 @@
 #include <iostream>
 
 #include "AbstractTranslationModel.h"
-#include "TranslationModelConfiguration.h"
 #include "TranslationRequest.h"
 #include "TranslationResult.h"
 #include "translator/parser.h"

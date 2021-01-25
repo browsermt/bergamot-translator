@@ -16,7 +16,6 @@
 
 // All local project includes
 #include "AbstractTranslationModel.h"
-#include "TranslationModelConfiguration.h"
 #include "translator/service.h"
 
 /* A Translation model that translates a plain (without any markups and emojis)
@@ -25,7 +24,7 @@
  */
 class TranslationModel : public AbstractTranslationModel {
 public:
-  /* Construct the model using the model configuration options.
+  /* Construct the model using the model configuration options as yaml-formatted string
    */
   TranslationModel(const std::string &config);
 

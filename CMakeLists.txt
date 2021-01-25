@@ -17,9 +17,5 @@ option(USE_STATIC_LIBS "Link statically against non-system libs" ON)
 option(USE_MKL "Compile with MKL support" ON)
 
 add_subdirectory(3rd_party)
-
-# Adds the include directories set inside 3rd_party.
-include_directories(${INCLUDE_DIRECTORIES})
-
 add_subdirectory(src)
 add_subdirectory(app)

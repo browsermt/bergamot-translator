@@ -50,10 +50,10 @@ SentenceSplitter::string2splitmode(const std::string &m) {
   return splitmode::wrapped_text;
 }
 
-Segment TextProcessor::tokenize(const string_view &snt,
+Segment TextProcessor::tokenize(const string_view &segment,
                                 TokenRanges &tokenRanges) {
   return vocabs_->front()->encodePreservingSource(
-      snt, tokenRanges, /*addEOS=*/false, /*inference=*/true);
+      segment, tokenRanges, /*addEOS=*/false, /*inference=*/true);
 }
 
 TextProcessor::TextProcessor(std::vector<Ptr<Vocab const>> &vocabs,
@@ -90,33 +90,18 @@ void TextProcessor::process(const string_view &query, Segments &segments,
 void TextProcessor::truncate(Segment &segment, TokenRanges &tokenRanges,
                              Segments &segments,
                              std::vector<TokenRanges> &sourceRanges) {
-  if (segment.size() > max_input_sentence_tokens_) {
-    int offset;
-    // Loop as long as I can grab max_input_sentence_tokens_
-    for (offset = 0; offset + max_input_sentence_tokens_ < segment.size();
-         offset += max_input_sentence_tokens_) {
-      auto start = segment.begin() + offset;
+  for (int offset = 0; offset < segment.size();
+       offset += max_input_sentence_tokens_) {
+    auto start = segment.begin() + offset;
 
-      segments.emplace_back(start, start + max_input_sentence_tokens_);
-      segments.back().push_back(sourceEosId());
+    unsigned int left = segment.size() - offset;
+    unsigned int diff = std::min(max_input_sentence_tokens_, left);
 
-      auto astart = tokenRanges.begin() + offset;
-      sourceRanges.emplace_back(astart, astart + max_input_sentence_tokens_);
-    }
-
-    if (offset < max_input_sentence_tokens_) {
-      auto start = segment.begin() + offset;
-      segments.emplace_back(start, segment.end());
-      segments.back().push_back(sourceEosId());
-
-      auto astart = tokenRanges.begin() + offset;
-      sourceRanges.emplace_back(astart, tokenRanges.end());
-    }
-
-  } else {
-    segments.emplace_back(segment);
+    segments.emplace_back(start, start + diff);
     segments.back().push_back(sourceEosId());
-    sourceRanges.emplace_back(tokenRanges);
+
+    auto astart = tokenRanges.begin() + offset;
+    sourceRanges.emplace_back(astart, astart + diff);
   }
 }
 

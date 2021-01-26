@@ -48,11 +48,10 @@ void Request::processHistory(size_t index, Ptr<History> history) {
 void Request::completeRequest() {
   // Request no longer needs to hold the content, can transfer it to
   // TranslationResult.
-  TranslationResult translation_result(std::move(source_), std::move(segments_),
+  TranslationResult translation_result(std::move(source_),
                                        std::move(sourceAlignments_),
                                        std::move(histories_), *vocabs_);
-  LOG(info, "Last translation in. Closing request;");
-  response_.set_value(translation_result);
+  response_.set_value(std::move(translation_result));
 }
 
 bool Request::operator<(const Request &b) const {

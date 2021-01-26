@@ -13,10 +13,20 @@ namespace marian {
 namespace bergamot {
 class TranslationResult {
 public:
-  TranslationResult(std::string &&source, Segments &&segments,
+  TranslationResult(std::string &&source,
                     std::vector<TokenRanges> &&sourceRanges,
                     Histories &&histories,
                     std::vector<Ptr<Vocab const>> &vocabs);
+
+  TranslationResult(TranslationResult &&other)
+      : source_(std::move(other.source_)),
+        translation_(std::move(other.translation_)),
+        sourceRanges_(std::move(other.sourceRanges_)),
+        sentenceMappings_(std::move(other.sentenceMappings_)),
+        histories_(std::move(other.histories_)){};
+
+  TranslationResult(const TranslationResult &) = delete;
+  TranslationResult &operator=(const TranslationResult &) = delete;
 
   // Returns const references to source and translated texts, for external
   // consumption.
@@ -28,7 +38,8 @@ public:
   // pair for external consumption. Each entry corresponding
   // to a (source-sentence, target-sentence).
 
-  typedef std::vector<std::pair<string_view, string_view>> SentenceMappings;
+  typedef std::vector<std::pair<const string_view, const string_view>>
+      SentenceMappings;
   const SentenceMappings &getSentenceMappings() const {
     return sentenceMappings_;
   }
@@ -39,6 +50,9 @@ public:
 
   // For development use to benchmark with marian-decoder.
   const Histories &getHistories() const { return histories_; }
+
+  // @jerinphilip: Why are these members no longer-private? For move-semantics
+  // with consistent string_views for bergamot-translator.
 
   std::string source_;
   std::string translation_;
@@ -53,16 +67,8 @@ private:
   // Future hook to gain alignments.
   Histories histories_;
 
-  // Can be removed eventually.
-  Segments segments_;
-  std::vector<Ptr<Vocab const>> *vocabs_;
-
   // string_views at the token level.
   std::vector<TokenRanges> sourceRanges_;
-
-  // string_views at the sentence-level.
-  std::vector<string_view> sourceMappings_;
-  std::vector<string_view> targetMappings_;
 };
 } // namespace bergamot
 } // namespace marian

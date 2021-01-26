@@ -9,9 +9,10 @@ namespace bergamot {
 Batcher::Batcher(Ptr<Options> options) {
   max_input_tokens_ = options->get<int>("max-input-tokens");
   bucket_.resize(options->get<int>("max-input-sentence-tokens") + 1);
-  ABORT_IF(max_input_tokens_ >= bucket_.size(),
-           "max-input-sentence-tokens cannot be greater than max-input-tokens, "
-           "batcher fail");
+  ABORT_IF(
+      max_input_tokens_ < bucket_.size() - 1,
+      "max-input-tokens cannot be less than than max-input-sentence-tokens, "
+      "batcher fail");
 }
 
 void Batcher::addSentenceWithPriority(RequestSentence &sentence) {

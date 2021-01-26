@@ -26,11 +26,18 @@ public:
       : originalText(original), translatedText(translation),
         sentenceMappings(sentenceMappings) {}
 
+  TranslationResult(TranslationResult &&other)
+      : originalText(std::move(other.originalText)),
+        translatedText(std::move(other.translatedText)),
+        sentenceMappings(std::move(other.sentenceMappings)) {}
+
   TranslationResult(std::string &&original, std::string &&translation,
                     SentenceMappings &&sentenceMappings)
       : originalText(std::move(original)),
         translatedText(std::move(translation)),
         sentenceMappings(std::move(sentenceMappings)) {}
+
+  TranslationResult &operator=(const TranslationResult &) = delete;
 
   /* Return the original text. */
   const std::string &getOriginalText() const { return originalText; }

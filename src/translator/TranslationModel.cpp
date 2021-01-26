@@ -62,8 +62,15 @@ TranslationModel::translate(std::vector<std::string> &&texts,
   std::promise<std::vector<TranslationResult>> promise;
   auto future = promise.get_future();
 
-  auto convert = [](marian::bergamot::TranslationResult &mTranslationResult) {
-    // Change marian::string_view to std::string_view
+  // This code, move into async?
+  std::vector<TranslationResult> translationResults;
+  for (auto &text : texts) {
+    // Collect future as marian::bergamot::TranslationResult
+    auto intermediate = service_.translate(std::move(text));
+    intermediate.wait();
+    auto mTranslationResult(std::move(intermediate.get()));
+
+    // Convert to UnifiedAPI::TranslationResult
     TranslationResult::SentenceMappings sentenceMappings;
     for (auto &p : mTranslationResult.getSentenceMappings()) {
       std::string_view src(p.first.data(), p.first.size()),
@@ -71,26 +78,13 @@ TranslationModel::translate(std::vector<std::string> &&texts,
       sentenceMappings.emplace_back(src, tgt);
     }
 
-    TranslationResult translationResult(
-        std::move(mTranslationResult.source_),
-        std::move(mTranslationResult.translation_),
-        std::move(sentenceMappings));
-
-    return translationResult;
-  };
-
-  // This code, move into async?
-  std::vector<TranslationResult> translationResults;
-  for (auto &text : texts) {
-    // Copying text, can also be replaced with move based function.
-    // translate(...)
-    auto intermediate = service_.translateWithCopy(text);
-    intermediate.wait();
-    marian::bergamot::TranslationResult result = intermediate.get();
-    translationResults.push_back(convert(result));
+    // In place construction.
+    translationResults.emplace_back(std::move(mTranslationResult.source_),
+                                    std::move(mTranslationResult.translation_),
+                                    std::move(sentenceMappings));
   }
 
-  promise.set_value(translationResults);
+  promise.set_value(std::move(translationResults));
   return future;
 }
 

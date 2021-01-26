@@ -1,4 +1,5 @@
 #include <cstdlib>
+#include <future>
 #include <iostream>
 #include <sstream>
 
@@ -7,6 +8,7 @@
 #include "marian.h"
 #include "translator/parser.h"
 #include "translator/service.h"
+#include "translator/translation_result.h"
 
 int main(int argc, char *argv[]) {
   auto cp = marian::bergamot::createConfigParser();
@@ -17,17 +19,26 @@ int main(int argc, char *argv[]) {
   std::ostringstream std_input;
   std_input << std::cin.rdbuf();
   std::string input = std_input.str();
+  using marian::bergamot::TranslationResult;
 
-  LOG(info, "IO complete Translating input");
   // Wait on future until TranslationResult is complete
-  auto translation_result_future = service.translate(std::move(input));
+  std::future<TranslationResult> translation_result_future =
+      service.translate(std::move(input));
   translation_result_future.wait();
-  auto translation_result = translation_result_future.get();
+  const TranslationResult &translation_result = translation_result_future.get();
 
-  // Obtain sentencemappings and print them as Proof of Concept.
-  for (auto &p : translation_result.getSentenceMappings()) {
-    std::cout << "[src] " << p.first << "\n";
-    std::cout << "[tgt] " << p.second << "\n";
+  std::cout << "service-cli [Source text]: ";
+  std::cout << translation_result.getOriginalText() << std::endl;
+
+  std::cout << "service-cli [Translated text]: ";
+  std::cout << translation_result.getTranslatedText() << std::endl;
+
+  // Obtain sentenceMappings and print them as Proof of Concept.
+  const TranslationResult::SentenceMappings &sentenceMappings =
+      translation_result.getSentenceMappings();
+  for (auto &p : sentenceMappings) {
+    std::cout << "service-cli [src] " << p.first << "\n";
+    std::cout << "service-cli [tgt] " << p.second << "\n";
   }
 
   // Stop Service.

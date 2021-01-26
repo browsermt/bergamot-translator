@@ -28,38 +28,38 @@ int main(int argc, char **argv) {
 
   TranslationRequest translationRequest;
   std::vector<std::string> texts;
-  for (int i = 0; i < 10; i++) {
-    texts.emplace_back(
-        "The Bergamot project will add and improve client-side machine"
-        "translation in a web browser.  Unlike current cloud-based"
-        "options, running directly on users’ machines empowers citizens to"
-        "preserve their privacy and increases the uptake of language"
-        "technologies in Europe in various sectors that require"
-        "confidentiality. Free software integrated with an open-source web"
-        "browser, such as Mozilla Firefox, will enable bottom-up adoption"
-        "by non-experts, resulting in cost savings for private and public"
-        "sector users who would otherwise procure translation or operate"
-        "monolingually.  Bergamot is a consortium coordinated by the"
-        "University of Edinburgh with partners Charles University in"
-        "Prague, the University of Sheffield, University of Tartu, and"
+  texts.emplace_back("The Bergamot project will add and improve client-side machine "
+        "translation in a web browser.  Unlike current cloud-based "
+        "options, running directly on users’ machines empowers citizens to "
+        "preserve their privacy and increases the uptake of language "
+        "technologies in Europe in various sectors that require "
+        "confidentiality.");
+  texts.emplace_back("Free software integrated with an open-source web "
+        "browser, such as Mozilla Firefox, will enable bottom-up adoption "
+        "by non-experts, resulting in cost savings for private and public "
+        "sector users who would otherwise procure translation or operate "
+        "monolingually.  Bergamot is a consortium coordinated by the "
+        "University of Edinburgh with partners Charles University in "
+        "Prague, the University of Sheffield, University of Tartu, and "
         "Mozilla.");
-  }
 
-  auto result = model->translate(std::move(texts), translationRequest);
+  auto futureResults = model->translate(std::move(texts), translationRequest);
 
   // Resolve the future and get the actual result
-  std::vector<TranslationResult> results = result.get();
+  std::vector<TranslationResult> results = futureResults.get();
 
   for (auto &result : results) {
+    std::cout << "[original]: " << result.getOriginalText() << std::endl;
+    std::cout << "[translated]: " << result.getTranslatedText() << std::endl;
     auto mappings = result.getSentenceMappings();
     for (auto &p : mappings) {
       std::string_view src = p.first;
       std::string_view tgt = p.second;
 
-      std::cout << "[src]: " << src << std::endl;
-      std::cout << "[tgt]: " << tgt << std::endl;
-      std::cout << std::endl;
+      std::cout << " [src Sentence]: " << src << std::endl;
+      std::cout << " [tgt Sentence]: " << tgt << std::endl;
     }
+    std::cout << std::endl;
   }
 
   return 0;

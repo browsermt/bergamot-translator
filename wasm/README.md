@@ -2,7 +2,8 @@
 The example file `bergamot.html` in this folder demonstrates how to use the bergamot translator in JavaScript via a `<script>` tag.
 
 A brief summary is here though:
-```
+
+```js
 // Instantiate the TranslationModelConfiguration
 var modelConfig = new Module.TranslationModelConfiguration("dummy_modelFilePath","dummy_sourceVocabPath","dummy_targetVocabPath");
 
@@ -39,11 +40,12 @@ You can also see everything in action by running `bergamot.html` file in the bro
 
 Assuming build artefacts are present in `$ROOT/build-wasm` folder where `ROOT` is repository's root.
 Above instructions would become:
+
+```bash
+cd $ROOT/build-wasm
+cp ../wasm/bergamot.html wasm/.
+python3 -m http.server -d wasm
 ```
-$ cd $ROOT/build-wasm
-$ cp ../wasm/bergamot.html wasm/.
-$ python3 -m http.server -d wasm
 
 Assuming it starts the http server on 8000 port,
 open `http://0.0.0.0:8000/bergamot.html` in any browser and see the console logs in browser's console.
-```

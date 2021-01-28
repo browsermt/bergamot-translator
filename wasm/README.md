@@ -5,20 +5,20 @@ A brief summary is here though:
 
 ```js
 // Instantiate the TranslationModelConfiguration
-var modelConfig = new Module.TranslationModelConfiguration("dummy_modelFilePath","dummy_sourceVocabPath","dummy_targetVocabPath");
+const modelConfig = new Module.TranslationModelConfiguration("dummy_modelFilePath","dummy_sourceVocabPath","dummy_targetVocabPath");
 
 // Instantiate the TranslationModel
-var model = new Module.TranslationModel(modelConfig);
+const model = new Module.TranslationModel(modelConfig);
 
 // Instantiate the arguments of translate() API i.e. TranslationRequest and input (vector<string>)
-var request = new Module.TranslationRequest();
-let input = new Module.VectorString;
+const request = new Module.TranslationRequest();
+const input = new Module.VectorString;
 
 // Initialize the input
 input.push_back("Hola"); input.push_back("Mundo");
 
 // translate the input; the result is a vector<TranslationResult>
-var result = model.translate(input, request);
+const result = model.translate(input, request);
 
 // Print original and translated text from each entry of vector<TranslationResult>
 for (let i = 0; i < result.size(); i++) {

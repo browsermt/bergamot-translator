@@ -19,7 +19,6 @@ int main(int argc, char **argv) {
   auto configParser = marian::bergamot::createConfigParser();
   auto options = configParser.parseOptions(argc, argv, true);
   std::string config = options->asYamlString();
-  std::cout << config << std::endl;
 
   // Route the config string to construct marian model through
   // AbstractTranslationModel
@@ -28,20 +27,22 @@ int main(int argc, char **argv) {
 
   TranslationRequest translationRequest;
   std::vector<std::string> texts;
-  texts.emplace_back("The Bergamot project will add and improve client-side machine "
-        "translation in a web browser.  Unlike current cloud-based "
-        "options, running directly on users’ machines empowers citizens to "
-        "preserve their privacy and increases the uptake of language "
-        "technologies in Europe in various sectors that require "
-        "confidentiality.");
-  texts.emplace_back("Free software integrated with an open-source web "
-        "browser, such as Mozilla Firefox, will enable bottom-up adoption "
-        "by non-experts, resulting in cost savings for private and public "
-        "sector users who would otherwise procure translation or operate "
-        "monolingually.  Bergamot is a consortium coordinated by the "
-        "University of Edinburgh with partners Charles University in "
-        "Prague, the University of Sheffield, University of Tartu, and "
-        "Mozilla.");
+  texts.emplace_back(
+      "The Bergamot project will add and improve client-side machine "
+      "translation in a web browser.  Unlike current cloud-based "
+      "options, running directly on users’ machines empowers citizens to "
+      "preserve their privacy and increases the uptake of language "
+      "technologies in Europe in various sectors that require "
+      "confidentiality.");
+  texts.emplace_back(
+      "Free software integrated with an open-source web "
+      "browser, such as Mozilla Firefox, will enable bottom-up adoption "
+      "by non-experts, resulting in cost savings for private and public "
+      "sector users who would otherwise procure translation or operate "
+      "monolingually.  Bergamot is a consortium coordinated by the "
+      "University of Edinburgh with partners Charles University in "
+      "Prague, the University of Sheffield, University of Tartu, and "
+      "Mozilla.");
 
   auto futureResults = model->translate(std::move(texts), translationRequest);
 

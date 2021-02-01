@@ -13,6 +13,6 @@ target_include_directories(bergamot-translator-wasm
 
 set_target_properties(bergamot-translator-wasm PROPERTIES
                         SUFFIX ".js"
-                        LINK_FLAGS "--bind --post-js ../../wasm/post-module.js")
+                        LINK_FLAGS "--bind")
 
 target_link_libraries(bergamot-translator-wasm bergamot-translator)

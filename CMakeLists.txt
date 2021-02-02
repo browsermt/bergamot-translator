@@ -16,10 +16,11 @@ option(USE_SENTENCEPIECE "Download and compile SentencePiece" ON)
 option(USE_STATIC_LIBS "Link statically against non-system libs" ON)
 option(USE_MKL "Compile with MKL support" ON)
 
+execute_process(COMMAND git submodule update --init --recursive --no-fetch
+                WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+
 add_subdirectory(3rd_party)
 add_subdirectory(src)
 add_subdirectory(app)
 
-execute_process(COMMAND git submodule update --init --recursive --no-fetch
-                WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 

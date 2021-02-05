@@ -2,7 +2,6 @@
 #include "common/logging.h"
 #include "data/corpus.h"
 #include "data/text_input.h"
-#include "sanelogging.h"
 #include "translator/beam_search.h"
 
 namespace marian {

@@ -4,7 +4,7 @@
 #include "batch_translator.h"
 #include "batcher.h"
 #include "pcqueue.h"
-#include "textops.h"
+#include "text_processor.h"
 #include "translation_result.h"
 
 #include <queue>

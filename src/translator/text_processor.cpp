@@ -1,58 +1,17 @@
-#include "textops.h"
-#include "common/timer.h"
-#include <pcrecpp.h>
-#include <string>
-#include <unordered_map>
-#include <utility>
+#include "text_processor.h"
+#include "data/types.h"
+#include "definitions.h"
+
+#include "common/options.h"
+#include "data/vocab.h"
 #include <vector>
 
 namespace marian {
 namespace bergamot {
 
-SentenceSplitter::SentenceSplitter(marian::Ptr<marian::Options> options)
-    : options_(options) {
-
-  std::string smode_str = options_->get<std::string>("ssplit-mode", "");
-  mode_ = string2splitmode(smode_str);
-  std::string ssplit_prefix_file =
-      options_->get<std::string>("ssplit-prefix-file", "");
-
-  if (ssplit_prefix_file.size()) {
-    ssplit_prefix_file = marian::cli::interpolateEnvVars(ssplit_prefix_file);
-
-    LOG(info, "Loading protected prefixes for sentence splitting from {}",
-        ssplit_prefix_file);
-
-    ssplit_.load(ssplit_prefix_file);
-  } else {
-    LOG(warn, "Missing list of protected prefixes for sentence splitting. "
-              "Set with --ssplit-prefix-file.");
-  }
-}
-
-ug::ssplit::SentenceStream
-SentenceSplitter::createSentenceStream(const string_view &input) {
-  pcrecpp::StringPiece spiece(input.begin(), input.size());
-  return std::move(ug::ssplit::SentenceStream(spiece, this->ssplit_, mode_));
-}
-
-ug::ssplit::SentenceStream::splitmode
-SentenceSplitter::string2splitmode(const std::string &m) {
-  typedef ug::ssplit::SentenceStream::splitmode splitmode;
-  // @TODO: throw Exception on error
-  if (m == "sentence" || m == "Sentence")
-    return splitmode::one_sentence_per_line;
-  if (m == "paragraph" || m == "Paragraph")
-    return splitmode::one_paragraph_per_line;
-  if (m != "wrapped_text" && m != "WrappedText" && m != "wrappedText") {
-    LOG(warn, "Ignoring unknown text input format specification: {}.", m);
-  }
-  return splitmode::wrapped_text;
-}
-
 Segment TextProcessor::tokenize(const string_view &segment,
                                 TokenRanges &tokenRanges) {
-  return vocabs_->front()->encodePreservingSource(
+  return vocabs_->front()->encodeWithByteRanges(
       segment, tokenRanges, /*addEOS=*/false, /*inference=*/true);
 }
 
@@ -70,11 +29,11 @@ void TextProcessor::process(const string_view &query, Segments &segments,
                             std::vector<TokenRanges> &sourceRanges) {
 
   auto sentenceStream = sentence_splitter_.createSentenceStream(query);
-  pcrecpp::StringPiece sentenceStringPiece;
+  std::string_view sentenceStringPiece;
 
   while (sentenceStream >> sentenceStringPiece) {
-    string_view sentence(sentenceStringPiece.data(),
-                         sentenceStringPiece.size());
+    marian::string_view sentence(sentenceStringPiece.data(),
+                                 sentenceStringPiece.size());
     TokenRanges tokenRanges;
     Segment segment = tokenize(sentence, tokenRanges);
 

@@ -3,7 +3,8 @@ add_library(bergamot-translator STATIC
     TranslationModel.cpp
 
     # Following files added from browsermt/mts@nuke
-    textops.cpp
+    text_processor.cpp
+    sentence_splitter.cpp
     batch_translator.cpp 
     multifactor_priority.cpp 
     request.cpp 
@@ -17,4 +18,5 @@ target_link_libraries(bergamot-translator marian ssplit)
 target_include_directories(bergamot-translator
     PRIVATE ${CMAKE_SOURCE_DIR}
     PUBLIC ${CMAKE_SOURCE_DIR}/src)
+
 

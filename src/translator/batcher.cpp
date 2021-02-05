@@ -1,6 +1,5 @@
 #include "batcher.h"
 #include "common/logging.h"
-#include "sanelogging.h"
 #include <cassert>
 
 namespace marian {

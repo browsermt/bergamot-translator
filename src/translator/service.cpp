@@ -1,6 +1,5 @@
 #include "service.h"
 #include "definitions.h"
-#include "sanelogging.h"
 
 #include <string>
 #include <utility>

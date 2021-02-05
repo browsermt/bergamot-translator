@@ -1,39 +1,16 @@
-#ifndef SRC_BERGAMOT_TEXTOPS_H_
-#define SRC_BERGAMOT_TEXTOPS_H_
+#ifndef SRC_BERGAMOT_TEXT_PROCESSOR_H_
+#define SRC_BERGAMOT_TEXT_PROCESSOR_H_
 
-#include "common/definitions.h"
-#include "common/logging.h"
-#include "common/options.h"
-#include "common/types.h" // missing in shortlist.h
-#include "common/utils.h"
-#include "data/sentencepiece_vocab.h"
-#include "data/shortlist.h"
+#include "data/types.h"
+#include "data/vocab.h"
 #include "definitions.h"
-#include "ssplit.h"
 
-#include <cassert>
-#include <iostream>
-#include <string>
+#include "sentence_splitter.h"
+
 #include <vector>
 
 namespace marian {
 namespace bergamot {
-
-class SentenceSplitter {
-  // A wrapper around @ugermann's ssplit-cpp compiled from several places in
-  // mts. Constructed based on options. Used in TextProcessor below to create
-  // sentence-streams, which provide access to one sentence from blob of text at
-  // a time.
-public:
-  explicit SentenceSplitter(Ptr<Options> options);
-  ug::ssplit::SentenceStream createSentenceStream(string_view const &input);
-
-private:
-  ug::ssplit::SentenceSplitter ssplit_;
-  Ptr<Options> options_;
-  ug::ssplit::SentenceStream::splitmode mode_;
-  ug::ssplit::SentenceStream::splitmode string2splitmode(const std::string &m);
-};
 
 class TextProcessor {
   // TextProcessor handles loading the sentencepiece vocabulary and also
@@ -68,4 +45,4 @@ private:
 } // namespace bergamot
 } // namespace marian
 
-#endif // SRC_BERGAMOT_TEXTOPS_H_
+#endif // SRC_BERGAMOT_TEXT_PROCESSOR_H_

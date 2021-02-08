@@ -52,7 +52,7 @@ SentenceSplitter::string2splitmode(const std::string &m) {
 
 Segment TextProcessor::tokenize(const string_view &segment,
                                 TokenRanges &tokenRanges) {
-  return vocabs_->front()->encodePreservingSource(
+  return vocabs_->front()->encodeWithByteRanges(
       segment, tokenRanges, /*addEOS=*/false, /*inference=*/true);
 }
 

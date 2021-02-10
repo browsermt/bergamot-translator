@@ -55,7 +55,7 @@ TranslationModel::TranslationModel(const std::string &config)
 
 TranslationModel::~TranslationModel() {}
 
-std::future<std::vector<TranslationResult>>
+std::vector<TranslationResult>
 TranslationModel::translate(std::vector<std::string> &&texts,
                             TranslationRequest request) {
   // Implementing a non-async version first. Unpleasant, but should work.
@@ -84,8 +84,7 @@ TranslationModel::translate(std::vector<std::string> &&texts,
                                     std::move(sentenceMappings));
   }
 
-  promise.set_value(std::move(translationResults));
-  return future;
+  return translationResults;
 }
 
 bool TranslationModel::isAlignmentSupported() const { return false; }

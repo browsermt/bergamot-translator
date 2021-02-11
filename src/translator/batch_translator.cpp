@@ -14,7 +14,11 @@ BatchTranslator::BatchTranslator(DeviceId const device,
                                  Ptr<Options> options)
     : device_(device), options_(options), pcqueue_(&pcqueue), vocabs_(&vocabs) {
 
+#ifdef WITH_PTHREADS
   thread_ = std::thread([this] { this->mainloop(); });
+#else
+  this->initGraph();
+#endif
 }
 
 void BatchTranslator::initGraph() {
@@ -100,12 +104,16 @@ void BatchTranslator::translate(RequestSentences &requestSentences,
 }
 
 void BatchTranslator::mainloop() {
+#ifdef WITH_PTHREADS
   initGraph();
+#endif
 
   PCItem pcitem;
   Histories histories;
 
+#ifdef WITH_PTHREADS
   while (true) {
+#endif
     pcqueue_->ConsumeSwap(pcitem);
     if (pcitem.isPoison()) {
       return;
@@ -115,10 +123,16 @@ void BatchTranslator::mainloop() {
         pcitem.sentences[i].completeSentence(histories[i]);
       }
     }
+#ifdef WITH_PTHREADS
   }
+#endif
 }
 
-void BatchTranslator::join() { thread_.join(); }
+void BatchTranslator::join() {
+#ifdef WITH_PTHREADS
+  thread_.join();
+#endif
+}
 
 } // namespace bergamot
 } // namespace marian

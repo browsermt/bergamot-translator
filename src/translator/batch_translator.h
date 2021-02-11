@@ -29,10 +29,16 @@ public:
   // convenience function for logging. TODO(jerin)
   std::string _identifier() { return "worker" + std::to_string(device_.no); }
 
+#ifndef WITH_PTHREADS
+  void mainloop();
+#endif
+
 private:
   void initGraph();
   void translate(RequestSentences &requestSentences, Histories &histories);
+#ifdef WITH_PTHREADS
   void mainloop();
+#endif
 
   Ptr<Options> options_;
 
@@ -43,7 +49,9 @@ private:
   Ptr<data::ShortlistGenerator const> slgen_;
 
   PCQueue<PCItem> *pcqueue_;
+#ifdef WITH_PTHREADS
   std::thread thread_;
+#endif
 };
 } // namespace bergamot
 } // namespace marian

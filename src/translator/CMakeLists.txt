@@ -21,6 +21,10 @@ if(COMPILE_WASM)
   target_compile_definitions(bergamot-translator PUBLIC USE_SSE2 WASM)
 endif(COMPILE_WASM)
 
+if (COMPILE_THREAD_VARIANT)
+  target_compile_definitions(bergamot-translator PRIVATE WITH_PTHREADS)
+endif()
+
 target_link_libraries(bergamot-translator marian ssplit)
 
 target_include_directories(bergamot-translator

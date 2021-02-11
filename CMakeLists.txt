@@ -11,6 +11,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Project specific cmake options
 option(COMPILE_WASM "Compile for WASM" OFF)
+option(COMPILE_THREAD_VARIANT "Compile with thread support" OFF)
 
 # Set marian (3rd party submodule) cmake options to compile for this project
 SET(COMPILE_CUDA OFF CACHE BOOL "Compile GPU version")
@@ -41,3 +42,6 @@ add_subdirectory(src)
 if(NOT COMPILE_WASM)
   add_subdirectory(app)
 endif()
+if(COMPILE_WASM)
+  add_subdirectory(app)
+endif(COMPILE_WASM)

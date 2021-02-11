@@ -73,6 +73,9 @@ std::future<TranslationResult> Service::translate(std::string &&input) {
     }
   } while (numSentences > 0);
 
+#ifndef WITH_PTHREADS
+  workers_[0].mainloop();
+#endif
   return future;
 }
 

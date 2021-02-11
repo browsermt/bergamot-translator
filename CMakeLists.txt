@@ -12,6 +12,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Project specific cmake options
 option(COMPILE_WASM "Compile for WASM" OFF)
 option(COMPILE_THREAD_VARIANT "Compile with thread support" OFF)
+option(PACKAGE_DIR "Directory including all the files to be packaged (pre-loaded) in wasm builds" "")
 
 # Set marian (3rd party submodule) cmake options to compile for this project
 SET(COMPILE_CUDA OFF CACHE BOOL "Compile GPU version")

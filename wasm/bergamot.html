@@ -1,0 +1,54 @@
+<!doctype html>
+<html>
+  <script>
+    var Module = {
+      onRuntimeInitialized: function() {
+        // Set the Model Configuration as YAML formatted string.
+        // For available configuration options, please check: https://marian-nmt.github.io/docs/cmd/marian-decoder/
+        // This example captures the most relevant options: model file, vocabulary files and shortlist file
+        var modelConfig = "{\"models\":[\"/model.npz\"],\"vocabs\":[\"/vocab.esen.spm\",\"/vocab.esen.spm\"],\"beam-size\":1}";//,\"shortlist\":[\"/lex.s2t\"]
+
+        // Instantiate the TranslationModel
+        var model = new Module.TranslationModel(modelConfig);
+        console.log('Alignment:', model.isAlignmentSupported());
+
+        // Instantiate the arguments of translate() API i.e. TranslationRequest and input (vector<string>)
+        var request = new Module.TranslationRequest();
+        let input = new Module.VectorString;
+
+        // Initialize the input
+        input.push_back("¿Qué estás haciendo? ¿Por qué estás haciendo eso?");
+        input.push_back("Han pasado tres días de las elecciones presidenciales y los ecuatorianos siguen sin saber quién pasará a la segunda vuelta. El anuncio de Iván Duque del plan para regularizar al millón de migrantes venezolanos que están ilegales en Colombia ha generado esperanza a la vez que confusión.");
+
+        // Access input (just for debugging)
+        console.log('Input size=', input.size());
+        for (let i = 0; i < input.size(); i++) {
+          console.log(' val:' + input.get(i));
+        }
+
+        // Translate the input; the result is a vector<TranslationResult>
+        var result = model.translate(input, request);
+
+        // Access original and translated text from each entry of vector<TranslationResult>
+        console.log('Result size=', result.size());
+        for (let i = 0; i < result.size(); i++) {
+          console.log(' original=' + result.get(i).getOriginalText() + ', translation=' + result.get(i).getTranslatedText());
+        }
+
+        // Translate again more text
+        input.push_back("Luego de los cuestionamientos al gobierno chileno por la gestión de la pandemia, el país sudamericano lidera el ranking de vacunación en América Latina. Aquí te explicamos cómo lo ha logrado.");
+        result = model.translate(input, request);
+        console.log('Result size=', result.size());
+        for (let i = 0; i < result.size(); i++) {
+          console.log(' original=' + result.get(i).getOriginalText() + ', translation=' + result.get(i).getTranslatedText());
+        }
+
+        // Don't forget to clean up the instances
+        model.delete();
+        request.delete();
+        input.delete();
+      }
+    };
+  </script>
+  <script src="bergamot-translator-worker.js"></script>
+</html>

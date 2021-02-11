@@ -19,6 +19,8 @@ endif()
 if(COMPILE_WASM)
   # A dirty hack because of marian's bad cmake practices
   target_compile_definitions(bergamot-translator PUBLIC USE_SSE2 WASM)
+  # Enable code that is required for generating JS bindings
+  target_compile_definitions(bergamot-translator PRIVATE WASM_BINDINGS)
 endif(COMPILE_WASM)
 
 if (COMPILE_THREAD_VARIANT)

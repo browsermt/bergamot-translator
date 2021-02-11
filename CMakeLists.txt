@@ -12,14 +12,14 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Project specific cmake options
 option(COMPILE_WASM "Compile for WASM" OFF)
 
-# Custom CMake options to compile marian (a 3rd party submodule) for this project
-option(COMPILE_CUDA "Compile GPU version" OFF)
-option(USE_SENTENCEPIECE "Download and compile SentencePiece" ON)
-option(USE_STATIC_LIBS "Link statically against non-system libs" ON)
-option(USE_MKL "Compile with MKL support" OFF)
-option(COMPILE_DECODER_ONLY "Compile marian-decoder only" ON)
-option(COMPILE_WITH_PTHREADS "Compile with pthreads support" OFF)
-option(USE_WASM_COMPATIBLE_BLAS "Compile with a WASM compatible blas for decoder only builds" ON)
+# Set marian (3rd party submodule) cmake options to compile for this project
+SET(COMPILE_CUDA OFF CACHE BOOL "Compile GPU version")
+SET(USE_SENTENCEPIECE ON CACHE BOOL "Download and compile SentencePiece")
+SET(USE_STATIC_LIBS ON CACHE BOOL "Link statically against non-system libs")
+SET(USE_MKL OFF CACHE BOOL "Compile with MKL support")
+SET(COMPILE_DECODER_ONLY ON CACHE BOOL "Compile marian-decoder only")
+SET(COMPILE_WITH_PTHREADS OFF CACHE BOOL "Compile with pthreads support")
+SET(USE_WASM_COMPATIBLE_BLAS ON CACHE BOOL "Compile with a WASM compatible blas for decoder only builds")
 SET(COMPILE_LIBRARY_ONLY ON CACHE BOOL "Build only the Marian library and exclude all executables.")
 
 execute_process(COMMAND git submodule update --init --recursive --no-fetch

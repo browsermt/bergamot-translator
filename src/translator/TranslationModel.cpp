@@ -15,6 +15,8 @@
 // All local project includes
 #include "TranslationModel.h"
 #include "translator/service.h"
+#include "translator/parser.h"
+
 
 std::shared_ptr<marian::Options> parseOptions(const std::string &config) {
   marian::Options options;
@@ -34,7 +36,7 @@ std::shared_ptr<marian::Options> parseOptions(const std::string &config) {
   // Error: Aborted from void unhandledException() in
   // 3rd_party/marian-dev/src/common/logging.cpp:113
 
-  marian::ConfigParser configParser(marian::cli::mode::translation);
+  marian::ConfigParser configParser = marian::bergamot::createConfigParser();
   const YAML::Node &defaultConfig = configParser.getConfig();
 
   options.merge(defaultConfig);

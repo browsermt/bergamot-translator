@@ -20,6 +20,7 @@ option(USE_MKL "Compile with MKL support" OFF)
 option(COMPILE_DECODER_ONLY "Compile marian-decoder only" ON)
 option(COMPILE_WITH_PTHREADS "Compile with pthreads support" OFF)
 option(USE_WASM_COMPATIBLE_BLAS "Compile with a WASM compatible blas for decoder only builds" ON)
+SET(COMPILE_LIBRARY_ONLY ON CACHE BOOL "Build only the Marian library and exclude all executables.")
 
 execute_process(COMMAND git submodule update --init --recursive --no-fetch
                 WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})

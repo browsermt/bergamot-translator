@@ -16,6 +16,11 @@ if (COMPILE_DECODER_ONLY)
   target_compile_definitions(bergamot-translator PUBLIC DECODER_ONLY)
 endif()
 
+if(COMPILE_WASM)
+  # A dirty hack because of marian's bad cmake practices
+  target_compile_definitions(bergamot-translator PUBLIC USE_SSE2 WASM)
+endif(COMPILE_WASM)
+
 target_link_libraries(bergamot-translator marian ssplit)
 
 target_include_directories(bergamot-translator

@@ -11,6 +11,10 @@ add_library(bergamot-translator STATIC
     batcher.cpp
     translation_result.cpp
 )
+if (COMPILE_DECODER_ONLY)
+  # A dirty hack because of marian's bad cmake practices
+  target_compile_definitions(bergamot-translator PUBLIC DECODER_ONLY)
+endif()
 
 target_link_libraries(bergamot-translator marian ssplit)
 

@@ -19,7 +19,7 @@ make -j
 
 To compile WASM, first download and Install Emscripten using following instructions:
 
-1. Get the latest sdk: `git clone https://github.com/emscripten-core/emsdk.git`
+1. Get the latest sdk: `git clone  --recursive https://github.com/emscripten-core/emsdk.git`
 2. Enter the cloned directory: `cd emsdk`
 3. Install the lastest sdk tools: `./emsdk install latest`
 4. Activate the latest sdk tools: `./emsdk activate latest`

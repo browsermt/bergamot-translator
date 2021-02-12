@@ -21,6 +21,7 @@ if(COMPILE_WASM)
   target_compile_definitions(bergamot-translator PUBLIC USE_SSE2 WASM)
   # Enable code that is required for generating JS bindings
   target_compile_definitions(bergamot-translator PRIVATE WASM_BINDINGS)
+  target_compile_options(bergamot-translator PRIVATE ${WASM_COMPILE_FLAGS})
 endif(COMPILE_WASM)
 
 if (COMPILE_THREAD_VARIANT)

@@ -12,6 +12,7 @@ target_include_directories(bergamot-translator-worker
 )
 # This compile definition is required for generating binding code properly
 target_compile_definitions(bergamot-translator-worker PRIVATE WASM_BINDINGS)
+target_compile_options(bergamot-translator-worker PRIVATE ${WASM_COMPILE_FLAGS})
 
 set(LINKER_FLAGS "--bind -s ASSERTIONS=1 -s DISABLE_EXCEPTION_CATCHING=0 -s FORCE_FILESYSTEM=1 -s ALLOW_MEMORY_GROWTH=1")
 if (NOT PACKAGE_DIR STREQUAL "")
@@ -22,6 +23,5 @@ set_target_properties(bergamot-translator-worker PROPERTIES
                         SUFFIX ".js"
                         LINK_FLAGS ${LINKER_FLAGS}
                         )
-#target_link_options(bergamot-translator-worker --preload-file ${PACKAGE_DIR}@/)
 
 target_link_libraries(bergamot-translator-worker bergamot-translator)

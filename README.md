@@ -7,7 +7,7 @@ Bergamot translator provides a unified API for ([Marian NMT](https://marian-nmt.
 ### Build Natively
 
 ```bash
-git clone https://github.com/browsermt/bergamot-translator
+git clone  --recursive https://github.com/browsermt/bergamot-translator
 cd bergamot-translator
 mkdir build
 cd build

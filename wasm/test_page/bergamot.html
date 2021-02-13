@@ -1,0 +1,140 @@
+<!doctype html>
+<html>
+  <head>
+    <link rel="icon" href="data:,">
+    <meta http-equiv="Content-Type" content="text/html;charset=ISO-8859-1">
+  </head>
+  <style>
+    body, html, div {
+      margin-left:1%;
+      margin-right:1%;
+      margin-bottom:1%;
+      margin-top:1%;
+      padding-left:1%;
+      padding-right:1%;
+      padding-bottom:1%;
+      padding-top:1%;
+      }
+
+      textarea, #to, #from {
+        width: 100%;
+        max-width: 100%;
+      }
+
+      div {
+        float: left;
+        width: 80%;
+      }
+  </style>
+  <body>
+
+  <div id="divradios">
+    <label for="radios">Choose the model to use</label>
+    <input type="radio" id="modellang" name="modellang" value="enes" checked><label for="es">English to Spanish</label>
+    <input type="radio" id="modellang" name="modellang" value="esen"><label for="en">Spanish to English</label>
+    <input type="button" id="load" value="Load Model"/>
+  </div>
+
+  <div id="divtranslation">
+    <label for="from">From</label>
+    <input type="text" id="from" name="from"/>
+    <br><br>
+    <label for="to">To</label>
+    <input type="text" id="to" name="to" readonly/>
+    <br><br>
+    <input type="button" id="translate" value="Translate"/>
+  </div>
+
+  <div id="divlog">
+    <label for="log">Log:</label><br>
+    <textarea id="log" name="log" rows="50" cols="75"></textarea>
+  </div>
+
+  <script>
+
+    var model, request, input = undefined;
+    const loadModel = (lang) => {
+        // Set the Model Configuration as YAML formatted string.
+        // For available configuration options, please check: https://marian-nmt.github.io/docs/cmd/marian-decoder/
+        // This example captures the most relevant options: model file, vocabulary files and shortlist file
+        //        var modelConfig = "{\"models\":[\"/model.enes.npz\"],\"vocabs\":[\"/vocab.esen.spm\"],\"beam-size\":1}";//,\"shortlist\":[\"/lex.s2t\"]
+        const modelConfig = `{\"models\":[\"/model.${lang}.npz\"],\"vocabs\":[\"/vocab.esen.spm\",\"/vocab.esen.spm\"],\"beam-size\":1} ,\"shortlist\":[\"/lex.s2t\"]`;
+
+        // Instantiate the TranslationModel
+        if (model) model.delete();
+        model = new Module.TranslationModel(modelConfig);
+    }
+
+    const translate = (sentence) => {
+
+        // Instantiate the arguments of translate() API i.e. TranslationRequest and input (vector<string>)
+        var request = new Module.TranslationRequest();
+        let input = new Module.VectorString;
+
+        // Initialize the input
+        input.push_back(sentence);
+        /*
+        // Access input (just for debugging)
+        console.log('Input size=', input.size());
+        for (let i = 0; i < input.size(); i++) {
+          console.log(' val:' + input.get(i));
+        }
+        */
+
+        // Translate the input; the result is a vector<TranslationResult>
+        let result = model.translate(input, request);
+        // Access original and translated text from each entry of vector<TranslationResult>
+        //console.log('Result size=', result.size(), ' - TimeDiff - ', (Date.now() - start)/1000);
+        let translatedText = "";
+        for (let i = 0; i < result.size(); i++) {
+          translatedText += result.get(i).getTranslatedText() + " ";
+        }
+        console.log(translatedText);
+        request.delete();
+        input.delete();
+        return translatedText;
+  }
+
+    document.querySelector("#load").addEventListener("click", () => {
+      const lang = document.querySelector('input[name="modellang"]:checked').value;
+      let start = Date.now();
+      loadModel(lang)
+      log(`model ${lang} loaded in ${(Date.now() - start)/1000} secs`);
+      //log('Model Alignment:', model.isAlignmentSupported());
+    });
+
+    const translateCall = () => {
+      const text = document.querySelector('#from').value;
+      let start = Date.now();
+      const translate_text = translate(text);
+      log(`sentence translation time ${(Date.now() - start)/1000} secs`);
+      document.querySelector('#to').value = translate_text;
+    }
+
+    document.querySelector("#translate").addEventListener("click", () => {
+      translateCall();
+    });
+
+    document.querySelector("#from").addEventListener('keyup', function (event) {
+      if (event.keyCode === 13) {
+        translateCall();
+      }
+   });
+
+    const log = (message) => {
+      document.querySelector("#log").value += message + "\n";
+    }
+
+    let moduleLoadStart;
+    var Module = {
+      preRun: [function() {
+        moduleLoadStart = Date.now();
+      }],
+      onRuntimeInitialized: function() {
+        log(`Wasm Runtime initialized in ${(Date.now() - moduleLoadStart)/1000} secs`);
+      }
+    };
+  </script>
+  <script src="bergamot-translator-worker.js"></script>
+</body>
+</html>

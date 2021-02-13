@@ -30,6 +30,8 @@ After the successful installation of Emscripten, perform these steps:
 ```bash
 git clone --recursive https://github.com/browsermt/bergamot-translator
 cd bergamot-translator
+git checkout wasm-integration
+git submodule update --recursive
 mkdir build-wasm
 cd build-wasm
 emcmake cmake -DCOMPILE_WASM=on ../

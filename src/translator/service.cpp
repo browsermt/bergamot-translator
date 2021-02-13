@@ -14,13 +14,17 @@ Service::Service(Ptr<Options> options)
       text_processor_(vocabs_, options), batcher_(options),
       pcqueue_(2 * options->get<int>("cpu-threads")) {
 
-  workers_.reserve(numWorkers_);
-
-  for (int cpuId = 0; cpuId < numWorkers_; cpuId++) {
-    workers_.emplace_back([&] {
-      marian::DeviceId deviceId(cpuId, DeviceType::cpu);
-      translation_loop(deviceId, pcqueue_, vocabs_, options);
-    });
+  if (numWorkers_ > 0) {
+    workers_.reserve(numWorkers_);
+    for (int cpuId = 0; cpuId < numWorkers_; cpuId++) {
+      workers_.emplace_back([&] {
+        marian::DeviceId deviceId(cpuId, DeviceType::cpu);
+        translation_loop(deviceId, pcqueue_, vocabs_, options);
+      });
+    }
+  } else {
+    marian::DeviceId deviceId(/*cpuId=*/0, DeviceType::cpu);
+    translator = new BatchTranslator(deviceId, vocabs_, options);
   }
 }
 
@@ -53,26 +57,27 @@ std::future<TranslationResult> Service::translate(std::string &&input) {
       std::move(segments), std::move(sourceAlignments),
       std::move(translationResultPromise));
 
-  for (int i = 0; i < request->numSegments(); i++) {
-    RequestSentence requestSentence(i, request);
-    batcher_.addSentenceWithPriority(requestSentence);
+  batcher_.addWholeRequest(request);
+  if (numWorkers_ > 0) {
+    batcher_.enqueue(pcqueue_);
+  } else {
+    // Queue single-threaded
+    int numSentences;
+    do {
+      RequestSentences batchSentences;
+      batcher_.cleaveBatch(batchSentences);
+      numSentences = batchSentences.size();
+
+      if (numSentences > 0) {
+        translator->translate(batchSentences);
+        batchNumber_++;
+      }
+
+      if (batchNumber_ % 500 == 0) {
+        LOG(info, "Tranlsating batch {}", batchNumber_);
+      }
+    } while (numSentences > 0);
   }
-
-  int numSentences;
-  do {
-    RequestSentences batchSentences;
-    batcher_.cleaveBatch(batchSentences);
-    numSentences = batchSentences.size();
-
-    if (numSentences > 0) {
-      PCItem pcitem(batchNumber_++, std::move(batchSentences));
-      pcqueue_.ProduceSwap(pcitem);
-    }
-
-    if (batchNumber_ % 500 == 0) {
-      LOG(info, "Queuing batch {}", batchNumber_);
-    }
-  } while (numSentences > 0);
 
   return future;
 }

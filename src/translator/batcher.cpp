@@ -50,5 +50,30 @@ void Batcher::cleaveBatch(RequestSentences &sentences) {
   }
 }
 
+void Batcher::addWholeRequest(Ptr<Request> request) {
+  for (int i = 0; i < request->numSegments(); i++) {
+    RequestSentence requestSentence(i, request);
+    addSentenceWithPriority(requestSentence);
+  }
+}
+
+void Batcher::enqueue(PCQueue<PCItem> &pcqueue) {
+  int numSentences;
+  do {
+    RequestSentences batchSentences;
+    cleaveBatch(batchSentences);
+    numSentences = batchSentences.size();
+
+    if (numSentences > 0) {
+      PCItem pcitem(batchNumber_++, std::move(batchSentences));
+      pcqueue.ProduceSwap(pcitem);
+    }
+
+    if (batchNumber_ % 500 == 0) {
+      LOG(info, "Queuing batch {}", batchNumber_);
+    }
+  } while (numSentences > 0);
+}
+
 } // namespace bergamot
 } // namespace marian

@@ -70,6 +70,9 @@ private:
   Batcher batcher_;
   PCQueue<PCItem> pcqueue_;
   std::vector<std::thread> workers_;
+
+  // Optional
+  BatchTranslator *translator{nullptr};
 };
 
 std::vector<Ptr<const Vocab>> loadVocabularies(Ptr<Options> options);

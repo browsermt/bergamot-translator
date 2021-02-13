@@ -36,8 +36,7 @@ BatchTranslator::BatchTranslator(DeviceId const device,
   graph_->forward();
 }
 
-void BatchTranslator::translate(RequestSentences &requestSentences,
-                                Histories &histories) {
+void BatchTranslator::translate(RequestSentences &requestSentences) {
   std::vector<data::SentenceTuple> batchVector;
 
   for (auto &sentence : requestSentences) {
@@ -89,7 +88,10 @@ void BatchTranslator::translate(RequestSentences &requestSentences,
   auto trgVocab = vocabs_->back();
   auto search = New<BeamSearch>(options_, scorers_, trgVocab);
 
-  histories = std::move(search->search(graph_, batch));
+  auto histories = std::move(search->search(graph_, batch));
+  for (int i = 0; i < requestSentences.size(); i++) {
+    requestSentences[i].completeSentence(histories[i]);
+  }
 }
 
 // void BatchTranslator::join() { thread_.join(); }
@@ -107,10 +109,7 @@ void translation_loop(DeviceId const &device, PCQueue<PCItem> &pcqueue,
     if (pcitem.isPoison()) {
       return;
     } else {
-      translator.translate(pcitem.sentences, histories);
-      for (int i = 0; i < pcitem.sentences.size(); i++) {
-        pcitem.sentences[i].completeSentence(histories[i]);
-      }
+      translator.translate(pcitem.sentences);
     }
   }
 }

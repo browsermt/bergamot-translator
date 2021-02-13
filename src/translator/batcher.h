@@ -4,6 +4,7 @@
 #include "common/options.h"
 #include "data/corpus_base.h"
 #include "definitions.h"
+#include "pcqueue.h"
 #include "request.h"
 
 #include <set>
@@ -19,6 +20,8 @@ public:
   // sentence. This method inserts the sentence into the internal data-structure
   // which maintains priority among sentences from multiple concurrent requests.
   void addSentenceWithPriority(RequestSentence &sentence);
+  void addWholeRequest(Ptr<Request> request);
+  void enqueue(PCQueue<PCItem> &pcqueue);
 
   // Loads sentences with sentences compiled from (tentatively) multiple
   // requests optimizing for both padding and priority.
@@ -27,6 +30,7 @@ public:
 private:
   unsigned int max_input_tokens_;
   std::vector<std::set<RequestSentence>> bucket_;
+  unsigned int batchNumber_{0};
 };
 
 } // namespace bergamot

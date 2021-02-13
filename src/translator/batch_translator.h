@@ -22,29 +22,26 @@ class BatchTranslator {
   // shut down in Service which calls join() on the threads.
 
 public:
-  BatchTranslator(DeviceId const device, PCQueue<PCItem> &pcqueue,
-                  std::vector<Ptr<Vocab const>> &vocabs, Ptr<Options> options);
-  void join();
+  BatchTranslator(DeviceId const device, std::vector<Ptr<Vocab const>> &vocabs,
+                  Ptr<Options> options);
 
   // convenience function for logging. TODO(jerin)
   std::string _identifier() { return "worker" + std::to_string(device_.no); }
+  void translate(RequestSentences &requestSentences, Histories &histories);
 
 private:
-  void initGraph();
-  void translate(RequestSentences &requestSentences, Histories &histories);
-  void mainloop();
-
   Ptr<Options> options_;
-
   DeviceId device_;
   std::vector<Ptr<Vocab const>> *vocabs_;
   Ptr<ExpressionGraph> graph_;
   std::vector<Ptr<Scorer>> scorers_;
   Ptr<data::ShortlistGenerator const> slgen_;
-
-  PCQueue<PCItem> *pcqueue_;
-  std::thread thread_;
 };
+
+void translation_loop(DeviceId const &device, PCQueue<PCItem> &pcqueue,
+                      std::vector<Ptr<Vocab const>> &vocabs,
+                      Ptr<Options> options);
+
 } // namespace bergamot
 } // namespace marian
 

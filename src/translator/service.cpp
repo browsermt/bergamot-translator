@@ -16,9 +16,11 @@ Service::Service(Ptr<Options> options)
 
   workers_.reserve(numWorkers_);
 
-  for (int i = 0; i < numWorkers_; i++) {
-    marian::DeviceId deviceId(i, DeviceType::cpu);
-    workers_.emplace_back(deviceId, pcqueue_, vocabs_, options);
+  for (int cpuId = 0; cpuId < numWorkers_; cpuId++) {
+    workers_.emplace_back([&] {
+      marian::DeviceId deviceId(cpuId, DeviceType::cpu);
+      translation_loop(deviceId, pcqueue_, vocabs_, options);
+    });
   }
 }
 

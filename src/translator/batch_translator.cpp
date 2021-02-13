@@ -8,15 +8,10 @@ namespace marian {
 namespace bergamot {
 
 BatchTranslator::BatchTranslator(DeviceId const device,
-                                 PCQueue<PCItem> &pcqueue,
                                  std::vector<Ptr<Vocab const>> &vocabs,
                                  Ptr<Options> options)
-    : device_(device), options_(options), pcqueue_(&pcqueue), vocabs_(&vocabs) {
-
-  thread_ = std::thread([this] { this->mainloop(); });
-}
-
-void BatchTranslator::initGraph() {
+    : device_(device), options_(options), vocabs_(&vocabs) {
+  // Initializes the graph.
   if (options_->hasAndNotEmpty("shortlist")) {
     int srcIdx = 0, trgIdx = 1;
     bool shared_vcb = vocabs_->front() == vocabs_->back();
@@ -38,7 +33,6 @@ void BatchTranslator::initGraph() {
       scorer->setShortlistGenerator(slgen_);
     }
   }
-
   graph_->forward();
 }
 
@@ -98,26 +92,28 @@ void BatchTranslator::translate(RequestSentences &requestSentences,
   histories = std::move(search->search(graph_, batch));
 }
 
-void BatchTranslator::mainloop() {
-  initGraph();
+// void BatchTranslator::join() { thread_.join(); }
+
+void translation_loop(DeviceId const &device, PCQueue<PCItem> &pcqueue,
+                      std::vector<Ptr<Vocab const>> &vocabs,
+                      Ptr<Options> options) {
+
+  BatchTranslator translator(device, vocabs, options);
 
   PCItem pcitem;
   Histories histories;
-
   while (true) {
-    pcqueue_->ConsumeSwap(pcitem);
+    pcqueue.ConsumeSwap(pcitem);
     if (pcitem.isPoison()) {
       return;
     } else {
-      translate(pcitem.sentences, histories);
+      translator.translate(pcitem.sentences, histories);
       for (int i = 0; i < pcitem.sentences.size(); i++) {
         pcitem.sentences[i].completeSentence(histories[i]);
       }
     }
   }
 }
-
-void BatchTranslator::join() { thread_.join(); }
 
 } // namespace bergamot
 } // namespace marian

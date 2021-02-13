@@ -36,10 +36,10 @@ BatchTranslator::BatchTranslator(DeviceId const device,
   graph_->forward();
 }
 
-void BatchTranslator::translate(RequestSentences &requestSentences) {
+void BatchTranslator::translate(Batch &batch) {
   std::vector<data::SentenceTuple> batchVector;
 
-  for (auto &sentence : requestSentences) {
+  for (auto &sentence : batch.sentences) {
     data::SentenceTuple sentence_tuple(sentence.lineNumber());
     Segment segment = sentence.getUnderlyingSegment();
     sentence_tuple.push_back(segment);
@@ -82,32 +82,31 @@ void BatchTranslator::translate(RequestSentences &requestSentences) {
   for (size_t j = 0; j < maxDims.size(); ++j)
     subBatches[j]->setWords(words[j]);
 
-  auto batch = Ptr<CorpusBatch>(new CorpusBatch(subBatches));
-  batch->setSentenceIds(sentenceIds);
+  auto corpus_batch = Ptr<CorpusBatch>(new CorpusBatch(subBatches));
+  corpus_batch->setSentenceIds(sentenceIds);
 
   auto trgVocab = vocabs_->back();
   auto search = New<BeamSearch>(options_, scorers_, trgVocab);
 
-  auto histories = std::move(search->search(graph_, batch));
-  for (int i = 0; i < requestSentences.size(); i++) {
-    requestSentences[i].completeSentence(histories[i]);
+  auto histories = std::move(search->search(graph_, corpus_batch));
+  for (int i = 0; i < batch.sentences.size(); i++) {
+    batch.sentences[i].completeSentence(histories[i]);
   }
 }
 
-void translation_loop(DeviceId const &device, PCQueue<PCItem> &pcqueue,
+void translation_loop(DeviceId const &device, PCQueue<Batch> &pcqueue,
                       std::vector<Ptr<Vocab const>> &vocabs,
                       Ptr<Options> options) {
 
   BatchTranslator translator(device, vocabs, options);
-
-  PCItem pcitem;
+  Batch batch;
   Histories histories;
   while (true) {
-    pcqueue.ConsumeSwap(pcitem);
-    if (pcitem.isPoison()) {
+    pcqueue.ConsumeSwap(batch);
+    if (batch.isPoison()) {
       return;
     } else {
-      translator.translate(pcitem.sentences);
+      translator.translate(batch);
     }
   }
 }

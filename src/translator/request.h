@@ -24,6 +24,7 @@
 #include "definitions.h"
 #include "translation_result.h"
 
+#include "common/logging.h"
 #include "data/types.h"
 #include "translator/beam_search.h"
 
@@ -92,20 +93,23 @@ public:
 
 typedef std::vector<RequestSentence> RequestSentences;
 
-struct PCItem {
-  int batchNumber;
+struct Batch {
+  int Id;
+  int numTokens, maxLength;
   RequestSentences sentences;
 
-  // PCItem should be default constructible for PCQueue. Default constructed
+  // Batch should be default constructible for PCQueue. Default constructed
   // element is poison.
-  PCItem() : batchNumber(-1) {}
-
-  // PCItem constructor to construct a legit PCItem.
-  explicit PCItem(int batchNumber, RequestSentences &&sentences)
-      : batchNumber(batchNumber), sentences(std::move(sentences)) {}
+  Batch() { reset(); }
+  void reset() { Id = -1, numTokens = 0, maxLength = 0, sentences.clear(); }
 
   // Convenience function to determine poison.
-  bool isPoison() { return (batchNumber == -1); }
+  bool isPoison() { return (Id == -1); }
+
+  void log() {
+    LOG(info, "Batch(Id={}, tokens={}, max-length={}, sentences={})", Id,
+        numTokens, maxLength, sentences.size());
+  }
 };
 
 } // namespace bergamot

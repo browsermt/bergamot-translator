@@ -27,7 +27,7 @@ public:
 
   // convenience function for logging. TODO(jerin)
   std::string _identifier() { return "worker" + std::to_string(device_.no); }
-  void translate(RequestSentences &requestSentences);
+  void translate(Batch &batch);
 
 private:
   Ptr<Options> options_;
@@ -38,7 +38,7 @@ private:
   Ptr<data::ShortlistGenerator const> slgen_;
 };
 
-void translation_loop(DeviceId const &device, PCQueue<PCItem> &pcqueue,
+void translation_loop(DeviceId const &device, PCQueue<Batch> &pcqueue,
                       std::vector<Ptr<Vocab const>> &vocabs,
                       Ptr<Options> options);
 

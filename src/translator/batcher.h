@@ -21,14 +21,15 @@ public:
   // which maintains priority among sentences from multiple concurrent requests.
   void addSentenceWithPriority(RequestSentence &sentence);
   void addWholeRequest(Ptr<Request> request);
-  void enqueue(PCQueue<PCItem> &pcqueue);
+  void enqueue(PCQueue<Batch> &pcqueue);
 
   // Loads sentences with sentences compiled from (tentatively) multiple
   // requests optimizing for both padding and priority.
-  void cleaveBatch(RequestSentences &sentences);
+  bool cleaveBatch(Batch &batch);
+  bool operator>>(Batch &batch); // alias
 
 private:
-  unsigned int max_input_tokens_;
+  unsigned int miniBatchWords;
   std::vector<std::set<RequestSentence>> bucket_;
   unsigned int batchNumber_{0};
 };

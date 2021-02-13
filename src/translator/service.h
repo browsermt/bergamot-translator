@@ -46,7 +46,6 @@ public:
 
 private:
   unsigned int requestId_;
-  unsigned int batchNumber_;
   int numWorkers_;
 
   // vocabs are used to construct a Request, which later uses it to construct
@@ -68,7 +67,7 @@ private:
 
   TextProcessor text_processor_; // ORDER DEPENDENCY
   Batcher batcher_;
-  PCQueue<PCItem> pcqueue_;
+  PCQueue<Batch> pcqueue_;
   std::vector<std::thread> workers_;
 
   // Optional

@@ -8,8 +8,7 @@ namespace marian {
 namespace bergamot {
 
 Service::Service(Ptr<Options> options)
-    : requestId_(0), batchNumber_(0),
-      numWorkers_(options->get<int>("cpu-threads")),
+    : requestId_(0), numWorkers_(options->get<int>("cpu-threads")),
       vocabs_(std::move(loadVocabularies(options))),
       text_processor_(vocabs_, options), batcher_(options),
       pcqueue_(2 * options->get<int>("cpu-threads")) {
@@ -58,25 +57,15 @@ std::future<TranslationResult> Service::translate(std::string &&input) {
       std::move(translationResultPromise));
 
   batcher_.addWholeRequest(request);
+
   if (numWorkers_ > 0) {
     batcher_.enqueue(pcqueue_);
   } else {
     // Queue single-threaded
-    int numSentences;
-    do {
-      RequestSentences batchSentences;
-      batcher_.cleaveBatch(batchSentences);
-      numSentences = batchSentences.size();
-
-      if (numSentences > 0) {
-        translator->translate(batchSentences);
-        batchNumber_++;
-      }
-
-      if (batchNumber_ % 500 == 0) {
-        LOG(info, "Tranlsating batch {}", batchNumber_);
-      }
-    } while (numSentences > 0);
+    Batch batch;
+    while (batcher_ >> batch) {
+      translator->translate(batch);
+    }
   }
 
   return future;
@@ -85,8 +74,8 @@ std::future<TranslationResult> Service::translate(std::string &&input) {
 void Service::stop() {
   int counter = 0;
   for (auto &worker : workers_) {
-    PCItem pcitem;
-    pcqueue_.ProduceSwap(pcitem);
+    Batch batch;
+    pcqueue_.ProduceSwap(batch);
     ++counter;
   }
 

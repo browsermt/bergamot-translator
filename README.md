@@ -40,10 +40,12 @@ emmake make -j
 
 It should generate the artefacts (.js and .wasm files) in `wasm` folder inside build directory ("build-wasm" in this case).
 
+Download the models from `https://github.com/mozilla-applied-ml/bergamot-models`, and place all the desired ones to package in a folder called `models`.
+
 The build also allows packaging files into wasm binary (i.e. preloading in Emscripten’s virtual file system) using cmake
-option `PACKAGE_DIR`. The compile command below packages all the files in PATH directory into wasm binary.
+option `PACKAGE_DIR`. The compile command below packages all the files in PATH directory (in these case, your models) into wasm binary.
 ```bash
-emcmake cmake -DCOMPILE_WASM=on -DPACKAGE_DIR=<PATH> ../
+emcmake cmake -DCOMPILE_WASM=on -DPACKAGE_DIR=<PATH> ./models
 ```
 Files packaged this way are preloaded in the root of the virtual file system.
 

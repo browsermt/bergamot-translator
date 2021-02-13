@@ -1,5 +1,5 @@
 ## Using Bergamot Translator in JavaScript
-The example file `bergamot.html` in this folder demonstrates how to use the bergamot translator in JavaScript via a `<script>` tag.
+The example file `bergamot.html` in the folder `test_page` demonstrates how to use the bergamot translator in JavaScript via a `<script>` tag.
 This example assumes that files were packaged in wasm binary.
 
 A brief summary is here though:
@@ -33,20 +33,30 @@ request.delete();
 input.delete();
 ```
 
-You can also see everything in action by running `bergamot.html` file in the browser following these steps:
-* Copy bergamot.html to the directory where build artefacts of wasm compilation (i.e. .js and .wasm files) reside.
-* Start an http server locally
-* Open the link provided by the http server in any browser
-* Open the browser's console and you will see all the console messages there
+You can also see everything in action by following the next steps:
+* Start the test webserver (ensure you have the latest nodejs installed)
+```
+cd test_page
+bash start_server
+```
+* Open any of the browsers below
+    * Firefox Nightly +87: make sure the following prefs are on (about:config)
+    ````
+    javascript.options.wasm_simd = true
+    javascript.options.wasm_simd_wormhole = true
+    ````
 
-Assuming build artefacts are present in `$ROOT/build-wasm` folder where `ROOT` is repository's root.
-Above instructions would become:
+    * Chrome Canary +90: start with the following argument
+    ```
+    --js-flags="--experimental-wasm-simd"
+    ```
 
-```bash
-cd $ROOT/build-wasm
-cp ../wasm/bergamot.html wasm/.
-python3 -m http.server -d wasm
+* Browse to the following page:
+```
+http://localhost:8000/bergamot.html
 ```
 
-Assuming it starts the http server on 8000 port,
-open `http://0.0.0.0:8000/bergamot.html` in any browser and see the console logs in browser's console.
+* Run some translations:
+    * Choose a model and press `Load Model`
+    * Type a sentence to be translated in the `From` textbox and press `Translate`
+    * See the results in the `To` and `Log` textboxes

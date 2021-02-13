@@ -94,8 +94,6 @@ void BatchTranslator::translate(RequestSentences &requestSentences) {
   }
 }
 
-// void BatchTranslator::join() { thread_.join(); }
-
 void translation_loop(DeviceId const &device, PCQueue<PCItem> &pcqueue,
                       std::vector<Ptr<Vocab const>> &vocabs,
                       Ptr<Options> options) {

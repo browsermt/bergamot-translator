@@ -39,7 +39,8 @@ BatchTranslator::BatchTranslator(DeviceId const device,
 void BatchTranslator::translate(Batch &batch) {
   std::vector<data::SentenceTuple> batchVector;
 
-  for (auto &sentence : batch.sentences) {
+  auto &sentences = batch.sentences();
+  for (auto &sentence : sentences) {
     data::SentenceTuple sentence_tuple(sentence.lineNumber());
     Segment segment = sentence.getUnderlyingSegment();
     sentence_tuple.push_back(segment);
@@ -89,9 +90,7 @@ void BatchTranslator::translate(Batch &batch) {
   auto search = New<BeamSearch>(options_, scorers_, trgVocab);
 
   auto histories = std::move(search->search(graph_, corpus_batch));
-  for (int i = 0; i < batch.sentences.size(); i++) {
-    batch.sentences[i].completeSentence(histories[i]);
-  }
+  batch.completeBatch(histories);
 }
 
 void translation_loop(DeviceId const &device, PCQueue<Batch> &pcqueue,

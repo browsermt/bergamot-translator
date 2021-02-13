@@ -28,6 +28,8 @@
 #include "data/types.h"
 #include "translator/beam_search.h"
 
+#include <cassert>
+
 #include <future>
 #include <vector>
 
@@ -93,23 +95,50 @@ public:
 
 typedef std::vector<RequestSentence> RequestSentences;
 
-struct Batch {
-  int Id;
-  int numTokens, maxLength;
-  RequestSentences sentences;
-
-  // Batch should be default constructible for PCQueue. Default constructed
-  // element is poison.
+class Batch {
+public:
   Batch() { reset(); }
-  void reset() { Id = -1, numTokens = 0, maxLength = 0, sentences.clear(); }
-
+  void reset() { Id_ = 0, numTokens_ = 0, maxLength_ = 0, sentences_.clear(); }
   // Convenience function to determine poison.
-  bool isPoison() { return (Id == -1); }
+  bool isPoison() { return (Id_ == -1); }
+  static Batch poison() {
+    Batch poison_;
+    poison_.Id_ = -1;
+    return poison_;
+  }
 
   void log() {
-    LOG(info, "Batch(Id={}, tokens={}, max-length={}, sentences={})", Id,
-        numTokens, maxLength, sentences.size());
+    LOG(info, "Batch(Id_={}, tokens={}, max-length={}, sentences_={})", Id_,
+        numTokens_, maxLength_, sentences_.size());
   }
+
+  void add(const RequestSentence &sentence) {
+    sentences_.push_back(sentence);
+    maxLength_ = std::max(sentence.numTokens(), maxLength_);
+    numTokens_ += sentence.numTokens();
+  }
+
+  size_t size() { return sentences_.size(); }
+
+  void setId(int Id) {
+    assert(Id > 0);
+    Id_ = Id;
+    if (Id % 500 == 0) {
+      log();
+    }
+  }
+
+  const RequestSentences &sentences() { return sentences_; }
+  void completeBatch(const Histories &histories) {
+    for (int i = 0; i < sentences_.size(); i++) {
+      sentences_[i].completeSentence(histories[i]);
+    }
+  }
+
+private:
+  int Id_;
+  size_t numTokens_, maxLength_;
+  RequestSentences sentences_;
 };
 
 } // namespace bergamot

@@ -74,8 +74,8 @@ std::future<TranslationResult> Service::translate(std::string &&input) {
 void Service::stop() {
   int counter = 0;
   for (auto &worker : workers_) {
-    Batch batch;
-    pcqueue_.ProduceSwap(batch);
+    Batch poison = Batch::poison();
+    pcqueue_.ProduceSwap(poison);
     ++counter;
   }
 

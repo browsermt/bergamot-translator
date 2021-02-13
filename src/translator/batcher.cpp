@@ -33,31 +33,22 @@ bool Batcher::cleaveBatch(Batch &batch) {
   for (int length = 0; length < bucket_.size(); length++) {
     auto p = bucket_[length].begin();
     while (p != bucket_[length].end()) {
-      paddedBatchSize = (batch.sentences.size() + 1) * length;
+      paddedBatchSize = (batch.size() + 1) * length;
       if (paddedBatchSize <= miniBatchWords) {
-        auto q = p;
-        ++p;
-
-        batch.numTokens += length;
-        batch.sentences.push_back(*q);
-        batch.maxLength = std::max(batch.maxLength, length);
-
+        auto q = p++;
+        batch.add(*q);
         bucket_[length].erase(q);
       } else {
         // Check if elements exist
-        assert(batch.sentences.size() > 0);
-        batch.Id = ++batchNumber_;
-        if (batchId % 500 == 0) {
-          batch.log();
-        }
+        assert(batch.size() > 0);
+        batch.setId(++batchNumber_);
         return true;
       }
     }
   }
 
-  if (batch.sentences.size()) {
-    batch.Id = ++batchNumber_;
-    batch.log();
+  if (batch.size()) {
+    batch.setId(++batchNumber_);
     return true;
   } else {
     return false;

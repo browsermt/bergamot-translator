@@ -48,9 +48,9 @@ void Request::processHistory(size_t index, Ptr<History> history) {
 void Request::completeRequest() {
   // Request no longer needs to hold the content, can transfer it to
   // Response.
-  Response translation_result(std::move(source_), std::move(sourceAlignments_),
-                              std::move(histories_), *vocabs_);
-  response_.set_value(std::move(translation_result));
+  Response response(std::move(source_), std::move(sourceAlignments_),
+                    std::move(histories_), *vocabs_);
+  response_.set_value(std::move(response));
 }
 
 bool Request::operator<(const Request &b) const {

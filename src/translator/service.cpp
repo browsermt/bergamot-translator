@@ -13,18 +13,28 @@ Service::Service(Ptr<Options> options)
       text_processor_(vocabs_, options), batcher_(options),
       pcqueue_(2 * options->get<int>("cpu-threads")) {
 
-  if (numWorkers_ > 0) {
+  if (numWorkers_ == 0) {
+    // In case workers are 0, a single-translator is created and initialized
+    // in the main thread.
+    marian::DeviceId deviceId(/*cpuId=*/0, DeviceType::cpu);
+    translators_.emplace_back(deviceId, vocabs_, options);
+    translators_.back().initialize();
+  } else {
+    // If workers specified are greater than 0, translators_ are populated with
+    // unitialized instances. These are then initialized inside
+    // individual threads and set to consume from producer-consumer queue.
     workers_.reserve(numWorkers_);
+    translators_.reserve(numWorkers_);
     for (size_t cpuId = 0; cpuId < numWorkers_; cpuId++) {
       marian::DeviceId deviceId(cpuId, DeviceType::cpu);
-      workers_.emplace_back(translation_loop, // Function
-                            deviceId, std::ref(pcqueue_), std::ref(vocabs_),
-                            options);
+      translators_.emplace_back(deviceId, vocabs_, options);
+
+      auto &translator = translators_.back();
+      workers_.emplace_back([&translator, this] {
+        translator.initialize();
+        translator.consumeFrom(pcqueue_);
+      });
     }
-  } else {
-    marian::DeviceId deviceId(/*cpuId=*/0, DeviceType::cpu);
-    translator =
-        UPtr<BatchTranslator>(new BatchTranslator(deviceId, vocabs_, options));
   }
 }
 
@@ -65,7 +75,7 @@ std::future<Response> Service::translate(std::string &&input) {
     // Queue single-threaded
     Batch batch;
     while (batcher_ >> batch) {
-      translator->translate(batch);
+      translators_[0].translate(batch);
     }
   }
 

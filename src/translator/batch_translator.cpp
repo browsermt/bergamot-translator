@@ -10,7 +10,9 @@ namespace bergamot {
 BatchTranslator::BatchTranslator(DeviceId const device,
                                  std::vector<Ptr<Vocab const>> &vocabs,
                                  Ptr<Options> options)
-    : device_(device), options_(options), vocabs_(&vocabs) {
+    : device_(device), options_(options), vocabs_(&vocabs) {}
+
+void BatchTranslator::initialize() {
   // Initializes the graph.
   if (options_->hasAndNotEmpty("shortlist")) {
     int srcIdx = 0, trgIdx = 1;
@@ -93,11 +95,7 @@ void BatchTranslator::translate(Batch &batch) {
   batch.completeBatch(histories);
 }
 
-void translation_loop(DeviceId const &device, PCQueue<Batch> &pcqueue,
-                      std::vector<Ptr<Vocab const>> &vocabs,
-                      Ptr<Options> options) {
-
-  BatchTranslator translator(device, vocabs, options);
+void BatchTranslator::consumeFrom(PCQueue<Batch> &pcqueue) {
   Batch batch;
   Histories histories;
   while (true) {
@@ -105,7 +103,7 @@ void translation_loop(DeviceId const &device, PCQueue<Batch> &pcqueue,
     if (batch.isPoison()) {
       return;
     } else {
-      translator.translate(batch);
+      translate(batch);
     }
   }
 }

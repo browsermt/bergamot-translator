@@ -28,6 +28,8 @@ public:
   // convenience function for logging. TODO(jerin)
   std::string _identifier() { return "worker" + std::to_string(device_.no); }
   void translate(Batch &batch);
+  void initialize();
+  void consumeFrom(PCQueue<Batch> &pcqueue);
 
 private:
   Ptr<Options> options_;
@@ -37,10 +39,6 @@ private:
   std::vector<Ptr<Scorer>> scorers_;
   Ptr<data::ShortlistGenerator const> slgen_;
 };
-
-void translation_loop(DeviceId const &device, PCQueue<Batch> &pcqueue,
-                      std::vector<Ptr<Vocab const>> &vocabs,
-                      Ptr<Options> options);
 
 } // namespace bergamot
 } // namespace marian

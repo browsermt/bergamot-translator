@@ -68,10 +68,8 @@ private:
   TextProcessor text_processor_; // ORDER DEPENDENCY
   Batcher batcher_;
   PCQueue<Batch> pcqueue_;
+  std::vector<BatchTranslator> translators_;
   std::vector<std::thread> workers_;
-
-  // Optional
-  UPtr<BatchTranslator> translator{nullptr};
 };
 
 std::vector<Ptr<const Vocab>> loadVocabularies(Ptr<Options> options);

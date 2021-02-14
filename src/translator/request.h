@@ -98,7 +98,10 @@ typedef std::vector<RequestSentence> RequestSentences;
 class Batch {
 public:
   Batch() { reset(); }
-  void reset() { Id_ = 0, numTokens_ = 0, maxLength_ = 0, sentences_.clear(); }
+  void reset() {
+    Id_ = 0;
+    sentences_.clear();
+  }
   // Convenience function to determine poison.
   bool isPoison() { return (Id_ == -1); }
   static Batch poison() {
@@ -108,15 +111,17 @@ public:
   }
 
   void log() {
+    int numTokens{0}, maxLength{0};
+    for (auto &sentence : sentences_) {
+      numTokens += sentence.numTokens();
+      maxLength = std::max(maxLength, static_cast<int>(sentence.numTokens()));
+    }
+
     LOG(info, "Batch(Id_={}, tokens={}, max-length={}, sentences_={})", Id_,
-        numTokens_, maxLength_, sentences_.size());
+        numTokens, maxLength, sentences_.size());
   }
 
-  void add(const RequestSentence &sentence) {
-    sentences_.push_back(sentence);
-    maxLength_ = std::max(sentence.numTokens(), maxLength_);
-    numTokens_ += sentence.numTokens();
-  }
+  void add(const RequestSentence &sentence) { sentences_.push_back(sentence); }
 
   size_t size() { return sentences_.size(); }
 
@@ -137,7 +142,6 @@ public:
 
 private:
   int Id_;
-  size_t numTokens_, maxLength_;
   RequestSentences sentences_;
 };
 

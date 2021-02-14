@@ -1,4 +1,4 @@
-#include "translation_result.h"
+#include "response.h"
 #include "common/logging.h"
 #include "data/alignment.h"
 

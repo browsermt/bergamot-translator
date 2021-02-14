@@ -10,7 +10,7 @@ add_library(bergamot-translator STATIC
     request.cpp 
     service.cpp
     batcher.cpp
-    translation_result.cpp
+    response.cpp
 )
 
 target_link_libraries(bergamot-translator marian ssplit)

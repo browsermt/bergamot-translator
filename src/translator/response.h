@@ -1,5 +1,5 @@
-#ifndef SRC_BERGAMOT_TRANSLATION_RESULT_H_
-#define SRC_BERGAMOT_TRANSLATION_RESULT_H_
+#ifndef SRC_BERGAMOT_RESPONSE_H_
+#define SRC_BERGAMOT_RESPONSE_H_
 
 #include "data/types.h"
 #include "definitions.h"
@@ -49,4 +49,4 @@ private:
 } // namespace bergamot
 } // namespace marian
 
-#endif // SRC_BERGAMOT_TRANSLATION_RESULT_H_
+#endif // SRC_BERGAMOT_RESPONSE_H_

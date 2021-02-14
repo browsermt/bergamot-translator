@@ -7,8 +7,8 @@
 #include "common/utils.h"
 #include "marian.h"
 #include "translator/parser.h"
+#include "translator/response.h"
 #include "translator/service.h"
-#include "translator/translation_result.h"
 
 int main(int argc, char *argv[]) {
   auto cp = marian::bergamot::createConfigParser();

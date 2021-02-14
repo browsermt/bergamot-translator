@@ -11,8 +11,8 @@
 #include "translator/output_collector.h"
 #include "translator/output_printer.h"
 #include "translator/parser.h"
+#include "translator/response.h"
 #include "translator/service.h"
-#include "translator/translation_result.h"
 
 void marian_decoder_minimal(const marian::Histories &histories,
                             marian::Ptr<marian::Vocab const> targetVocab,

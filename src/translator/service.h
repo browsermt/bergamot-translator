@@ -4,8 +4,8 @@
 #include "batch_translator.h"
 #include "batcher.h"
 #include "pcqueue.h"
+#include "response.h"
 #include "text_processor.h"
-#include "translation_result.h"
 
 #include <queue>
 #include <vector>

@@ -22,7 +22,7 @@
 #define SRC_BERGAMOT_REQUEST_H_
 
 #include "definitions.h"
-#include "translation_result.h"
+#include "response.h"
 
 #include "common/logging.h"
 #include "data/types.h"

@@ -5,7 +5,8 @@
 
 namespace marian {
 namespace bergamot {
-marian::ConfigParser createConfigParser() {
+
+inline marian::ConfigParser createConfigParser() {
   marian::ConfigParser cp(marian::cli::mode::translation);
   cp.addOption<std::string>(
       "--ssplit-prefix-file", "Bergamot Options",

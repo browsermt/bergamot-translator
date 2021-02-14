@@ -22,53 +22,31 @@ public:
       : source_(std::move(other.source_)),
         translation_(std::move(other.translation_)),
         sourceRanges_(std::move(other.sourceRanges_)),
-        sentenceMappings_(std::move(other.sentenceMappings_)),
+        targetRanges_(std::move(other.targetRanges_)),
         histories_(std::move(other.histories_)){};
 
   TranslationResult(const TranslationResult &) = delete;
   TranslationResult &operator=(const TranslationResult &) = delete;
 
-  // Returns const references to source and translated texts, for external
-  // consumption.
-
-  const std::string &getOriginalText() const { return source_; }
-  const std::string &getTranslatedText() const { return translation_; }
-
-  // A mapping of string_views in the source_ and translation_ are provide as a
-  // pair for external consumption. Each entry corresponding
-  // to a (source-sentence, target-sentence).
-
   typedef std::vector<std::pair<const string_view, const string_view>>
       SentenceMappings;
-  const SentenceMappings &getSentenceMappings() const {
-    return sentenceMappings_;
-  }
 
-  // Return the Quality scores of the translated text.
-  // Not implemented currently, commenting out.
-  // const QualityScore &getQualityScore() const { return qualityScore; }
+  void move(std::string &source, std::string &target,
+            SentenceMappings &sentenceMappings);
 
-  // For development use to benchmark with marian-decoder.
-  const Histories &getHistories() const { return histories_; }
+  const Histories &histories() const { return histories_; }
+  const std::string &source() const { return source_; }
+  const std::string &translation() const { return translation_; }
 
-  // @jerinphilip: Why are these members no longer-private? For move-semantics
-  // with consistent string_views for bergamot-translator.
+private:
+  void constructTargetProperties(std::vector<Ptr<Vocab const>> &vocabs);
+  void constructSentenceMappings(SentenceMappings &);
 
   std::string source_;
   std::string translation_;
-  // Adding the following to complete bergamot-translator spec, redundant while
-  // sourceMappings_ and targetMappings_ exists or vice-versa.
-
-  SentenceMappings sentenceMappings_;
-
-private:
-  // Histories are currently required for interoperability with OutputPrinter
-  // and OutputCollector and hence comparisons with marian-decoder.
-  // Future hook to gain alignments.
   Histories histories_;
-
-  // string_views at the token level.
   std::vector<TokenRanges> sourceRanges_;
+  std::vector<TokenRanges> targetRanges_;
 };
 } // namespace bergamot
 } // namespace marian

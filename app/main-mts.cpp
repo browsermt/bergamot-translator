@@ -26,7 +26,7 @@ int main(int argc, char *argv[]) {
       service.translate(std::move(input));
   translation_result_future.wait();
   const TranslationResult &translation_result = translation_result_future.get();
-  std::cout << translation_result.getTranslatedText() << std::endl;
+  std::cout << translation_result.translation() << std::endl;
 
   // Stop Service.
   service.stop();

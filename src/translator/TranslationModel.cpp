@@ -14,6 +14,7 @@
 
 // All local project includes
 #include "TranslationModel.h"
+#include "translator/parser.h"
 #include "translator/service.h"
 
 std::shared_ptr<marian::Options> parseOptions(const std::string &config) {
@@ -34,7 +35,7 @@ std::shared_ptr<marian::Options> parseOptions(const std::string &config) {
   // Error: Aborted from void unhandledException() in
   // 3rd_party/marian-dev/src/common/logging.cpp:113
 
-  marian::ConfigParser configParser(marian::cli::mode::translation);
+  marian::ConfigParser configParser = marian::bergamot::createConfigParser();
   const YAML::Node &defaultConfig = configParser.getConfig();
 
   options.merge(defaultConfig);
@@ -70,18 +71,25 @@ TranslationModel::translate(std::vector<std::string> &&texts,
     intermediate.wait();
     auto mTranslationResult(std::move(intermediate.get()));
 
+    // This mess because marian::string_view != std::string_view
+    std::string source, translation;
+    marian::bergamot::TranslationResult::SentenceMappings mSentenceMappings;
+    mTranslationResult.move(source, translation, mSentenceMappings);
+
     // Convert to UnifiedAPI::TranslationResult
     TranslationResult::SentenceMappings sentenceMappings;
-    for (auto &p : mTranslationResult.getSentenceMappings()) {
+    for (auto &p : mSentenceMappings) {
       std::string_view src(p.first.data(), p.first.size()),
           tgt(p.second.data(), p.second.size());
       sentenceMappings.emplace_back(src, tgt);
     }
 
     // In place construction.
-    translationResults.emplace_back(std::move(mTranslationResult.source_),
-                                    std::move(mTranslationResult.translation_),
-                                    std::move(sentenceMappings));
+    translationResults.emplace_back(
+        std::move(source),          // &&mTranslationResult.source_
+        std::move(translation),     // &&mTranslationResult.translation_
+        std::move(sentenceMappings) // &&sentenceMappings
+    );
   }
 
   promise.set_value(std::move(translationResults));

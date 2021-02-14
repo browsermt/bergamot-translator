@@ -54,8 +54,8 @@ int main(int argc, char *argv[]) {
   translation_result_future.wait();
   const TranslationResult &translation_result = translation_result_future.get();
 
-  marian_decoder_minimal(translation_result.getHistories(),
-                         service.targetVocab(), options);
+  marian_decoder_minimal(translation_result.histories(), service.targetVocab(),
+                         options);
 
   LOG(info, "Total time: {:.5f}s wall", decoderTimer.elapsed());
   service.stop();

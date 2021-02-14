@@ -15,11 +15,11 @@ Service::Service(Ptr<Options> options)
 
   if (numWorkers_ > 0) {
     workers_.reserve(numWorkers_);
-    for (int cpuId = 0; cpuId < numWorkers_; cpuId++) {
-      workers_.emplace_back([&] {
-        marian::DeviceId deviceId(cpuId, DeviceType::cpu);
-        translation_loop(deviceId, pcqueue_, vocabs_, options);
-      });
+    for (size_t cpuId = 0; cpuId < numWorkers_; cpuId++) {
+      marian::DeviceId deviceId(cpuId, DeviceType::cpu);
+      workers_.emplace_back(translation_loop, // Function
+                            deviceId, std::ref(pcqueue_), std::ref(vocabs_),
+                            options);
     }
   } else {
     marian::DeviceId deviceId(/*cpuId=*/0, DeviceType::cpu);

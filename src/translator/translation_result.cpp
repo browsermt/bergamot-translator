@@ -14,22 +14,26 @@ TranslationResult::TranslationResult(std::string &&source,
     : source_(std::move(source)), sourceRanges_(std::move(sourceRanges)),
       histories_(std::move(histories)) {
 
-  std::vector<string_view> sourceMappings;
-  std::vector<string_view> targetMappings;
+  constructTargetProperties(vocabs);
+}
 
-  // Process sourceMappings into sourceMappings.
-  sourceMappings.reserve(sourceRanges_.size());
-  for (int i = 0; i < sourceRanges_.size(); i++) {
-    string_view first = sourceRanges_[i].front();
-    string_view last = sourceRanges_[i].back();
-    sourceMappings.emplace_back(first.data(), last.end() - first.begin());
-  }
+void TranslationResult::move(std::string &source, std::string &translation,
+                             SentenceMappings &sentenceMappings) {
 
-  // Compiles translations into a single std::string translation_
-  // Current implementation uses += on std::string, multiple resizes.
-  // Stores ByteRanges as indices first, followed by conversion into
-  // string_views.
-  // TODO(jerin): Add token level string_views here as well.
+  constructSentenceMappings(sentenceMappings);
+  // Totally illegal stuff.
+  source = std::move(source_);
+  translation = std::move(translation_);
+
+  // The above assignment expects source, target be moved.
+  // which makes the following invalid, hence required to be cleared.
+  sourceRanges_.clear();
+  targetRanges_.clear();
+  histories_.clear();
+}
+
+void TranslationResult::constructTargetProperties(
+    std::vector<Ptr<Vocab const>> &vocabs) {
   std::vector<std::pair<int, int>> translationRanges;
   size_t offset{0};
   bool first{true};
@@ -52,21 +56,36 @@ TranslationResult::TranslationResult(std::string &&source,
     offset += decoded.size();
   }
 
-  // Converting ByteRanges as indices into string_views.
-  targetMappings.reserve(translationRanges.size());
+  // TODO(@jerinphilip):
+  // Currently considers target tokens as whole text. Needs
+  // to be further enhanced in marian-dev to extract alignments.
   for (auto &range : translationRanges) {
+    std::vector<string_view> targetMappings;
     const char *begin = &translation_[range.first];
     targetMappings.emplace_back(begin, range.second);
-  }
-
-  // Surely, let's add sentenceMappings_
-  for (auto src = sourceMappings.begin(), tgt = targetMappings.begin();
-       src != sourceMappings.end() && tgt != targetMappings.end();
-       ++src, ++tgt) {
-    sentenceMappings_.emplace_back(*src, *tgt);
-    auto &t = sentenceMappings_.back();
+    targetRanges_.push_back(std::move(targetMappings));
   }
 }
 
+void TranslationResult::constructSentenceMappings(
+    TranslationResult::SentenceMappings &sentenceMappings) {
+
+  for (int i = 0; i < sourceRanges_.size(); i++) {
+    string_view first, last;
+
+    // Handle source-sentence
+    first = sourceRanges_[i].front();
+    last = sourceRanges_[i].back();
+    string_view src_sentence(first.data(), last.end() - first.begin());
+
+    // Handle target-sentence
+    first = targetRanges_[i].front();
+    last = targetRanges_[i].back();
+    string_view tgt_sentence(first.data(), last.end() - first.begin());
+
+    // Add both into sentence-mappings
+    sentenceMappings.emplace_back(src_sentence, tgt_sentence);
+  }
+}
 } // namespace bergamot
 } // namespace marian

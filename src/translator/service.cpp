@@ -23,7 +23,8 @@ Service::Service(Ptr<Options> options)
     }
   } else {
     marian::DeviceId deviceId(/*cpuId=*/0, DeviceType::cpu);
-    translator = new BatchTranslator(deviceId, vocabs_, options);
+    translator =
+        UPtr<BatchTranslator>(new BatchTranslator(deviceId, vocabs_, options));
   }
 }
 

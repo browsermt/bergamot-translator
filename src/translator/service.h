@@ -71,7 +71,7 @@ private:
   std::vector<std::thread> workers_;
 
   // Optional
-  BatchTranslator *translator{nullptr};
+  UPtr<BatchTranslator> translator{nullptr};
 };
 
 std::vector<Ptr<const Vocab>> loadVocabularies(Ptr<Options> options);

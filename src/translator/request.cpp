@@ -14,11 +14,11 @@ Request::Request(unsigned int Id, int lineNumberBegin,
                  std::vector<Ptr<Vocab const>> &vocabs, std::string &&source,
                  Segments &&segments,
                  std::vector<TokenRanges> &&sourceAlignments,
-                 std::promise<TranslationResult> translationResultPromise)
+                 std::promise<Response> responsePromise)
     : Id_(Id), lineNumberBegin_(lineNumberBegin), vocabs_(&vocabs),
       source_(std::move(source)), segments_(std::move(segments)),
       sourceAlignments_(std::move(sourceAlignments)),
-      response_(std::move(translationResultPromise)) {
+      response_(std::move(responsePromise)) {
 
   counter_ = segments_.size();
   histories_.resize(segments_.size(), nullptr);
@@ -47,10 +47,9 @@ void Request::processHistory(size_t index, Ptr<History> history) {
 
 void Request::completeRequest() {
   // Request no longer needs to hold the content, can transfer it to
-  // TranslationResult.
-  TranslationResult translation_result(std::move(source_),
-                                       std::move(sourceAlignments_),
-                                       std::move(histories_), *vocabs_);
+  // Response.
+  Response translation_result(std::move(source_), std::move(sourceAlignments_),
+                              std::move(histories_), *vocabs_);
   response_.set_value(std::move(translation_result));
 }
 

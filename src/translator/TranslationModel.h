@@ -24,7 +24,8 @@
  */
 class TranslationModel : public AbstractTranslationModel {
 public:
-  /* Construct the model using the model configuration options as yaml-formatted string
+  /* Construct the model using the model configuration options as yaml-formatted
+   * string
    */
   TranslationModel(const std::string &config);
 

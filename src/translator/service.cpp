@@ -28,11 +28,11 @@ Service::Service(Ptr<Options> options)
   }
 }
 
-std::future<TranslationResult> Service::translateWithCopy(std::string input) {
+std::future<Response> Service::translateWithCopy(std::string input) {
   return translate(std::move(input));
 }
 
-std::future<TranslationResult> Service::translate(std::string &&input) {
+std::future<Response> Service::translate(std::string &&input) {
   // Takes in a blob of text. Segments and std::vector<TokenRanges> are
   // extracted from the input (blob of text) and used to construct a Request
   // along with a promise. promise value is set by the worker completing a
@@ -49,13 +49,13 @@ std::future<TranslationResult> Service::translate(std::string &&input) {
   std::vector<TokenRanges> sourceAlignments;
   text_processor_.process(input, segments, sourceAlignments);
 
-  std::promise<TranslationResult> translationResultPromise;
-  auto future = translationResultPromise.get_future();
+  std::promise<Response> responsePromise;
+  auto future = responsePromise.get_future();
 
-  Ptr<Request> request = New<Request>(
-      requestId_++, /* lineNumberBegin = */ 0, vocabs_, std::move(input),
-      std::move(segments), std::move(sourceAlignments),
-      std::move(translationResultPromise));
+  Ptr<Request> request =
+      New<Request>(requestId_++, /* lineNumberBegin = */ 0, vocabs_,
+                   std::move(input), std::move(segments),
+                   std::move(sourceAlignments), std::move(responsePromise));
 
   batcher_.addWholeRequest(request);
 

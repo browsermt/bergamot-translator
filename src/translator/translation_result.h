@@ -11,22 +11,20 @@
 
 namespace marian {
 namespace bergamot {
-class TranslationResult {
+class Response {
 public:
-  TranslationResult(std::string &&source,
-                    std::vector<TokenRanges> &&sourceRanges,
-                    Histories &&histories,
-                    std::vector<Ptr<Vocab const>> &vocabs);
+  Response(std::string &&source, std::vector<TokenRanges> &&sourceRanges,
+           Histories &&histories, std::vector<Ptr<Vocab const>> &vocabs);
 
-  TranslationResult(TranslationResult &&other)
+  Response(Response &&other)
       : source_(std::move(other.source_)),
         translation_(std::move(other.translation_)),
         sourceRanges_(std::move(other.sourceRanges_)),
         targetRanges_(std::move(other.targetRanges_)),
         histories_(std::move(other.histories_)){};
 
-  TranslationResult(const TranslationResult &) = delete;
-  TranslationResult &operator=(const TranslationResult &) = delete;
+  Response(const Response &) = delete;
+  Response &operator=(const Response &) = delete;
 
   typedef std::vector<std::pair<const string_view, const string_view>>
       SentenceMappings;

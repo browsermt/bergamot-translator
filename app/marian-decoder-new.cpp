@@ -46,16 +46,14 @@ int main(int argc, char *argv[]) {
   std::ostringstream std_input;
   std_input << std::cin.rdbuf();
   std::string input = std_input.str();
-  using marian::bergamot::TranslationResult;
+  using marian::bergamot::Response;
 
-  // Wait on future until TranslationResult is complete
-  std::future<TranslationResult> translation_result_future =
-      service.translate(std::move(input));
-  translation_result_future.wait();
-  const TranslationResult &translation_result = translation_result_future.get();
+  // Wait on future until Response is complete
+  std::future<Response> responseFuture = service.translate(std::move(input));
+  responseFuture.wait();
+  const Response &response = responseFuture.get();
 
-  marian_decoder_minimal(translation_result.histories(), service.targetVocab(),
-                         options);
+  marian_decoder_minimal(response.histories(), service.targetVocab(), options);
 
   LOG(info, "Total time: {:.5f}s wall", decoderTimer.elapsed());
   service.stop();

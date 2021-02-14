@@ -69,12 +69,12 @@ TranslationModel::translate(std::vector<std::string> &&texts,
     // Collect future as marian::bergamot::TranslationResult
     auto intermediate = service_.translate(std::move(text));
     intermediate.wait();
-    auto mTranslationResult(std::move(intermediate.get()));
+    auto marianResponse(std::move(intermediate.get()));
 
     // This mess because marian::string_view != std::string_view
     std::string source, translation;
-    marian::bergamot::TranslationResult::SentenceMappings mSentenceMappings;
-    mTranslationResult.move(source, translation, mSentenceMappings);
+    marian::bergamot::Response::SentenceMappings mSentenceMappings;
+    marianResponse.move(source, translation, mSentenceMappings);
 
     // Convert to UnifiedAPI::TranslationResult
     TranslationResult::SentenceMappings sentenceMappings;
@@ -86,8 +86,8 @@ TranslationModel::translate(std::vector<std::string> &&texts,
 
     // In place construction.
     translationResults.emplace_back(
-        std::move(source),          // &&mTranslationResult.source_
-        std::move(translation),     // &&mTranslationResult.translation_
+        std::move(source),          // &&marianResponse.source_
+        std::move(translation),     // &&marianResponse.translation_
         std::move(sentenceMappings) // &&sentenceMappings
     );
   }

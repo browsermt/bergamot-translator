@@ -48,13 +48,13 @@ private:
   std::vector<TokenRanges> sourceAlignments_;
   std::vector<Ptr<History>> histories_;
 
-  std::promise<TranslationResult> response_;
+  std::promise<Response> response_;
 
 public:
   Request(unsigned int Id, int lineNumberBegin,
           std::vector<Ptr<Vocab const>> &vocabs_, std::string &&source,
           Segments &&segments, std::vector<TokenRanges> &&sourceAlignments,
-          std::promise<TranslationResult> translationResultPromise);
+          std::promise<Response> responsePromise);
 
   // Obtain the count of tokens in the segment correponding to index. Used to
   // insert sentence from multiple requests into the corresponding size bucket.

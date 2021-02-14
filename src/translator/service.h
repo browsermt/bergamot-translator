@@ -25,17 +25,17 @@ class Service {
   //  options = ...;
   //  service = Service(options);
   //  std::string input_blob = "Hello World";
-  //  std::future<TranslationResult>
+  //  std::future<Response>
   //      response = service.translate(std::move(input_blob));
   //  response.wait();
-  //  TranslationResult result = response.get();
+  //  Response result = response.get();
 
 public:
   explicit Service(Ptr<Options> options);
 
   // Constructs new string copying, calls translate internally.
-  std::future<TranslationResult> translateWithCopy(std::string input);
-  std::future<TranslationResult> translate(std::string &&input);
+  std::future<Response> translateWithCopy(std::string input);
+  std::future<Response> translate(std::string &&input);
 
   void stop();
 
@@ -49,7 +49,7 @@ private:
   int numWorkers_;
 
   // vocabs are used to construct a Request, which later uses it to construct
-  // TranslationResult (decode from words to string).
+  // Response (decode from words to string).
   std::vector<Ptr<Vocab const>> vocabs_; // ORDER DEPENDENCY
 
   // Consists of:

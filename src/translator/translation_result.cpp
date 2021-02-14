@@ -7,18 +7,17 @@
 namespace marian {
 namespace bergamot {
 
-TranslationResult::TranslationResult(std::string &&source,
-                                     std::vector<TokenRanges> &&sourceRanges,
-                                     Histories &&histories,
-                                     std::vector<Ptr<Vocab const>> &vocabs)
+Response::Response(std::string &&source,
+                   std::vector<TokenRanges> &&sourceRanges,
+                   Histories &&histories, std::vector<Ptr<Vocab const>> &vocabs)
     : source_(std::move(source)), sourceRanges_(std::move(sourceRanges)),
       histories_(std::move(histories)) {
 
   constructTargetProperties(vocabs);
 }
 
-void TranslationResult::move(std::string &source, std::string &translation,
-                             SentenceMappings &sentenceMappings) {
+void Response::move(std::string &source, std::string &translation,
+                    SentenceMappings &sentenceMappings) {
 
   constructSentenceMappings(sentenceMappings);
   // Totally illegal stuff.
@@ -32,7 +31,7 @@ void TranslationResult::move(std::string &source, std::string &translation,
   histories_.clear();
 }
 
-void TranslationResult::constructTargetProperties(
+void Response::constructTargetProperties(
     std::vector<Ptr<Vocab const>> &vocabs) {
   std::vector<std::pair<int, int>> translationRanges;
   size_t offset{0};
@@ -67,8 +66,8 @@ void TranslationResult::constructTargetProperties(
   }
 }
 
-void TranslationResult::constructSentenceMappings(
-    TranslationResult::SentenceMappings &sentenceMappings) {
+void Response::constructSentenceMappings(
+    Response::SentenceMappings &sentenceMappings) {
 
   for (int i = 0; i < sourceRanges_.size(); i++) {
     string_view first, last;

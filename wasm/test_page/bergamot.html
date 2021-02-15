@@ -141,13 +141,15 @@ the sky is blue
       document.querySelector("#log").value += message + "\n";
     }
 
+    const start = Date.now();
     let moduleLoadStart;
     var Module = {
       preRun: [function() {
+        log(`Time until Module.preRun: ${(Date.now() - start)/1000} secs`);
         moduleLoadStart = Date.now();
       }],
       onRuntimeInitialized: function() {
-        log(`Wasm Runtime initialized in ${(Date.now() - moduleLoadStart)/1000} secs`);
+        log(`Wasm Runtime initialized (preRun -> onRuntimeInitialized) in ${(Date.now() - moduleLoadStart)/1000} secs`);
       }
     };
   </script>

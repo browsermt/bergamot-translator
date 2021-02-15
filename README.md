@@ -45,10 +45,25 @@ Download the models from `https://github.com/mozilla-applied-ml/bergamot-models`
 The build also allows packaging files into wasm binary (i.e. preloading in Emscripten’s virtual file system) using cmake
 option `PACKAGE_DIR`. The compile command below packages all the files in PATH directory (in these case, your models) into wasm binary.
 ```bash
-emcmake cmake -DCOMPILE_WASM=on -DPACKAGE_DIR=<PATH> ./models
+emcmake cmake -DCOMPILE_WASM=on -DPACKAGE_DIR=/repo/models ../
 ```
 Files packaged this way are preloaded in the root of the virtual file system.
 
+To package the set of files expected by the test page:
+
+```bash
+git clone https://github.com/browsermt/students
+cd students/esen/
+./download-models.sh
+cp esen.student.tiny11/lex.s2t ../../models/lex.esen.s2t
+cp esen.student.tiny11/model.npz ../../models/model.esen.npz
+cp esen.student.tiny11/vocab.esen.spm ../../models/vocab.esen.spm
+cd -
+cd students/enes/
+./download-models.sh
+cp enes.student.tiny11/lex.s2t ../../models/lex.enes.s2t
+cp enes.student.tiny11/model.npz ../../models/model.enes.npz
+```
 
 After Editing Files:
 

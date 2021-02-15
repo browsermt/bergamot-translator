@@ -10,14 +10,15 @@
 namespace marian {
 namespace bergamot {
 
+// -----------------------------------------------------------------
 Request::Request(unsigned int Id, int lineNumberBegin,
                  std::vector<Ptr<Vocab const>> &vocabs, std::string &&source,
                  Segments &&segments,
-                 std::vector<TokenRanges> &&sourceAlignments,
+                 std::vector<TokenRanges> &&sourceTokenRanges,
                  std::promise<Response> responsePromise)
     : Id_(Id), lineNumberBegin_(lineNumberBegin), vocabs_(&vocabs),
       source_(std::move(source)), segments_(std::move(segments)),
-      sourceAlignments_(std::move(sourceAlignments)),
+      sourceTokenRanges_(std::move(sourceTokenRanges)),
       response_(std::move(responsePromise)) {
 
   counter_ = segments_.size();
@@ -48,7 +49,7 @@ void Request::processHistory(size_t index, Ptr<History> history) {
 void Request::completeRequest() {
   // Request no longer needs to hold the content, can transfer it to
   // Response.
-  Response response(std::move(source_), std::move(sourceAlignments_),
+  Response response(std::move(source_), std::move(sourceTokenRanges_),
                     std::move(histories_), *vocabs_);
   response_.set_value(std::move(response));
 }
@@ -57,6 +58,8 @@ bool Request::operator<(const Request &b) const {
   // Among Requests, only sequence id is used for obtaining priority.
   return Id_ < b.Id_;
 }
+
+// ------------------------------------------------------------------
 
 RequestSentence::RequestSentence(size_t index, Ptr<Request> request)
     : index_(index), request_(request) {}
@@ -85,6 +88,42 @@ bool operator<(const RequestSentence &a, const RequestSentence &b) {
     return a.index_ < b.index_;
   }
   return a.request_ < b.request_;
+}
+
+// ----------------------------------------------------------------------
+
+void Batch::reset() {
+  Id_ = 0;
+  sentences_.clear();
+}
+
+void Batch::log() {
+  int numTokens{0}, maxLength{0};
+  for (auto &sentence : sentences_) {
+    numTokens += sentence.numTokens();
+    maxLength = std::max(maxLength, static_cast<int>(sentence.numTokens()));
+  }
+
+  LOG(info, "Batch(Id_={}, tokens={}, max-length={}, sentences_={})", Id_,
+      numTokens, maxLength, sentences_.size());
+}
+
+void Batch::add(const RequestSentence &sentence) {
+  sentences_.push_back(sentence);
+}
+
+void Batch::setId(int Id) {
+  assert(Id > 0);
+  Id_ = Id;
+  if (Id % 500 == 0) {
+    log();
+  }
+}
+
+void Batch::completeBatch(const Histories &histories) {
+  for (int i = 0; i < sentences_.size(); i++) {
+    sentences_[i].completeSentence(histories[i]);
+  }
 }
 
 } // namespace bergamot

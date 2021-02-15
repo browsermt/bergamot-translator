@@ -5,3 +5,4 @@
 wasm/test_page/node_modules
 build-wasm
 models
+wasm/test_page/bergamot-translator-worker.*

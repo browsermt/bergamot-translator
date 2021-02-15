@@ -3,6 +3,6 @@
 *.swo
 
 wasm/test_page/node_modules
-build-wasm
+build-*
 models
 wasm/test_page/bergamot-translator-worker.*

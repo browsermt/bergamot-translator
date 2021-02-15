@@ -35,17 +35,17 @@ input.delete();
 
 You can also see everything in action by following the next steps:
 * Start the test webserver (ensure you have the latest nodejs installed)
-```
+```bash
 cd test_page
 bash start_server.sh
 ```
 * Open any of the browsers below
     * Firefox Nightly +87: make sure the following prefs are on (about:config)
-    ````
+    ```
     dom.postMessage.sharedArrayBuffer.bypassCOOP_COEP.insecure.enabled = true
     javascript.options.wasm_simd = true
     javascript.options.wasm_simd_wormhole = true
-    ````
+    ```
 
     * Chrome Canary +90: start with the following argument
     ```

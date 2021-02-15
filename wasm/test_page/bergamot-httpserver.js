@@ -33,7 +33,3 @@ function serveFile(res, pathName, mime) {
 
 server.listen(8000);
 console.log('HTTP and BinaryJS server started on port 8000');
-
-
-
-

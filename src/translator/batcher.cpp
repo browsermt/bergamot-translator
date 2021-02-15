@@ -62,7 +62,7 @@ void Batcher::addWholeRequest(Ptr<Request> request) {
   }
 }
 
-void Batcher::enqueue(PCQueue<Batch> &pcqueue) {
+void Batcher::produceTo(PCQueue<Batch> &pcqueue) {
   Batch batch;
   while (cleaveBatch(batch)) {
     pcqueue.ProduceSwap(batch);

@@ -21,7 +21,7 @@ public:
   // which maintains priority among sentences from multiple concurrent requests.
   void addSentenceWithPriority(RequestSentence &sentence);
   void addWholeRequest(Ptr<Request> request);
-  void enqueue(PCQueue<Batch> &pcqueue);
+  void produceTo(PCQueue<Batch> &pcqueue);
 
   // Loads sentences with sentences compiled from (tentatively) multiple
   // requests optimizing for both padding and priority.

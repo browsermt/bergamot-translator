@@ -70,7 +70,7 @@ std::future<Response> Service::translate(std::string &&input) {
   batcher_.addWholeRequest(request);
 
   if (numWorkers_ > 0) {
-    batcher_.enqueue(pcqueue_);
+    batcher_.produceTo(pcqueue_);
   } else {
     // Queue single-threaded
     Batch batch;

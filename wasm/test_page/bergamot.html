@@ -61,7 +61,7 @@ the sky is blue
         // For available configuration options, please check: https://marian-nmt.github.io/docs/cmd/marian-decoder/
         // This example captures the most relevant options: model file, vocabulary files and shortlist file
         //        var modelConfig = "{\"models\":[\"/model.enes.npz\"],\"vocabs\":[\"/vocab.esen.spm\"],\"beam-size\":1}";//,\"shortlist\":[\"/lex.s2t\"]
-        const modelConfig = `{\"models\":[\"/model.${lang}.npz\"],\"vocabs\":[\"/vocab.esen.spm\",\"/vocab.esen.spm\"],\"beam-size\":1} ,\"shortlist\":[\"/lex.${lang}.s2t\"]`;
+        const modelConfig = `{\"models\":[\"/model.${lang}.npz\"],\"vocabs\":[\"/vocab.esen.spm\",\"/vocab.esen.spm\"],\"beam-size\":1,\"shortlist\":[\"/lex.${lang}.s2t\"]}`;
 
         // Instantiate the TranslationModel
         if (model) model.delete();

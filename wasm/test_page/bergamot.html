@@ -67,36 +67,33 @@ En consecuencia, durante el año 2011 se introdujeron 180 proyectos de ley que re
   const loadModel = (lang) => {
     // Set the Model Configuration as YAML formatted string.
     // For available configuration options, please check: https://marian-nmt.github.io/docs/cmd/marian-decoder/
-
-    const modelConfig = {
-      "models": [
-        `/model.${lang}.npz`
-      ],
-      "vocabs": [
-        "/vocab.esen.spm",
-        "/vocab.esen.spm"
-      ],
-      "beam-size": 1,
-      "mini-batch": 32,
-      "maxi-batch": 100,
-      "maxi-batch-sort": "src",
-      "workspace": 128,
-      "skip-cost": true,
-      "cpu-threads": 1,
-      "shortlist": [
-        `/lex.${lang}.s2t`,
-        50,
-        50,
-      ]
-      // TODO: Enable when wormhole is enabled
-      // "int8shift": true,
-      // TODO: Enable when loading of binary models is supported and we use model.intgemm.alphas.bin
-      // "int8shiftAlphaAll": true,
-    };
+    const modelConfig = `models:
+  - /model.${lang}.npz
+vocabs:
+  - /vocab.esen.spm
+  - /vocab.esen.spm
+beam-size: 1
+normalize: 1.0
+word-penalty: 0
+mini-batch: 32
+maxi-batch: 100
+maxi-batch-sort: src
+workspace: 128
+max-length-factor: 2.0
+skip-cost: true
+shortlist:
+    - lex.${lang}.s2t
+    - 50
+    - 50
+`;
+// TODO: Use in model config when wormhole is enabled:
+// gemm-precision: int8shift
+// TODO: Use in model config when loading of binary models is supported and we use model.intgemm.alphas.bin:
+// gemm-precision: int8shiftAlphaAll
 
     // Instantiate the TranslationModel
     if (model) model.delete();
-    model = new Module.TranslationModel(JSON.stringify(modelConfig));
+    model = new Module.TranslationModel(modelConfig);
   }
 
   const translate = (sentences) => {

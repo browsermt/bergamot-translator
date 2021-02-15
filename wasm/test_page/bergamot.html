@@ -117,7 +117,7 @@ the sky is blue
       const sentences = text.split("\n");
       let wordCount = 0;
       sentences.forEach(sentence => {
-        wordCount += sentence.trim().split(" ").length;
+        wordCount += sentence.trim().split(" ").filter(word => word.trim() !== "").length;
       })
       const start = Date.now();
       const translatedSentences = translate(sentences);

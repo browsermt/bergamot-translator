@@ -76,11 +76,22 @@ En consecuencia, durante el año 2011 se introdujeron 180 proyectos de ley que re
         "/vocab.esen.spm",
         "/vocab.esen.spm"
       ],
+      "beam-size": 1,
+      "mini-batch": 32,
+      "maxi-batch": 100,
+      "maxi-batch-sort": "src",
+      "workspace": 128,
+      "skip-cost": true,
+      "cpu-threads": 1,
       "shortlist": [
         `/lex.${lang}.s2t`,
         50,
         50,
       ]
+      // TODO: Enable when wormhole is enabled
+      // "int8shift": true,
+      // TODO: Enable when loading of binary models is supported and we use model.intgemm.alphas.bin
+      // "int8shiftAlphaAll": true,
     };
 
     // Instantiate the TranslationModel

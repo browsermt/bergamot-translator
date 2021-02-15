@@ -14,7 +14,7 @@ target_include_directories(bergamot-translator-worker
 target_compile_definitions(bergamot-translator-worker PRIVATE WASM_BINDINGS)
 target_compile_options(bergamot-translator-worker PRIVATE ${WASM_COMPILE_FLAGS})
 
-set(LINKER_FLAGS "--bind -s ASSERTIONS=1 -s DISABLE_EXCEPTION_CATCHING=0 -s FORCE_FILESYSTEM=1 -s ALLOW_MEMORY_GROWTH=1")
+set(LINKER_FLAGS "--bind -s ASSERTIONS=1 -s DISABLE_EXCEPTION_CATCHING=0 -s FORCE_FILESYSTEM=1 -s ALLOW_MEMORY_GROWTH=1 -s NO_DYNAMIC_EXECUTION=1")
 if (NOT PACKAGE_DIR STREQUAL "")
   set(LINKER_FLAGS "${LINKER_FLAGS} --preload-file ${PACKAGE_DIR}@/")
 endif()

@@ -23,10 +23,6 @@ SET(COMPILE_DECODER_ONLY ON CACHE BOOL "Compile marian-decoder only")
 SET(COMPILE_WITH_PTHREADS OFF CACHE BOOL "Compile with pthreads support")
 SET(USE_WASM_COMPATIBLE_BLAS ON CACHE BOOL "Compile with a WASM compatible blas for decoder only builds")
 SET(COMPILE_LIBRARY_ONLY ON CACHE BOOL "Build only the Marian library and exclude all executables.")
-if(COMPILE_WASM)
-  # Set WORMHOLE to ON for marian whenever compiling for wasm platform
-  SET(WORMHOLE ON CACHE BOOL "Use WASM wormhole in intgemm https://bugzilla.mozilla.org/show_bug.cgi?id=1672160")
-endif()
 
 execute_process(COMMAND git submodule update --init --recursive --no-fetch
                 WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
@@ -38,7 +34,7 @@ endif()
 
 if(COMPILE_WASM)
   list(APPEND WASM_COMPILE_FLAGS -pthread -O3 -g2 -fPIC -mssse3 -msimd128)
-  list(APPEND WASM_COMPILE_FLAGS "SHELL:-s WASM=1" "SHELL:-s ASSERTIONS=1" "SHELL:-s DISABLE_EXCEPTION_CATCHING=0" "SHELL:-s LLD_REPORT_UNDEFINED" "SHELL:-s FORCE_FILESYSTEM=1" "SHELL:-s ALLOW_MEMORY_GROWTH=1")
+  list(APPEND WASM_COMPILE_FLAGS "SHELL:-s WASM=1" "SHELL:-s ASSERTIONS=0" "SHELL:-s DISABLE_EXCEPTION_CATCHING=1" "SHELL:-s LLD_REPORT_UNDEFINED" "SHELL:-s FORCE_FILESYSTEM=1" "SHELL:-s ALLOW_MEMORY_GROWTH=1")
   list(APPEND WASM_COMPILE_FLAGS -Wno-error=pthreads-mem-growth)
 endif(COMPILE_WASM)
 

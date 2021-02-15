@@ -37,10 +37,13 @@
 
   <div id="divtranslation">
     <label for="from">From</label>
-    <input type="text" id="from" name="from"/>
+    <textarea id="from" name="from">
+hello world
+the sky is blue
+    </textarea>
     <br><br>
     <label for="to">To</label>
-    <input type="text" id="to" name="to" readonly/>
+    <textarea id="to" name="to" readonly></textarea>
     <br><br>
     <input type="button" id="translate" value="Translate"/>
   </div>
@@ -65,17 +68,23 @@
         model = new Module.TranslationModel(modelConfig);
     }
 
-    const translate = (sentence) => {
+    const translate = (sentences) => {
 
         // Instantiate the arguments of translate() API i.e. TranslationRequest and input (vector<string>)
         var request = new Module.TranslationRequest();
         let input = new Module.VectorString;
 
         // Initialize the input
-        input.push_back(sentence);
-        /*
+        sentences.forEach(sentence => {
+          // prevent empty sentences - it breaks the translation
+          if (sentence.trim() === "") {
+            return;
+          }
+          input.push_back(sentence.trim())
+        })
         // Access input (just for debugging)
         console.log('Input size=', input.size());
+        /*
         for (let i = 0; i < input.size(); i++) {
           console.log(' val:' + input.get(i));
         }
@@ -85,14 +94,14 @@
         let result = model.translate(input, request);
         // Access original and translated text from each entry of vector<TranslationResult>
         //console.log('Result size=', result.size(), ' - TimeDiff - ', (Date.now() - start)/1000);
-        let translatedText = "";
+        const translatedSentences = [];
         for (let i = 0; i < result.size(); i++) {
-          translatedText += result.get(i).getTranslatedText() + " ";
+          translatedSentences.push(result.get(i).getTranslatedText());
         }
-        console.log(translatedText);
+        console.log({translatedSentences});
         request.delete();
         input.delete();
-        return translatedText;
+        return translatedSentences;
   }
 
     document.querySelector("#load").addEventListener("click", () => {
@@ -105,10 +114,17 @@
 
     const translateCall = () => {
       const text = document.querySelector('#from').value;
-      let start = Date.now();
-      const translate_text = translate(text);
-      log(`sentence translation time ${(Date.now() - start)/1000} secs`);
-      document.querySelector('#to').value = translate_text;
+      const sentences = text.split("\n");
+      let wordCount = 0;
+      sentences.forEach(sentence => {
+        wordCount += sentence.trim().split(" ").length;
+      })
+      const start = Date.now();
+      const translatedSentences = translate(sentences);
+      const secs = (Date.now() - start) / 1000;
+      log(`Translation of ${translatedSentences.length} sentences (wordCount ${wordCount}) took ${secs} secs (${Math.round(wordCount / secs)} words per second)`);
+
+      document.querySelector('#to').value = translatedSentences.join("\n");
     }
 
     document.querySelector("#translate").addEventListener("click", () => {

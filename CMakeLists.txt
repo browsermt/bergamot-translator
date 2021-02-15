@@ -23,6 +23,7 @@ SET(COMPILE_DECODER_ONLY ON CACHE BOOL "Compile marian-decoder only")
 SET(COMPILE_WITH_PTHREADS OFF CACHE BOOL "Compile with pthreads support")
 SET(USE_WASM_COMPATIBLE_BLAS ON CACHE BOOL "Compile with a WASM compatible blas for decoder only builds")
 SET(COMPILE_LIBRARY_ONLY ON CACHE BOOL "Build only the Marian library and exclude all executables.")
+SET(COMPILE_WITHOUT_EXCEPTIONS ON CACHE BOOL "Compile without exceptions")
 
 execute_process(COMMAND git submodule update --init --recursive --no-fetch
                 WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})

@@ -67,13 +67,25 @@ En consecuencia, durante el año 2011 se introdujeron 180 proyectos de ley que re
   const loadModel = (lang) => {
     // Set the Model Configuration as YAML formatted string.
     // For available configuration options, please check: https://marian-nmt.github.io/docs/cmd/marian-decoder/
-    // This example captures the most relevant options: model file, vocabulary files and shortlist file
-    //        var modelConfig = "{\"models\":[\"/model.enes.npz\"],\"vocabs\":[\"/vocab.esen.spm\"],\"beam-size\":1}";//,\"shortlist\":[\"/lex.s2t\"]
-    const modelConfig = `{\"models\":[\"/model.${lang}.npz\"],\"vocabs\":[\"/vocab.esen.spm\",\"/vocab.esen.spm\"],\"beam-size\":1,\"shortlist\":[\"/lex.${lang}.s2t\"]}`;
+
+    const modelConfig = {
+      "models": [
+        `/model.${lang}.npz`
+      ],
+      "vocabs": [
+        "/vocab.esen.spm",
+        "/vocab.esen.spm"
+      ],
+      "shortlist": [
+        `/lex.${lang}.s2t`,
+        50,
+        50,
+      ]
+    };
 
     // Instantiate the TranslationModel
     if (model) model.delete();
-    model = new Module.TranslationModel(modelConfig);
+    model = new Module.TranslationModel(JSON.stringify(modelConfig));
   }
 
   const translate = (sentences) => {

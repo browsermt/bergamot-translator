@@ -75,17 +75,25 @@ vocabs:
 beam-size: 1
 normalize: 1.0
 word-penalty: 0
-mini-batch: 32
-maxi-batch: 100
-maxi-batch-sort: src
+max-input-sentence-tokens: 128
+max-input-tokens: 1024
 workspace: 128
 max-length-factor: 2.0
 skip-cost: true
+cpu-threads: 1
+quiet: true
+quiet-translation: true
 shortlist:
     - /lex.${lang}.s2t
     - 50
     - 50
 `;
+/*
+This config is not valid anymore in new APIs
+mini-batch: 32
+maxi-batch: 100
+maxi-batch-sort: src
+*/
 // TODO: Use in model config when wormhole is enabled:
 // gemm-precision: int8shift
 // TODO: Use in model config when loading of binary models is supported and we use model.intgemm.alphas.bin:

@@ -20,7 +20,7 @@ void Batch::add(const RequestSentence &sentence) {
 }
 
 void Batch::completeBatch(const Histories &histories) {
-  for (int i = 0; i < sentences_.size(); i++) {
+  for (size_t i = 0; i < sentences_.size(); i++) {
     sentences_[i].completeSentence(histories[i]);
   }
 }

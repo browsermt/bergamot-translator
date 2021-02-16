@@ -52,17 +52,10 @@ Files packaged this way are preloaded in the root of the virtual file system.
 To package the set of files expected by the test page:
 
 ```bash
-git clone https://github.com/browsermt/students
-cd students/esen/
-./download-models.sh
-cp esen.student.tiny11/lex.s2t ../../models/lex.esen.s2t
-cp esen.student.tiny11/model.npz ../../models/model.esen.npz
-cp esen.student.tiny11/vocab.esen.spm ../../models/vocab.esen.spm
-cd -
-cd students/enes/
-./download-models.sh
-cp enes.student.tiny11/lex.s2t ../../models/lex.enes.s2t
-cp enes.student.tiny11/model.npz ../../models/model.enes.npz
+mkdir models
+git clone https://github.com/motin/bergamot-models
+cp -r bergamot-models/* models
+gunzip models/*/*
 ```
 
 After Editing Files:

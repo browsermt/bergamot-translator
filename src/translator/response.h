@@ -43,7 +43,8 @@ public:
         translation_(std::move(other.translation_)),
         sourceRanges_(std::move(other.sourceRanges_)),
         targetRanges_(std::move(other.targetRanges_)),
-        histories_(std::move(other.histories_)){};
+        histories_(std::move(other.histories_)),
+        vocabs_(std::move(other.vocabs_)){};
 
   // Prevents CopyConstruction and CopyAssignment. sourceRanges_ is constituted
   // by string_view and copying invalidates the data member.
@@ -66,9 +67,7 @@ public:
   const Histories &histories() const { return histories_; }
   const std::string &source() const { return source_; }
   const std::string &translation() {
-    if (!translationConstructed) {
-      constructTranslation();
-    }
+    constructTranslation();
     return translation_;
   }
 
@@ -88,8 +87,8 @@ private:
   std::vector<TokenRanges> sourceRanges_;
   Histories histories_;
 
-  std::vector<Ptr<Vocab const>> *vocabs_{nullptr};
-  bool translationConstructed{false};
+  std::vector<Ptr<Vocab const>> *vocabs_;
+  bool translationConstructed_{false};
   std::string translation_;
   std::vector<TokenRanges> targetRanges_;
 };

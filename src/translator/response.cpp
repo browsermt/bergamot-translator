@@ -16,7 +16,11 @@ Response::Response(std::string &&source,
 void Response::move(std::string &source, std::string &translation,
                     SentenceMappings &sentenceMappings) {
 
+  // Construct required stuff first.
+  constructTranslation();
   constructSentenceMappings(sentenceMappings);
+
+  // Move content out.
   source = std::move(source_);
   translation = std::move(translation_);
 
@@ -28,6 +32,13 @@ void Response::move(std::string &source, std::string &translation,
 }
 
 void Response::constructTranslation() {
+  if (translationConstructed_) {
+    return;
+  }
+
+  // Reserving length at least as much as source_ seems like a reasonable thing
+  // to do to avoid reallocations.
+  translation_.reserve(source_.size());
 
   // In a first step, the decoded units (individual senteneces) are compiled
   // into a huge string. This is done by computing indices first and appending
@@ -43,7 +54,8 @@ void Response::constructTranslation() {
 
     Result result = onebest[0]; // Expecting only one result;
     Words words = std::get<0>(result);
-    std::string decoded = vocabs_->back()->decode(words);
+    auto targetVocab = vocabs_->back();
+    std::string decoded = targetVocab->decode(words);
     if (first) {
       first = false;
     } else {
@@ -67,9 +79,10 @@ void Response::constructTranslation() {
 
     const char *begin = &translation_[range.first];
     targetMappings.emplace_back(begin, range.second);
-
     targetRanges_.push_back(std::move(targetMappings));
   }
+
+  translationConstructed_ = true;
 }
 
 void Response::constructSentenceMappings(

@@ -92,39 +92,5 @@ bool operator<(const RequestSentence &a, const RequestSentence &b) {
 
 // ----------------------------------------------------------------------
 
-void Batch::reset() {
-  Id_ = 0;
-  sentences_.clear();
-}
-
-void Batch::log() {
-  int numTokens{0}, maxLength{0};
-  for (auto &sentence : sentences_) {
-    numTokens += sentence.numTokens();
-    maxLength = std::max(maxLength, static_cast<int>(sentence.numTokens()));
-  }
-
-  LOG(info, "Batch(Id_={}, tokens={}, max-length={}, sentences_={})", Id_,
-      numTokens, maxLength, sentences_.size());
-}
-
-void Batch::add(const RequestSentence &sentence) {
-  sentences_.push_back(sentence);
-}
-
-void Batch::setId(int Id) {
-  assert(Id > 0);
-  Id_ = Id;
-  if (Id % 500 == 0) {
-    log();
-  }
-}
-
-void Batch::completeBatch(const Histories &histories) {
-  for (int i = 0; i < sentences_.size(); i++) {
-    sentences_[i].completeSentence(histories[i]);
-  }
-}
-
 } // namespace bergamot
 } // namespace marian

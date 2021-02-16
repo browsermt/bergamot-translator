@@ -1,6 +1,7 @@
 #ifndef SRC_BERGAMOT_BATCHER_H_
 #define SRC_BERGAMOT_BATCHER_H_
 
+#include "batch.h"
 #include "common/options.h"
 #include "data/corpus_base.h"
 #include "definitions.h"

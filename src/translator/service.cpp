@@ -1,4 +1,5 @@
 #include "service.h"
+#include "batch.h"
 #include "definitions.h"
 
 #include <string>

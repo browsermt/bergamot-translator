@@ -1,4 +1,5 @@
 #include "batch_translator.h"
+#include "batch.h"
 #include "common/logging.h"
 #include "data/corpus.h"
 #include "data/text_input.h"

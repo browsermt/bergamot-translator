@@ -13,9 +13,6 @@
 // batching mechanism access to the segment within the request. The backref to
 // Request allows event triggering the barrier upon completion of the last
 // sentence by a worker.
-//
-// Batch: is a vector of RequestSentences tagged with a batchNumber, which is
-// what the PCQueue holds. Batch is "produced" by the Batcher.
 
 #ifndef SRC_BERGAMOT_REQUEST_H_
 #define SRC_BERGAMOT_REQUEST_H_
@@ -121,57 +118,6 @@ private:
 };
 
 typedef std::vector<RequestSentence> RequestSentences;
-
-class Batch {
-public:
-  Batch() { reset(); }
-  // Reset is required to reuse the same batch by consumer.
-  void reset();
-
-  //  Methods to construct and determine poison.
-  static Batch poison() {
-    Batch poison_;
-    poison_.Id_ = -1;
-    return poison_;
-  }
-  bool isPoison() const { return (Id_ == -1); }
-
-  size_t size() const { return sentences_.size(); }
-
-  // Accessors to load data into a batch. Use add(...) to add sentences into a
-  // batch. Once complete with a legal batch, use setId to set Id_ accordingly.
-  // setId only allows setting Id > 0. For use in Batcher, which acts as a
-  // producer to a PCQueue holding "Batch"es.
-  //
-  // Id_ =
-  //    -1 : Batch::Poison
-  //     0 : Empty Batch
-  //    >0 : Legal batch containing sentences
-
-  void add(const RequestSentence &sentence);
-  void setId(int Id);
-
-  // Accessors to read from a Batch. For use in BatchTranslator (consumer on a
-  // PCQueue holding batches).
-  //
-  // sentences() are used to access sentences to construct marian internal
-  // batch.
-  const RequestSentences &sentences() { return sentences_; }
-
-  // On obtaining Histories after translating a batch, completeBatch can be
-  // called with Histories , which forwards the call to Request through
-  // RequestSentence and triggers completion, by setting the promised value to
-  // the future given to client.
-  void completeBatch(const Histories &histories);
-
-  // Convenience function to log batch-statistics. numTokens, max-length.
-  // TODO(jerinphilip): Use to log and report packing efficiency.
-  void log();
-
-private:
-  int Id_;
-  RequestSentences sentences_;
-};
 
 } // namespace bergamot
 } // namespace marian

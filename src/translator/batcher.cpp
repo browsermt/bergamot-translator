@@ -1,4 +1,5 @@
 #include "batcher.h"
+#include "batch.h"
 #include "common/logging.h"
 #include <cassert>
 
@@ -27,7 +28,7 @@ bool Batcher::cleaveBatch(Batch &batch) {
   // has to be enhanced with optimizing over priority. The baseline
   // implementation should at least be as fast as marian's maxi-batch with full
   // corpus size as maxi-batch size.
-  batch.reset();
+  batch.clear();
   int paddedBatchSize = 0;
 
   for (int length = 0; length < bucket_.size(); length++) {
@@ -41,18 +42,13 @@ bool Batcher::cleaveBatch(Batch &batch) {
       } else {
         // Check if elements exist
         assert(batch.size() > 0);
-        batch.setId(++batchNumber_);
         return true;
       }
     }
   }
 
-  if (batch.size()) {
-    batch.setId(++batchNumber_);
-    return true;
-  } else {
-    return false;
-  }
+  bool isValidBatch = batch.size() > 0;
+  return isValidBatch;
 }
 
 void Batcher::addWholeRequest(Ptr<Request> request) {

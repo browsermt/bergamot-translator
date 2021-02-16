@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 
+#include "batch.h"
 #include "common/utils.h"
 #include "data/shortlist.h"
 #include "definitions.h"

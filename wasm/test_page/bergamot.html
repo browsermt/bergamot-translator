@@ -64,14 +64,20 @@ En consecuencia, durante el año 2011 se introdujeron 180 proyectos de ley que re
 <script>
 
   var model, request, input = undefined;
-  const loadModel = (lang) => {
+  const loadModel = (from, to) => {
+
+    const languagePair = `${from}${to}`;
+
+    // Vocab files are re-used in both translation directions
+    const vocabLanguagePair = from === "en" ? `${to}${from}` : languagePair;
+
     // Set the Model Configuration as YAML formatted string.
     // For available configuration options, please check: https://marian-nmt.github.io/docs/cmd/marian-decoder/
     const modelConfig = `models:
-  - /model.${lang}.npz
+  - /${languagePair}/model.${languagePair}.npz
 vocabs:
-  - /vocab.esen.spm
-  - /vocab.esen.spm
+  - /${vocabLanguagePair}/vocab.${vocabLanguagePair}.spm
+  - /${vocabLanguagePair}/vocab.${vocabLanguagePair}.spm
 beam-size: 1
 normalize: 1.0
 word-penalty: 0
@@ -84,7 +90,7 @@ cpu-threads: 1
 quiet: true
 quiet-translation: true
 shortlist:
-    - /lex.${lang}.s2t
+    - /${languagePair}/lex.${languagePair}.s2t
     - 50
     - 50
 `;
@@ -98,6 +104,8 @@ maxi-batch-sort: src
 // gemm-precision: int8shift
 // TODO: Use in model config when loading of binary models is supported and we use model.intgemm.alphas.bin:
 // gemm-precision: int8shiftAlphaAll
+
+    console.debug("modelConfig: ", modelConfig);
 
     // Instantiate the TranslationModel
     if (model) model.delete();
@@ -142,9 +150,11 @@ maxi-batch-sort: src
 
   document.querySelector("#load").addEventListener("click", () => {
     const lang = document.querySelector('input[name="modellang"]:checked').value;
+    const from = lang.substring(0, 2);
+    const to = lang.substring(2, 4);
     let start = Date.now();
-    loadModel(lang)
-    log(`model ${lang} loaded in ${(Date.now() - start) / 1000} secs`);
+    loadModel(from, to)
+    log(`model ${from}${to} loaded in ${(Date.now() - start) / 1000} secs`);
     //log('Model Alignment:', model.isAlignmentSupported());
   });
 

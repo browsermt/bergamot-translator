@@ -12,10 +12,32 @@
 namespace marian {
 namespace bergamot {
 class Response {
+  // Response is a marian internal class (not a bergamot-translator class)
+  // holding source blob of text, vector of TokenRanges corresponding to each
+  // sentence in the source text blob and histories obtained from translating
+  // these sentences.
+  //
+  // This class provides an API at a higher level in comparison to History to
+  // access translations and additionally use string_view manipulations to
+  // recover structure in translation from source-text's structure known through
+  // reference string and string_view. As many of these computations are not
+  // required until invoked, they are computed as required and stored in data
+  // members where it makes sense to do so (translation,translationTokenRanges).
+  //
+  // Examples of such use-cases are:
+  //    translation()
+  //    translationInSourceStructure() TODO(@jerinphilip)
+  //    alignment(idx) TODO(@jerinphilip)
+  //    sentenceMappings (for bergamot-translator)
+
 public:
   Response(std::string &&source, std::vector<TokenRanges> &&sourceRanges,
-           Histories &&histories, std::vector<Ptr<Vocab const>> &vocabs);
+           Histories &&histories,
+           // Required for constructing translation and TokenRanges within
+           // translation lazily.
+           std::vector<Ptr<Vocab const>> &vocabs);
 
+  // Move constructor.
   Response(Response &&other)
       : source_(std::move(other.source_)),
         translation_(std::move(other.translation_)),
@@ -23,27 +45,52 @@ public:
         targetRanges_(std::move(other.targetRanges_)),
         histories_(std::move(other.histories_)){};
 
+  // Prevents CopyConstruction and CopyAssignment. sourceRanges_ is constituted
+  // by string_view and copying invalidates the data member.
   Response(const Response &) = delete;
   Response &operator=(const Response &) = delete;
 
   typedef std::vector<std::pair<const string_view, const string_view>>
       SentenceMappings;
 
-  void move(std::string &source, std::string &target,
+  // Moves source sentence into source, translated text into translation.
+  // Pairs of string_views to corresponding sentences in
+  // source and translation are loaded into sentenceMappings. These string_views
+  // reference the new source and translation.
+  //
+  // Calling move() invalidates the Response object as ownership is transferred.
+  // Exists for moving strc
+  void move(std::string &source, std::string &translation,
             SentenceMappings &sentenceMappings);
 
   const Histories &histories() const { return histories_; }
   const std::string &source() const { return source_; }
-  const std::string &translation() const { return translation_; }
+  const std::string &translation() {
+    if (!translationConstructed) {
+      constructTranslation();
+    }
+    return translation_;
+  }
+
+  // A convenience function provided to return translated text placed within
+  // source's structure. This is useful when the source text is a multi-line
+  // paragraph or string_views extracted from structured text like HTML and it's
+  // desirable to place the individual sentences in the locations of the source
+  // sentences.
+  // const std::string translationInSourceStructure();
+  // const PendingAlignmentType alignment(size_t idx);
 
 private:
-  void constructTargetProperties(std::vector<Ptr<Vocab const>> &vocabs);
+  void constructTranslation();
   void constructSentenceMappings(SentenceMappings &);
 
   std::string source_;
-  std::string translation_;
-  Histories histories_;
   std::vector<TokenRanges> sourceRanges_;
+  Histories histories_;
+
+  std::vector<Ptr<Vocab const>> *vocabs_{nullptr};
+  bool translationConstructed{false};
+  std::string translation_;
   std::vector<TokenRanges> targetRanges_;
 };
 } // namespace bergamot

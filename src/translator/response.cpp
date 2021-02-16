@@ -11,16 +11,12 @@ Response::Response(std::string &&source,
                    std::vector<TokenRanges> &&sourceRanges,
                    Histories &&histories, std::vector<Ptr<Vocab const>> &vocabs)
     : source_(std::move(source)), sourceRanges_(std::move(sourceRanges)),
-      histories_(std::move(histories)) {
-
-  constructTargetProperties(vocabs);
-}
+      histories_(std::move(histories)), vocabs_(&vocabs) {}
 
 void Response::move(std::string &source, std::string &translation,
                     SentenceMappings &sentenceMappings) {
 
   constructSentenceMappings(sentenceMappings);
-  // Totally illegal stuff.
   source = std::move(source_);
   translation = std::move(translation_);
 
@@ -31,18 +27,23 @@ void Response::move(std::string &source, std::string &translation,
   histories_.clear();
 }
 
-void Response::constructTargetProperties(
-    std::vector<Ptr<Vocab const>> &vocabs) {
-  std::vector<std::pair<int, int>> translationRanges;
+void Response::constructTranslation() {
+
+  // In a first step, the decoded units (individual senteneces) are compiled
+  // into a huge string. This is done by computing indices first and appending
+  // to the string as each sentences are decoded.
+  std::vector<std::pair<size_t, size_t>> translationRanges;
+
   size_t offset{0};
   bool first{true};
+
   for (auto &history : histories_) {
     // TODO(jerin): Change hardcode of nBest = 1
     NBestList onebest = history->nBest(1);
 
     Result result = onebest[0]; // Expecting only one result;
     Words words = std::get<0>(result);
-    std::string decoded = (vocabs.back())->decode(words);
+    std::string decoded = vocabs_->back()->decode(words);
     if (first) {
       first = false;
     } else {
@@ -55,13 +56,18 @@ void Response::constructTargetProperties(
     offset += decoded.size();
   }
 
-  // TODO(@jerinphilip):
-  // Currently considers target tokens as whole text. Needs
-  // to be further enhanced in marian-dev to extract alignments.
+  // Once the entire string is constructed, there are no further possibility of
+  // reallocation in the string's storage, the indices are converted into
+  // string_views.
+
   for (auto &range : translationRanges) {
+    // TODO(@jerinphilip):  Currently considers target tokens as whole text.
+    // Needs to be further enhanced in marian-dev to extract alignments.
     std::vector<string_view> targetMappings;
+
     const char *begin = &translation_[range.first];
     targetMappings.emplace_back(begin, range.second);
+
     targetRanges_.push_back(std::move(targetMappings));
   }
 }

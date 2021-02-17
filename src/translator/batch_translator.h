@@ -47,7 +47,6 @@ private:
   Ptr<data::ShortlistGenerator const> slgen_;
 
 #ifdef WITH_PTHREADS
-  PCQueue<PCItem> *pcqueue_;
   std::thread thread_;
 #endif
 };

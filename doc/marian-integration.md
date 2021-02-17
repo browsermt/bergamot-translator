@@ -10,7 +10,9 @@ $ git clone https://github.com/browsermt/bergamot-translator
 $ cd bergamot-translator
 $ mkdir build
 $ cd build
-$ cmake ../
+$ cmake .. -DCOMPILE_CUDA=off -DCMAKE_BUILD_TYPE=Release \
+    -DCOMPILE_DECODER_ONLY=off -DCOMPILE_LIBRARY_ONLY=off -DUSE_MKL=on \
+    -DCOMPILE_THREAD_VARIANT=on
 $ make -j
 
 

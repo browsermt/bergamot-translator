@@ -7,8 +7,8 @@ namespace marian {
 namespace bergamot {
 
 Batcher::Batcher(Ptr<Options> options) {
-  miniBatchWords = options->get<int>("max-input-tokens");
-  bucket_.resize(options->get<int>("max-input-sentence-tokens") + 1);
+  miniBatchWords = options->get<int>("mini-batch-words");
+  bucket_.resize(options->get<int>("max-length-break") + 1);
   ABORT_IF(
       miniBatchWords < bucket_.size() - 1,
       "max-input-tokens cannot be less than than max-input-sentence-tokens, "

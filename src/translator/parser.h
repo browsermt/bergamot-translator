@@ -16,13 +16,8 @@ inline marian::ConfigParser createConfigParser() {
                             "[paragraph, sentence, wrapped_text]", "paragraph");
 
   cp.addOption<int>(
-      "--max-input-sentence-tokens", "Bergamot Options",
+      "--max-length-break", "Bergamot Options",
       "Maximum input tokens to be processed in a single sentence.", 128);
-
-  cp.addOption<int>("--max-input-tokens", "Bergamot Options",
-                    "Maximum input tokens in a batch. control for"
-                    "Bergamot Queue",
-                    1024);
 
   return cp;
 }

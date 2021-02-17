@@ -20,10 +20,9 @@ TextProcessor::TextProcessor(std::vector<Ptr<Vocab const>> &vocabs,
                              Ptr<Options> options)
     : vocabs_(&vocabs), sentence_splitter_(options) {
 
-  max_input_sentence_tokens_ = options->get<int>("max-input-sentence-tokens");
-  max_input_sentence_tokens_ = max_input_sentence_tokens_ - 1;
-  ABORT_IF(max_input_sentence_tokens_ < 0,
-           "max-input-sentence-tokens cannot be < 0");
+  max_length_break_ = options->get<int>("max-length-break");
+  max_length_break_ = max_length_break_ - 1;
+  ABORT_IF(max_length_break_ < 0, "max-length-break cannot be < 0");
 }
 
 void TextProcessor::process(const string_view &query, Segments &segments,
@@ -52,11 +51,11 @@ void TextProcessor::truncate(Segment &segment,
                              std::vector<string_view> &wordRanges,
                              Segments &segments, SentenceRanges &sourceRanges) {
   for (size_t offset = 0; offset < segment.size();
-       offset += max_input_sentence_tokens_) {
+       offset += max_length_break_) {
     auto start = segment.begin() + offset;
 
     size_t left = segment.size() - offset;
-    size_t diff = std::min(max_input_sentence_tokens_, left);
+    size_t diff = std::min(max_length_break_, left);
 
     segments.emplace_back(start, start + diff);
     segments.back().push_back(sourceEosId());

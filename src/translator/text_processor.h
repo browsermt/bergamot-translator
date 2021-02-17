@@ -41,7 +41,7 @@ private:
 
   std::vector<Ptr<Vocab const>> *vocabs_;
   SentenceSplitter sentence_splitter_;
-  size_t max_input_sentence_tokens_;
+  size_t max_length_break_;
 };
 
 } // namespace bergamot

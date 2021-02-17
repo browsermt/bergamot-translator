@@ -11,8 +11,9 @@ $ cd bergamot-translator
 $ mkdir build
 $ cd build
 $ cmake .. -DCOMPILE_CUDA=off -DCMAKE_BUILD_TYPE=Release \
-    -DCOMPILE_DECODER_ONLY=off -DCOMPILE_LIBRARY_ONLY=off -DUSE_MKL=on \
-    -DCOMPILE_THREAD_VARIANT=on
+     -DCOMPILE_DECODER_ONLY=on -DUSE_MKL=on -DCOMPILE_THREAD_VARIANT=on \
+     -DUSE_WASM_COMPATIBLE_BLAS=off -DCOMPILE_MAIN_EIGEN=off
+
 $ make -j
 ```
 

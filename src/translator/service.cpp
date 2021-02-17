@@ -44,7 +44,7 @@ std::future<Response> Service::translateWithCopy(std::string input) {
 }
 
 std::future<Response> Service::translate(std::string &&input) {
-  // Takes in a blob of text. Segments and std::vector<TokenRanges> are
+  // Takes in a blob of text. Segments and SentenceRanges are
   // extracted from the input (blob of text) and used to construct a Request
   // along with a promise. promise value is set by the worker completing a
   // request.
@@ -57,16 +57,15 @@ std::future<Response> Service::translate(std::string &&input) {
   // returns future corresponding to the promise.
 
   Segments segments;
-  std::vector<TokenRanges> sourceTokenRanges;
-  text_processor_.process(input, segments, sourceTokenRanges);
+  SentenceRanges sourceRanges;
+  text_processor_.process(input, segments, sourceRanges);
 
   std::promise<Response> responsePromise;
   auto future = responsePromise.get_future();
 
-  Ptr<Request> request =
-      New<Request>(requestId_++, /* lineNumberBegin = */ 0, vocabs_,
-                   std::move(input), std::move(segments),
-                   std::move(sourceTokenRanges), std::move(responsePromise));
+  Ptr<Request> request = New<Request>(
+      requestId_++, /* lineNumberBegin = */ 0, vocabs_, std::move(input),
+      std::move(segments), std::move(sourceRanges), std::move(responsePromise));
 
   batcher_.addWholeRequest(request);
 

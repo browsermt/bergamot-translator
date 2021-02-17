@@ -1,6 +1,7 @@
 #ifndef SRC_BERGAMOT_RESPONSE_H_
 #define SRC_BERGAMOT_RESPONSE_H_
 
+#include "sentence_ranges.h"
 #include "data/types.h"
 #include "definitions.h"
 #include "translator/beam_search.h"
@@ -31,7 +32,7 @@ class Response {
   //    sentenceMappings (for bergamot-translator)
 
 public:
-  Response(std::string &&source, std::vector<TokenRanges> &&sourceRanges,
+  Response(std::string &&source, SentenceRanges &&sourceRanges,
            Histories &&histories,
            // Required for constructing translation and TokenRanges within
            // translation lazily.
@@ -84,13 +85,13 @@ private:
   void constructSentenceMappings(SentenceMappings &);
 
   std::string source_;
-  std::vector<TokenRanges> sourceRanges_;
+  SentenceRanges sourceRanges_;
   Histories histories_;
 
   std::vector<Ptr<Vocab const>> *vocabs_;
   bool translationConstructed_{false};
   std::string translation_;
-  std::vector<TokenRanges> targetRanges_;
+  SentenceRanges targetRanges_;
 };
 } // namespace bergamot
 } // namespace marian

@@ -1,4 +1,5 @@
 #include "text_processor.h"
+#include "sentence_ranges.h"
 #include "data/types.h"
 #include "definitions.h"
 
@@ -10,9 +11,9 @@ namespace marian {
 namespace bergamot {
 
 Segment TextProcessor::tokenize(const string_view &segment,
-                                TokenRanges &tokenRanges) {
+                                std::vector<string_view> &wordRanges) {
   return vocabs_->front()->encodeWithByteRanges(
-      segment, tokenRanges, /*addEOS=*/false, /*inference=*/true);
+      segment, wordRanges, /*addEOS=*/false, /*inference=*/true);
 }
 
 TextProcessor::TextProcessor(std::vector<Ptr<Vocab const>> &vocabs,
@@ -26,7 +27,7 @@ TextProcessor::TextProcessor(std::vector<Ptr<Vocab const>> &vocabs,
 }
 
 void TextProcessor::process(const string_view &query, Segments &segments,
-                            std::vector<TokenRanges> &sourceRanges) {
+                            SentenceRanges &sourceRanges) {
 
   auto sentenceStream = sentence_splitter_.createSentenceStream(query);
   std::string_view sentenceStringPiece;
@@ -34,21 +35,22 @@ void TextProcessor::process(const string_view &query, Segments &segments,
   while (sentenceStream >> sentenceStringPiece) {
     marian::string_view sentence(sentenceStringPiece.data(),
                                  sentenceStringPiece.size());
-    TokenRanges tokenRanges;
-    Segment segment = tokenize(sentence, tokenRanges);
+
+    std::vector<string_view> wordRanges;
+    Segment segment = tokenize(sentence, wordRanges);
 
     // There are some cases where SentencePiece or vocab returns no words
     // after normalization. 0 prevents any empty entries from being added.
     if (segment.size() > 0) {
       // Truncate segment into max_input_size segments.
-      truncate(segment, tokenRanges, segments, sourceRanges);
+      truncate(segment, wordRanges, segments, sourceRanges);
     }
   }
 }
 
-void TextProcessor::truncate(Segment &segment, TokenRanges &tokenRanges,
-                             Segments &segments,
-                             std::vector<TokenRanges> &sourceRanges) {
+void TextProcessor::truncate(Segment &segment,
+                             std::vector<string_view> &wordRanges,
+                             Segments &segments, SentenceRanges &sourceRanges) {
   for (int offset = 0; offset < segment.size();
        offset += max_input_sentence_tokens_) {
     auto start = segment.begin() + offset;
@@ -59,8 +61,8 @@ void TextProcessor::truncate(Segment &segment, TokenRanges &tokenRanges,
     segments.emplace_back(start, start + diff);
     segments.back().push_back(sourceEosId());
 
-    auto astart = tokenRanges.begin() + offset;
-    sourceRanges.emplace_back(astart, astart + diff);
+    auto astart = wordRanges.begin() + offset;
+    sourceRanges.addSentence(astart, astart + diff);
   }
 }
 

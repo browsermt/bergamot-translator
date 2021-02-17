@@ -1,5 +1,5 @@
 #include "request.h"
-
+#include "sentence_ranges.h"
 #include "definitions.h"
 #include "response.h"
 
@@ -13,12 +13,11 @@ namespace bergamot {
 // -----------------------------------------------------------------
 Request::Request(unsigned int Id, int lineNumberBegin,
                  std::vector<Ptr<Vocab const>> &vocabs, std::string &&source,
-                 Segments &&segments,
-                 std::vector<TokenRanges> &&sourceTokenRanges,
+                 Segments &&segments, SentenceRanges &&sourceRanges,
                  std::promise<Response> responsePromise)
     : Id_(Id), lineNumberBegin_(lineNumberBegin), vocabs_(&vocabs),
       source_(std::move(source)), segments_(std::move(segments)),
-      sourceTokenRanges_(std::move(sourceTokenRanges)),
+      sourceRanges_(std::move(sourceRanges)),
       response_(std::move(responsePromise)) {
 
   counter_ = segments_.size();
@@ -49,7 +48,7 @@ void Request::processHistory(size_t index, Ptr<History> history) {
 void Request::completeRequest() {
   // Request no longer needs to hold the content, can transfer it to
   // Response.
-  Response response(std::move(source_), std::move(sourceTokenRanges_),
+  Response response(std::move(source_), std::move(sourceRanges_),
                     std::move(histories_), *vocabs_);
   response_.set_value(std::move(response));
 }

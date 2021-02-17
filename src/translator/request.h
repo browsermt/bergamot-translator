@@ -17,6 +17,7 @@
 #ifndef SRC_BERGAMOT_REQUEST_H_
 #define SRC_BERGAMOT_REQUEST_H_
 
+#include "sentence_ranges.h"
 #include "definitions.h"
 #include "response.h"
 
@@ -36,7 +37,7 @@ class Request {
 public:
   Request(unsigned int Id, int lineNumberBegin,
           std::vector<Ptr<Vocab const>> &vocabs_, std::string &&source,
-          Segments &&segments, std::vector<TokenRanges> &&sourceTokenRanges,
+          Segments &&segments, SentenceRanges &&sourceTokenRanges,
           std::promise<Response> responsePromise);
 
   // Obtain the count of tokens in the segment correponding to index. Used to
@@ -72,13 +73,13 @@ private:
   std::atomic<int> counter_;
 
   // source_ holds the source string to be translated. segments_ hold the
-  // sentences generated from source_ in vector<Words>. sourceTokenRanges_ are
+  // sentences generated from source_ in vector<Words>. sourceRanges_ are
   // string_views of the text corresponding to these words, pointing to
   // sequences in source_. histories_ is a buffer which eventually stores the
   // translations of each segment in the corresponding index.
   std::string source_;
   Segments segments_;
-  std::vector<TokenRanges> sourceTokenRanges_;
+  SentenceRanges sourceRanges_;
   std::vector<Ptr<History>> histories_;
 
   // Members above are moved into newly constructed Response on completion

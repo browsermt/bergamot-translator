@@ -1,6 +1,7 @@
 #ifndef SRC_BERGAMOT_TEXT_PROCESSOR_H_
 #define SRC_BERGAMOT_TEXT_PROCESSOR_H_
 
+#include "sentence_ranges.h"
 #include "data/types.h"
 #include "data/vocab.h"
 #include "definitions.h"
@@ -23,16 +24,17 @@ public:
   explicit TextProcessor(std::vector<Ptr<Vocab const>> &vocabs, Ptr<Options>);
 
   void process(const string_view &query, Segments &segments,
-               std::vector<TokenRanges> &sourceRanges);
+               SentenceRanges &sourceRanges);
 
 private:
   // Tokenizes an input string, returns Words corresponding. Loads the
   // corresponding byte-ranges into tokenRanges.
-  Segment tokenize(const string_view &input, TokenRanges &tokenRanges);
+  Segment tokenize(const string_view &input,
+                   std::vector<string_view> &tokenRanges);
 
   // Truncate sentence into max_input_size segments.
-  void truncate(Segment &sentence, TokenRanges &tokenRanges, Segments &segments,
-                std::vector<TokenRanges> &sourceRanges);
+  void truncate(Segment &sentence, std::vector<string_view> &tokenRanges,
+                Segments &segments, SentenceRanges &sourceRanges);
 
   // shorthand, used only in truncate()
   const Word sourceEosId() const { return vocabs_->front()->getEosId(); }

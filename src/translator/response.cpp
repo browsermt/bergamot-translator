@@ -1,4 +1,5 @@
 #include "response.h"
+#include "sentence_ranges.h"
 #include "common/logging.h"
 #include "data/alignment.h"
 
@@ -7,8 +8,7 @@
 namespace marian {
 namespace bergamot {
 
-Response::Response(std::string &&source,
-                   std::vector<TokenRanges> &&sourceRanges,
+Response::Response(std::string &&source, SentenceRanges &&sourceRanges,
                    Histories &&histories, std::vector<Ptr<Vocab const>> &vocabs)
     : source_(std::move(source)), sourceRanges_(std::move(sourceRanges)),
       histories_(std::move(histories)), vocabs_(&vocabs) {}
@@ -79,7 +79,7 @@ void Response::constructTranslation() {
 
     const char *begin = &translation_[range.first];
     targetMappings.emplace_back(begin, range.second);
-    targetRanges_.push_back(std::move(targetMappings));
+    targetRanges_.addSentence(targetMappings);
   }
 
   translationConstructed_ = true;
@@ -88,21 +88,10 @@ void Response::constructTranslation() {
 void Response::constructSentenceMappings(
     Response::SentenceMappings &sentenceMappings) {
 
-  for (int i = 0; i < sourceRanges_.size(); i++) {
-    string_view first, last;
-
-    // Handle source-sentence
-    first = sourceRanges_[i].front();
-    last = sourceRanges_[i].back();
-    string_view src_sentence(first.data(), last.end() - first.begin());
-
-    // Handle target-sentence
-    first = targetRanges_[i].front();
-    last = targetRanges_[i].back();
-    string_view tgt_sentence(first.data(), last.end() - first.begin());
-
-    // Add both into sentence-mappings
-    sentenceMappings.emplace_back(src_sentence, tgt_sentence);
+  for (size_t i = 0; i < sourceRanges_.numSentences(); i++) {
+    string_view src = sourceRanges_.sentence(i);
+    string_view tgt = targetRanges_.sentence(i);
+    sentenceMappings.emplace_back(src, tgt);
   }
 }
 } // namespace bergamot

@@ -9,7 +9,6 @@
 #include <memory>
 #include <mutex>
 
-#ifdef WITH_PTHREADS
 #ifdef __APPLE__
 #include <mach/mach.h>
 #include <mach/mach_traps.h>
@@ -20,7 +19,6 @@
 #else
 #include <boost/interprocess/sync/interprocess_semaphore.hpp>
 #endif
-#endif // WITH_PTHREADS
 
 #if __GNUC__ >= 3
 #define UTIL_UNLIKELY(x) __builtin_expect(!!(x), 0)
@@ -31,7 +29,6 @@
 namespace marian {
 namespace bergamot {
 
-#ifdef WITH_PTHREADS
 /* OS X Maverick and Boost interprocess were doing "Function not implemented."
  * So this is my own wrapper around the mach kernel APIs.
  */
@@ -117,20 +114,6 @@ inline void WaitSemaphore(Semaphore &on) {
 }
 
 #endif // Apple
-#else // WITH_PTHREADS
-// A dummy Semaphore class that does nothing
-class Semaphore {
-public:
-  explicit Semaphore(unsigned int value) : count(value) {}
-  ~Semaphore() {}
-  void wait() {}
-  void post() {}
-private:
-  unsigned int count;
-};
-
-inline void WaitSemaphore(Semaphore &semaphore) { semaphore.wait(); }
-#endif // WITH_PTHREADS
 
 /**
  * Producer consumer queue safe for multiple producers and multiple consumers.
@@ -151,9 +134,7 @@ public:
   void Produce(const T &val) {
     WaitSemaphore(empty_);
     {
-    #ifdef WITH_PTHREADS
       std::lock_guard<std::mutex> produce_lock(produce_at_mutex_);
-    #endif
       try {
         *produce_at_ = val;
       } catch (...) {
@@ -170,9 +151,7 @@ public:
   void ProduceSwap(T &val) {
     WaitSemaphore(empty_);
     {
-    #ifdef WITH_PTHREADS
       std::lock_guard<std::mutex> produce_lock(produce_at_mutex_);
-    #endif
       try {
         std::swap(*produce_at_, val);
       } catch (...) {
@@ -189,9 +168,7 @@ public:
   T &Consume(T &out) {
     WaitSemaphore(used_);
     {
-    #ifdef WITH_PTHREADS
       std::lock_guard<std::mutex> consume_lock(consume_at_mutex_);
-    #endif
       try {
         out = *consume_at_;
       } catch (...) {
@@ -209,9 +186,7 @@ public:
   T &ConsumeSwap(T &out) {
     WaitSemaphore(used_);
     {
-    #ifdef WITH_PTHREADS
       std::lock_guard<std::mutex> consume_lock(consume_at_mutex_);
-    #endif
       try {
         std::swap(out, *consume_at_);
       } catch (...) {
@@ -245,15 +220,11 @@ private:
 
   // Index for next write in storage_.
   T *produce_at_;
-#ifdef WITH_PTHREADS
   std::mutex produce_at_mutex_;
-#endif
 
   // Index for next read from storage_.
   T *consume_at_;
-#ifdef WITH_PTHREADS
   std::mutex consume_at_mutex_;
-#endif
 };
 
 template <class T> struct UnboundedPage {

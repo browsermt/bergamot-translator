@@ -41,6 +41,11 @@ Service::Service(Ptr<Options> options)
         translator.consumeFrom(pcqueue_);
       });
     }
+#else // WITH_PTHREADS
+    ABORT(
+        "Fatal: Service started requesting multiple threadswhile compiled with "
+        "COMPILE_THREAD_VARIANT=off. Please check your cmake build "
+        "configuration");
 #endif
   }
 }

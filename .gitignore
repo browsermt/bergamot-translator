@@ -16,3 +16,7 @@ CTestTestfile.cmake
 _deps
 
 
+wasm/test_page/node_modules
+build-*
+models
+wasm/test_page/bergamot-translator-worker.*

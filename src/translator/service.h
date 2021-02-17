@@ -3,7 +3,6 @@
 
 #include "batch_translator.h"
 #include "batcher.h"
-#include "pcqueue.h"
 #include "response.h"
 #include "text_processor.h"
 
@@ -11,6 +10,10 @@
 #include <vector>
 
 #include "data/types.h"
+
+#ifdef WITH_PTHREADS
+#include "pcqueue.h"
+#endif
 
 namespace marian {
 namespace bergamot {
@@ -67,9 +70,12 @@ private:
 
   TextProcessor text_processor_; // ORDER DEPENDENCY
   Batcher batcher_;
-  PCQueue<Batch> pcqueue_;
   std::vector<BatchTranslator> translators_;
+
+#ifdef WITH_PTHREADS
+  PCQueue<Batch> pcqueue_;
   std::vector<std::thread> workers_;
+#endif
 };
 
 std::vector<Ptr<const Vocab>> loadVocabularies(Ptr<Options> options);

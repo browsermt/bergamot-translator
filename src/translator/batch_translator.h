@@ -8,10 +8,13 @@
 #include "common/utils.h"
 #include "data/shortlist.h"
 #include "definitions.h"
-#include "pcqueue.h"
 #include "request.h"
 #include "translator/history.h"
 #include "translator/scorers.h"
+
+#ifdef WITH_PTHREADS
+#include "pcqueue.h"
+#endif
 
 namespace marian {
 namespace bergamot {
@@ -30,7 +33,10 @@ public:
   std::string _identifier() { return "worker" + std::to_string(device_.no); }
   void translate(Batch &batch);
   void initialize();
+
+#ifdef WITH_PTHREADS
   void consumeFrom(PCQueue<Batch> &pcqueue);
+#endif
 
 private:
   Ptr<Options> options_;
@@ -39,6 +45,11 @@ private:
   Ptr<ExpressionGraph> graph_;
   std::vector<Ptr<Scorer>> scorers_;
   Ptr<data::ShortlistGenerator const> slgen_;
+
+#ifdef WITH_PTHREADS
+  PCQueue<PCItem> *pcqueue_;
+  std::thread thread_;
+#endif
 };
 
 } // namespace bergamot

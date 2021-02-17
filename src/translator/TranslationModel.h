@@ -55,7 +55,7 @@ public:
    * entry of texts list will be moved to its corresponding TranslationResult
    * object).
    */
-  std::future<std::vector<TranslationResult>>
+  std::vector<TranslationResult>
   translate(std::vector<std::string> &&texts,
             TranslationRequest request) override;
 

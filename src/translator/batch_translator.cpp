@@ -96,6 +96,8 @@ void BatchTranslator::translate(Batch &batch) {
   batch.completeBatch(histories);
 }
 
+#ifdef WITH_PTHREADS
+
 void BatchTranslator::consumeFrom(PCQueue<Batch> &pcqueue) {
   Batch batch;
   Histories histories;
@@ -108,6 +110,8 @@ void BatchTranslator::consumeFrom(PCQueue<Batch> &pcqueue) {
     }
   }
 }
+
+#endif
 
 } // namespace bergamot
 } // namespace marian

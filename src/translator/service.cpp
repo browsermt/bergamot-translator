@@ -11,8 +11,12 @@ namespace bergamot {
 Service::Service(Ptr<Options> options)
     : requestId_(0), numWorkers_(options->get<int>("cpu-threads")),
       vocabs_(std::move(loadVocabularies(options))),
-      text_processor_(vocabs_, options), batcher_(options),
-      pcqueue_(2 * options->get<int>("cpu-threads")) {
+      text_processor_(vocabs_, options), batcher_(options)
+#ifdef WITH_PTHREADS
+      ,
+      pcqueue_(2 * options->get<int>("cpu-threads"))
+#endif // WITH_PTHREADS
+{
 
   if (numWorkers_ == 0) {
     // In case workers are 0, a single-translator is created and initialized
@@ -21,6 +25,7 @@ Service::Service(Ptr<Options> options)
     translators_.emplace_back(deviceId, vocabs_, options);
     translators_.back().initialize();
   } else {
+#ifdef WITH_PTHREADS
     // If workers specified are greater than 0, translators_ are populated with
     // unitialized instances. These are then initialized inside
     // individual threads and set to consume from producer-consumer queue.
@@ -36,6 +41,7 @@ Service::Service(Ptr<Options> options)
         translator.consumeFrom(pcqueue_);
       });
     }
+#endif
   }
 }
 
@@ -70,7 +76,9 @@ std::future<Response> Service::translate(std::string &&input) {
   batcher_.addWholeRequest(request);
 
   if (numWorkers_ > 0) {
+#ifdef WITH_PTHREADS
     batcher_.produceTo(pcqueue_);
+#endif
   } else {
     // Queue single-threaded
     Batch batch;
@@ -83,6 +91,7 @@ std::future<Response> Service::translate(std::string &&input) {
 }
 
 void Service::stop() {
+#ifdef WITH_PTHREADS
   for (auto &worker : workers_) {
     Batch poison = Batch::poison();
     pcqueue_.ProduceSwap(poison);
@@ -93,6 +102,7 @@ void Service::stop() {
   }
 
   workers_.clear(); // Takes care of idempotency.
+#endif
 }
 
 Service::~Service() { stop(); }

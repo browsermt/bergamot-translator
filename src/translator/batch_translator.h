@@ -45,10 +45,6 @@ private:
   Ptr<ExpressionGraph> graph_;
   std::vector<Ptr<Scorer>> scorers_;
   Ptr<data::ShortlistGenerator const> slgen_;
-
-#ifdef WITH_PTHREADS
-  std::thread thread_;
-#endif
 };
 
 } // namespace bergamot

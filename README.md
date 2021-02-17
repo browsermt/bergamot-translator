@@ -16,64 +16,76 @@ make -j
 ```
 
 ### Build WASM
+#### Compiling for the first time
 
-To compile WASM, first download and Install Emscripten using following instructions:
+1. Download and Install Emscripten using following instructions
+    * Get the latest sdk: `git clone https://github.com/emscripten-core/emsdk.git`
+    * Enter the cloned directory: `cd emsdk`
+    * Install the lastest sdk tools: `./emsdk install latest`
+    * Activate the latest sdk tools: `./emsdk activate latest`
+    * Activate path variables: `source ./emsdk_env.sh`
 
-1. Get the latest sdk: `git clone https://github.com/emscripten-core/emsdk.git`
-2. Enter the cloned directory: `cd emsdk`
-3. Install the lastest sdk tools: `./emsdk install latest`
-4. Activate the latest sdk tools: `./emsdk activate latest`
-5. Activate path variables: `source ./emsdk_env.sh`
+2. Clone the repository and checkout the appropriate branch using these instructions:
+    ```bash
+    git clone https://github.com/browsermt/bergamot-translator
+    cd bergamot-translator
+    git checkout -b wasm-integration origin/wasm-integration
+    git submodule update --init --recursive
+    ```
 
-After the successful installation of Emscripten, perform these steps:
+3. Download models (only required if you want to package files in wasm binary)
 
+    This step is only required if you want to package files (e.g. models, vocabularies etc.)
+    into wasm binary. If you don't then just skip this step.
+
+    The build preloads the files in Emscripten’s virtual file system.
+
+    If you want to use bergamot models, please follow these instructions:
+    ```bash
+    mkdir models
+    git clone https://github.com/mozilla-applied-ml/bergamot-models
+    cp -rf bergamot-models/* models
+    gunzip models/*/*
+    ```
+
+4. Compile
+    1. Create a folder where you want to build all the artefacts (`build-wasm` in this case)
+        ```bash
+        mkdir build-wasm
+        cd build-wasm
+        ```
+
+    2. Compile the artefacts
+        * If you want to package files into wasm binary then execute following commands (Replace `FILES_TO_PACKAGE` with the absolute path of the
+        directory containing the files to be packaged in wasm binary)
+
+            ```bash
+            emcmake cmake -DCOMPILE_WASM=on -DPACKAGE_DIR=FILES_TO_PACKAGE ../
+            emmake make -j
+            ```
+
+        * If you don't want to package any file into wasm binary then execute following commands:
+            ```bash
+            emcmake cmake -DCOMPILE_WASM=on ../
+            emmake make -j
+            ```
+
+    The artefacts (.js and .wasm files) will be available in `wasm` folder of build directory ("build-wasm" in this case).
+
+#### Recompiling
+As long as you don't update any submodule, just follow steps in `4.ii` to recompile.\
+If you update a submodule, execute following command before executing steps in `4.ii` to recompile.
 ```bash
-git clone --recursive https://github.com/browsermt/bergamot-translator
-cd bergamot-translator
-git checkout wasm-integration
-git submodule update --recursive
-mkdir build-wasm
-cd build-wasm
-emcmake cmake -DCOMPILE_WASM=on ../
-emmake make -j
+git submodule update --init --recursive
 ```
 
-It should generate the artefacts (.js and .wasm files) in `wasm` folder inside build directory ("build-wasm" in this case).
 
-Download the models from `https://github.com/mozilla-applied-ml/bergamot-models`, and place all the desired ones to package in a folder called `models`.
-
-The build also allows packaging files into wasm binary (i.e. preloading in Emscripten’s virtual file system) using cmake
-option `PACKAGE_DIR`. The compile command below packages all the files in PATH directory (in these case, your models) into wasm binary.
-```bash
-emcmake cmake -DCOMPILE_WASM=on -DPACKAGE_DIR=/repo/models ../
-```
-Files packaged this way are preloaded in the root of the virtual file system.
-
-To package the set of files expected by the test page:
-
-```bash
-mkdir models
-git clone https://github.com/motin/bergamot-models
-cp -r bergamot-models/* models
-gunzip models/*/*
-```
-
-After Editing Files:
-
-```bash
-emmake make -j
-```
-
-After Adding/Removing Files:
-
-```bash
-emcmake cmake -DCOMPILE_WASM=on ../
-emmake make -j
-```
+## How to use
 
 ### Using Native version
 
-The builds generate library that can be integrated to any project. All the public header files are specified in `src` folder. A short example of how to use the APIs is provided in `app/main.cpp` file
+The builds generate library that can be integrated to any project. All the public header files are specified in `src` folder.\
+A short example of how to use the APIs is provided in `app/main.cpp` file.
 
 ### Using WASM version
 

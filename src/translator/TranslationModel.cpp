@@ -16,8 +16,6 @@
 #include "TranslationModel.h"
 #include "translator/parser.h"
 #include "translator/service.h"
-#include "translator/parser.h"
-
 
 std::shared_ptr<marian::Options> parseOptions(const std::string &config) {
   marian::Options options;

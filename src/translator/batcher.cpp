@@ -9,10 +9,9 @@ namespace bergamot {
 Batcher::Batcher(Ptr<Options> options) {
   miniBatchWords = options->get<int>("mini-batch-words");
   bucket_.resize(options->get<int>("max-length-break") + 1);
-  ABORT_IF(
-      miniBatchWords < bucket_.size() - 1,
-      "max-input-tokens cannot be less than than max-input-sentence-tokens, "
-      "batcher fail");
+  ABORT_IF(bucket_.size() - 1 > miniBatchWords,
+           "Fatal: max-length-break > mini-batch-words  will lead to sentences "
+           "longer than what can fit in a batch.");
 }
 
 void Batcher::addSentenceWithPriority(RequestSentence &sentence) {

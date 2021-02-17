@@ -16,8 +16,22 @@ option(USE_SENTENCEPIECE "Download and compile SentencePiece" ON)
 option(USE_STATIC_LIBS "Link statically against non-system libs" ON)
 option(USE_MKL "Compile with MKL support" ON)
 
-execute_process(COMMAND git submodule update --init --recursive --no-fetch
-                WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+# Documentation: https://cliutils.gitlab.io/modern-cmake/chapters/projects/submodule.html
+# Ensures the submodules are set correctly during a build.
+find_package(Git QUIET)
+if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
+# Update submodules as needed
+    option(GIT_SUBMODULE "Check submodules during build" ON)
+    if(GIT_SUBMODULE)
+        message(STATUS "Submodule update")
+        execute_process(COMMAND ${GIT_EXECUTABLE} submodule update --init --recursive
+                        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+                        RESULT_VARIABLE GIT_SUBMOD_RESULT)
+        if(NOT GIT_SUBMOD_RESULT EQUAL "0")
+            message(FATAL_ERROR "git submodule update --init failed with ${GIT_SUBMOD_RESULT}, please checkout submodules")
+        endif()
+    endif()
+endif()
 
 add_subdirectory(3rd_party)
 add_subdirectory(src)

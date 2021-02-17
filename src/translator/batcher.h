@@ -30,9 +30,9 @@ public:
   bool operator>>(Batch &batch); // alias
 
 private:
-  unsigned int miniBatchWords;
+  size_t miniBatchWords;
   std::vector<std::set<RequestSentence>> bucket_;
-  unsigned int batchNumber_{0};
+  size_t batchNumber_{0};
 };
 
 } // namespace bergamot

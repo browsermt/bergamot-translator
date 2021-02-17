@@ -1,7 +1,7 @@
 #include "request.h"
-#include "sentence_ranges.h"
 #include "definitions.h"
 #include "response.h"
+#include "sentence_ranges.h"
 
 #include "common/logging.h"
 
@@ -11,7 +11,7 @@ namespace marian {
 namespace bergamot {
 
 // -----------------------------------------------------------------
-Request::Request(unsigned int Id, int lineNumberBegin,
+Request::Request(size_t Id, size_t lineNumberBegin,
                  std::vector<Ptr<Vocab const>> &vocabs, std::string &&source,
                  Segments &&segments, SentenceRanges &&sourceRanges,
                  std::promise<Response> responsePromise)

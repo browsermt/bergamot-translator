@@ -83,17 +83,13 @@ std::future<Response> Service::translate(std::string &&input) {
 }
 
 void Service::stop() {
-  int counter = 0;
   for (auto &worker : workers_) {
     Batch poison = Batch::poison();
     pcqueue_.ProduceSwap(poison);
-    ++counter;
   }
 
-  counter = 0;
   for (auto &worker : workers_) {
     worker.join();
-    ++counter;
   }
 
   workers_.clear(); // Takes care of idempotency.

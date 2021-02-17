@@ -45,8 +45,8 @@ public:
   ~Service();
 
 private:
-  unsigned int requestId_;
-  int numWorkers_;
+  size_t requestId_;
+  size_t numWorkers_;
 
   // vocabs are used to construct a Request, which later uses it to construct
   // Response (decode from words to string).

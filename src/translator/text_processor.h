@@ -1,10 +1,10 @@
 #ifndef SRC_BERGAMOT_TEXT_PROCESSOR_H_
 #define SRC_BERGAMOT_TEXT_PROCESSOR_H_
 
-#include "sentence_ranges.h"
 #include "data/types.h"
 #include "data/vocab.h"
 #include "definitions.h"
+#include "sentence_ranges.h"
 
 #include "sentence_splitter.h"
 
@@ -41,7 +41,7 @@ private:
 
   std::vector<Ptr<Vocab const>> *vocabs_;
   SentenceSplitter sentence_splitter_;
-  unsigned int max_input_sentence_tokens_;
+  size_t max_input_sentence_tokens_;
 };
 
 } // namespace bergamot

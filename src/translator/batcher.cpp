@@ -16,7 +16,7 @@ Batcher::Batcher(Ptr<Options> options) {
 }
 
 void Batcher::addSentenceWithPriority(RequestSentence &sentence) {
-  int bucket_id = sentence.numTokens();
+  size_t bucket_id = sentence.numTokens();
   assert(bucket_id < bucket_.size());
   bucket_[bucket_id].insert(sentence);
 }
@@ -29,9 +29,9 @@ bool Batcher::cleaveBatch(Batch &batch) {
   // implementation should at least be as fast as marian's maxi-batch with full
   // corpus size as maxi-batch size.
   batch.clear();
-  int paddedBatchSize = 0;
+  size_t paddedBatchSize = 0;
 
-  for (int length = 0; length < bucket_.size(); length++) {
+  for (size_t length = 0; length < bucket_.size(); length++) {
     auto p = bucket_[length].begin();
     while (p != bucket_[length].end()) {
       paddedBatchSize = (batch.size() + 1) * length;
@@ -52,7 +52,7 @@ bool Batcher::cleaveBatch(Batch &batch) {
 }
 
 void Batcher::addWholeRequest(Ptr<Request> request) {
-  for (int i = 0; i < request->numSegments(); i++) {
+  for (size_t i = 0; i < request->numSegments(); i++) {
     RequestSentence requestSentence(i, request);
     addSentenceWithPriority(requestSentence);
   }

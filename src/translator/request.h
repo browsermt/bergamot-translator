@@ -17,9 +17,9 @@
 #ifndef SRC_BERGAMOT_REQUEST_H_
 #define SRC_BERGAMOT_REQUEST_H_
 
-#include "sentence_ranges.h"
 #include "definitions.h"
 #include "response.h"
+#include "sentence_ranges.h"
 
 #include "common/logging.h"
 #include "data/types.h"
@@ -35,7 +35,7 @@ namespace bergamot {
 
 class Request {
 public:
-  Request(unsigned int Id, int lineNumberBegin,
+  Request(size_t Id, size_t lineNumberBegin,
           std::vector<Ptr<Vocab const>> &vocabs_, std::string &&source,
           Segments &&segments, SentenceRanges &&sourceTokenRanges,
           std::promise<Response> responsePromise);
@@ -64,8 +64,8 @@ public:
   void completeRequest();
 
 private:
-  unsigned int Id_;
-  int lineNumberBegin_;
+  size_t Id_;
+  size_t lineNumberBegin_;
 
   // Multiple translation-workers can concurrently access the same Request. The
   // following atomic atomically operates on the variable holding sentences

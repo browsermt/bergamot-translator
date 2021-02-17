@@ -1,7 +1,7 @@
 #include "text_processor.h"
-#include "sentence_ranges.h"
 #include "data/types.h"
 #include "definitions.h"
+#include "sentence_ranges.h"
 
 #include "common/options.h"
 #include "data/vocab.h"
@@ -51,12 +51,12 @@ void TextProcessor::process(const string_view &query, Segments &segments,
 void TextProcessor::truncate(Segment &segment,
                              std::vector<string_view> &wordRanges,
                              Segments &segments, SentenceRanges &sourceRanges) {
-  for (int offset = 0; offset < segment.size();
+  for (size_t offset = 0; offset < segment.size();
        offset += max_input_sentence_tokens_) {
     auto start = segment.begin() + offset;
 
-    unsigned int left = segment.size() - offset;
-    unsigned int diff = std::min(max_input_sentence_tokens_, left);
+    size_t left = segment.size() - offset;
+    size_t diff = std::min(max_input_sentence_tokens_, left);
 
     segments.emplace_back(start, start + diff);
     segments.back().push_back(sourceEosId());

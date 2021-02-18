@@ -44,14 +44,6 @@ std::future<Response> Service::translateWithCopy(std::string input) {
 }
 
 std::future<Response> Service::translate(std::string &&input) {
-  UPtr<RequestTracker> tracker =
-      std::move(translatePart(std::move(input), /*lineNumberBegin=*/0));
-  std::future<Response> future = std::move(tracker->future);
-  return future;
-}
-
-UPtr<RequestTracker> Service::translatePart(std::string &&input,
-                                            int lineNumberBegin) {
   // Takes in a blob of text. Segments and SentenceRanges are
   // extracted from the input (blob of text) and used to construct a Request
   // along with a promise. promise value is set by the worker completing a
@@ -63,6 +55,14 @@ UPtr<RequestTracker> Service::translatePart(std::string &&input,
   // TODO(jerin): Make asynchronous and compile from multiple requests.
   //
   // returns future corresponding to the promise.
+  UPtr<RequestTracker> tracker =
+      std::move(translatePart(std::move(input), /*lineNumberBegin=*/0));
+  std::future<Response> future = std::move(tracker->future);
+  return future;
+}
+
+UPtr<RequestTracker> Service::translatePart(std::string &&input,
+                                            int lineNumberBegin) {
 
   UPtr<RequestTracker> tracker = UPtr<RequestTracker>(new RequestTracker());
   auto prepareRequest = [&]() {

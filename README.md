@@ -33,14 +33,14 @@ make -j
     git submodule update --init --recursive
     ```
 
-3. Download models (only required if you want to package files in wasm binary)
+3. Download files (only required if you want to package files in wasm binary)
 
     This step is only required if you want to package files (e.g. models, vocabularies etc.)
     into wasm binary. If you don't then just skip this step.
 
     The build preloads the files in Emscripten’s virtual file system.
 
-    If you want to use bergamot models, please follow these instructions:
+    If you want to package bergamot project specific models, please follow these instructions:
     ```bash
     mkdir models
     git clone https://github.com/mozilla-applied-ml/bergamot-models
@@ -56,13 +56,15 @@ make -j
         ```
 
     2. Compile the artefacts
-        * If you want to package files into wasm binary then execute following commands (Replace `FILES_TO_PACKAGE` with the absolute path of the
+        * If you want to package files into wasm binary then execute following commands (Replace `FILES_TO_PACKAGE` with the path of the
         directory containing the files to be packaged in wasm binary)
 
             ```bash
             emcmake cmake -DCOMPILE_WASM=on -DPACKAGE_DIR=FILES_TO_PACKAGE ../
             emmake make -j
             ```
+            e.g. If you want to package bergamot project specific models (downloaded using step 3 above) then
+            replace `FILES_TO_PACKAGE` with `../models`
 
         * If you don't want to package any file into wasm binary then execute following commands:
             ```bash

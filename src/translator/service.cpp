@@ -56,23 +56,31 @@ std::future<Response> Service::translate(std::string &&input) {
   //
   // returns future corresponding to the promise.
 
-  Segments segments;
-  SentenceRanges sourceRanges;
-  text_processor_.process(input, segments, sourceRanges);
-
   std::promise<Response> responsePromise;
   auto future = responsePromise.get_future();
 
-  Ptr<Request> request = New<Request>(
-      requestId_++, /* lineNumberBegin = */ 0, vocabs_, std::move(input),
-      std::move(segments), std::move(sourceRanges), std::move(responsePromise));
+  auto prepareRequest = [&]() {
+    Segments segments;
+    SentenceRanges sourceRanges;
+    text_processor_.process(input, segments, sourceRanges);
 
-  batcher_.addWholeRequest(request);
+    Ptr<Request> request =
+        New<Request>(requestId_++, /* lineNumberBegin = */ 0, vocabs_,
+                     std::move(input), std::move(segments),
+                     std::move(sourceRanges), std::move(responsePromise));
+
+    batcher_.addWholeRequest(request);
+  };
 
   if (numWorkers_ > 0) {
-    batcher_.produceTo(pcqueue_);
+    auto queueInBackground = [&]() {
+      prepareRequest();
+      batcher_.produceTo(pcqueue_);
+    };
+    auto queueResponse = std::async(std::launch::async, queueInBackground);
   } else {
     // Queue single-threaded
+    prepareRequest();
     Batch batch;
     while (batcher_ >> batch) {
       translators_[0].translate(batch);

@@ -8,6 +8,7 @@
 #include "pcqueue.h"
 #include "request.h"
 
+#include <mutex>
 #include <set>
 #include <vector>
 
@@ -33,6 +34,7 @@ private:
   size_t miniBatchWords;
   std::vector<std::set<RequestSentence>> bucket_;
   size_t batchNumber_{0};
+  std::mutex bucketAccess_;
 };
 
 } // namespace bergamot

@@ -27,6 +27,7 @@ bool Batcher::cleaveBatch(Batch &batch) {
   // has to be enhanced with optimizing over priority. The baseline
   // implementation should at least be as fast as marian's maxi-batch with full
   // corpus size as maxi-batch size.
+  std::lock_guard<std::mutex> lock(bucketAccess_);
   batch.clear();
   size_t paddedBatchSize = 0;
 
@@ -51,6 +52,7 @@ bool Batcher::cleaveBatch(Batch &batch) {
 }
 
 void Batcher::addWholeRequest(Ptr<Request> request) {
+  std::lock_guard<std::mutex> lock(bucketAccess_);
   for (size_t i = 0; i < request->numSegments(); i++) {
     RequestSentence requestSentence(i, request);
     addSentenceWithPriority(requestSentence);

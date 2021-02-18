@@ -10,7 +10,7 @@ void RequestTracker::track(Ptr<Request> request) {
   future = request_->get_future();
 }
 
-void RequestTracker::setStatus(StatusCode code) {
+void RequestTracker::logStatusChange(StatusCode before, StatusCode after) {
   auto humanfriendly = [](StatusCode scode) {
     std::string hfcode;
     switch (scode) {
@@ -37,7 +37,15 @@ void RequestTracker::setStatus(StatusCode code) {
   };
 
   LOG(info, "Request({}) status change: {} -> {}", request_->Id(),
-      humanfriendly(status_), humanfriendly(code));
+      humanfriendly(before), humanfriendly(after));
+  if (after == StatusCode::SUCCESS) {
+    LOG(info, "Request({}) completed in {}s wall", request_->Id(),
+        timer_.elapsed());
+  }
+}
+
+void RequestTracker::setStatus(StatusCode code) {
+  logStatusChange(status_, code);
   status_ = code;
 }
 

@@ -28,6 +28,8 @@ public:
   const Ptr<Request> &request() const { return request_; }
 
 private:
+  void logStatusChange(StatusCode before, StatusCode after);
+
   Ptr<Request> request_{nullptr};
   StatusCode status_{StatusCode::UNSET};
 

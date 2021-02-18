@@ -11,7 +11,7 @@ namespace marian {
 namespace bergamot {
 
 // -----------------------------------------------------------------
-Request::Request(size_t Id, size_t lineNumberBegin,
+Request::Request(size_t Id, size_t lineNumberBegin, int nice,
                  std::vector<Ptr<Vocab const>> &vocabs, std::string &&source,
                  Segments &&segments, SentenceRanges &&sourceRanges)
     : Id_(Id), lineNumberBegin_(lineNumberBegin), vocabs_(&vocabs),
@@ -20,10 +20,19 @@ Request::Request(size_t Id, size_t lineNumberBegin,
 
   counter_ = segments_.size();
   histories_.resize(segments_.size(), nullptr);
+  nice_ = std::clamp(nice, -20, 20);
 }
 
 size_t Request::lineNumberBegin() const { return lineNumberBegin_; }
 size_t Request::numSegments() const { return segments_.size(); }
+size_t Request::numWords() const {
+  size_t wordCount = 0;
+  ;
+  for (auto &segment : segments_) {
+    wordCount += segment.size();
+  }
+  return wordCount;
+}
 
 size_t Request::segmentTokens(size_t index) const {
   return (segments_[index].size());
@@ -53,7 +62,10 @@ void Request::completeRequest() {
 
 bool Request::operator<(const Request &b) const {
   // Among Requests, only sequence id is used for obtaining priority.
-  return Id_ < b.Id_;
+  if (nice_ == b.nice_) {
+    return Id_ < b.Id_;
+  }
+  return nice_ < b.nice_;
 }
 
 // ------------------------------------------------------------------

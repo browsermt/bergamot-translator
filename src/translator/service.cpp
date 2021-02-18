@@ -44,6 +44,11 @@ std::future<Response> Service::translateWithCopy(std::string input) {
 }
 
 std::future<Response> Service::translate(std::string &&input) {
+  return translatePart(std::move(input), /*lineNumberBegin=*/0);
+}
+
+std::future<Response> Service::translatePart(std::string &&input,
+                                             int lineNumberBegin) {
   // Takes in a blob of text. Segments and SentenceRanges are
   // extracted from the input (blob of text) and used to construct a Request
   // along with a promise. promise value is set by the worker completing a
@@ -57,18 +62,17 @@ std::future<Response> Service::translate(std::string &&input) {
   // returns future corresponding to the promise.
 
   RequestTracker tracker;
-
   auto prepareRequest = [&]() {
     Segments segments;
     SentenceRanges sourceRanges;
     text_processor_.process(input, segments, sourceRanges);
 
     Ptr<Request> request = New<Request>(
-        requestId_++, /* lineNumberBegin = */ 0, vocabs_, std::move(input),
+        requestId_++, lineNumberBegin, /*nice=*/20, vocabs_, std::move(input),
         std::move(segments), std::move(sourceRanges));
 
     tracker.track(request);
-    batcher_.addWholeRequest(request);
+    batcher_.addWholeRequest(tracker);
   };
 
   if (numWorkers_ > 0) {
@@ -76,7 +80,9 @@ std::future<Response> Service::translate(std::string &&input) {
       prepareRequest();
       batcher_.produceTo(pcqueue_);
     };
-    auto queueResponse = std::async(std::launch::async, queueInBackground);
+
+    std::async(std::launch::async, queueInBackground);
+
   } else {
     // Queue single-threaded
     prepareRequest();
@@ -88,6 +94,16 @@ std::future<Response> Service::translate(std::string &&input) {
 
   std::future<Response> future = std::move(tracker.future);
   return future;
+}
+
+void Service::cancel(RequestTracker &requestTracker) {
+  std::async([this, &requestTracker]() { batcher_.cancel(requestTracker); });
+}
+
+void Service::amend(RequestTracker &requestTracker, int nice) {
+  std::async([&requestTracker, nice, this]() {
+    batcher_.amend(requestTracker, nice);
+  });
 }
 
 void Service::stop() {

@@ -2,14 +2,18 @@
 #include "batch.h"
 #include "common/logging.h"
 #include <cassert>
+#include <stdint.h>
 
 namespace marian {
 namespace bergamot {
 
 Batcher::Batcher(Ptr<Options> options) {
-  miniBatchWords = options->get<int>("mini-batch-words");
+  miniBatchWords_ = options->get<int>("mini-batch-words");
+  // TODO(jerinphilip):
+  // maxiBatchWords_ = options->get<int>("maxi-batch-words");
+  maxiBatchWords_ = SIZE_MAX;
   bucket_.resize(options->get<int>("max-length-break") + 1);
-  ABORT_IF(bucket_.size() - 1 > miniBatchWords,
+  ABORT_IF(bucket_.size() - 1 > miniBatchWords_,
            "Fatal: max-length-break > mini-batch-words  will lead to sentences "
            "longer than what can fit in a batch.");
 }
@@ -35,7 +39,7 @@ bool Batcher::cleaveBatch(Batch &batch) {
     auto p = bucket_[length].begin();
     while (p != bucket_[length].end()) {
       paddedBatchSize = (batch.size() + 1) * length;
-      if (paddedBatchSize <= miniBatchWords) {
+      if (paddedBatchSize <= miniBatchWords_) {
         auto q = p++;
         batch.add(*q);
         bucket_[length].erase(q);
@@ -51,11 +55,20 @@ bool Batcher::cleaveBatch(Batch &batch) {
   return isValidBatch;
 }
 
-void Batcher::addWholeRequest(Ptr<Request> request) {
+void Batcher::addWholeRequest(RequestTracker &requestTracker) {
+  Ptr<Request> request = requestTracker.request();
   std::lock_guard<std::mutex> lock(bucketAccess_);
-  for (size_t i = 0; i < request->numSegments(); i++) {
-    RequestSentence requestSentence(i, request);
-    addSentenceWithPriority(requestSentence);
+
+  size_t requestWords = request->numWords();
+  if (maxiBatchWords_ < requestWords) {
+    requestTracker.setStatus(StatusCode::REJECTED_MEMORY);
+  } else {
+    for (size_t i = 0; i < request->numSegments(); i++) {
+      RequestSentence requestSentence(i, request);
+      addSentenceWithPriority(requestSentence);
+    }
+    maxiBatchWords_ -= requestWords;
+    requestTracker.setStatus(StatusCode::QUEUED);
   }
 }
 
@@ -64,6 +77,15 @@ void Batcher::produceTo(PCQueue<Batch> &pcqueue) {
   while (cleaveBatch(batch)) {
     pcqueue.ProduceSwap(batch);
   }
+}
+
+void Batcher::cancel(RequestTracker &tracker) {
+  tracker.setStatus(StatusCode::CANCELLED_BY_USER);
+  // TODO(jerinphilip): Cancel code
+}
+
+void Batcher::amend(RequestTracker &tracker, int nice) {
+  // TODO(jerinphilip): Amend code
 }
 
 } // namespace bergamot

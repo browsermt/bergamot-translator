@@ -7,6 +7,7 @@
 #include "definitions.h"
 #include "pcqueue.h"
 #include "request.h"
+#include "request_tracker.h"
 
 #include <mutex>
 #include <set>
@@ -22,8 +23,11 @@ public:
   // sentence. This method inserts the sentence into the internal data-structure
   // which maintains priority among sentences from multiple concurrent requests.
   void addSentenceWithPriority(RequestSentence &sentence);
-  void addWholeRequest(Ptr<Request> request);
+  void addWholeRequest(RequestTracker &requestTracker);
   void produceTo(PCQueue<Batch> &pcqueue);
+
+  void cancel(RequestTracker &tracker);
+  void amend(RequestTracker &tracker, int nice);
 
   // Loads sentences with sentences compiled from (tentatively) multiple
   // requests optimizing for both padding and priority.
@@ -31,10 +35,11 @@ public:
   bool operator>>(Batch &batch); // alias
 
 private:
-  size_t miniBatchWords;
+  size_t miniBatchWords_;
   std::vector<std::set<RequestSentence>> bucket_;
   size_t batchNumber_{0};
   std::mutex bucketAccess_;
+  std::atomic<size_t> maxiBatchWords_;
 };
 
 } // namespace bergamot

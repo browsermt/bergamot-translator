@@ -35,7 +35,7 @@ namespace bergamot {
 
 class Request {
 public:
-  Request(size_t Id, size_t lineNumberBegin,
+  Request(size_t Id, size_t lineNumberBegin, int nice,
           std::vector<Ptr<Vocab const>> &vocabs_, std::string &&source,
           Segments &&segments, SentenceRanges &&sourceTokenRanges);
 
@@ -46,6 +46,7 @@ public:
   // Obtain number of segments in a request.
   size_t numSegments() const;
   size_t lineNumberBegin() const;
+  size_t numWords() const;
 
   // Obtains segment corresponding to index  to create a batch of segments among
   // several requests.
@@ -65,6 +66,11 @@ public:
 
 private:
   size_t Id_;
+  int nice_;
+
+  // lineNumberBegin_ exists to simulate a maxi-batch-setting to compare with
+  // marian-decoder's maxi-batching-mechanism. histories returns embed line
+  // numbers which are used in OutputCollector
   size_t lineNumberBegin_;
 
   // Multiple translation-workers can concurrently access the same Request. The

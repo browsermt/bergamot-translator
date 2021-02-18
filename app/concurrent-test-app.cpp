@@ -14,7 +14,7 @@
 #include "translator/response.h"
 #include "translator/service.h"
 
-typedef marian::bergamot::RequestTracker RequestTracker;
+typedef std::unique_ptr<marian::bergamot::RequestTracker> RequestTracker;
 
 void marian_decoder_minimal(std::vector<RequestTracker> &requestTrackers,
                             marian::Ptr<marian::Vocab const> targetVocab,
@@ -30,7 +30,7 @@ void marian_decoder_minimal(std::vector<RequestTracker> &requestTrackers,
     collector->setPrintingStrategy(marian::New<marian::QuietPrinting>());
 
   for (auto &requestTracker : requestTrackers) {
-    auto &future = requestTracker.future;
+    auto &future = requestTracker->future;
     future.wait();
     const marian::bergamot::Response &response = future.get();
     auto histories = response.histories();

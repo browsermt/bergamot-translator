@@ -37,10 +37,10 @@ public:
   // Constructs new string copying, calls translate internally.
   std::future<Response> translateWithCopy(std::string input);
   std::future<Response> translate(std::string &&input);
-  RequestTracker translatePart(std::string &&input, int lineNumberBegin);
+  UPtr<RequestTracker> translatePart(std::string &&input, int lineNumberBegin);
 
-  void cancel(RequestTracker &requestTracker);
-  void amend(RequestTracker &requestTracker, int nice);
+  void cancel(RequestTracker *requestTracker);
+  void amend(RequestTracker *requestTracker, int nice);
 
   void stop();
 

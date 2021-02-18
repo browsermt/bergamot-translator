@@ -59,7 +59,7 @@ void Request::completeRequest() {
                     std::move(histories_), *vocabs_);
 
   // TODO(jerinphilip): There are stack/heap lifetime issues. Fix
-  // tracker_->setStatus(StatusCode::SUCCESS);
+  tracker_->setStatus(StatusCode::SUCCESS);
   response_.set_value(std::move(response));
 }
 

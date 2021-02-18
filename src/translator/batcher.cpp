@@ -55,20 +55,20 @@ bool Batcher::cleaveBatch(Batch &batch) {
   return isValidBatch;
 }
 
-void Batcher::addWholeRequest(RequestTracker &requestTracker) {
-  Ptr<Request> request = requestTracker.request();
+void Batcher::addWholeRequest(RequestTracker *requestTracker) {
+  Ptr<Request> request = requestTracker->request();
   std::lock_guard<std::mutex> lock(bucketAccess_);
 
   size_t requestWords = request->numWords();
   if (maxiBatchWords_ < requestWords) {
-    requestTracker.setStatus(StatusCode::REJECTED_MEMORY);
+    requestTracker->setStatus(StatusCode::REJECTED_MEMORY);
   } else {
     for (size_t i = 0; i < request->numSegments(); i++) {
       RequestSentence requestSentence(i, request);
       addSentenceWithPriority(requestSentence);
     }
     maxiBatchWords_ -= requestWords;
-    requestTracker.setStatus(StatusCode::QUEUED);
+    requestTracker->setStatus(StatusCode::QUEUED);
   }
 }
 
@@ -79,12 +79,12 @@ void Batcher::produceTo(PCQueue<Batch> &pcqueue) {
   }
 }
 
-void Batcher::cancel(RequestTracker &tracker) {
-  tracker.setStatus(StatusCode::CANCELLED_BY_USER);
+void Batcher::cancel(RequestTracker *tracker) {
+  tracker->setStatus(StatusCode::CANCELLED_BY_USER);
   // TODO(jerinphilip): Cancel code
 }
 
-void Batcher::amend(RequestTracker &tracker, int nice) {
+void Batcher::amend(RequestTracker *tracker, int nice) {
   // TODO(jerinphilip): Amend code
 }
 

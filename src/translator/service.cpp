@@ -44,14 +44,14 @@ std::future<Response> Service::translateWithCopy(std::string input) {
 }
 
 std::future<Response> Service::translate(std::string &&input) {
-  RequestTracker tracker =
+  UPtr<RequestTracker> tracker =
       std::move(translatePart(std::move(input), /*lineNumberBegin=*/0));
-  std::future<Response> future = std::move(tracker.future);
+  std::future<Response> future = std::move(tracker->future);
   return future;
 }
 
-RequestTracker Service::translatePart(std::string &&input,
-                                      int lineNumberBegin) {
+UPtr<RequestTracker> Service::translatePart(std::string &&input,
+                                            int lineNumberBegin) {
   // Takes in a blob of text. Segments and SentenceRanges are
   // extracted from the input (blob of text) and used to construct a Request
   // along with a promise. promise value is set by the worker completing a
@@ -64,7 +64,7 @@ RequestTracker Service::translatePart(std::string &&input,
   //
   // returns future corresponding to the promise.
 
-  RequestTracker tracker;
+  UPtr<RequestTracker> tracker = UPtr<RequestTracker>(new RequestTracker());
   auto prepareRequest = [&]() {
     Segments segments;
     SentenceRanges sourceRanges;
@@ -74,9 +74,9 @@ RequestTracker Service::translatePart(std::string &&input,
         requestId_++, lineNumberBegin, /*nice=*/20, vocabs_, std::move(input),
         std::move(segments), std::move(sourceRanges));
 
-    tracker.track(request);
-    request->setTracker(&tracker);
-    batcher_.addWholeRequest(tracker);
+    tracker->track(request);
+    request->setTracker(tracker.get());
+    batcher_.addWholeRequest(tracker.get());
   };
 
   if (numWorkers_ > 0) {
@@ -99,14 +99,12 @@ RequestTracker Service::translatePart(std::string &&input,
   return tracker;
 }
 
-void Service::cancel(RequestTracker &requestTracker) {
-  std::async([this, &requestTracker]() { batcher_.cancel(requestTracker); });
+void Service::cancel(RequestTracker *requestTracker) {
+  std::async([&]() { batcher_.cancel(requestTracker); });
 }
 
-void Service::amend(RequestTracker &requestTracker, int nice) {
-  std::async([&requestTracker, nice, this]() {
-    batcher_.amend(requestTracker, nice);
-  });
+void Service::amend(RequestTracker *requestTracker, int nice) {
+  std::async([&]() { batcher_.amend(requestTracker, nice); });
 }
 
 void Service::stop() {

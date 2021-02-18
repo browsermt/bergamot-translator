@@ -56,7 +56,7 @@ std::future<Response> Service::translate(std::string &&input) {
   //
   // returns future corresponding to the promise.
 
-  std::future<Response> future;
+  RequestTracker tracker;
 
   auto prepareRequest = [&]() {
     Segments segments;
@@ -67,7 +67,7 @@ std::future<Response> Service::translate(std::string &&input) {
         requestId_++, /* lineNumberBegin = */ 0, vocabs_, std::move(input),
         std::move(segments), std::move(sourceRanges));
 
-    future = request->get_future();
+    tracker.track(request);
     batcher_.addWholeRequest(request);
   };
 
@@ -86,6 +86,7 @@ std::future<Response> Service::translate(std::string &&input) {
     }
   }
 
+  std::future<Response> future = std::move(tracker.future);
   return future;
 }
 

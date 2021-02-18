@@ -4,6 +4,7 @@
 #include "batch_translator.h"
 #include "batcher.h"
 #include "pcqueue.h"
+#include "request_tracker.h"
 #include "response.h"
 #include "text_processor.h"
 

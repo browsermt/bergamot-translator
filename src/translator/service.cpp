@@ -44,11 +44,14 @@ std::future<Response> Service::translateWithCopy(std::string input) {
 }
 
 std::future<Response> Service::translate(std::string &&input) {
-  return translatePart(std::move(input), /*lineNumberBegin=*/0);
+  RequestTracker tracker =
+      std::move(translatePart(std::move(input), /*lineNumberBegin=*/0));
+  std::future<Response> future = std::move(tracker.future);
+  return future;
 }
 
-std::future<Response> Service::translatePart(std::string &&input,
-                                             int lineNumberBegin) {
+RequestTracker Service::translatePart(std::string &&input,
+                                      int lineNumberBegin) {
   // Takes in a blob of text. Segments and SentenceRanges are
   // extracted from the input (blob of text) and used to construct a Request
   // along with a promise. promise value is set by the worker completing a
@@ -72,6 +75,7 @@ std::future<Response> Service::translatePart(std::string &&input,
         std::move(segments), std::move(sourceRanges));
 
     tracker.track(request);
+    request->setTracker(&tracker);
     batcher_.addWholeRequest(tracker);
   };
 
@@ -92,8 +96,7 @@ std::future<Response> Service::translatePart(std::string &&input,
     }
   }
 
-  std::future<Response> future = std::move(tracker.future);
-  return future;
+  return tracker;
 }
 
 void Service::cancel(RequestTracker &requestTracker) {

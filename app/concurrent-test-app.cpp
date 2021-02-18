@@ -14,9 +14,9 @@
 #include "translator/response.h"
 #include "translator/service.h"
 
-typedef std::future<marian::bergamot::Response> ResponseFuture;
+typedef marian::bergamot::RequestTracker RequestTracker;
 
-void marian_decoder_minimal(std::vector<ResponseFuture> &responseFutures,
+void marian_decoder_minimal(std::vector<RequestTracker> &requestTrackers,
                             marian::Ptr<marian::Vocab const> targetVocab,
                             marian::Ptr<marian::Options> options) {
 
@@ -29,9 +29,10 @@ void marian_decoder_minimal(std::vector<ResponseFuture> &responseFutures,
   if (options->get<bool>("quiet-translation"))
     collector->setPrintingStrategy(marian::New<marian::QuietPrinting>());
 
-  for (auto &responseFuture : responseFutures) {
-    responseFuture.wait();
-    const marian::bergamot::Response &response = responseFuture.get();
+  for (auto &requestTracker : requestTrackers) {
+    auto &future = requestTracker.future;
+    future.wait();
+    const marian::bergamot::Response &response = future.get();
     auto histories = response.histories();
     for (auto &history : histories) {
       std::stringstream best1;
@@ -52,7 +53,7 @@ int main(int argc, char *argv[]) {
   // Read a large input text blob from stdin
 
   size_t maxiBatchLines = options->get<int>("maxi-batch");
-  std::vector<ResponseFuture> maxiBatchResponseFutures;
+  std::vector<RequestTracker> maxiBatchRequestTrackers;
 
   size_t lineNumber{0}, maxiBatches{0}, lineNumberBegin{0};
   std::string line;
@@ -62,9 +63,9 @@ int main(int argc, char *argv[]) {
     std_input << line << "\n";
     if (lineNumber % maxiBatchLines == 0) {
       std::string input = std_input.str();
-      ResponseFuture responseFuture =
+      RequestTracker requestTracker =
           service.translatePart(std::move(input), lineNumberBegin);
-      maxiBatchResponseFutures.push_back(std::move(responseFuture));
+      maxiBatchRequestTrackers.push_back(std::move(requestTracker));
       // Reset;
       std_input.str("");
       ++maxiBatches;
@@ -76,7 +77,7 @@ int main(int argc, char *argv[]) {
 
   // Wait on future until marian::bergamot::Response is complete
 
-  marian_decoder_minimal(maxiBatchResponseFutures, service.targetVocab(),
+  marian_decoder_minimal(maxiBatchRequestTrackers, service.targetVocab(),
                          options);
 
   LOG(info, "Total time: {:.5f}s wall", decoderTimer.elapsed());

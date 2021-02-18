@@ -1,19 +1,18 @@
 #ifndef SRC_BERGAMOT_REQUEST_TRACKER_H
 #define SRC_BERGAMOT_REQUEST_TRACKER_H
 
+#include "definitions.h"
+#include "request.h"
+#include "response.h"
+#include <common/logging.h>
+#include <common/timer.h>
 #include <data/types.h>
 #include <future>
 
 namespace marian {
 namespace bergamot {
 
-enum StatusCode {
-  UNSET,               // No object has operated yet.
-  CANCELLED_BY_USER,   // Denotes if the Request was cancelled by user.
-  REJECTED_MEMORY,     // Rejected by batcher on memory constraints.
-  QUEUED,              // Successfully Queued
-  TRANSLATION_SUCCESS, // Successfully Translated
-};
+class Request;
 
 class RequestTracker {
   // A fancier std::promise <-> std::future, with abilities to cancel and amend
@@ -21,22 +20,20 @@ class RequestTracker {
 public:
   std::future<Response> future;
 
-  RequestTracker(){};
-  void track(Ptr<Request> request) {
-    request_ = request;
-    future = request_->get_future();
-  }
+  RequestTracker();
+  void track(Ptr<Request> request);
+  void setStatus(StatusCode code);
 
   const StatusCode status() const { return status_; }
-
-  void setStatus(StatusCode code) { status_ = code; }
   const Ptr<Request> &request() const { return request_; }
 
 private:
   Ptr<Request> request_{nullptr};
-  std::atomic<StatusCode> status_{StatusCode::UNSET};
-};
+  StatusCode status_{StatusCode::UNSET};
 
+  // Temporary book-keeping
+  timer::Timer timer_;
+};
 } // namespace bergamot
 } // namespace marian
 

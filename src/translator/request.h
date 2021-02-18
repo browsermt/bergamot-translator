@@ -18,6 +18,7 @@
 #define SRC_BERGAMOT_REQUEST_H_
 
 #include "definitions.h"
+#include "request_tracker.h"
 #include "response.h"
 #include "sentence_ranges.h"
 
@@ -32,6 +33,8 @@
 
 namespace marian {
 namespace bergamot {
+
+class RequestTracker;
 
 class Request {
 public:
@@ -63,6 +66,9 @@ public:
   // On completion of last segment, sets value of the promise.
   void completeRequest();
   std::future<Response> get_future() { return response_.get_future(); }
+  const int Id() { return Id_; }
+
+  void setTracker(RequestTracker *tracker) { tracker_ = tracker; }
 
 private:
   size_t Id_;
@@ -96,6 +102,8 @@ private:
 
   // Constructing Response requires the vocabs_ used to generate Request.
   std::vector<Ptr<Vocab const>> *vocabs_;
+
+  RequestTracker *tracker_;
 };
 
 class RequestSentence {

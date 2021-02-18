@@ -13,6 +13,7 @@ add_library(bergamot-translator STATIC
     response.cpp
     batch.cpp
     sentence_ranges.cpp
+    request_tracker.cpp
 )
 
 target_link_libraries(bergamot-translator marian ssplit)

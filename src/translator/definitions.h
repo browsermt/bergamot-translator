@@ -13,6 +13,14 @@ typedef std::vector<Segment> Segments;
 typedef std::vector<marian::string_view> TokenRanges;
 typedef std::vector<TokenRanges> SentenceTokenRanges;
 
+enum StatusCode {
+  UNSET,             // No object has operated yet.
+  CANCELLED_BY_USER, // Denotes if the Request was cancelled by user.
+  REJECTED_MEMORY,   // Rejected by batcher on memory constraints.
+  QUEUED,            // Successfully Queued
+  SUCCESS,           // Successfully Translated
+};
+
 /** @brief Creates unique_ptr any type, passes all arguments to any available
  *  * constructor */
 template <class T, typename... Args> UPtr<T> UNew(Args &&... args) {

@@ -5,10 +5,10 @@
 set -e
 set -x
 
-# run script from the context of the script-containing directory
+# Run script from the context of the script-containing directory
 cd "$(dirname $0)"
 
-# This file replicates the instructions found in ../bergamot-translator/README.md under "Build WASM"
+# This file replicates the instructions found in ./README.md under "Build WASM"
 # with slight adjustments to be able to run the build script multiple times without having to clone all dependencies
 # as per "As long as you don't update any submodule, just follow steps in `4.ii` to recompile."
 

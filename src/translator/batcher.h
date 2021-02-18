@@ -23,7 +23,7 @@ public:
   // sentence. This method inserts the sentence into the internal data-structure
   // which maintains priority among sentences from multiple concurrent requests.
   void addSentenceWithPriority(RequestSentence &sentence);
-  void addWholeRequest(RequestTracker *requestTracker);
+  StatusCode addWholeRequest(Ptr<Request> request);
   void produceTo(PCQueue<Batch> &pcqueue);
 
   void cancel(RequestTracker *tracker);

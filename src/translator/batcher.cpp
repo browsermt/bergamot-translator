@@ -55,20 +55,19 @@ bool Batcher::cleaveBatch(Batch &batch) {
   return isValidBatch;
 }
 
-void Batcher::addWholeRequest(RequestTracker *requestTracker) {
-  Ptr<Request> request = requestTracker->request();
+StatusCode Batcher::addWholeRequest(Ptr<Request> request) {
   std::lock_guard<std::mutex> lock(bucketAccess_);
 
   size_t requestWords = request->numWords();
   if (maxiBatchWords_ < requestWords) {
-    requestTracker->setStatus(StatusCode::REJECTED_MEMORY);
+    return StatusCode::REJECTED_MEMORY;
   } else {
     for (size_t i = 0; i < request->numSegments(); i++) {
       RequestSentence requestSentence(i, request);
       addSentenceWithPriority(requestSentence);
     }
     maxiBatchWords_ -= requestWords;
-    requestTracker->setStatus(StatusCode::QUEUED);
+    return StatusCode::QUEUED;
   }
 }
 

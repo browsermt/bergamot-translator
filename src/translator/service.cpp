@@ -76,7 +76,9 @@ UPtr<RequestTracker> Service::translatePart(std::string &&input,
 
     tracker->track(request);
     request->setTracker(tracker.get());
-    batcher_.addWholeRequest(tracker.get());
+
+    StatusCode queueStatus = batcher_.addWholeRequest(request);
+    tracker->setStatus(queueStatus);
   };
 
   if (numWorkers_ > 0) {

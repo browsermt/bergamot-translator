@@ -62,7 +62,7 @@ fi
 cd build-wasm
 
 #     2. Compile the artefacts
-emcmake cmake -DCOMPILE_WASM=on -DPACKAGE_DIR="$(pwd)/../models/" ../
+emcmake cmake -DCOMPILE_WASM=on -DPACKAGE_DIR="../models/" ../
 emmake make -j
 
 # The artefacts (.js and .wasm files) will be available in `wasm` folder of build directory ("build-wasm" in this case).

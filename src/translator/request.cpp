@@ -13,12 +13,10 @@ namespace bergamot {
 // -----------------------------------------------------------------
 Request::Request(size_t Id, size_t lineNumberBegin,
                  std::vector<Ptr<Vocab const>> &vocabs, std::string &&source,
-                 Segments &&segments, SentenceRanges &&sourceRanges,
-                 std::promise<Response> responsePromise)
+                 Segments &&segments, SentenceRanges &&sourceRanges)
     : Id_(Id), lineNumberBegin_(lineNumberBegin), vocabs_(&vocabs),
       source_(std::move(source)), segments_(std::move(segments)),
-      sourceRanges_(std::move(sourceRanges)),
-      response_(std::move(responsePromise)) {
+      sourceRanges_(std::move(sourceRanges)) {
 
   counter_ = segments_.size();
   histories_.resize(segments_.size(), nullptr);

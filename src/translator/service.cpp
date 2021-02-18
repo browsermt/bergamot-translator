@@ -56,19 +56,18 @@ std::future<Response> Service::translate(std::string &&input) {
   //
   // returns future corresponding to the promise.
 
-  std::promise<Response> responsePromise;
-  auto future = responsePromise.get_future();
+  std::future<Response> future;
 
   auto prepareRequest = [&]() {
     Segments segments;
     SentenceRanges sourceRanges;
     text_processor_.process(input, segments, sourceRanges);
 
-    Ptr<Request> request =
-        New<Request>(requestId_++, /* lineNumberBegin = */ 0, vocabs_,
-                     std::move(input), std::move(segments),
-                     std::move(sourceRanges), std::move(responsePromise));
+    Ptr<Request> request = New<Request>(
+        requestId_++, /* lineNumberBegin = */ 0, vocabs_, std::move(input),
+        std::move(segments), std::move(sourceRanges));
 
+    future = request->get_future();
     batcher_.addWholeRequest(request);
   };
 

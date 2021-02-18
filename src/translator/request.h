@@ -37,8 +37,7 @@ class Request {
 public:
   Request(size_t Id, size_t lineNumberBegin,
           std::vector<Ptr<Vocab const>> &vocabs_, std::string &&source,
-          Segments &&segments, SentenceRanges &&sourceTokenRanges,
-          std::promise<Response> responsePromise);
+          Segments &&segments, SentenceRanges &&sourceTokenRanges);
 
   // Obtain the count of tokens in the segment correponding to index. Used to
   // insert sentence from multiple requests into the corresponding size bucket.
@@ -62,6 +61,7 @@ public:
 
   // On completion of last segment, sets value of the promise.
   void completeRequest();
+  std::future<Response> get_future() { return response_.get_future(); }
 
 private:
   size_t Id_;

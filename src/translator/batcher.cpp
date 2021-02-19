@@ -73,6 +73,10 @@ StatusCode Batcher::addWholeRequest(Ptr<Request> request) {
       addSentenceWithPriority(requestSentence);
     }
 
+    if (rejectOnFull_) {
+      // Bookkeeping required only if reject is set.
+      maxiBatchWords_ -= requestWords;
+    }
     return StatusCode::QUEUED;
   }
 }

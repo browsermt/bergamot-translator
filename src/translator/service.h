@@ -37,8 +37,14 @@ public:
   // Constructs new string copying, calls translate internally.
   std::future<Response> translateWithCopy(std::string input);
   std::future<Response> translate(std::string &&input);
+
+  // Fresh translate method with RequestTracker instead of future being
+  // prepared.
   UPtr<RequestTracker> translatePart(std::string &&input, int lineNumberBegin);
 
+  // A consumer of API with access to a requestTracker can cancel the request or
+  // amend priority, through the following functions. (TODO(jerinphilip): stub,
+  // improve).
   void cancel(RequestTracker *requestTracker);
   void amend(RequestTracker *requestTracker, int nice);
 

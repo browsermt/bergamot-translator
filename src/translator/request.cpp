@@ -58,13 +58,13 @@ void Request::completeRequest() {
   Response response(std::move(source_), std::move(sourceRanges_),
                     std::move(histories_), *vocabs_);
 
-  // TODO(jerinphilip): There are stack/heap lifetime issues. Fix
   tracker_->setStatus(StatusCode::SUCCESS);
   response_.set_value(std::move(response));
 }
 
 bool Request::operator<(const Request &b) const {
-  // Among Requests, only sequence id is used for obtaining priority.
+  // Order by user defined priority first, if same order by arrival.
+  // TODO(jerinphilip): Improve further.
   if (nice_ == b.nice_) {
     return Id_ < b.Id_;
   }

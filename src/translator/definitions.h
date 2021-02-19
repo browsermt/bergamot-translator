@@ -13,6 +13,7 @@ typedef std::vector<Segment> Segments;
 typedef std::vector<marian::string_view> TokenRanges;
 typedef std::vector<TokenRanges> SentenceTokenRanges;
 
+// Possible status-codes in a life-cycle of a Request.
 enum StatusCode {
   UNSET,             // No object has operated yet.
   CANCELLED_BY_USER, // Denotes if the Request was cancelled by user.

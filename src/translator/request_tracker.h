@@ -20,18 +20,26 @@ class RequestTracker {
 public:
   std::future<Response> future;
 
+  // Empty construction, and set later to track a request.
   RequestTracker();
   void track(Ptr<Request> request);
+
+  // Currently changeable, TODO(jerinphilip) disallow except through friends -
+  // Service, Request?
   void setStatus(StatusCode code);
 
+  // Returns status.
   const StatusCode status() const { return status_; }
+
+  // Returns access to the underlying pointer.
   const Ptr<Request> &request() const { return request_; }
 
 private:
-  void logStatusChange(StatusCode before, StatusCode after);
-
   Ptr<Request> request_{nullptr};
   StatusCode status_{StatusCode::UNSET};
+
+  // Convenience function to log StatusChanges and times.
+  void logStatusChange(StatusCode before, StatusCode after);
 
   // Temporary book-keeping
   timer::Timer timer_;

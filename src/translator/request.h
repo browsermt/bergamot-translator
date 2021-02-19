@@ -48,8 +48,14 @@ public:
 
   // Obtain number of segments in a request.
   size_t numSegments() const;
-  size_t lineNumberBegin() const;
+
+  // Obtain total number of words in a request. Useful to block or reject a
+  // request if the translator or batching mechanism is full to the point of
+  // unable to carry out requests.
   size_t numWords() const;
+
+  // For a benchmarking setting in WNGT20; Temporary.
+  size_t lineNumberBegin() const;
 
   // Obtains segment corresponding to index  to create a batch of segments among
   // several requests.
@@ -68,11 +74,13 @@ public:
   std::future<Response> get_future() { return response_.get_future(); }
   const int Id() { return Id_; }
 
+  // Only one tracker is allowed to listen (tracker holds futures corresponding
+  // to promises).
   void setTracker(RequestTracker *tracker) { tracker_ = tracker; }
 
 private:
   size_t Id_;
-  int nice_;
+  int nice_; // similar to linux nice, for use in priority determination.
 
   // lineNumberBegin_ exists to simulate a maxi-batch-setting to compare with
   // marian-decoder's maxi-batching-mechanism. histories returns embed line
@@ -103,6 +111,9 @@ private:
   // Constructing Response requires the vocabs_ used to generate Request.
   std::vector<Ptr<Vocab const>> *vocabs_;
 
+  // Pointer to tracker (might get deleted at client and can lead to segfaults,
+  // convert to Ptr<RequestTracker>?). Also can pick up destructor and forward
+  // cancel to Service if client doesn't have the tracker.
   RequestTracker *tracker_;
 };
 

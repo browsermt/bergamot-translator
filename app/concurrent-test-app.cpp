@@ -1,3 +1,7 @@
+// This application translates a large file containing lines of text breaking
+// them into several Requests of size --maxi-batch. For use in testing,
+// prototyping and benchmarking concurrent-queueing.
+
 #include <cstdlib>
 #include <future>
 #include <iostream>

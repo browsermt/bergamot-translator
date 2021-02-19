@@ -8,6 +8,7 @@ namespace marian {
 namespace bergamot {
 
 Batcher::Batcher(Ptr<Options> options) {
+  rejectOnFull_ = options->get<bool>("reject-on-full");
   miniBatchWords_ = options->get<int>("mini-batch-words");
   // TODO(jerinphilip):
   // maxiBatchWords_ = options->get<int>("maxi-batch-words");
@@ -56,17 +57,22 @@ bool Batcher::cleaveBatch(Batch &batch) {
 }
 
 StatusCode Batcher::addWholeRequest(Ptr<Request> request) {
-  std::lock_guard<std::mutex> lock(bucketAccess_);
 
   size_t requestWords = request->numWords();
-  if (maxiBatchWords_ < requestWords) {
+  if (rejectOnFull_ && maxiBatchWords_ < requestWords) {
     return StatusCode::REJECTED_MEMORY;
   } else {
+    // TODO(jerinphilip): Do we really need this? Preproc is already done. All
+    // the queue structure does is point to Request objects. PCQueue block on
+    // limits happens at produceTo.
+    //
+    // blockTillSpaceAvailable(requestWords);
+    / std::lock_guard<std::mutex> lock(bucketAccess_);
     for (size_t i = 0; i < request->numSegments(); i++) {
       RequestSentence requestSentence(i, request);
       addSentenceWithPriority(requestSentence);
     }
-    maxiBatchWords_ -= requestWords;
+
     return StatusCode::QUEUED;
   }
 }

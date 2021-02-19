@@ -15,6 +15,7 @@
 
 namespace marian {
 namespace bergamot {
+
 class Batcher {
 public:
   explicit Batcher(Ptr<Options> options);
@@ -52,13 +53,19 @@ private:
   std::vector<std::set<RequestSentence>> bucket_;
   size_t batchNumber_{0};
 
+  // Sets Batcher's operations to reject on full.
+  bool rejectOnFull_{false};
+
+  // void blockTillSpaceAvailable(size_t requiredSpace);
+
   // Controls access to bucket_ among concurrent queeuing requests.
   std::mutex bucketAccess_;
 
   // maxiBatchWords_ specify how much of a buffer Batcher should keep. Without
   // this construct, Batcher can end up holding infinite memory while waiting to
   // write to pcqueue, which is undesirable.
-  std::atomic<size_t> maxiBatchWords_;
+  std::atomic<int> maxiBatchWords_;
+  std::mutex maxiBatchWordsAccess_; // Mutex
 };
 
 } // namespace bergamot

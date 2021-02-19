@@ -19,6 +19,12 @@ inline marian::ConfigParser createConfigParser() {
       "--max-length-break", "Bergamot Options",
       "Maximum input tokens to be processed in a single sentence.", 128);
 
+  cp.addOption<bool>(
+      "--reject-on-full", "Bergamot Options",
+      "Sets batching mechanism to reject in case the allowed memory. Allowed "
+      "memory is controlled by --maxi-batch-words",
+      false);
+
   return cp;
 }
 

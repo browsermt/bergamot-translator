@@ -65,6 +65,9 @@ UPtr<RequestTracker> Service::translatePart(std::string &&input,
                                             int lineNumberBegin) {
 
   UPtr<RequestTracker> tracker = UPtr<RequestTracker>(new RequestTracker());
+
+  // A prepareRequest lambda allows this segment to be executed  synchronously
+  // or asynchronously, both of which are done below.
   auto prepareRequest = [&]() {
     Segments segments;
     SentenceRanges sourceRanges;
@@ -74,6 +77,8 @@ UPtr<RequestTracker> Service::translatePart(std::string &&input,
         requestId_++, lineNumberBegin, /*nice=*/20, vocabs_, std::move(input),
         std::move(segments), std::move(sourceRanges));
 
+    // Set tracker to track request. Set tracker on request so tracker is
+    // updated when request is complete.
     tracker->track(request);
     request->setTracker(tracker.get());
 
@@ -82,11 +87,13 @@ UPtr<RequestTracker> Service::translatePart(std::string &&input,
   };
 
   if (numWorkers_ > 0) {
+    // If there are more than 1 workers, we're operating in async multithread
+    // setting. The preprocessing and queue calls can also be done in the
+    // background.
     auto queueInBackground = [&]() {
       prepareRequest();
       batcher_.produceTo(pcqueue_);
     };
-
     std::async(std::launch::async, queueInBackground);
 
   } else {

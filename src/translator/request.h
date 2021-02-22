@@ -28,13 +28,12 @@
 
 #include <cassert>
 
+#include <functional>
 #include <future>
 #include <vector>
 
 namespace marian {
 namespace bergamot {
-
-class RequestTracker;
 
 class Request {
 public:
@@ -74,9 +73,12 @@ public:
   void completeRequest();
   const int Id() { return Id_; }
 
+  void onCompleteRequest(std::function<void()> &&callback) {
+    onComplete_ = std::move(callback);
+  }
+
   // Only one tracker is allowed to listen (tracker holds futures corresponding
   // to promises).
-  void setTracker(RequestTracker *tracker) { tracker_ = tracker; }
 
 private:
   size_t Id_;
@@ -102,19 +104,12 @@ private:
   SentenceRanges sourceRanges_;
   std::vector<Ptr<History>> histories_;
 
-  // Members above are moved into newly constructed Response on completion
-  // of translation of all segments. The promise below is set to this Response
-  // value. future to this promise is made available to the user through
-  // Service.
-  std::promise<Response> response_;
-
   // Constructing Response requires the vocabs_ used to generate Request.
   std::vector<Ptr<Vocab const>> *vocabs_;
 
-  // Pointer to tracker (might get deleted at client and can lead to segfaults,
-  // convert to Ptr<RequestTracker>?). Also can pick up destructor and forward
-  // cancel to Service if client doesn't have the tracker.
-  RequestTracker *tracker_;
+  // Callback on complete
+  std::function<void()> onComplete_;
+  std::promise<Response> response_;
 };
 
 class RequestSentence {

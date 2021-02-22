@@ -19,7 +19,6 @@ Request::Request(size_t Id, size_t lineNumberBegin, int nice,
       source_(std::move(source)), segments_(std::move(segments)),
       sourceRanges_(std::move(sourceRanges)),
       response_(std::move(responsePromise)) {
-
   counter_ = segments_.size();
   histories_.resize(segments_.size(), nullptr);
   nice_ = std::clamp(nice, -20, 20);
@@ -60,8 +59,8 @@ void Request::completeRequest() {
   Response response(std::move(source_), std::move(sourceRanges_),
                     std::move(histories_), *vocabs_);
 
-  tracker_->setStatus(StatusCode::SUCCESS);
   response_.set_value(std::move(response));
+  onComplete_();
 }
 
 bool Request::operator<(const Request &b) const {

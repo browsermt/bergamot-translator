@@ -18,7 +18,7 @@
 #include "translator/response.h"
 #include "translator/service.h"
 
-typedef std::unique_ptr<marian::bergamot::RequestTracker> RequestTracker;
+typedef std::shared_ptr<marian::bergamot::RequestTracker> RequestTracker;
 
 void marian_decoder_minimal(std::vector<RequestTracker> &requestTrackers,
                             marian::Ptr<marian::Vocab const> targetVocab,

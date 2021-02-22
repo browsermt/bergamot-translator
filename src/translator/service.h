@@ -40,7 +40,7 @@ public:
 
   // Fresh translate method with RequestTracker instead of future being
   // prepared.
-  UPtr<RequestTracker> translatePart(std::string &&input, int lineNumberBegin);
+  Ptr<RequestTracker> translatePart(std::string &&input, int lineNumberBegin);
 
   // A consumer of API with access to a requestTracker can cancel the request or
   // amend priority, through the following functions. (TODO(jerinphilip): stub,
@@ -59,7 +59,7 @@ private:
   size_t requestId_;
   size_t numWorkers_;
 
-  size_t capacityBytes_;
+  std::atomic<size_t> capacityBytes_;
 
   // vocabs are used to construct a Request, which later uses it to construct
   // Response (decode from words to string).

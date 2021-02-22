@@ -56,21 +56,23 @@ std::future<Response> Service::translate(std::string &&input) {
   // TODO(jerin): Make asynchronous and compile from multiple requests.
   //
   // returns future corresponding to the promise.
-  UPtr<RequestTracker> tracker =
+  Ptr<RequestTracker> tracker =
       std::move(translatePart(std::move(input), /*lineNumberBegin=*/0));
   std::future<Response> future = std::move(tracker->future);
   return future;
 }
 
-UPtr<RequestTracker> Service::translatePart(std::string &&input,
-                                            int lineNumberBegin) {
+Ptr<RequestTracker> Service::translatePart(std::string &&input,
+                                           int lineNumberBegin) {
 
-  UPtr<RequestTracker> tracker = UPtr<RequestTracker>(new RequestTracker());
+  Ptr<RequestTracker> tracker = New<RequestTracker>();
   std::promise<Response> responsePromise;
   auto future = responsePromise.get_future();
   tracker->set_future(std::move(future));
 
-  if (input.size() > capacityBytes_) {
+  size_t inputBytes = input.size();
+
+  if (inputBytes > capacityBytes_) {
     // Check if input exceeds capacity, reject if this is the case.
     tracker->setStatus(StatusCode::REJECTED_MEMORY);
     Response emptyResponse = Response::EmptyResponse();
@@ -79,6 +81,7 @@ UPtr<RequestTracker> Service::translatePart(std::string &&input,
 
     // Accept request in, and adjust capacity accordingly.
     capacityBytes_ -= input.size();
+    LOG(info, "CapacityBytes {}", capacityBytes_.load());
 
     // A prepareRequest lambda allows this segment to be executed  synchronously
     // or asynchronously, both of which are done below.
@@ -95,7 +98,14 @@ UPtr<RequestTracker> Service::translatePart(std::string &&input,
       // Set tracker to track request. Set tracker on request so tracker is
       // updated when request is complete.
       tracker->track(request);
-      request->setTracker(tracker.get());
+
+      auto callback = [tracker, this, inputBytes]() {
+        tracker->setStatus(StatusCode::SUCCESS);
+        capacityBytes_ += inputBytes;
+        LOG(info, "CapacityBytes {}", capacityBytes_.load());
+      };
+
+      request->onCompleteRequest(std::move(callback));
 
       batcher_.addWholeRequest(request);
       tracker->setStatus(StatusCode::QUEUED);

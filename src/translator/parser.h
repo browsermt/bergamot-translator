@@ -20,9 +20,10 @@ inline marian::ConfigParser createConfigParser() {
       "--max-length-break", "Bergamot Options",
       "Maximum input tokens to be processed in a single sentence.", 128);
 
-  cp.addOption<int>(
-      "--capacity-bytes", "Bergamot Options",
-      "Maximum input tokens to be processed in a single sentence.", INT_MAX);
+  cp.addOption<int>("--capacity-bytes", "Bergamot Options",
+                    "Restrict capacity of Service to only handle bytes over "
+                    "all processed requests",
+                    INT_MAX);
 
   return cp;
 }

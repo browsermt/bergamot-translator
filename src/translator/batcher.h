@@ -25,11 +25,8 @@ public:
   // which maintains priority among sentences from multiple concurrent requests.
   void addSentenceWithPriority(RequestSentence &sentence);
 
-  // Adds a whole Request. Returns statuscode which can either be
-  //  a) QUEUED if successful or
-  //  b) REJECTED_MEMORY if the instances Batcher/Translator are
-  //     operating at full capacity specified by maxiBatchWords .
-  StatusCode addWholeRequest(Ptr<Request> request);
+  // Adds a whole Request
+  void addWholeRequest(Ptr<Request> request);
 
   // Launches an infinite loop writing to a producer consumer queue. Only for
   // use asynchonous calls in multithreaded settings.
@@ -53,18 +50,8 @@ private:
   std::vector<std::set<RequestSentence>> bucket_;
   size_t batchNumber_{0};
 
-  // Sets Batcher's operations to reject on full.
-  bool rejectOnFull_{false};
-
-  // void blockTillSpaceAvailable(size_t requiredSpace);
-
   // Controls access to bucket_ among concurrent queeuing requests.
   std::mutex bucketAccess_;
-
-  // maxiBatchWords_ specify how much of a buffer Batcher should keep. Without
-  // this construct, Batcher can end up holding infinite memory while waiting to
-  // write to pcqueue, which is undesirable.
-  std::atomic<size_t> maxiBatchWords_;
 };
 
 } // namespace bergamot

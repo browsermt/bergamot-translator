@@ -33,6 +33,7 @@ public:
 
   // Returns access to the underlying pointer.
   const Ptr<Request> &request() const { return request_; }
+  void set_future(std::future<Response> &&responseFuture);
 
 private:
   Ptr<Request> request_{nullptr};

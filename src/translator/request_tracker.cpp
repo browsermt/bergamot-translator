@@ -5,10 +5,12 @@ namespace marian {
 namespace bergamot {
 
 RequestTracker::RequestTracker() { timer_.start(); };
-void RequestTracker::track(Ptr<Request> request) {
-  request_ = request;
-  future = request_->get_future();
+
+void RequestTracker::set_future(std::future<Response> &&responseFuture) {
+  future = std::move(responseFuture);
 }
+
+void RequestTracker::track(Ptr<Request> request) { request_ = request; }
 
 void RequestTracker::logStatusChange(StatusCode before, StatusCode after) {
   auto humanfriendly = [](StatusCode scode) {

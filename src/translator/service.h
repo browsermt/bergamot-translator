@@ -59,6 +59,8 @@ private:
   size_t requestId_;
   size_t numWorkers_;
 
+  size_t capacityBytes_;
+
   // vocabs are used to construct a Request, which later uses it to construct
   // Response (decode from words to string).
   std::vector<Ptr<Vocab const>> vocabs_; // ORDER DEPENDENCY

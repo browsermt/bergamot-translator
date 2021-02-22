@@ -1,9 +1,9 @@
 #ifndef SRC_BERGAMOT_RESPONSE_H_
 #define SRC_BERGAMOT_RESPONSE_H_
 
-#include "sentence_ranges.h"
 #include "data/types.h"
 #include "definitions.h"
+#include "sentence_ranges.h"
 #include "translator/beam_search.h"
 
 #include <cassert>
@@ -72,6 +72,13 @@ public:
     return translation_;
   }
 
+  bool empty() { return empty_; }
+  static Response EmptyResponse() {
+    Response response = Response();
+    response.empty_ = true;
+    return response;
+  }
+
   // A convenience function provided to return translated text placed within
   // source's structure. This is useful when the source text is a multi-line
   // paragraph or string_views extracted from structured text like HTML and it's
@@ -81,6 +88,7 @@ public:
   // const PendingAlignmentType alignment(size_t idx);
 
 private:
+  Response() {} // Default constructor to enable a static empty response.
   void constructTranslation();
   void constructSentenceMappings(SentenceMappings &);
 
@@ -92,6 +100,8 @@ private:
   bool translationConstructed_{false};
   std::string translation_;
   SentenceRanges targetRanges_;
+
+  bool empty_{false};
 };
 } // namespace bergamot
 } // namespace marian

@@ -12,6 +12,7 @@ Service::Service(Ptr<Options> options)
     : requestId_(0), numWorkers_(options->get<int>("cpu-threads")),
       vocabs_(std::move(loadVocabularies(options))),
       text_processor_(vocabs_, options), batcher_(options),
+      capacityBytes_(options->get<int>("capacity-bytes")),
       pcqueue_(2 * options->get<int>("cpu-threads")) {
 
   if (numWorkers_ == 0) {
@@ -65,43 +66,58 @@ UPtr<RequestTracker> Service::translatePart(std::string &&input,
                                             int lineNumberBegin) {
 
   UPtr<RequestTracker> tracker = UPtr<RequestTracker>(new RequestTracker());
+  std::promise<Response> responsePromise;
+  auto future = responsePromise.get_future();
+  tracker->set_future(std::move(future));
 
-  // A prepareRequest lambda allows this segment to be executed  synchronously
-  // or asynchronously, both of which are done below.
-  auto prepareRequest = [&]() {
-    Segments segments;
-    SentenceRanges sourceRanges;
-    text_processor_.process(input, segments, sourceRanges);
-
-    Ptr<Request> request = New<Request>(
-        requestId_++, lineNumberBegin, /*nice=*/20, vocabs_, std::move(input),
-        std::move(segments), std::move(sourceRanges));
-
-    // Set tracker to track request. Set tracker on request so tracker is
-    // updated when request is complete.
-    tracker->track(request);
-    request->setTracker(tracker.get());
-
-    StatusCode queueStatus = batcher_.addWholeRequest(request);
-    tracker->setStatus(queueStatus);
-  };
-
-  if (numWorkers_ > 0) {
-    // If there are more than 1 workers, we're operating in async multithread
-    // setting. The preprocessing and queue calls can also be done in the
-    // background.
-    auto queueInBackground = [&]() {
-      prepareRequest();
-      batcher_.produceTo(pcqueue_);
-    };
-    std::async(std::launch::async, queueInBackground);
-
+  if (input.size() > capacityBytes_) {
+    // Check if input exceeds capacity, reject if this is the case.
+    tracker->setStatus(StatusCode::REJECTED_MEMORY);
+    Response emptyResponse = Response::EmptyResponse();
+    responsePromise.set_value(std::move(emptyResponse));
   } else {
-    // Queue single-threaded
-    prepareRequest();
-    Batch batch;
-    while (batcher_ >> batch) {
-      translators_[0].translate(batch);
+
+    // Accept request in, and adjust capacity accordingly.
+    capacityBytes_ -= input.size();
+
+    // A prepareRequest lambda allows this segment to be executed  synchronously
+    // or asynchronously, both of which are done below.
+    auto prepareRequest = [&]() {
+      Segments segments;
+      SentenceRanges sourceRanges;
+      text_processor_.process(input, segments, sourceRanges);
+
+      Ptr<Request> request =
+          New<Request>(requestId_++, lineNumberBegin, /*nice=*/20, vocabs_,
+                       std::move(input), std::move(segments),
+                       std::move(sourceRanges), std::move(responsePromise));
+
+      // Set tracker to track request. Set tracker on request so tracker is
+      // updated when request is complete.
+      tracker->track(request);
+      request->setTracker(tracker.get());
+
+      batcher_.addWholeRequest(request);
+      tracker->setStatus(StatusCode::QUEUED);
+    };
+
+    if (numWorkers_ > 0) {
+      // If there are more than 1 workers, we're operating in async multithread
+      // setting. The preprocessing and queue calls can also be done in the
+      // background.
+      auto queueInBackground = [&]() {
+        prepareRequest();
+        batcher_.produceTo(pcqueue_);
+      };
+      std::async(std::launch::async, queueInBackground);
+
+    } else {
+      // Queue single-threaded
+      prepareRequest();
+      Batch batch;
+      while (batcher_ >> batch) {
+        translators_[0].translate(batch);
+      }
     }
   }
 

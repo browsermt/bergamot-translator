@@ -28,6 +28,8 @@ if(COMPILE_WASM)
   # Set WORMHOLE to ON for marian whenever compiling for wasm platform
   SET(WORMHOLE ON CACHE BOOL "Use WASM wormhole in intgemm https://bugzilla.mozilla.org/show_bug.cgi?id=1672160")
 endif()
+# Set ssplit (3rd party submodule) cmake options to compile for this project
+SET(USE_INTERNAL_PCRE2 ON CACHE BOOL "Use internal PCRE2 instead of system PCRE2")
 
 # Documentation: https://cliutils.gitlab.io/modern-cmake/chapters/projects/submodule.html
 # Ensures the submodules are set correctly during a build.

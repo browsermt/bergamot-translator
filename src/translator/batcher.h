@@ -64,8 +64,7 @@ private:
   // maxiBatchWords_ specify how much of a buffer Batcher should keep. Without
   // this construct, Batcher can end up holding infinite memory while waiting to
   // write to pcqueue, which is undesirable.
-  std::atomic<int> maxiBatchWords_;
-  std::mutex maxiBatchWordsAccess_; // Mutex
+  std::atomic<size_t> maxiBatchWords_;
 };
 
 } // namespace bergamot

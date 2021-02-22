@@ -67,7 +67,7 @@ StatusCode Batcher::addWholeRequest(Ptr<Request> request) {
     // limits happens at produceTo.
     //
     // blockTillSpaceAvailable(requestWords);
-    / std::lock_guard<std::mutex> lock(bucketAccess_);
+    std::lock_guard<std::mutex> lock(bucketAccess_);
     for (size_t i = 0; i < request->numSegments(); i++) {
       RequestSentence requestSentence(i, request);
       addSentenceWithPriority(requestSentence);

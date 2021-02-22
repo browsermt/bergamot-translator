@@ -45,7 +45,7 @@ void RequestTracker::logStatusChange(StatusCode before, StatusCode after) {
 }
 
 void RequestTracker::setStatus(StatusCode code) {
-  logStatusChange(status_, code);
+  // logStatusChange(status_, code);
   status_ = code;
 }
 

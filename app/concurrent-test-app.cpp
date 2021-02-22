@@ -74,8 +74,8 @@ int main(int argc, char *argv[]) {
       std_input.str("");
       ++maxiBatches;
       lineNumberBegin = lineNumber;
-      LOG(info, "{} maxibatches constructed, {} lines covered", maxiBatches,
-          lineNumber);
+      // LOG(info, "{} maxibatches constructed, {} lines covered", maxiBatches,
+      //     lineNumber);
     }
   }
 

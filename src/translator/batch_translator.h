@@ -4,13 +4,17 @@
 #include <string>
 #include <vector>
 
+#include "batch.h"
 #include "common/utils.h"
 #include "data/shortlist.h"
 #include "definitions.h"
-#include "pcqueue.h"
 #include "request.h"
 #include "translator/history.h"
 #include "translator/scorers.h"
+
+#ifdef WITH_PTHREADS
+#include "pcqueue.h"
+#endif
 
 namespace marian {
 namespace bergamot {
@@ -22,37 +26,27 @@ class BatchTranslator {
   // shut down in Service which calls join() on the threads.
 
 public:
-  BatchTranslator(DeviceId const device, PCQueue<PCItem> &pcqueue,
-                  std::vector<Ptr<Vocab const>> &vocabs, Ptr<Options> options);
-  void join();
+  BatchTranslator(DeviceId const device, std::vector<Ptr<Vocab const>> &vocabs,
+                  Ptr<Options> options);
 
   // convenience function for logging. TODO(jerin)
   std::string _identifier() { return "worker" + std::to_string(device_.no); }
+  void translate(Batch &batch);
+  void initialize();
 
-#ifndef WITH_PTHREADS
-  void mainloop();
+#ifdef WITH_PTHREADS
+  void consumeFrom(PCQueue<Batch> &pcqueue);
 #endif
 
 private:
-  void initGraph();
-  void translate(RequestSentences &requestSentences, Histories &histories);
-#ifdef WITH_PTHREADS
-  void mainloop();
-#endif
-
   Ptr<Options> options_;
-
   DeviceId device_;
   std::vector<Ptr<Vocab const>> *vocabs_;
   Ptr<ExpressionGraph> graph_;
   std::vector<Ptr<Scorer>> scorers_;
   Ptr<data::ShortlistGenerator const> slgen_;
-
-  PCQueue<PCItem> *pcqueue_;
-#ifdef WITH_PTHREADS
-  std::thread thread_;
-#endif
 };
+
 } // namespace bergamot
 } // namespace marian
 

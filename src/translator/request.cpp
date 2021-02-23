@@ -1,7 +1,7 @@
 #include "request.h"
-
 #include "definitions.h"
-#include "translation_result.h"
+#include "response.h"
+#include "sentence_ranges.h"
 
 #include "common/logging.h"
 
@@ -10,15 +10,15 @@
 namespace marian {
 namespace bergamot {
 
-Request::Request(unsigned int Id, int lineNumberBegin,
+// -----------------------------------------------------------------
+Request::Request(size_t Id, size_t lineNumberBegin,
                  std::vector<Ptr<Vocab const>> &vocabs, std::string &&source,
-                 Segments &&segments,
-                 std::vector<TokenRanges> &&sourceAlignments,
-                 std::promise<TranslationResult> translationResultPromise)
+                 Segments &&segments, SentenceRanges &&sourceRanges,
+                 std::promise<Response> responsePromise)
     : Id_(Id), lineNumberBegin_(lineNumberBegin), vocabs_(&vocabs),
       source_(std::move(source)), segments_(std::move(segments)),
-      sourceAlignments_(std::move(sourceAlignments)),
-      response_(std::move(translationResultPromise)) {
+      sourceRanges_(std::move(sourceRanges)),
+      response_(std::move(responsePromise)) {
 
   counter_ = segments_.size();
   histories_.resize(segments_.size(), nullptr);
@@ -47,17 +47,18 @@ void Request::processHistory(size_t index, Ptr<History> history) {
 
 void Request::completeRequest() {
   // Request no longer needs to hold the content, can transfer it to
-  // TranslationResult.
-  TranslationResult translation_result(std::move(source_),
-                                       std::move(sourceAlignments_),
-                                       std::move(histories_), *vocabs_);
-  response_.set_value(std::move(translation_result));
+  // Response.
+  Response response(std::move(source_), std::move(sourceRanges_),
+                    std::move(histories_), *vocabs_);
+  response_.set_value(std::move(response));
 }
 
 bool Request::operator<(const Request &b) const {
   // Among Requests, only sequence id is used for obtaining priority.
   return Id_ < b.Id_;
 }
+
+// ------------------------------------------------------------------
 
 RequestSentence::RequestSentence(size_t index, Ptr<Request> request)
     : index_(index), request_(request) {}
@@ -87,6 +88,8 @@ bool operator<(const RequestSentence &a, const RequestSentence &b) {
   }
   return a.request_ < b.request_;
 }
+
+// ----------------------------------------------------------------------
 
 } // namespace bergamot
 } // namespace marian

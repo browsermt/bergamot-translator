@@ -14,6 +14,7 @@
 
 // All local project includes
 #include "TranslationModel.h"
+#include "translator/parser.h"
 #include "translator/service.h"
 
 std::shared_ptr<marian::Options> parseOptions(const std::string &config) {
@@ -34,7 +35,7 @@ std::shared_ptr<marian::Options> parseOptions(const std::string &config) {
   // Error: Aborted from void unhandledException() in
   // 3rd_party/marian-dev/src/common/logging.cpp:113
 
-  marian::ConfigParser configParser(marian::cli::mode::translation);
+  marian::ConfigParser configParser = marian::bergamot::createConfigParser();
   const YAML::Node &defaultConfig = configParser.getConfig();
 
   options.merge(defaultConfig);
@@ -55,7 +56,7 @@ TranslationModel::TranslationModel(const std::string &config)
 
 TranslationModel::~TranslationModel() {}
 
-std::future<std::vector<TranslationResult>>
+std::vector<TranslationResult>
 TranslationModel::translate(std::vector<std::string> &&texts,
                             TranslationRequest request) {
   // Implementing a non-async version first. Unpleasant, but should work.
@@ -68,24 +69,30 @@ TranslationModel::translate(std::vector<std::string> &&texts,
     // Collect future as marian::bergamot::TranslationResult
     auto intermediate = service_.translate(std::move(text));
     intermediate.wait();
-    auto mTranslationResult(std::move(intermediate.get()));
+    auto marianResponse(std::move(intermediate.get()));
+
+    // This mess because marian::string_view != std::string_view
+    std::string source, translation;
+    marian::bergamot::Response::SentenceMappings mSentenceMappings;
+    marianResponse.move(source, translation, mSentenceMappings);
 
     // Convert to UnifiedAPI::TranslationResult
     TranslationResult::SentenceMappings sentenceMappings;
-    for (auto &p : mTranslationResult.getSentenceMappings()) {
+    for (auto &p : mSentenceMappings) {
       std::string_view src(p.first.data(), p.first.size()),
           tgt(p.second.data(), p.second.size());
       sentenceMappings.emplace_back(src, tgt);
     }
 
     // In place construction.
-    translationResults.emplace_back(std::move(mTranslationResult.source_),
-                                    std::move(mTranslationResult.translation_),
-                                    std::move(sentenceMappings));
+    translationResults.emplace_back(
+        std::move(source),          // &&marianResponse.source_
+        std::move(translation),     // &&marianResponse.translation_
+        std::move(sentenceMappings) // &&sentenceMappings
+    );
   }
 
-  promise.set_value(std::move(translationResults));
-  return future;
+  return translationResults;
 }
 
 bool TranslationModel::isAlignmentSupported() const { return false; }

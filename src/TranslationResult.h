@@ -20,7 +20,11 @@ class TranslationResult {
 public:
   typedef std::vector<std::pair<std::string_view, std::string_view>>
       SentenceMappings;
-
+#ifdef WASM_BINDINGS
+  TranslationResult(const std::string &original, const std::string &translation)
+      : originalText(original), translatedText(translation),
+        sentenceMappings() {}
+#endif
   TranslationResult(const std::string &original, const std::string &translation,
                     SentenceMappings &sentenceMappings)
       : originalText(original), translatedText(translation),
@@ -31,13 +35,29 @@ public:
         translatedText(std::move(other.translatedText)),
         sentenceMappings(std::move(other.sentenceMappings)) {}
 
+#ifdef WASM_BINDINGS
+  TranslationResult(const TranslationResult &other)
+      : originalText(other.originalText),
+        translatedText(other.translatedText),
+        sentenceMappings(other.sentenceMappings) {}
+#endif
+
   TranslationResult(std::string &&original, std::string &&translation,
                     SentenceMappings &&sentenceMappings)
       : originalText(std::move(original)),
         translatedText(std::move(translation)),
         sentenceMappings(std::move(sentenceMappings)) {}
 
+#ifndef WASM_BINDINGS
   TranslationResult &operator=(const TranslationResult &) = delete;
+#else
+  TranslationResult &operator=(const TranslationResult &result) {
+    originalText = result.originalText;
+    translatedText = result.translatedText;
+    sentenceMappings = result.sentenceMappings;
+    return *this;
+  }
+#endif
 
   /* Return the original text. */
   const std::string &getOriginalText() const { return originalText; }

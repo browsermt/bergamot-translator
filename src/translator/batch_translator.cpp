@@ -1,4 +1,5 @@
 #include "batch_translator.h"
+#include "batch.h"
 #include "common/logging.h"
 #include "data/corpus.h"
 #include "data/text_input.h"
@@ -8,15 +9,12 @@ namespace marian {
 namespace bergamot {
 
 BatchTranslator::BatchTranslator(DeviceId const device,
-                                 PCQueue<PCItem> &pcqueue,
                                  std::vector<Ptr<Vocab const>> &vocabs,
                                  Ptr<Options> options)
-    : device_(device), options_(options), pcqueue_(&pcqueue), vocabs_(&vocabs) {
+    : device_(device), options_(options), vocabs_(&vocabs) {}
 
-  thread_ = std::thread([this] { this->mainloop(); });
-}
-
-void BatchTranslator::initGraph() {
+void BatchTranslator::initialize() {
+  // Initializes the graph.
   if (options_->hasAndNotEmpty("shortlist")) {
     int srcIdx = 0, trgIdx = 1;
     bool shared_vcb = vocabs_->front() == vocabs_->back();
@@ -38,15 +36,14 @@ void BatchTranslator::initGraph() {
       scorer->setShortlistGenerator(slgen_);
     }
   }
-
   graph_->forward();
 }
 
-void BatchTranslator::translate(RequestSentences &requestSentences,
-                                Histories &histories) {
+void BatchTranslator::translate(Batch &batch) {
   std::vector<data::SentenceTuple> batchVector;
 
-  for (auto &sentence : requestSentences) {
+  auto &sentences = batch.sentences();
+  for (auto &sentence : sentences) {
     data::SentenceTuple sentence_tuple(sentence.lineNumber());
     Segment segment = sentence.getUnderlyingSegment();
     sentence_tuple.push_back(segment);
@@ -89,35 +86,32 @@ void BatchTranslator::translate(RequestSentences &requestSentences,
   for (size_t j = 0; j < maxDims.size(); ++j)
     subBatches[j]->setWords(words[j]);
 
-  auto batch = Ptr<CorpusBatch>(new CorpusBatch(subBatches));
-  batch->setSentenceIds(sentenceIds);
+  auto corpus_batch = Ptr<CorpusBatch>(new CorpusBatch(subBatches));
+  corpus_batch->setSentenceIds(sentenceIds);
 
   auto trgVocab = vocabs_->back();
   auto search = New<BeamSearch>(options_, scorers_, trgVocab);
 
-  histories = std::move(search->search(graph_, batch));
+  auto histories = std::move(search->search(graph_, corpus_batch));
+  batch.completeBatch(histories);
 }
 
-void BatchTranslator::mainloop() {
-  initGraph();
+#ifdef WITH_PTHREADS
 
-  PCItem pcitem;
+void BatchTranslator::consumeFrom(PCQueue<Batch> &pcqueue) {
+  Batch batch;
   Histories histories;
-
   while (true) {
-    pcqueue_->ConsumeSwap(pcitem);
-    if (pcitem.isPoison()) {
+    pcqueue.ConsumeSwap(batch);
+    if (batch.isPoison()) {
       return;
     } else {
-      translate(pcitem.sentences, histories);
-      for (int i = 0; i < pcitem.sentences.size(); i++) {
-        pcitem.sentences[i].completeSentence(histories[i]);
-      }
+      translate(batch);
     }
   }
 }
 
-void BatchTranslator::join() { thread_.join(); }
+#endif
 
 } // namespace bergamot
 } // namespace marian

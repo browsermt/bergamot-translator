@@ -1,7 +1,7 @@
+#include "sentence_splitter.h"
 #include "common/cli_helper.h"
 #include "common/logging.h"
 #include "common/options.h"
-#include "sentence_splitter.h"
 #include <string>
 
 namespace marian {
@@ -30,8 +30,9 @@ SentenceSplitter::SentenceSplitter(marian::Ptr<marian::Options> options)
 
 ug::ssplit::SentenceStream
 SentenceSplitter::createSentenceStream(const string_view &input) {
-  return std::move(ug::ssplit::SentenceStream(input.data(), input.size(),
-                                              this->ssplit_, mode_));
+  std::string_view input_converted(input.data(), input.size());
+  return std::move(
+      ug::ssplit::SentenceStream(input_converted, this->ssplit_, mode_));
 }
 
 ug::ssplit::SentenceStream::splitmode

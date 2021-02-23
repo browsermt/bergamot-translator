@@ -22,9 +22,9 @@ SET(PACKAGE_DIR "" CACHE STRING "Directory including all the files to be package
 SET(COMPILE_CUDA OFF CACHE BOOL "Compile GPU version")
 SET(USE_SENTENCEPIECE ON CACHE BOOL "Download and compile SentencePiece")
 SET(USE_STATIC_LIBS ON CACHE BOOL "Link statically against non-system libs")
-SET(COMPILE_LIBRARY_ONLY ON CACHE BOOL "Build only the Marian library and exclude all executables.")
 if (USE_WASM_COMPATIBLE_MARIAN)
   # If using wasm compatible marian then set following flags
+  SET(COMPILE_LIBRARY_ONLY ON CACHE BOOL "Build only the Marian library and exclude all executables.")
   SET(USE_MKL OFF CACHE BOOL "Compile with MKL support")
   SET(COMPILE_DECODER_ONLY ON CACHE BOOL "Compile marian-decoder only")
   SET(COMPILE_WITH_PTHREADS OFF CACHE BOOL "Compile with pthreads support")

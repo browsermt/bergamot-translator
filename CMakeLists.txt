@@ -36,7 +36,8 @@ if (USE_WASM_COMPATIBLE_MARIAN)
   endif()
 endif()
 # Set ssplit (3rd party submodule) cmake options to compile for this project
-SET(USE_INTERNAL_PCRE2 ON CACHE BOOL "Use internal PCRE2 instead of system PCRE2")
+CMAKE_DEPENDENT_OPTION(USE_INTERNAL_PCRE2 "Use internal PCRE2 instead of system PCRE2" ON
+                       "USE_WASM_COMPATIBLE_MARIAN" OFF)
 
 # Documentation: https://cliutils.gitlab.io/modern-cmake/chapters/projects/submodule.html
 # Ensures the submodules are set correctly during a build.

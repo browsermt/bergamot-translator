@@ -5,15 +5,20 @@ Bergamot translator provides a unified API for ([Marian NMT](https://marian-nmt.
 ## Build Instructions
 
 ### Build Natively
+1. Clone the repository using these instructions:
+    ```bash
+    git clone https://github.com/browsermt/bergamot-translator
+    cd bergamot-translator
+    ```
+2. Compile
 
-```bash
-git clone  --recursive https://github.com/browsermt/bergamot-translator
-cd bergamot-translator
-mkdir build
-cd build
-cmake ../
-make -j
-```
+    Create a folder where you want to build all the artifacts (`build-native` in this case) and compile in that folder
+    ```bash
+    mkdir build-native
+    cd build-native
+    cmake ../
+    make -j
+    ```
 
 ### Build WASM
 #### Compiling for the first time
@@ -25,12 +30,10 @@ make -j
     * Activate the latest sdk tools: `./emsdk activate latest`
     * Activate path variables: `source ./emsdk_env.sh`
 
-2. Clone the repository and checkout the appropriate branch using these instructions:
+2. Clone the repository using these instructions:
     ```bash
     git clone https://github.com/browsermt/bergamot-translator
     cd bergamot-translator
-    git checkout -b wasm-integration origin/wasm-integration
-    git submodule update --init --recursive
     ```
 
 3. Download files (only required if you want to package files in wasm binary)

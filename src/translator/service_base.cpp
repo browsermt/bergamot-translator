@@ -26,7 +26,9 @@ std::future<Response> ServiceBase::translate(std::string &&input) {
 
 NonThreadedService::NonThreadedService(Ptr<Options> options)
     : ServiceBase(options),
-      translator_(DeviceId(0, DeviceType::cpu), vocabs_, options) {}
+      translator_(DeviceId(0, DeviceType::cpu), vocabs_, options) {
+  translator_.initialize();
+}
 
 void NonThreadedService::enqueue() {
   // Queue single-threaded

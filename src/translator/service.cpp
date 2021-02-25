@@ -21,11 +21,22 @@ Service::Service(Ptr<Options> options)
   for (size_t cpuId = 0; cpuId < numWorkers_; cpuId++) {
     marian::DeviceId deviceId(cpuId, DeviceType::cpu);
     translators_.emplace_back(deviceId, vocabs_, options);
-
     auto &translator = translators_.back();
+
     workers_.emplace_back([&translator, this] {
       translator.initialize();
-      translator.consumeFrom(pcqueue_);
+
+      // Run thread mainloop
+      Batch batch;
+      Histories histories;
+      while (true) {
+        pcqueue_.ConsumeSwap(batch);
+        if (batch.isPoison()) {
+          return;
+        } else {
+          translator.translate(batch);
+        }
+      }
     });
   }
 }

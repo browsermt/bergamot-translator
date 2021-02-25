@@ -1,3 +1,7 @@
+if (NOT COMPILE_WASM)
+    set(SERVICE "service.cpp")
+endif()
+
 add_library(bergamot-translator STATIC
     AbstractTranslationModel.cpp
     TranslationModel.cpp
@@ -8,7 +12,8 @@ add_library(bergamot-translator STATIC
     batch_translator.cpp 
     multifactor_priority.cpp 
     request.cpp 
-    service.cpp
+    service_base.cpp
+    ${SERVICE}
     batcher.cpp
     response.cpp
     batch.cpp

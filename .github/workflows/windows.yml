@@ -2,9 +2,9 @@ name: Windows
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, ci-sandbox ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, ci-sandbox ]
 
 env:
   MKL_URL: "https://romang.blob.core.windows.net/mariandev/ci/mkl-2020.1-windows-static.zip"

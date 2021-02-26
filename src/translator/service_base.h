@@ -35,7 +35,7 @@ protected:
 class NonThreadedService : public ServiceBase {
 public:
   explicit NonThreadedService(Ptr<Options> options);
-  void enqueue();
+  void enqueue() override;
   void stop() override{};
 
 private:

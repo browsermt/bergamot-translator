@@ -16,7 +16,7 @@
 
 // All local project includes
 #include "AbstractTranslationModel.h"
-#include "translator/service.h"
+#include "translator/service_base.h"
 
 /* A Translation model that translates a plain (without any markups and emojis)
  * UTF-8 encoded text. This implementation supports translation from 1 source
@@ -55,9 +55,8 @@ public:
    * entry of texts list will be moved to its corresponding TranslationResult
    * object).
    */
-  std::vector<TranslationResult>
-  translate(std::vector<std::string> &&texts,
-            TranslationRequest request) override;
+  std::vector<TranslationResult> translate(std::vector<std::string> &&texts,
+                                           TranslationRequest request) override;
 
   /* Check if the model can provide alignment information b/w original and
    * translated text. */
@@ -66,7 +65,7 @@ public:
 private:
   // Model configuration options
   std::shared_ptr<marian::Options> configOptions_; // ORDER DEPENDECNY
-  marian::bergamot::Service service_;              // ORDER DEPENDENCY
+  marian::bergamot::NonThreadedService service_;   // ORDER DEPENDENCY
 };
 
 #endif /* SRC_TRANSLATOR_TRANSLATIONMODEL_H_ */

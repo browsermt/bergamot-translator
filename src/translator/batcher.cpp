@@ -57,14 +57,5 @@ void Batcher::addWholeRequest(Ptr<Request> request) {
   }
 }
 
-#ifdef WITH_PTHREADS
-void Batcher::produceTo(PCQueue<Batch> &pcqueue) {
-  Batch batch;
-  while (cleaveBatch(batch)) {
-    pcqueue.ProduceSwap(batch);
-  }
-}
-#endif
-
 } // namespace bergamot
 } // namespace marian

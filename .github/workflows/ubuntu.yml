@@ -2,9 +2,9 @@ name: Ubuntu
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, ci-sandbox ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, ci-sandbox ]
 
 jobs:
   build-ubuntu:
@@ -97,7 +97,7 @@ jobs:
           -DUSE_FBGEMM=${{ matrix.cpu }} \
           -DUSE_SENTENCEPIECE=on \
           -DUSE_STATIC_LIBS=on \
-          -DUSE_WASM_COMPATIBLE_MARIAN=off
+          -DUSE_WASM_COMPATIBLE_SOURCES=off
 
     - name: Compile
       working-directory: build

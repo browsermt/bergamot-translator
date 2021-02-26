@@ -34,10 +34,6 @@ public:
   void translate(Batch &batch);
   void initialize();
 
-#ifdef WITH_PTHREADS
-  void consumeFrom(PCQueue<Batch> &pcqueue);
-#endif
-
 private:
   Ptr<Options> options_;
   DeviceId device_;

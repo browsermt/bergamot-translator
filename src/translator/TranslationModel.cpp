@@ -15,7 +15,7 @@
 // All local project includes
 #include "TranslationModel.h"
 #include "translator/parser.h"
-#include "translator/service.h"
+#include "translator/service_base.h"
 
 std::shared_ptr<marian::Options> parseOptions(const std::string &config) {
   marian::Options options;

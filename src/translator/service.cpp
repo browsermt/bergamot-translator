@@ -11,8 +11,9 @@ namespace bergamot {
 Service::Service(Ptr<Options> options)
     : ServiceBase(options), numWorkers_(options->get<int>("cpu-threads")),
       pcqueue_(numWorkers_) {
-  if (numWorkers_ <= 0) {
-    ABORT("Fatal: numWorkers should be greater than 1");
+  if (numWorkers_ == 0) {
+    ABORT("Fatal: Attempt to create multithreaded instance with --cpu-threads "
+          "0. ");
   }
 
   translators_.reserve(numWorkers_);

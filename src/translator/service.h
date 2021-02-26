@@ -1,4 +1,3 @@
-
 #ifndef SRC_BERGAMOT_SERVICE_H_
 #define SRC_BERGAMOT_SERVICE_H_
 
@@ -43,8 +42,6 @@ private:
   std::vector<std::thread> workers_;
   std::vector<BatchTranslator> translators_;
 };
-
-std::vector<Ptr<const Vocab>> loadVocabularies(Ptr<Options> options);
 
 } // namespace bergamot
 } // namespace marian

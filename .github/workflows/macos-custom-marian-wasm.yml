@@ -1,0 +1,47 @@
+name: MacOS WASM (Custom)
+
+on:
+  push:
+    branches: [ main, ci-sandbox ]
+  pull_request:
+    branches: [ main, ci-sandbox ]
+
+jobs:
+  build-wasm:
+    name: WASM (With Custom Marian)
+    runs-on: macos-10.15
+
+    steps:
+      - name: Setup Emscripten toolchain
+        uses: mymindstorm/setup-emsdk@v8
+
+      - name: Verify Emscripten setup
+        run: emcc -v
+
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          submodules: recursive
+
+      - name: Configure builds
+        run: |
+          mkdir -p build-wasm
+          cd build-wasm
+          emcmake cmake -DCOMPILE_WASM=on ..
+
+      - name: Compile
+        working-directory: build-wasm
+        run: emmake make -j2
+
+      - name: Check artifacts
+        working-directory: build-wasm
+        run: |
+          export WASM_ARTIFACTS_DIR=wasm
+          ls -all ${WASM_ARTIFACTS_DIR}
+          if ls ${WASM_ARTIFACTS_DIR}/*.wasm &>/dev/null && ls ${WASM_ARTIFACTS_DIR}/*.js &>/dev/null
+          then
+            echo "Artifacts Successfully Generated"
+          else
+            echo "Failure: Artifacts Not Present"
+            exit 1
+          fi

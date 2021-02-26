@@ -13,16 +13,14 @@ include(CMakeDependentOption)
 
 # Project specific cmake options
 option(COMPILE_WASM "Compile for WASM" OFF)
-option(USE_WASM_COMPATIBLE_MARIAN "Use wasm compatible marian backend" ON)
-CMAKE_DEPENDENT_OPTION(COMPILE_THREAD_VARIANT "Compile the project with thread support" OFF
-                       "USE_WASM_COMPATIBLE_MARIAN" ON)
+option(USE_WASM_COMPATIBLE_SOURCES "Use wasm compatible sources" ON)
 SET(PACKAGE_DIR "" CACHE STRING "Directory including all the files to be packaged (pre-loaded) in wasm builds")
 
 # Set marian (3rd party submodule) cmake options to compile for this project
 SET(COMPILE_CUDA OFF CACHE BOOL "Compile GPU version")
 SET(USE_SENTENCEPIECE ON CACHE BOOL "Download and compile SentencePiece")
 SET(USE_STATIC_LIBS ON CACHE BOOL "Link statically against non-system libs")
-if (USE_WASM_COMPATIBLE_MARIAN)
+if (USE_WASM_COMPATIBLE_SOURCES)
   # If using wasm compatible marian then set following flags
   SET(COMPILE_LIBRARY_ONLY ON CACHE BOOL "Build only the Marian library and exclude all executables.")
   SET(USE_MKL OFF CACHE BOOL "Compile with MKL support")
@@ -37,7 +35,7 @@ if (USE_WASM_COMPATIBLE_MARIAN)
 endif()
 # Set ssplit (3rd party submodule) cmake options to compile for this project
 CMAKE_DEPENDENT_OPTION(USE_INTERNAL_PCRE2 "Use internal PCRE2 instead of system PCRE2" ON
-                       "USE_WASM_COMPATIBLE_MARIAN" OFF)
+                       "USE_WASM_COMPATIBLE_SOURCES" OFF)
 
 # Documentation: https://cliutils.gitlab.io/modern-cmake/chapters/projects/submodule.html
 # Ensures the submodules are set correctly during a build.

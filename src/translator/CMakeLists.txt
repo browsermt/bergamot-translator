@@ -1,5 +1,5 @@
-if (NOT COMPILE_WASM)
-    set(SERVICE "service.cpp")
+if (NOT USE_WASM_COMPATIBLE_SOURCES)
+    set(MULTITHREADED_SERVICE_SOURCE "service.cpp")
 endif()
 
 add_library(bergamot-translator STATIC
@@ -13,7 +13,7 @@ add_library(bergamot-translator STATIC
     multifactor_priority.cpp 
     request.cpp 
     service_base.cpp
-    ${SERVICE}
+    ${MULTITHREADED_SERVICE_SOURCE}
     batcher.cpp
     response.cpp
     batch.cpp
@@ -31,10 +31,6 @@ if(COMPILE_WASM)
   target_compile_definitions(bergamot-translator PRIVATE WASM_BINDINGS)
   target_compile_options(bergamot-translator PRIVATE ${WASM_COMPILE_FLAGS})
 endif(COMPILE_WASM)
-
-if (COMPILE_THREAD_VARIANT)
-  target_compile_definitions(bergamot-translator PRIVATE WITH_PTHREADS)
-endif()
 
 target_link_libraries(bergamot-translator marian ssplit)
 

@@ -32,11 +32,18 @@ class Service : public ServiceBase {
 
 public:
   explicit Service(Ptr<Options> options);
-  void enqueue() override;
+  // Implements enqueue and top through blocking methods.
   void stop() override;
   ~Service();
 
 private:
+  void enqueue() override;
+
+  // In addition to the common members (text_processor, requestId, vocabs_,
+  // batcher) extends with a producer-consumer queue, vector of translator
+  // instances owned by service each listening to the pcqueue in separate
+  // threads.
+
   size_t numWorkers_;      // ORDER DEPENDENCY
   PCQueue<Batch> pcqueue_; // ORDER DEPENDENCY
   std::vector<std::thread> workers_;

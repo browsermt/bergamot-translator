@@ -67,9 +67,9 @@ endif(COMPILE_WASM)
 
 add_subdirectory(3rd_party)
 add_subdirectory(src)
-if(NOT COMPILE_WASM)
-  add_subdirectory(app)
-endif()
+
 if(COMPILE_WASM)
   add_subdirectory(wasm)
+else()
+  add_subdirectory(app)
 endif(COMPILE_WASM)

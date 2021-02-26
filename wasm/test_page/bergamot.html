@@ -1,0 +1,200 @@
+<!doctype html>
+<html>
+<head>
+    <link rel="icon" href="data:,">
+    <meta http-equiv="Content-Type" content="text/html;charset=ISO-8859-1">
+</head>
+<style>
+    body, html, div {
+        margin-left: 1%;
+        margin-right: 1%;
+        margin-bottom: 1%;
+        margin-top: 1%;
+        padding-left: 1%;
+        padding-right: 1%;
+        padding-bottom: 1%;
+        padding-top: 1%;
+    }
+
+    textarea, #to, #from {
+        width: 100%;
+        max-width: 100%;
+    }
+
+    div {
+        float: left;
+        width: 80%;
+    }
+</style>
+<body>
+
+<div id="divradios">
+    <label>Choose the model to use</label>
+    <input type="radio" name="modellang" value="enes"/><label>English to Spanish</label>
+    <input type="radio" name="modellang" value="esen" checked/><label>Spanish to English</label>
+    <input type="button" id="load" value="Load Model"/>
+</div>
+
+<div id="divtranslation">
+    <label for="from">From</label>
+    <textarea id="from" name="from">
+Una estrategia republicana para obstaculizar la reelección de Obama. Los dirigentes republicanos justificaron su política por la necesidad de luchar contra el fraude electoral.
+Ahora bien, el Centro Brennan considera esto último un mito y afirma que el fraude electoral es menos frecuente en los Estados Unidos que el número de personas que mueren a causa de la caída de un rayo.
+De hecho, los abogados republicanos no han encontrado más que 300 casos de fraude electoral en los Estados Unidos en diez años. Una cosa es cierta: esas nuevas disposiciones afectarán negativamente a la tasa de participación.
+En ese sentido, estas medidas minarán en parte el sistema democrático americano. Al contrario de lo que ocurre en Canadá, los estados americanos son responsables de la organización de las elecciones federales en los Estados Unidos.
+Y en esa misma línea una mayoría de los gobiernos americanos promulgaron, a partir de 2009, nuevas leyes que dificultaban el proceso de inscripción o de votación. Este fenómeno se ha extendido tras las elecciones de noviembre de 2010, que vieron el aumento de 675 nuevos representantes republicanos en 26 estados.
+En consecuencia, durante el año 2011 se introdujeron 180 proyectos de ley que restringían el ejercicio del derecho de voto en 41 estados.
+    </textarea>
+    <br><br>
+    <label for="to">To</label>
+    <textarea id="to" name="to" readonly></textarea>
+    <br><br>
+    <input type="button" id="translate" value="Translate"/>
+</div>
+
+<div id="divlog">
+    <label for="log">Log:</label><br>
+    <textarea id="log" name="log" rows="50" cols="75"></textarea>
+</div>
+
+<script>
+
+  var model, request, input = undefined;
+  const loadModel = (from, to) => {
+
+    const languagePair = `${from}${to}`;
+
+    // Vocab files are re-used in both translation directions
+    const vocabLanguagePair = from === "en" ? `${to}${from}` : languagePair;
+
+    // Set the Model Configuration as YAML formatted string.
+    // For available configuration options, please check: https://marian-nmt.github.io/docs/cmd/marian-decoder/
+    const modelConfig = `models:
+  - /${languagePair}/model.${languagePair}.npz
+vocabs:
+  - /${vocabLanguagePair}/vocab.${vocabLanguagePair}.spm
+  - /${vocabLanguagePair}/vocab.${vocabLanguagePair}.spm
+beam-size: 1
+normalize: 1.0
+word-penalty: 0
+max-length-break: 128
+mini-batch-words: 1024
+workspace: 128
+max-length-factor: 2.0
+skip-cost: true
+cpu-threads: 0
+quiet: true
+quiet-translation: true
+shortlist:
+    - /${languagePair}/lex.${languagePair}.s2t
+    - 50
+    - 50
+`;
+/*
+This config is not valid anymore in new APIs
+mini-batch: 32
+maxi-batch: 100
+maxi-batch-sort: src
+*/
+// TODO: Use in model config when wormhole is enabled:
+// gemm-precision: int8shift
+// TODO: Use in model config when loading of binary models is supported and we use model.intgemm.alphas.bin:
+// gemm-precision: int8shiftAlphaAll
+
+    console.debug("modelConfig: ", modelConfig);
+
+    // Instantiate the TranslationModel
+    if (model) model.delete();
+    model = new Module.TranslationModel(modelConfig);
+  }
+
+  const translate = (paragraphs) => {
+
+    // Instantiate the arguments of translate() API i.e. TranslationRequest and input (vector<string>)
+    var request = new Module.TranslationRequest();
+    let input = new Module.VectorString;
+
+    // Initialize the input
+    paragraphs.forEach(paragraph => {
+      // prevent empty paragraph - it breaks the translation
+      if (paragraph.trim() === "") {
+        return;
+      }
+      input.push_back(paragraph.trim())
+    })
+    // Access input (just for debugging)
+    console.log('Input size=', input.size());
+    /*
+    for (let i = 0; i < input.size(); i++) {
+      console.log(' val:' + input.get(i));
+    }
+    */
+
+    // Translate the input; the result is a vector<TranslationResult>
+    let result = model.translate(input, request);
+    // Access original and translated text from each entry of vector<TranslationResult>
+    //console.log('Result size=', result.size(), ' - TimeDiff - ', (Date.now() - start)/1000);
+    const translatedParagraphs = [];
+    for (let i = 0; i < result.size(); i++) {
+      translatedParagraphs.push(result.get(i).getTranslatedText());
+    }
+    console.log({ translatedParagraphs });
+    request.delete();
+    input.delete();
+    return translatedParagraphs;
+  }
+
+  document.querySelector("#load").addEventListener("click", () => {
+    const lang = document.querySelector('input[name="modellang"]:checked').value;
+    const from = lang.substring(0, 2);
+    const to = lang.substring(2, 4);
+    let start = Date.now();
+    loadModel(from, to)
+    log(`model ${from}${to} loaded in ${(Date.now() - start) / 1000} secs`);
+    //log('Model Alignment:', model.isAlignmentSupported());
+  });
+
+  const translateCall = () => {
+    const text = document.querySelector('#from').value;
+    const paragraphs = text.split("\n");
+    let wordCount = 0;
+    paragraphs.forEach(sentence => {
+      wordCount += sentence.trim().split(" ").filter(word => word.trim() !== "").length;
+    })
+    const start = Date.now();
+    const translatedParagraphs = translate(paragraphs);
+    const secs = (Date.now() - start) / 1000;
+    log(`Translation of (${wordCount}) words took ${secs} secs (${Math.round(wordCount / secs)} words per second)`);
+
+    document.querySelector('#to').value = translatedParagraphs.join("\n");
+  }
+
+  document.querySelector("#translate").addEventListener("click", () => {
+    translateCall();
+  });
+
+  document.querySelector("#from").addEventListener('keyup', function(event) {
+    if (event.keyCode === 13) {
+      translateCall();
+    }
+  });
+
+  const log = (message) => {
+    document.querySelector("#log").value += message + "\n";
+  }
+
+  const start = Date.now();
+  let moduleLoadStart;
+  var Module = {
+    preRun: [function() {
+      log(`Time until Module.preRun: ${(Date.now() - start) / 1000} secs`);
+      moduleLoadStart = Date.now();
+    }],
+    onRuntimeInitialized: function() {
+      log(`Wasm Runtime initialized (preRun -> onRuntimeInitialized) in ${(Date.now() - moduleLoadStart) / 1000} secs`);
+    }
+  };
+</script>
+<script src="bergamot-translator-worker.js"></script>
+</body>
+</html>

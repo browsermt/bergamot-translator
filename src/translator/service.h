@@ -3,20 +3,20 @@
 
 #include "batch_translator.h"
 #include "batcher.h"
+#include "data/types.h"
 #include "pcqueue.h"
 #include "request_tracker.h"
 #include "response.h"
+#include "service_base.h"
 #include "text_processor.h"
 
 #include <queue>
 #include <vector>
 
-#include "data/types.h"
-
 namespace marian {
 namespace bergamot {
 
-class Service {
+class Service : public ServiceBase {
 
   // Service exposes methods to translate an incoming blob of text to the
   // Consumer of bergamot API.
@@ -34,10 +34,7 @@ class Service {
 public:
   explicit Service(Ptr<Options> options);
 
-  // Constructs new string copying, calls translate internally.
-  std::future<Response> translateWithCopy(std::string input);
   std::future<Response> translate(std::string &&input);
-
   // Fresh translate method with RequestTracker instead of future being
   // prepared.
   Ptr<RequestTracker> translatePart(std::string &&input, int lineNumberBegin);
@@ -47,45 +44,20 @@ public:
   // improve).
   void cancel(RequestTracker *requestTracker);
   void amend(RequestTracker *requestTracker, int nice);
-
-  void stop();
-
-  Ptr<Vocab const> sourceVocab() const { return vocabs_.front(); }
-  Ptr<Vocab const> targetVocab() const { return vocabs_.back(); }
-
+  void stop() override;
   ~Service();
 
 private:
-  size_t requestId_;
-  size_t numWorkers_;
+  // Implements enqueue and top through blocking methods.
+  void enqueue() override;
 
   std::atomic<size_t> capacityBytes_;
 
-  // vocabs are used to construct a Request, which later uses it to construct
-  // Response (decode from words to string).
-  std::vector<Ptr<Vocab const>> vocabs_; // ORDER DEPENDENCY
-
-  // Consists of:
-  //
-  // 1. text-processing class (TextProcessor), which handles breaking a blob of
-  //    text into sentences and providing them representated by finite
-  //    vocabulary for further processing by hte neural machine translation.
-  // 2. a Batcher class which handles efficient batching by minimizing
-  //    padding wasting compute.
-  // 3. Multiple workers - which are instances of BatchTranslators are
-  //    spawned in separate threads.
-  //
-  // Batcher acts as a producer for a producer-consumer queue (pcqueue_), with
-  // idle BatchTranslators being consumers requesting batches as they're ready.
-
-  TextProcessor text_processor_; // ORDER DEPENDENCY
-  Batcher batcher_;
-  PCQueue<Batch> pcqueue_;
-  std::vector<BatchTranslator> translators_;
+  size_t numWorkers_;      // ORDER DEPENDENCY
+  PCQueue<Batch> pcqueue_; // ORDER DEPENDENCY
   std::vector<std::thread> workers_;
+  std::vector<BatchTranslator> translators_;
 };
-
-std::vector<Ptr<const Vocab>> loadVocabularies(Ptr<Options> options);
 
 } // namespace bergamot
 } // namespace marian

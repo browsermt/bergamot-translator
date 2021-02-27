@@ -5,7 +5,6 @@
 #include "common/options.h"
 #include "data/corpus_base.h"
 #include "definitions.h"
-#include "pcqueue.h"
 #include "request.h"
 #include "request_tracker.h"
 
@@ -27,24 +26,18 @@ public:
 
   // Adds a whole Request
   void addWholeRequest(Ptr<Request> request);
-
-  // Launches an infinite loop writing to a producer consumer queue. Only for
-  // use asynchonous calls in multithreaded settings.
-  void produceTo(PCQueue<Batch> &pcqueue);
-
   void cancel(RequestTracker *tracker);
   void amend(RequestTracker *tracker, int nice);
 
   // Loads sentences with sentences compiled from (tentatively) multiple
   // requests optimizing for both padding and priority.
-  bool cleaveBatch(Batch &batch);
   bool operator>>(Batch &batch); // alias
 
 private:
-  // miniBatchWords_ specify the size of the batches. This is limited by
-  // BatchTranslator and hardware.
+  // Loads sentences with sentences compiled from (tentatively) multiple
+  // requests optimizing for both padding and priority.
+  bool cleaveBatch(Batch &batch);
   size_t miniBatchWords_;
-
   // Internal data structure to generate batches optimized by priority and
   // packing efficiency.
   std::vector<std::set<RequestSentence>> bucket_;

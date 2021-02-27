@@ -2,9 +2,9 @@ name: MacOS
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, ci-sandbox ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, ci-sandbox ]
 
 jobs:
   build-macos:
@@ -38,7 +38,8 @@ jobs:
           -DCOMPILE_TESTS=on \
           -DUSE_FBGEMM=on \
           -DUSE_SENTENCEPIECE=on \
-          -DUSE_STATIC_LIBS=off
+          -DUSE_STATIC_LIBS=off \
+          -DUSE_WASM_COMPATIBLE_SOURCES=off
 
     - name: Compile
       working-directory: build

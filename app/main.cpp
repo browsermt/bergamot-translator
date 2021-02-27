@@ -44,10 +44,10 @@ int main(int argc, char **argv) {
       "Prague, the University of Sheffield, University of Tartu, and "
       "Mozilla.");
 
-  auto futureResults = model->translate(std::move(texts), translationRequest);
+  auto results = model->translate(std::move(texts), translationRequest);
 
   // Resolve the future and get the actual result
-  std::vector<TranslationResult> results = futureResults.get();
+  //std::vector<TranslationResult> results = futureResults.get();
 
   for (auto &result : results) {
     std::cout << "[original]: " << result.getOriginalText() << std::endl;

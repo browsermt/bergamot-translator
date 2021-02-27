@@ -96,18 +96,5 @@ void BatchTranslator::translate(Batch &batch) {
   batch.completeBatch(histories);
 }
 
-void BatchTranslator::consumeFrom(PCQueue<Batch> &pcqueue) {
-  Batch batch;
-  Histories histories;
-  while (true) {
-    pcqueue.ConsumeSwap(batch);
-    if (batch.isPoison()) {
-      return;
-    } else {
-      translate(batch);
-    }
-  }
-}
-
 } // namespace bergamot
 } // namespace marian

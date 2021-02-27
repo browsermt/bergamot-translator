@@ -62,13 +62,6 @@ void Batcher::addWholeRequest(Ptr<Request> request) {
   }
 }
 
-void Batcher::produceTo(PCQueue<Batch> &pcqueue) {
-  Batch batch;
-  while (cleaveBatch(batch)) {
-    pcqueue.ProduceSwap(batch);
-  }
-}
-
 void Batcher::cancel(RequestTracker *tracker) {
   tracker->setStatus(StatusCode::CANCELLED_BY_USER);
   // TODO(jerinphilip): Cancel code

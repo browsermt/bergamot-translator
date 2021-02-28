@@ -14,32 +14,37 @@ namespace bergamot {
 
 class Request;
 
+/// A tracker/ticket provided to someone who calls Service#translate(...).
+/// RequestTracker provides controlled access to the underlying Request to
+/// enable capabilities of cancellation and amending priorities.
 class RequestTracker {
-  // A fancier std::promise <-> std::future, with abilities to cancel and amend
-  // priorities.
 public:
   std::future<Response> future;
 
-  // Empty construction, and set later to track a request.
+  /// Empty construction, and set later to track a request.
   RequestTracker();
+
+  /// Sets tracking on a request.
   void track(Ptr<Request> request);
 
+  /// Sets status: Used when the status of a request changes. For example, when
+  /// translation completes, status code is set to SUCCESS. See
+  /// StatusCode.
+  void setStatus(StatusCode code);
   // Currently changeable, TODO(jerinphilip) disallow except through friends -
   // Service, Request?
-  void setStatus(StatusCode code);
 
-  // Returns status.
   const StatusCode status() const { return status_; }
-
-  // Returns access to the underlying pointer.
   const Ptr<Request> &request() const { return request_; }
+
+  /// Sets future captured by the tracker.
   void set_future(std::future<Response> &&responseFuture);
 
 private:
   Ptr<Request> request_{nullptr};
   StatusCode status_{StatusCode::UNSET};
 
-  // Convenience function to log StatusChanges and times.
+  /// Convenience function to log StatusChanges and times.
   void logStatusChange(StatusCode before, StatusCode after);
 
   // Temporary book-keeping

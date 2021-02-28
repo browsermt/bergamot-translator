@@ -18,19 +18,6 @@ namespace bergamot {
 
 class Service : public ServiceBase {
 
-  // Service exposes methods to translate an incoming blob of text to the
-  // Consumer of bergamot API.
-  //
-  // An example use of this API looks as follows:
-  //
-  //  options = ...;
-  //  service = Service(options);
-  //  std::string input_blob = "Hello World";
-  //  std::future<Response>
-  //      response = service.translate(std::move(input_blob));
-  //  response.wait();
-  //  Response result = response.get();
-
 public:
   explicit Service(Ptr<Options> options);
 
@@ -53,9 +40,17 @@ private:
 
   std::atomic<size_t> capacityBytes_;
 
-  size_t numWorkers_;      // ORDER DEPENDENCY
+  /// Number of workers (each a translator) to launch.
+  size_t numWorkers_; // ORDER DEPENDENCY
+
+  /// Producer-Consumer queue. batcher_ as producer, writes batches to pcqueue_.
+  /// translators_ consume batches from pcqueue_.
   PCQueue<Batch> pcqueue_; // ORDER DEPENDENCY
+
+  /// Holds the threads to destruct properly through join.
   std::vector<std::thread> workers_;
+
+  /// numWorkers_ instances of BatchTranslators.
   std::vector<BatchTranslator> translators_;
 };
 

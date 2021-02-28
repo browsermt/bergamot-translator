@@ -1,3 +1,6 @@
+// This file describes the base class ServiceBase, and a non-threaded subclass
+// implementing translation functionality called NonThreadedService.
+
 #ifndef SRC_BERGAMOT_SERVICE_BASE_H_
 #define SRC_BERGAMOT_SERVICE_BASE_H_
 #include "batch_translator.h"
@@ -11,20 +14,21 @@
 
 namespace marian {
 namespace bergamot {
-// This file describes the base class ServiceBase, and a non-threaded subclass
-// implementing translation functionality called NonThreadedService.
+/// ServiceBase abstracts the common elements in an implementation of a
+/// Translation Service. There are two variants of implementation present - An
+/// implementation running multithreaded and one running single-threaded.
 
 class ServiceBase {
 public:
   explicit ServiceBase(Ptr<Options> options);
 
-  // Transfers ownership of input string to Service, returns a future containing
-  // an object which provides access to translations, other features like
-  // sentencemappings and (tentatively) alignments.
+  /// Transfers ownership of input string to this class, returns a future
+  /// containing an object which provides access to translations, other features
+  /// like sentencemappings and (tentatively) alignments.
   std::future<Response> translate(std::string &&input);
 
-  // Convenience accessor methods to extract these vocabulary outside service.
-  // e.g: For use in decoding histories for marian-decoder replacement.
+  /// Convenience accessor methods to extract these vocabulary outside service.
+  /// e.g: For use in decoding histories for marian-decoder replacement.
   Ptr<Vocab const> sourceVocab() const { return vocabs_.front(); }
   Ptr<Vocab const> targetVocab() const { return vocabs_.back(); }
 
@@ -37,8 +41,13 @@ protected:
   virtual void enqueue() = 0;
 
   size_t requestId_;
+
+  /// Vocabs to encode and decode in the source and target languages.
   std::vector<Ptr<Vocab const>> vocabs_; // ORDER DEPENDENCY
-  TextProcessor text_processor_;         // ORDER DEPENDENCY
+
+  /// Text processor is a combination of a sentence-splitter and tokenizer to
+  /// operate on a blob of input-text.
+  TextProcessor text_processor_; // ORDER DEPENDENCY
   Batcher batcher_;
 };
 

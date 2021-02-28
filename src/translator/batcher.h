@@ -17,33 +17,46 @@ namespace bergamot {
 
 class Batcher {
 public:
+  /// Expects the following options to be set:  `mini-batch-words`,
+  /// `max-length-break`.
+  // @TODO(jerinphilip): Probably make this named parameters.
   explicit Batcher(Ptr<Options> options);
 
-  // RequestSentence incorporates (tentative) notions of priority with each
-  // sentence. This method inserts the sentence into the internal data-structure
-  // which maintains priority among sentences from multiple concurrent requests.
+  /// RequestSentence incorporates notions of priority with each
+  /// sentence. This method inserts the sentence into the internal
+  /// data-structure which maintains priority among sentences from multiple
+  /// concurrent requests.
   void addSentenceWithPriority(RequestSentence &sentence);
 
-  // Adds a whole Request
+  /// Adds a whole Request. Internally calls addSentenceWithPriority.
   void addWholeRequest(Ptr<Request> request);
+
   void cancel(RequestTracker *tracker);
   void amend(RequestTracker *tracker, int nice);
 
-  // Loads sentences with sentences compiled from (tentatively) multiple
-  // requests optimizing for both padding and priority.
-  bool operator>>(Batch &batch); // alias
+  /// alias for cleaveBatch, for use outside this class.
+  /// \code{.cpp}
+  ///   while (batcher >> batch) {
+  ///      // do something;
+  ///    }
+  /// \endcode
+  bool operator>>(Batch &batch);
 
 private:
-  // Loads sentences with sentences compiled from (tentatively) multiple
-  // requests optimizing for both padding and priority.
+  // Cleaves of batches with sentences compiled from multiple requests
+  // optimizing for both padding and priority. Returns false when no more
+  // batches can be created due to lack of sentences.
   bool cleaveBatch(Batch &batch);
+
   size_t miniBatchWords_;
+
   // Internal data structure to generate batches optimized by priority and
   // packing efficiency.
   std::vector<std::set<RequestSentence>> bucket_;
+
   size_t batchNumber_{0};
 
-  // Controls access to bucket_ among concurrent queeuing requests.
+  // Controls access to bucket_ among concurrent queuing requests.
   std::mutex bucketAccess_;
 };
 

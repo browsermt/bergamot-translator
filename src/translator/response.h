@@ -12,24 +12,18 @@
 
 namespace marian {
 namespace bergamot {
+/// Response is a marian internal class (not a bergamot-translator class)
+/// holding source blob of text, vector of TokenRanges corresponding to each
+/// sentence in the source text blob and histories obtained from translating
+/// these sentences.
+///
+/// This class provides an API at a higher level in comparison to History to
+/// access translations and additionally use string_view manipulations to
+/// recover structure in translation from source-text's structure known through
+/// reference string and string_view. As many of these computations are not
+/// required until invoked, they are computed as required and stored in data
+/// members where it makes sense to do so (translation,translationTokenRanges).
 class Response {
-  // Response is a marian internal class (not a bergamot-translator class)
-  // holding source blob of text, vector of TokenRanges corresponding to each
-  // sentence in the source text blob and histories obtained from translating
-  // these sentences.
-  //
-  // This class provides an API at a higher level in comparison to History to
-  // access translations and additionally use string_view manipulations to
-  // recover structure in translation from source-text's structure known through
-  // reference string and string_view. As many of these computations are not
-  // required until invoked, they are computed as required and stored in data
-  // members where it makes sense to do so (translation,translationTokenRanges).
-  //
-  // Examples of such use-cases are:
-  //    translation()
-  //    translationInSourceStructure() TODO(@jerinphilip)
-  //    alignment(idx) TODO(@jerinphilip)
-  //    sentenceMappings (for bergamot-translator)
 
 public:
   Response(std::string &&source, SentenceRanges &&sourceRanges,

@@ -1,0 +1,51 @@
+/*! 
+
+\mainpage Bergamot Translator Documentation
+
+\link unified-api Unified API \endlink
+
+The following doc contains classes and structures which are positioned to interact
+interally with marian. These are in the `marian::bergamot::*` namespace.
+They enable a concrete implementation of `AbstractTranslationModel` from
+unified-API through `TranslationModel`.
+
+\link marian-components Marian Components \endlink
+
+\page unified-api Unified API
+
+\page marian-components Marian Components
+
+
+
+\section marian-components-objective Objective
+
+`marian` as of now does not have an interface to feed in a "request" to
+translate an input blob of text. To solve this, a new marian entity
+specified by `marian::bergamot::ServiceBase` is envisioned.  Subclasses currently implement
+single-threaded and multi-threaded versions, namely `marian::bergamot::NonThreadedService`
+and `marian::bergamot::Service` respectively.    
+
+\section marian-components-api External API 
+
+The simplest example use of this API looks as follows:
+
+\code{.cpp} 
+service = Service(options); 
+std::string input_blob = "Hello  World"; 
+std::future<Response> response = service.translate(std::move(input_blob)); 
+response.wait(); 
+Response result  = response.get(); 
+\endcode
+ 
+
+
+
+Documentation of the following classes maybe worth reading into:
+
+\li marian::bergamot::Service
+\li marian::bergamot::RequestTracker
+\li marian::bergamot::Response
+
+\subsection marian-components-mod Modifying Request
+
+*/

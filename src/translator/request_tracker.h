@@ -39,6 +39,7 @@ public:
 
   /// Sets future captured by the tracker.
   void set_future(std::future<Response> &&responseFuture);
+  void wait() { future.wait(); }
 
 private:
   Ptr<Request> request_{nullptr};

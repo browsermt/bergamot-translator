@@ -32,7 +32,7 @@ public:
            // translation lazily.
            std::vector<Ptr<Vocab const>> &vocabs);
 
-  // Move constructor.
+  /// Move constructor.
   Response(Response &&other)
       : source_(std::move(other.source_)),
         translation_(std::move(other.translation_)),
@@ -41,21 +41,22 @@ public:
         histories_(std::move(other.histories_)),
         vocabs_(std::move(other.vocabs_)){};
 
-  // Prevents CopyConstruction and CopyAssignment. sourceRanges_ is constituted
-  // by string_view and copying invalidates the data member.
+  /// Prevents CopyConstruction.  sourceRanges_ is constituted
+  /// by string_view and copying invalidates the data member.
   Response(const Response &) = delete;
+  /// Prevents CopyAssignment.
   Response &operator=(const Response &) = delete;
 
   typedef std::vector<std::pair<const string_view, const string_view>>
       SentenceMappings;
 
-  // Moves source sentence into source, translated text into translation.
-  // Pairs of string_views to corresponding sentences in
-  // source and translation are loaded into sentenceMappings. These string_views
-  // reference the new source and translation.
-  //
-  // Calling move() invalidates the Response object as ownership is transferred.
-  // Exists for moving strc
+  /// Moves source sentence into source, translated text into translation.
+  /// Pairs of string_views to corresponding sentences in
+  /// source and translation are loaded into sentenceMappings. These
+  /// string_views reference the new source and translation.
+  ///
+  /// Calling move() invalidates the Response object as ownership is
+  /// transferred. Exists for moving strc
   void move(std::string &source, std::string &translation,
             SentenceMappings &sentenceMappings);
 

@@ -76,17 +76,18 @@ public:
   }
 
 private:
-  size_t Id_;
-  int nice_; // similar to linux nice, for use in priority determination.
+  size_t Id_; /// An identifier to the request, assigned in the order of arrival
+              /// and used in assigning priority.
+  int nice_;  /// similar to linux nice, for use in priority determination.
 
-  // lineNumberBegin_ exists to simulate a maxi-batch-setting to compare with
-  // marian-decoder's maxi-batching-mechanism. histories returns embed line
-  // numbers which are used in OutputCollector
+  /// lineNumberBegin_ exists to simulate a maxi-batch-setting to compare with
+  /// marian-decoder's maxi-batching-mechanism. histories returns embed line
+  /// numbers which are used in OutputCollector
   size_t lineNumberBegin_;
 
-  // Multiple translation-workers can concurrently access the same Request. The
-  // following atomic atomically operates on the variable holding sentences
-  // remaining to be translated.
+  /// Multiple translation-workers can concurrently access the same Request. The
+  /// following atomic atomically operates on the variable holding sentences
+  /// remaining to be translated.
   std::atomic<int> counter_;
 
   /// source_ holds the source string to be translated.

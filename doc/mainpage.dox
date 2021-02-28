@@ -4,17 +4,12 @@
 
 \link unified-api Unified API \endlink
 
-The following doc contains classes and structures which are positioned to interact
+\section marian-components Marian Components 
+
+This section contains classes and structures which are positioned to interact
 interally with marian. These are in the `marian::bergamot::*` namespace.
 They enable a concrete implementation of `AbstractTranslationModel` from
 unified-API through `TranslationModel`.
-
-\link marian-components Marian Components \endlink
-
-\page unified-api Unified API
-
-\page marian-components Marian Components
-
 
 
 \section marian-components-objective Objective
@@ -25,19 +20,62 @@ specified by `marian::bergamot::ServiceBase` is envisioned.  Subclasses currentl
 single-threaded and multi-threaded versions, namely `marian::bergamot::NonThreadedService`
 and `marian::bergamot::Service` respectively.    
 
-\section marian-components-api External API 
+\subsection marian-components-api External API 
 
 The simplest example use of this API looks as follows:
 
 \code{.cpp} 
+using namespace marian::bergamot;
 service = Service(options); 
 std::string input_blob = "Hello  World"; 
 std::future<Response> response = service.translate(std::move(input_blob)); 
 response.wait(); 
 Response result  = response.get(); 
 \endcode
- 
 
+\subsubsection marian-components-upcoming-changes Upcoming Changes to API
+
+The API is about to change to use `marian::bergamot::RequestTracker` as follows:
+
+\code{.cpp} 
+using namespace marian::bergamot;
+service = Service(options); 
+std::string input_blob = "Hello  World"; 
+RequestTracker tracker = service.translate(std::move(input_blob)); 
+tracker.wait(); 
+if(tracker.status() == marian::bergamot::StatusCode::SUCCESS){
+    Response result = response.future.get(); 
+    // Do stuff with Response
+}
+\endcode
+
+
+Aside from success, the status provides several other cases which explain
+failures or a change of status in while in progress - documented in
+`marian::bergamot::StatusCode`. In the event of a failure of any kind the
+Response returned is set to `marian::bergamot::Response::EmptyResponse`.
+
+`marian::bergamot::Response` provides methods to access the source, translation
+and further properties like mappings between sentences in source and
+translation, (tentatively) alignment between tokens in a pair of mapped
+sentences in source, translation.
+
+A consumer of the API can additionally do amend or cancel  operations as
+follows, say for the use-case of an event of a browser tab switch or a tab
+close respectively:
+
+\code{.cpp} 
+using namespace marian::bergamot;
+service = Service(options); 
+std::string input_blob = "Hello  World"; 
+RequestTracker tracker = service.translate(std::move(input_blob)); 
+
+// e.g: Tab close
+service.cancel(tracker); // For cancellation.
+
+// e.g: Tab switch or a press of highest priority translation button.
+service.amend(tracker, -20); // To set the request as maximum priority.
+\endcode
 
 
 Documentation of the following classes maybe worth reading into:
@@ -46,6 +84,5 @@ Documentation of the following classes maybe worth reading into:
 \li marian::bergamot::RequestTracker
 \li marian::bergamot::Response
 
-\subsection marian-components-mod Modifying Request
 
 */

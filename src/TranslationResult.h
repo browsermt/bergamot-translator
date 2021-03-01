@@ -22,29 +22,28 @@
 #include "translator/sentence_ranges.h"
 
 /// SentenceRanges is a pseudo-2D container which holds a sequence of
-/// string_views that correspond to words in vocabulary. The API allows adding a
-/// sentence, which accounts extra extra annotations to mark sentences in a flat
-/// vector<string_views>.
+/// string_views that correspond to words in vocabulary from either source or
+/// the translation. The API allows adding a sentence, which accounts extra
+/// extra annotations to mark sentences in a flat vector<string_views> storing
+/// them in an efficient way.
+//?
 typedef marian::bergamot::SentenceRangesT<std::string_view> SentenceRanges;
 
 /// An AnnotatedBlob is blob std::string along with the annotations which are
 /// valid until the original blob is valid (string shouldn't be invalidated).
 /// Annotated Blob, due to its nature binding a blob to string_view should only
 /// be move-constructible as a whole.
-class AnnotatedBlob {
-public:
+struct AnnotatedBlob {
+  std::string blob;
+  SentenceRanges ranges;
+
   AnnotatedBlob(std::string &&blob, SentenceRanges &&ranges)
-      : blob_(std::move(blob)), ranges_(std::move(ranges)) {}
+      : blob(std::move(blob)), ranges(std::move(ranges)) {}
   AnnotatedBlob(AnnotatedBlob &&other)
-      : blob_(std::move(other.blob_)), ranges_(std::move(other.ranges_)) {}
+      : blob(std::move(other.blob)), ranges(std::move(other.ranges)) {}
   AnnotatedBlob(const AnnotatedBlob &other) = delete;
   AnnotatedBlob &operator=(const AnnotatedBlob &other) = delete;
-
-  const size_t numSentences() const { return ranges_.numSentences(); }
-
-private:
-  std::string blob_;
-  SentenceRanges ranges_;
+  const size_t numSentences() const { return ranges.numSentences(); }
 };
 
 /// Alignment is stored as a sparse matrix, this pretty much aligns with marian
@@ -76,18 +75,18 @@ struct Quality {
 };
 
 /// TranslationResult holds two annotated blobs of source and translation. It
-/// further extends and stores information like alignment (which is a function)
-/// of both.
+/// further extends and stores information like alignment (which is a function
+/// of both source and target).
 ///
 /// The API allows access to the source and translation (text) as a whole.
 /// Additional access to iterate through internal meaningful units of
 /// translation (sentences) are provided through for-looping through size().
 /// Might be reasonable to provide iterator access.
 ///
-/// Wondering if we can do pImpl and forward access calls to the marian object,
-/// specifying only interface here. Thus decoding and extracting alignments
-/// (passable), QualityScores (expensive for sure) are done only if required.
-/// This way only histories need to be held.
+/// It is upto the browser / further algorithms to decide what to do with the
+/// additional information provided through accessors. vectors alignments_ and
+/// score_ are set only if they're demanded by TranslationRequest, given they're
+/// expensive.
 
 class TranslationResult {
 public:
@@ -104,31 +103,34 @@ public:
     alignments_ = std::move(alignments);
   }
 
+  // Access to source and translation as a whole.
   const std::string &source() const { return source_.blob; };
   const std::string &translation() const { return translation_.blob; };
 
   /// Returns the number of units in a sentence.
-  const size_t size() { return source_.numSentences(); }
+  const size_t size() const { return source_.numSentences(); }
 
   /// Allows access to a sentence mapping, when accesed iterating through
   /// indices using size(). Intended to substitute for getSentenceMappings.
-  std::pair<const std::string_view, const std::string_view>
-  sentences(size_t index) {
-    return make_pair(source_.ranges.sentence(i),
-                     translation_.ranges.sentence(i));
-  }
+
+  /// Access to sentences.
+  std::string_view source_sentence(size_t idx) const;
+  std::string_view translated_sentence(size_t idx) const;
+
+  /// Access to token level annotations.
+  void load_source_sentence_tokens(
+      size_t idx, std::vector<std::string_view> &sourceTokens) const;
+  void load_target_sentence_tokens(
+      size_t idx, std::vector<std::string_view> &targetTokens) const;
 
   /// Both quality and alignment will require tapping into token level.
   /// information.
 
   /// Returns quality score associated with the i-th pair.
-  Quality quality(size_t index) {
-    Quality dummy;
-    return dummy
-  }
+  Quality quality(size_t index) const { return scores_[index]; }
 
   /// Returns alignment information for the i-th pair.
-  Alignment alignment(size_t index) {}
+  Alignment alignment(size_t index) const { return alignments_[index]; }
 
 private:
   AnnotatedBlob source_;
@@ -136,9 +138,8 @@ private:
   std::vector<Alignment>
       alignments_; // Alignments are consistent with the word annotations for
                    // the i-th source and target sentence.
-  std::vector<Quality>
-      scores_; // scores_ are consistent with the word annotations for
-               // the i-th source and target sentence.
+  std::vector<Quality> scores_; // scores_ are consistent with the word
+                                // annotations for the i-th target sentence.
 };
 
 #endif /* SRC_TRANSLATOR_TRANSLATIONRESULT_H_ */

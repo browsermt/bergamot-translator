@@ -26,7 +26,8 @@ The simplest example use of this API looks as follows:
 
 \code{.cpp} 
 using namespace marian::bergamot;
-service = Service(options); 
+options = // build marian-options object with options.
+Service service(options); 
 std::string input_blob = "Hello  World"; 
 std::future<Response> response = service.translate(std::move(input_blob)); 
 response.wait(); 
@@ -39,12 +40,13 @@ The API is about to change to use `marian::bergamot::RequestTracker` as follows:
 
 \code{.cpp} 
 using namespace marian::bergamot;
-service = Service(options); 
+options = // build marian-options object with options.
+Service service(options); 
 std::string input_blob = "Hello  World"; 
 RequestTracker tracker = service.translate(std::move(input_blob)); 
 tracker.wait(); 
-if(tracker.status() == marian::bergamot::StatusCode::SUCCESS){
-    Response result = response.future.get(); 
+if(tracker.status() == StatusCode::SUCCESS){
+    Response response = tracker.future.get(); 
     // Do stuff with Response
 }
 \endcode
@@ -66,7 +68,7 @@ close respectively:
 
 \code{.cpp} 
 using namespace marian::bergamot;
-service = Service(options); 
+Service service(options); 
 std::string input_blob = "Hello  World"; 
 RequestTracker tracker = service.translate(std::move(input_blob)); 
 

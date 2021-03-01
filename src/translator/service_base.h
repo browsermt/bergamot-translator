@@ -40,6 +40,9 @@ protected:
   // or asynchronous and queued in the background.
   virtual void enqueue() = 0;
 
+  /// Assigned in the order of incoming Request-s as they arrive by Service.
+  /// Further used to tie-break priority based on arrival-order. Although not
+  /// used at the moment, can also be used to identify a unique Request.
   size_t requestId_;
 
   /// Vocabs to encode and decode in the source and target languages.

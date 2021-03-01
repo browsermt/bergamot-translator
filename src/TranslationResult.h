@@ -106,7 +106,9 @@ public:
   const std::string &source() const { return source_.blob; };
   const std::string &translation() const { return translation_.blob; };
 
-  /// Returns the number of units in a sentence.
+  /// Returns the number of units that are translated. To simplify thinking can
+  /// be thought of as number of sentences (equal in source and target by nature
+  /// of the task).
   const size_t size() const { return source_.numSentences(); }
 
   /// Allows access to a sentence mapping, when accesed iterating through

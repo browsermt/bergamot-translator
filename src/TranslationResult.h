@@ -8,6 +8,8 @@
 #ifndef SRC_TRANSLATOR_TRANSLATIONRESULT_H_
 #define SRC_TRANSLATOR_TRANSLATIONRESULT_H_
 
+#include <cassert>
+#include <pair>
 #include <string>
 #include <vector>
 
@@ -16,93 +18,127 @@
 /* This class represents the result of AbstractTranslationModel::translate() API
  * for each of its text entry and TranslationRequest.
  */
-class TranslationResult {
+
+#include "translator/sentence_ranges.h"
+
+/// SentenceRanges is a pseudo-2D container which holds a sequence of
+/// string_views that correspond to words in vocabulary. The API allows adding a
+/// sentence, which accounts extra extra annotations to mark sentences in a flat
+/// vector<string_views>.
+typedef marian::bergamot::SentenceRangesT<std::string_view> SentenceRanges;
+
+/// An AnnotatedBlob is blob std::string along with the annotations which are
+/// valid until the original blob is valid (string shouldn't be invalidated).
+/// Annotated Blob, due to its nature binding a blob to string_view should only
+/// be move-constructible as a whole.
+class AnnotatedBlob {
 public:
-  typedef std::vector<std::pair<std::string_view, std::string_view>>
-      SentenceMappings;
-#ifdef WASM_BINDINGS
-  TranslationResult(const std::string &original, const std::string &translation)
-      : originalText(original), translatedText(translation),
-        sentenceMappings() {}
-#endif
-  TranslationResult(const std::string &original, const std::string &translation,
-                    SentenceMappings &sentenceMappings)
-      : originalText(original), translatedText(translation),
-        sentenceMappings(sentenceMappings) {}
+  AnnotatedBlob(std::string &&blob, SentenceRanges &&ranges)
+      : blob_(std::move(blob)), ranges_(std::move(ranges)) {}
+  AnnotatedBlob(AnnotatedBlob &&other)
+      : blob_(std::move(other.blob_)), ranges_(std::move(other.ranges_)) {}
+  AnnotatedBlob(const AnnotatedBlob &other) = delete;
+  AnnotatedBlob &operator=(const AnnotatedBlob &other) = delete;
 
-  TranslationResult(TranslationResult &&other)
-      : originalText(std::move(other.originalText)),
-        translatedText(std::move(other.translatedText)),
-        sentenceMappings(std::move(other.sentenceMappings)) {}
-
-#ifdef WASM_BINDINGS
-  TranslationResult(const TranslationResult &other)
-      : originalText(other.originalText),
-        translatedText(other.translatedText),
-        sentenceMappings(other.sentenceMappings) {}
-#endif
-
-  TranslationResult(std::string &&original, std::string &&translation,
-                    SentenceMappings &&sentenceMappings)
-      : originalText(std::move(original)),
-        translatedText(std::move(translation)),
-        sentenceMappings(std::move(sentenceMappings)) {}
-
-#ifndef WASM_BINDINGS
-  TranslationResult &operator=(const TranslationResult &) = delete;
-#else
-  TranslationResult &operator=(const TranslationResult &result) {
-    originalText = result.originalText;
-    translatedText = result.translatedText;
-    sentenceMappings = result.sentenceMappings;
-    return *this;
-  }
-#endif
-
-  /* Return the original text. */
-  const std::string &getOriginalText() const { return originalText; }
-
-  /* Return the translated text. */
-  const std::string &getTranslatedText() const { return translatedText; }
-
-  /* Return the Quality scores of the translated text. */
-  const QualityScore &getQualityScore() const { return qualityScore; }
-
-  /* Return the Sentence mappings (information regarding how individual
-   * sentences of originalText map to corresponding translated sentences in
-   * translatedText).
-   */
-  const SentenceMappings &getSentenceMappings() const {
-    return sentenceMappings;
-  }
+  const size_t numSentences() const { return ranges_.numSentences(); }
 
 private:
-  // Original text (in UTF-8 encoded format) that was supposed to be translated
-  std::string originalText;
+  std::string blob_;
+  SentenceRanges ranges_;
+};
 
-  // Translation (in UTF-8 encoded format) of the originalText
-  std::string translatedText;
+/// Alignment is stored as a sparse matrix, this pretty much aligns with marian
+/// internals but is brought here to maintain translator
+/// agnosticism/independence.
+class Alignment {
+public:
+  struct Point {
+    size_t src;  // Index pointing to source string_view.
+    size_t tgt;  // Index pointing to target string_view.
+    float value; // Score between [0, 1] on indicating degree of alignment.
+  };
 
-  // Quality score of the translated text at the granularity specified in
-  // TranslationRequest. It is an optional result (it will have no information
-  // if not requested in TranslationRequest)
-  QualityScore qualityScore;
-
-  // Information regarding how individual sentences of originalText map to
-  // corresponding translated sentences in joined translated text
-  // (translatedText) An example of sentence mapping:
-  //     originalText (contains 2 sentences)              = "What is your name?
-  //     My name is Abc." translatedText (contains 2 translated sentences) =
-  //     "Was ist dein Name? Mein Name ist Abc." sentenceMappings = [
-  //         {"What is your name?", "Was ist dein Name?"},  //
-  //         Pair(originalText[0],translatedText[0])
-  //         {"My name is Abc", "Mein Name ist Abc."}       //
-  //         Pair(originalText[1],translatedText[1])
-  //     ]
+  // Additional methods can be brought about to export this as a matrix, replace
+  // tags or whatever, leaving space open below.
   //
-  // It is an optional result (it will be empty if not requested in
-  // TranslationRequest).
-  SentenceMappings sentenceMappings;
+  // matrix hard_alignment()
+  // vector soft_alignment()
+  // Embedding tags can be written as another function
+  // f(Alignment a, AnnotatedBlob source, AnnotatedBlob target)
+
+private:
+  std::vector<Point> alignment_;
+};
+
+struct Quality {
+  float sequence;     // Certainty/uncertainty score for sequence.
+  vector<float> word; // Certainty/uncertainty for each word in the sequence.
+};
+
+/// TranslationResult holds two annotated blobs of source and translation. It
+/// further extends and stores information like alignment (which is a function)
+/// of both.
+///
+/// The API allows access to the source and translation (text) as a whole.
+/// Additional access to iterate through internal meaningful units of
+/// translation (sentences) are provided through for-looping through size().
+/// Might be reasonable to provide iterator access.
+///
+/// Wondering if we can do pImpl and forward access calls to the marian object,
+/// specifying only interface here. Thus decoding and extracting alignments
+/// (passable), QualityScores (expensive for sure) are done only if required.
+/// This way only histories need to be held.
+
+class TranslationResult {
+public:
+  TranslationResult(AnnotatedBlob &&source, AnnotatedBlob &&translation)
+      : source_(std::move(source)), translation_(std::move(translation_)) {
+    assert(source_.numSentences() == translation_.numSentences());
+  }
+
+  void set_scores(std::vector<Quality> &&quality) {
+    scores_ = std::move(quality);
+  }
+
+  void set_alignments(std::vector<Alignment> &&alignments) {
+    alignments_ = std::move(alignments);
+  }
+
+  const std::string &source() const { return source_.blob; };
+  const std::string &translation() const { return translation_.blob; };
+
+  /// Returns the number of units in a sentence.
+  const size_t size() { return source_.numSentences(); }
+
+  /// Allows access to a sentence mapping, when accesed iterating through
+  /// indices using size(). Intended to substitute for getSentenceMappings.
+  std::pair<const std::string_view, const std::string_view>
+  sentences(size_t index) {
+    return make_pair(source_.ranges.sentence(i),
+                     translation_.ranges.sentence(i));
+  }
+
+  /// Both quality and alignment will require tapping into token level.
+  /// information.
+
+  /// Returns quality score associated with the i-th pair.
+  Quality quality(size_t index) {
+    Quality dummy;
+    return dummy
+  }
+
+  /// Returns alignment information for the i-th pair.
+  Alignment alignment(size_t index) {}
+
+private:
+  AnnotatedBlob source_;
+  AnnotatedBlob translation_;
+  std::vector<Alignment>
+      alignments_; // Alignments are consistent with the word annotations for
+                   // the i-th source and target sentence.
+  std::vector<Quality>
+      scores_; // scores_ are consistent with the word annotations for
+               // the i-th source and target sentence.
 };
 
 #endif /* SRC_TRANSLATOR_TRANSLATIONRESULT_H_ */

@@ -19,31 +19,30 @@
  * for each of its text entry and TranslationRequest.
  */
 
-#include "translator/sentence_ranges.h"
+#include "translator/sentence_annotation.h"
 
-/// SentenceRanges is a pseudo-2D container which holds a sequence of
+/// Annotation is a pseudo-2D container which holds a sequence of
 /// string_views that correspond to words in vocabulary from either source or
 /// the translation. The API allows adding a sentence, which accounts extra
-/// extra annotations to mark sentences in a flat vector<string_views> storing
+/// extra annotation to mark sentences in a flat vector<string_views> storing
 /// them in an efficient way.
-//?
-typedef marian::bergamot::SentenceRangesT<std::string_view> SentenceRanges;
+typedef marian::bergamot::SentenceRangesT<std::string_view> Annotation;
 
-/// An AnnotatedBlob is blob std::string along with the annotations which are
+/// An AnnotatedBlob is blob std::string along with the annotation which are
 /// valid until the original blob is valid (string shouldn't be invalidated).
 /// Annotated Blob, due to its nature binding a blob to string_view should only
 /// be move-constructible as a whole.
 struct AnnotatedBlob {
   std::string blob;
-  SentenceRanges ranges;
+  Annotation annotation;
 
-  AnnotatedBlob(std::string &&blob, SentenceRanges &&ranges)
-      : blob(std::move(blob)), ranges(std::move(ranges)) {}
+  AnnotatedBlob(std::string &&blob, Annotation &&annotation)
+      : blob(std::move(blob)), annotation(std::move(annotation)) {}
   AnnotatedBlob(AnnotatedBlob &&other)
-      : blob(std::move(other.blob)), ranges(std::move(other.ranges)) {}
+      : blob(std::move(other.blob)), annotation(std::move(other.annotation)) {}
   AnnotatedBlob(const AnnotatedBlob &other) = delete;
   AnnotatedBlob &operator=(const AnnotatedBlob &other) = delete;
-  const size_t numSentences() const { return ranges.numSentences(); }
+  const size_t numSentences() const { return annotation.numSentences(); }
 };
 
 /// Alignment is stored as a sparse matrix, this pretty much aligns with marian
@@ -117,7 +116,7 @@ public:
   std::string_view source_sentence(size_t idx) const;
   std::string_view translated_sentence(size_t idx) const;
 
-  /// Access to token level annotations.
+  /// Access to token level annotation.
   void load_source_sentence_tokens(
       size_t idx, std::vector<std::string_view> &sourceTokens) const;
   void load_target_sentence_tokens(
@@ -136,10 +135,10 @@ private:
   AnnotatedBlob source_;
   AnnotatedBlob translation_;
   std::vector<Alignment>
-      alignments_; // Alignments are consistent with the word annotations for
+      alignments_; // Alignments are consistent with the word annotation for
                    // the i-th source and target sentence.
   std::vector<Quality> scores_; // scores_ are consistent with the word
-                                // annotations for the i-th target sentence.
+                                // annotation for the i-th target sentence.
 };
 
 #endif /* SRC_TRANSLATOR_TRANSLATIONRESULT_H_ */

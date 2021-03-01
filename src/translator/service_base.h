@@ -32,9 +32,6 @@ public:
   Ptr<Vocab const> sourceVocab() const { return vocabs_.front(); }
   Ptr<Vocab const> targetVocab() const { return vocabs_.back(); }
 
-  // Wraps up any thread related destruction code.
-  virtual void stop() = 0;
-
 protected:
   // Enqueue queues a request for translation, this can be synchronous, blocking
   // or asynchronous and queued in the background.
@@ -57,7 +54,6 @@ protected:
 class NonThreadedService : public ServiceBase {
 public:
   explicit NonThreadedService(Ptr<Options> options);
-  void stop() override{};
 
 private:
   // NonThreaded service overrides unimplemented functions in base-class using

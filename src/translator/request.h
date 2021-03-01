@@ -105,7 +105,9 @@ private:
   std::vector<Ptr<Vocab const>> *vocabs_;
 
   /// Stores callback function to be called on complete.
-  std::function<void()> onComplete_;
+  std::function<void()> onComplete_{
+      []() {} // no-op by default.
+  };
   std::promise<Response> response_;
 };
 

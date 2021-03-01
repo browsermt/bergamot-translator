@@ -27,7 +27,5 @@ int main(int argc, char *argv[]) {
   Response response = responseFuture.get();
   std::cout << response.translation() << std::endl;
 
-  // Stop Service.
-  service.stop();
   return 0;
 }

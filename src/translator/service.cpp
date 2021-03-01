@@ -139,7 +139,7 @@ void Service::enqueue() {
   }
 }
 
-void Service::stop() {
+Service::~Service() {
   for (auto &worker : workers_) {
     Batch poison = Batch::poison();
     pcqueue_.ProduceSwap(poison);
@@ -153,8 +153,6 @@ void Service::stop() {
 
   workers_.clear();
 }
-
-Service::~Service() { stop(); }
 
 } // namespace bergamot
 } // namespace marian

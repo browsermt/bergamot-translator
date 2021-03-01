@@ -31,7 +31,6 @@ public:
   // improve).
   void cancel(RequestTracker *requestTracker);
   void amend(RequestTracker *requestTracker, int nice);
-  void stop() override;
   ~Service();
 
 private:

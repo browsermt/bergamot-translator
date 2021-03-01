@@ -56,6 +56,5 @@ int main(int argc, char *argv[]) {
   marian_decoder_minimal(response.histories(), service.targetVocab(), options);
 
   LOG(info, "Total time: {:.5f}s wall", decoderTimer.elapsed());
-  service.stop();
   return 0;
 }

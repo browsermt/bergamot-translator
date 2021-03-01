@@ -85,6 +85,5 @@ int main(int argc, char *argv[]) {
                          options);
 
   LOG(info, "Total time: {:.5f}s wall", decoderTimer.elapsed());
-  service.stop();
   return 0;
 }

@@ -60,7 +60,9 @@ int main(int argc, char **argv) {
       std::cout << "Alignments" << std::endl;
       auto &alignments = result.alignment(idx);
       for (auto &p : alignments) {
-        std::cout << p.src << " " << p.tgt << ": " << p.prob << std::endl;
+        std::cout << result.source_word(idx, p.src) << " "
+                  << result.translation_word(idx, p.tgt) << ": " << p.prob
+                  << std::endl;
       }
     }
     std::cout << std::endl;

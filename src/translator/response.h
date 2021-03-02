@@ -68,6 +68,7 @@ public:
   }
 
   const WordAlignment hardAlignment(int idx, float threshold = 1.f) {
+    WordAlignment result;
     return data::ConvertSoftAlignToHardAlign(softAlignment(idx), threshold);
   }
 

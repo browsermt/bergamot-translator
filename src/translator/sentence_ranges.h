@@ -54,6 +54,11 @@ public:
     return sentenceBetween(bos, eos);
   };
 
+  string_view_type word(size_t sentence_idx, size_t word_idx) const {
+    size_t offset = sentenceBeginIds_[sentence_idx];
+    return flatByteRanges_[offset + word_idx];
+  }
+
   void words(size_t index, std::vector<string_view_type> &out) {
     wordsT<string_view_type>(index, out);
   }

@@ -101,6 +101,15 @@ public:
   void load_target_sentence_tokens(
       size_t idx, std::vector<std::string_view> &targetTokens) const;
 
+  std::string_view source_word(size_t sentence_idx, size_t word_idx) const {
+    return source_.annotation.word(sentence_idx, word_idx);
+  }
+
+  std::string_view translation_word(size_t sentence_idx,
+                                    size_t word_idx) const {
+    return translation_.annotation.word(sentence_idx, word_idx);
+  }
+
   /// Both quality and alignment will require tapping into token level.
   /// information.
 

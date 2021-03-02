@@ -75,9 +75,7 @@ struct Quality {
 class TranslationResult {
 public:
   TranslationResult(AnnotatedBlob &&source, AnnotatedBlob &&translation)
-      : source_(std::move(source)), translation_(std::move(translation_)) {
-    std::cout << source.numSentences() << " " << translation_.numSentences()
-              << std::endl;
+      : source_(std::move(source)), translation_(std::move(translation)) {
     assert(source_.numSentences() == translation_.numSentences());
   }
 

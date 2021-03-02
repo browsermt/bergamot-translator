@@ -47,14 +47,19 @@ Response::Response(std::string &&sourceBlob, SentenceRanges &&sourceRanges,
 
     sentenceBegins.push_back(translationRanges.size());
     target.blob += decoded;
-    auto decoded_string_begin_marker = targetMappings.front().begin();
+    auto decodedStringBeginMarker = targetMappings.front().begin();
     for (auto &sview : targetMappings) {
-      size_t start_idx = offset + sview.begin() - decoded_string_begin_marker;
-      translationRanges.emplace_back(start_idx, start_idx + sview.size());
+      size_t startIdx = offset + sview.begin() - decodedStringBeginMarker;
+      translationRanges.emplace_back(startIdx, startIdx + sview.size());
     }
 
     offset += decoded.size();
   }
+
+  // Once we have the indices in translation (which might be resized a few
+  // times) ready, we can prepare and store the string_view as annotations
+  // instead. This is accomplished by iterating over available sentences using
+  // sentenceBegin and using addSentence(...) API from Annotation.
 
   for (size_t i = 1; i <= sentenceBegins.size(); i++) {
     std::vector<string_view> targetMappings;
@@ -74,9 +79,6 @@ Response::Response(std::string &&sourceBlob, SentenceRanges &&sourceRanges,
 
     target.annotation.addSentence(targetMappings);
   }
-
-  assert(source.numSentences() == target.numSentences());
 }
-
 } // namespace bergamot
 } // namespace marian

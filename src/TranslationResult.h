@@ -26,8 +26,13 @@
 /// the translation. The API allows adding a sentence, which accounts extra
 /// extra annotation to mark sentences in a flat vector<string_views> storing
 /// them in an efficient way.
+
+/// With Annotation construct in place, we bind an std::string and string_views
+/// that are valid referring to the std::string in an AnnotatedBlob.
+/// AnnotatedBlob doesn't have restricting it to marian::bergamot only. For DRY
+/// for development and debugging purposes, it's typedef-ed using a structure
+/// currently marian internal.
 typedef marian::bergamot::AnnotatedBlobT<std::string_view> AnnotatedBlob;
-typedef marian::bergamot::AnnotatedBlobT<marian::string_view> AnnotatedBlobM;
 
 /// Alignment is stored as a sparse matrix, this pretty much aligns with marian
 /// internals but is brought here to maintain translator
@@ -57,8 +62,8 @@ struct Quality {
 ///
 /// It is upto the browser / further algorithms to decide what to do with the
 /// additional information provided through accessors. vectors alignments_ and
-/// score_ are set only if they're demanded by TranslationRequest, given they're
-/// expensive.
+/// score_ are (tentatively) set only if they're demanded by TranslationRequest,
+/// given they're expensive.
 
 class TranslationResult {
 public:
@@ -75,8 +80,10 @@ public:
     alignments_ = std::move(alignments);
   }
 
-  // Access to source and translation as a whole.
+  // Access to source as a whole.
   const std::string &source() const { return source_.blob; };
+
+  // Access to translation as a whole.
   const std::string &translation() const { return translation_.blob; };
 
   /// Returns the number of units that are translated. To simplify thinking can
@@ -87,31 +94,30 @@ public:
   /// Allows access to a sentence mapping, when accesed iterating through
   /// indices using size(). Intended to substitute for getSentenceMappings.
 
-  /// Access to sentences.
+  /// Access to source sentences.
   std::string_view source_sentence(size_t idx) const {
     return source_.annotation.sentence(idx);
   };
+
+  /// Access to translated sentences.
   std::string_view translated_sentence(size_t idx) const {
     return translation_.annotation.sentence(idx);
   };
 
-  /// Access to token level annotation.
-  void load_source_sentence_tokens(
-      size_t idx, std::vector<std::string_view> &sourceTokens) const;
-  void load_target_sentence_tokens(
-      size_t idx, std::vector<std::string_view> &targetTokens) const;
-
-  std::string_view source_word(size_t sentence_idx, size_t word_idx) const {
-    return source_.annotation.word(sentence_idx, word_idx);
+  /// Access to word level annotation in source.
+  std::string_view source_word(size_t sentenceIdx, size_t wordIdx) const {
+    return source_.annotation.word(sentenceIdx, wordIdx);
   }
 
-  std::string_view translation_word(size_t sentence_idx,
-                                    size_t word_idx) const {
-    return translation_.annotation.word(sentence_idx, word_idx);
+  /// Access to word level annotation in translation
+  std::string_view translation_word(size_t sentenceIdx, size_t wordIdx) const {
+    return translation_.annotation.word(sentenceIdx, wordIdx);
   }
 
   /// Both quality and alignment will require tapping into token level.
-  /// information.
+  /// information. wordIdx information required to extract corresponding
+  /// word-unit is embedded internally as indices in vectors (Quality) or
+  /// sparse-matrix constructions with indices (Alignment).
 
   /// Returns quality score associated with the i-th pair.
   Quality quality(size_t index) const { return scores_[index]; }
@@ -150,10 +156,11 @@ private:
   AnnotatedBlob source_;
   AnnotatedBlob translation_;
   std::vector<Alignment>
-      alignments_; // Alignments are consistent with the word annotation for
-                   // the i-th source and target sentence.
-  std::vector<Quality> scores_; // scores_ are consistent with the word
-                                // annotation for the i-th target sentence.
+      alignments_; // Indices provided by alignments are consistent with the
+                   // word annotations for the i-th source and target sentence.
+  std::vector<Quality>
+      scores_; // Indices provided by scores_ are consistent with the word
+               // annotations annotation for the i-th target sentence.
 };
 
 #endif /* SRC_TRANSLATOR_TRANSLATIONRESULT_H_ */

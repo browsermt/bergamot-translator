@@ -1,6 +1,7 @@
 #ifndef SRC_BERGAMOT_RESPONSE_H_
 #define SRC_BERGAMOT_RESPONSE_H_
 
+#include "data/alignment.h"
 #include "data/types.h"
 #include "definitions.h"
 #include "sentence_ranges.h"
@@ -13,6 +14,8 @@
 namespace marian {
 namespace bergamot {
 
+typedef marian::data::SoftAlignment SoftAlignment;
+typedef marian::data::WordAlignment WordAlignment;
 typedef SentenceRangesT<string_view> SentenceRanges;
 typedef AnnotatedBlobT<string_view> AnnotatedBlob;
 
@@ -54,8 +57,21 @@ public:
 
   const Histories &histories() const { return histories_; }
 
+  const SoftAlignment softAlignment(int idx) {
+    NBestList onebest = histories_[idx]->nBest(1);
+    Result result = onebest[0]; // Expecting only one result;
+    auto hyp = std::get<1>(result);
+    auto alignment = hyp->tracebackAlignment();
+    return alignment;
+  }
+
+  const WordAlignment hardAlignment(int idx, float threshold = 1.f) {
+    return data::ConvertSoftAlignToHardAlign(softAlignment(idx), threshold);
+  }
+
   AnnotatedBlob source;
   AnnotatedBlob target;
+  std::vector<WordAlignment> alignments;
 
   const std::string &translation() {
     LOG(info, "translation() will be deprecated now that target is public.");

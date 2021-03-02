@@ -9,8 +9,8 @@
 #define SRC_TRANSLATOR_TRANSLATIONRESULT_H_
 
 #include <cassert>
-#include <pair>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "QualityScore.h"
@@ -19,7 +19,7 @@
  * for each of its text entry and TranslationRequest.
  */
 
-#include "translator/sentence_annotation.h"
+#include "translator/sentence_ranges.h"
 
 /// Annotation is a pseudo-2D container which holds a sequence of
 /// string_views that correspond to words in vocabulary from either source or
@@ -69,8 +69,9 @@ private:
 };
 
 struct Quality {
-  float sequence;     // Certainty/uncertainty score for sequence.
-  vector<float> word; // Certainty/uncertainty for each word in the sequence.
+  float sequence; /// Certainty/uncertainty score for sequence.
+  /// Certainty/uncertainty for each word in the sequence.
+  std::vector<float> word;
 };
 
 /// TranslationResult holds two annotated blobs of source and translation. It

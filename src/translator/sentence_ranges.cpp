@@ -5,19 +5,25 @@
 namespace marian {
 namespace bergamot {
 
-void SentenceRanges::addSentence(std::vector<string_view> &wordRanges) {
+template <class string_view_type>
+void SentenceRangesT<string_view_type>::addSentence(
+    std::vector<string_view_type> &wordRanges) {
   addSentence(std::begin(wordRanges), std::end(wordRanges));
 }
 
-void SentenceRanges::addSentence(WordIterator begin, WordIterator end) {
+template <class string_view_type>
+void SentenceRangesT<string_view_type>::addSentence(WordIterator begin,
+                                                    WordIterator end) {
   size_t size = flatByteRanges_.size();
   flatByteRanges_.insert(std::end(flatByteRanges_), begin, end);
   sentenceBeginIds_.push_back(size);
 }
 
-string_view SentenceRanges::sentence(size_t index) const {
+template <class string_view_type>
+string_view_type
+SentenceRangesT<string_view_type>::sentence(size_t index) const {
   size_t bos_id;
-  string_view eos, bos;
+  string_view_type eos, bos;
 
   bos_id = sentenceBeginIds_[index];
   bos = flatByteRanges_[bos_id];
@@ -34,12 +40,13 @@ string_view SentenceRanges::sentence(size_t index) const {
   return sentenceBetween(bos, eos);
 }
 
-string_view SentenceRanges::sentenceBetween(string_view firstWord,
-                                            string_view lastWord) const {
+template <class string_view_type>
+string_view_type SentenceRangesT<string_view_type>::sentenceBetween(
+    string_view_type firstWord, string_view_type lastWord) const {
 
   const char *data = firstWord.data();
   size_t size = lastWord.data() + lastWord.size() - firstWord.data();
-  return string_view(data, size);
+  return string_view_type(data, size);
 }
 
 } // namespace bergamot

@@ -15,7 +15,7 @@ template <class string_view_type> class SentenceRangesT {
   // Given the availability annotations, this container provides capabilty to
   // add sentences, and access individual sentences.
 public:
-  typedef std::vector<string_view_type>::iterator WordIterator;
+  typedef typename std::vector<string_view_type>::iterator WordIterator;
 
   void addSentence(std::vector<string_view_type> &wordRanges);
   void addSentence(WordIterator begin, WordIterator end);

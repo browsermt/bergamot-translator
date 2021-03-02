@@ -21,6 +21,7 @@ Response::Response(std::string &&sourceBlob, SentenceRanges &&sourceRanges,
   // into a huge string. This is done by computing indices first and appending
   // to the string as each sentences are decoded.
   std::vector<std::pair<size_t, size_t>> translationRanges;
+  std::vector<size_t> sentenceBegins;
 
   size_t offset{0};
   bool first{true};
@@ -32,7 +33,11 @@ Response::Response(std::string &&sourceBlob, SentenceRanges &&sourceRanges,
     Result result = onebest[0]; // Expecting only one result;
     Words words = std::get<0>(result);
     auto targetVocab = vocabs.back();
-    std::string decoded = targetVocab->decode(words);
+
+    std::string decoded;
+    std::vector<string_view> targetMappings;
+    targetVocab->decodeWithByteRanges(words, decoded, targetMappings);
+
     if (first) {
       first = false;
     } else {
@@ -40,22 +45,31 @@ Response::Response(std::string &&sourceBlob, SentenceRanges &&sourceRanges,
       ++offset;
     }
 
+    sentenceBegins.push_back(translationRanges.size());
     target.blob += decoded;
-    translationRanges.emplace_back(offset, decoded.size());
+    auto decoded_string_begin_marker = targetMappings.front().begin();
+    for (auto &sview : targetMappings) {
+      size_t start_idx = offset + sview.begin() - decoded_string_begin_marker;
+      translationRanges.emplace_back(start_idx, start_idx + sview.size());
+    }
+
     offset += decoded.size();
   }
 
-  // Once the entire string is constructed, there are no further possibility of
-  // reallocation in the string's storage, the indices are converted into
-  // string_views.
-
-  for (auto &range : translationRanges) {
-    // TODO(@jerinphilip):  Currently considers target tokens as whole text.
-    // Needs to be further enhanced in marian-dev to extract alignments.
+  for (size_t i = 1; i < sentenceBegins.size(); i++) {
     std::vector<string_view> targetMappings;
+    size_t begin = sentenceBegins[i - 1];
+    size_t end = sentenceBegins[i];
+    for (size_t idx = begin; idx < end; idx++) {
+      auto &p = translationRanges[idx];
+      size_t begin_idx = p.first;
+      size_t end_idx = p.second;
 
-    const char *begin = &target.blob[range.first];
-    targetMappings.emplace_back(begin, range.second);
+      const char *data = &target.blob[begin_idx];
+      size_t size = end_idx - begin_idx;
+      targetMappings.emplace_back(data, size);
+    }
+
     target.annotation.addSentence(targetMappings);
   }
 }

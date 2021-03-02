@@ -47,18 +47,21 @@ int main(int argc, char **argv) {
   auto results = model->translate(std::move(texts), translationRequest);
 
   // Resolve the future and get the actual result
-  //std::vector<TranslationResult> results = futureResults.get();
+  // std::vector<TranslationResult> results = futureResults.get();
 
   for (auto &result : results) {
     std::cout << "[original]: " << result.getOriginalText() << std::endl;
     std::cout << "[translated]: " << result.getTranslatedText() << std::endl;
-    auto mappings = result.getSentenceMappings();
-    for (auto &p : mappings) {
-      std::string_view src = p.first;
-      std::string_view tgt = p.second;
-
-      std::cout << " [src Sentence]: " << src << std::endl;
-      std::cout << " [tgt Sentence]: " << tgt << std::endl;
+    for (int idx = 0; idx < result.size(); idx++) {
+      std::cout << " [src Sentence]: " << result.source_sentence(idx)
+                << std::endl;
+      std::cout << " [tgt Sentence]: " << result.translated_sentence(idx)
+                << std::endl;
+      std::cout << "Alignments" << std::endl;
+      auto &alignments = result.alignment(idx);
+      for (auto &p : alignments) {
+        std::cout << p.src << " " << p.tgt << ": " << p.prob << std::endl;
+      }
     }
     std::cout << std::endl;
   }

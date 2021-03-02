@@ -32,28 +32,13 @@ typedef marian::bergamot::AnnotatedBlobT<marian::string_view> AnnotatedBlobM;
 /// Alignment is stored as a sparse matrix, this pretty much aligns with marian
 /// internals but is brought here to maintain translator
 /// agnosticism/independence.
-class Alignment {
-public:
-  struct Point {
-    size_t src; // Index pointing to source string_view.
-    size_t tgt; // Index pointing to target string_view.
-    float prob; // Score between [0, 1] on indicating degree of alignment.
-  };
-
-  // Additional methods can be brought about to export this as a matrix, replace
-  // tags or whatever, leaving space open below.
-  //
-  // matrix hard_alignment()
-  // vector soft_alignment()
-  // Embedding tags can be written as another function
-  // f(Alignment a, AnnotatedBlob source, AnnotatedBlob target)
-  void add(size_t srcIdx, size_t tgtIdx, float prob) {
-    alignment_.push_back((Point){srcIdx, tgtIdx, prob});
-  }
-
-private:
-  std::vector<Point> alignment_;
+struct Point {
+  size_t src; // Index pointing to source string_view.
+  size_t tgt; // Index pointing to target string_view.
+  float prob; // Score between [0, 1] on indicating degree of alignment.
 };
+
+typedef std::vector<Point> Alignment;
 
 struct Quality {
   float sequence; /// Certainty/uncertainty score for sequence.
@@ -123,7 +108,7 @@ public:
   Quality quality(size_t index) const { return scores_[index]; }
 
   /// Returns alignment information for the i-th pair.
-  Alignment alignment(size_t index) const { return alignments_[index]; }
+  const Alignment &alignment(size_t index) const { return alignments_[index]; }
 
   const std::string_view getOriginalText() const {
     std::cerr << "DeprecationWarning: getOriginalText() is deprecated in "

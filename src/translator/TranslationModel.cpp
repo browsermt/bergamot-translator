@@ -73,10 +73,10 @@ TranslationModel::translate(std::vector<std::string> &&texts,
 
     std::vector<Alignment> alignments;
     for (int i = 0; i < marianResponse.size(); i++) {
-      auto alignment = marianResponse.hardAlignment(i);
+      auto alignment = marianResponse.hardAlignment(i, 0.2f);
       Alignment unified_alignment;
       for (auto &p : alignment) {
-        unified_alignment.add(p.srcPos, p.tgtPos, p.prob);
+        unified_alignment.emplace_back((Point){p.srcPos, p.tgtPos, p.prob});
       }
       alignments.push_back(std::move(unified_alignment));
     }

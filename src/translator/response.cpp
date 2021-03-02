@@ -56,11 +56,13 @@ Response::Response(std::string &&sourceBlob, SentenceRanges &&sourceRanges,
     offset += decoded.size();
   }
 
-  for (size_t i = 1; i < sentenceBegins.size(); i++) {
+  for (size_t i = 1; i <= sentenceBegins.size(); i++) {
     std::vector<string_view> targetMappings;
     size_t begin = sentenceBegins[i - 1];
-    size_t end = sentenceBegins[i];
-    for (size_t idx = begin; idx < end; idx++) {
+    size_t safe_end = (i == sentenceBegins.size()) ? translationRanges.size()
+                                                   : sentenceBegins[i];
+
+    for (size_t idx = begin; idx < safe_end; idx++) {
       auto &p = translationRanges[idx];
       size_t begin_idx = p.first;
       size_t end_idx = p.second;
@@ -72,6 +74,8 @@ Response::Response(std::string &&sourceBlob, SentenceRanges &&sourceRanges,
 
     target.annotation.addSentence(targetMappings);
   }
+
+  assert(source.numSentences() == target.numSentences());
 }
 
 } // namespace bergamot

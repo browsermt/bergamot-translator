@@ -55,6 +55,8 @@ public:
   Response(const Response &) = delete;
   Response &operator=(const Response &) = delete;
 
+  const size_t size() const { return source.numSentences(); }
+
   const Histories &histories() const { return histories_; }
 
   const SoftAlignment softAlignment(int idx) {

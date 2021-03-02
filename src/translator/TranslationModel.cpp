@@ -70,12 +70,24 @@ TranslationModel::translate(std::vector<std::string> &&texts,
     auto intermediate = service_.translate(std::move(text));
     intermediate.wait();
     auto marianResponse(std::move(intermediate.get()));
+
+    std::vector<Alignment> alignments;
+    for (int i = 0; i < marianResponse.size(); i++) {
+      auto alignment = marianResponse.hardAlignment(i);
+      Alignment unified_alignment;
+      for (auto &p : alignment) {
+        unified_alignment.add(p.srcPos, p.tgtPos, p.prob);
+      }
+      alignments.push_back(std::move(unified_alignment));
+    }
+
     marian::bergamot::AnnotatedBlobT<std::string_view> source =
         std::move(marianResponse.source);
     marian::bergamot::AnnotatedBlobT<std::string_view> target =
         std::move(marianResponse.target);
 
     translationResults.emplace_back(std::move(source), std::move(target));
+    translationResults.back().set_alignments(std::move(alignments));
   }
 
   return translationResults;

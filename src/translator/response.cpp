@@ -11,7 +11,7 @@ namespace bergamot {
 Response::Response(std::string &&sourceBlob, SentenceRanges &&sourceRanges,
                    Histories &&histories, std::vector<Ptr<Vocab const>> &vocabs)
     : source(std::move(sourceBlob), std::move(sourceRanges)),
-      histories_(std::move(histories)), vocabs_(&vocabs) {
+      histories_(std::move(histories)) {
 
   // Reserving length at least as much as source_ seems like a reasonable thing
   // to do to avoid reallocations.
@@ -31,7 +31,7 @@ Response::Response(std::string &&sourceBlob, SentenceRanges &&sourceRanges,
 
     Result result = onebest[0]; // Expecting only one result;
     Words words = std::get<0>(result);
-    auto targetVocab = vocabs_->back();
+    auto targetVocab = vocabs.back();
     std::string decoded = targetVocab->decode(words);
     if (first) {
       first = false;

@@ -45,8 +45,7 @@ public:
   // Move constructor.
   Response(Response &&other)
       : source(std::move(other.source)), target(std::move(other.target)),
-        histories_(std::move(other.histories_)),
-        vocabs_(std::move(other.vocabs_)){};
+        histories_(std::move(other.histories_)){};
 
   // Prevents CopyConstruction and CopyAssignment. sourceRanges_ is constituted
   // by string_view and copying invalidates the data member.
@@ -65,7 +64,6 @@ public:
 
 private:
   Histories histories_;
-  std::vector<Ptr<Vocab const>> *vocabs_;
 };
 } // namespace bergamot
 } // namespace marian

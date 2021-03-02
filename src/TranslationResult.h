@@ -26,24 +26,8 @@
 /// the translation. The API allows adding a sentence, which accounts extra
 /// extra annotation to mark sentences in a flat vector<string_views> storing
 /// them in an efficient way.
-typedef marian::bergamot::SentenceRangesT<std::string_view> Annotation;
-
-/// An AnnotatedBlob is blob std::string along with the annotation which are
-/// valid until the original blob is valid (string shouldn't be invalidated).
-/// Annotated Blob, due to its nature binding a blob to string_view should only
-/// be move-constructible as a whole.
-struct AnnotatedBlob {
-  std::string blob;
-  Annotation annotation;
-
-  AnnotatedBlob(std::string &&blob, Annotation &&annotation)
-      : blob(std::move(blob)), annotation(std::move(annotation)) {}
-  AnnotatedBlob(AnnotatedBlob &&other)
-      : blob(std::move(other.blob)), annotation(std::move(other.annotation)) {}
-  AnnotatedBlob(const AnnotatedBlob &other) = delete;
-  AnnotatedBlob &operator=(const AnnotatedBlob &other) = delete;
-  const size_t numSentences() const { return annotation.numSentences(); }
-};
+typedef marian::bergamot::AnnotatedBlobT<std::string_view> AnnotatedBlob;
+typedef marian::bergamot::AnnotatedBlobT<marian::string_view> AnnotatedBlobM;
 
 /// Alignment is stored as a sparse matrix, this pretty much aligns with marian
 /// internals but is brought here to maintain translator

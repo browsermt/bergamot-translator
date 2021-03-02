@@ -1,44 +1,21 @@
 #include "response.h"
-#include "sentence_ranges.h"
 #include "common/logging.h"
 #include "data/alignment.h"
+#include "sentence_ranges.h"
 
 #include <utility>
 
 namespace marian {
 namespace bergamot {
 
-Response::Response(std::string &&source, SentenceRanges &&sourceRanges,
+Response::Response(std::string &&sourceBlob, SentenceRanges &&sourceRanges,
                    Histories &&histories, std::vector<Ptr<Vocab const>> &vocabs)
-    : source_(std::move(source)), sourceRanges_(std::move(sourceRanges)),
-      histories_(std::move(histories)), vocabs_(&vocabs) {}
-
-void Response::move(std::string &source, std::string &translation,
-                    SentenceMappings &sentenceMappings) {
-
-  // Construct required stuff first.
-  constructTranslation();
-  constructSentenceMappings(sentenceMappings);
-
-  // Move content out.
-  source = std::move(source_);
-  translation = std::move(translation_);
-
-  // The above assignment expects source, target be moved.
-  // which makes the following invalid, hence required to be cleared.
-  sourceRanges_.clear();
-  targetRanges_.clear();
-  histories_.clear();
-}
-
-void Response::constructTranslation() {
-  if (translationConstructed_) {
-    return;
-  }
+    : source(std::move(sourceBlob), std::move(sourceRanges)),
+      histories_(std::move(histories)), vocabs_(&vocabs) {
 
   // Reserving length at least as much as source_ seems like a reasonable thing
   // to do to avoid reallocations.
-  translation_.reserve(source_.size());
+  target.blob.reserve(source.blob.size());
 
   // In a first step, the decoded units (individual senteneces) are compiled
   // into a huge string. This is done by computing indices first and appending
@@ -59,11 +36,11 @@ void Response::constructTranslation() {
     if (first) {
       first = false;
     } else {
-      translation_ += " ";
+      target.blob += " ";
       ++offset;
     }
 
-    translation_ += decoded;
+    target.blob += decoded;
     translationRanges.emplace_back(offset, decoded.size());
     offset += decoded.size();
   }
@@ -77,22 +54,11 @@ void Response::constructTranslation() {
     // Needs to be further enhanced in marian-dev to extract alignments.
     std::vector<string_view> targetMappings;
 
-    const char *begin = &translation_[range.first];
+    const char *begin = &target.blob[range.first];
     targetMappings.emplace_back(begin, range.second);
-    targetRanges_.addSentence(targetMappings);
-  }
-
-  translationConstructed_ = true;
-}
-
-void Response::constructSentenceMappings(
-    Response::SentenceMappings &sentenceMappings) {
-
-  for (size_t i = 0; i < sourceRanges_.numSentences(); i++) {
-    string_view src = sourceRanges_.sentence(i);
-    string_view tgt = targetRanges_.sentence(i);
-    sentenceMappings.emplace_back(src, tgt);
+    target.annotation.addSentence(targetMappings);
   }
 }
+
 } // namespace bergamot
 } // namespace marian

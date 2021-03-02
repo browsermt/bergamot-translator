@@ -30,6 +30,37 @@ public:
   // Returns a string_view_type into the ith sentence.
   string_view_type sentence(size_t index) const;
 
+  void words(size_t index, std::vector<string_view_type> &out) {
+    wordsT<string_view_type>(index, out);
+  }
+
+  template <class tgt_string_view_type>
+  void wordsT(size_t index, std::vector<tgt_string_view_type> &out) {
+    for (size_t idx = sentenceBeginIds_[index];
+         idx < sentenceBeginIds_[index + 1]; idx++) {
+      out.emplace_back(flatByteRanges_[idx].data(),
+                       flatByteRanges_[idx].size());
+    }
+  }
+
+  SentenceRangesT() {}
+
+  template <class src_type>
+  SentenceRangesT(const SentenceRangesT<src_type> &other) {
+    sentenceBeginIds_ = other.sentenceBeginIds();
+    for (auto &sview : other.flatByteRanges()) {
+      flatByteRanges_.emplace_back(sview.data(), sview.size());
+    }
+  };
+
+  const std::vector<string_view_type> &flatByteRanges() const {
+    return flatByteRanges_;
+  }
+
+  const std::vector<size_t> &sentenceBeginIds() const {
+    return sentenceBeginIds_;
+  }
+
 private:
   // A flat storage for string_view_types. Can be words or sentences.
   std::vector<string_view_type> flatByteRanges_;
@@ -46,6 +77,32 @@ private:
 };
 
 typedef SentenceRangesT<string_view> SentenceRanges;
+
+/// An AnnotatedBlob is blob std::string along with the annotation which are
+/// valid until the original blob is valid (string shouldn't be invalidated).
+/// Annotated Blob, due to its nature binding a blob to string_view should only
+/// be move-constructible as a whole.
+template <class Annotation> struct AnnotatedBlobT {
+  std::string blob;
+  SentenceRangesT<Annotation> annotation;
+  AnnotatedBlobT(){};
+
+  template <class src_annotation_type>
+  AnnotatedBlobT(std::string &&blob,
+                 SentenceRangesT<src_annotation_type> &&annotation)
+      : blob(std::move(blob)), annotation(annotation) {}
+
+  AnnotatedBlobT(std::string &&blob, SentenceRangesT<Annotation> &&annotation)
+      : blob(std::move(blob)), annotation(std::move(annotation)) {}
+
+  template <class src_annotation_type>
+  AnnotatedBlobT(AnnotatedBlobT<src_annotation_type> &&other)
+      : blob(std::move(other.blob)), annotation(std::move(other.annotation)) {}
+
+  AnnotatedBlobT(const AnnotatedBlobT &other) = delete;
+  AnnotatedBlobT &operator=(const AnnotatedBlobT &other) = delete;
+  const size_t numSentences() const { return annotation.numSentences(); }
+};
 
 } // namespace bergamot
 

@@ -70,26 +70,12 @@ TranslationModel::translate(std::vector<std::string> &&texts,
     auto intermediate = service_.translate(std::move(text));
     intermediate.wait();
     auto marianResponse(std::move(intermediate.get()));
+    marian::bergamot::AnnotatedBlobT<std::string_view> source =
+        std::move(marianResponse.source);
+    marian::bergamot::AnnotatedBlobT<std::string_view> target =
+        std::move(marianResponse.target);
 
-    // This mess because marian::string_view != std::string_view
-    std::string source, translation;
-    marian::bergamot::Response::SentenceMappings mSentenceMappings;
-    marianResponse.move(source, translation, mSentenceMappings);
-
-    // Convert to UnifiedAPI::TranslationResult
-    TranslationResult::SentenceMappings sentenceMappings;
-    for (auto &p : mSentenceMappings) {
-      std::string_view src(p.first.data(), p.first.size()),
-          tgt(p.second.data(), p.second.size());
-      sentenceMappings.emplace_back(src, tgt);
-    }
-
-    // In place construction.
-    translationResults.emplace_back(
-        std::move(source),          // &&marianResponse.source_
-        std::move(translation),     // &&marianResponse.translation_
-        std::move(sentenceMappings) // &&sentenceMappings
-    );
+    translationResults.emplace_back(std::move(source), std::move(target));
   }
 
   return translationResults;

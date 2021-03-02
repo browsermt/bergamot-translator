@@ -76,6 +76,8 @@ class TranslationResult {
 public:
   TranslationResult(AnnotatedBlob &&source, AnnotatedBlob &&translation)
       : source_(std::move(source)), translation_(std::move(translation_)) {
+    std::cout << source.numSentences() << " " << translation_.numSentences()
+              << std::endl;
     assert(source_.numSentences() == translation_.numSentences());
   }
 
@@ -100,8 +102,12 @@ public:
   /// indices using size(). Intended to substitute for getSentenceMappings.
 
   /// Access to sentences.
-  std::string_view source_sentence(size_t idx) const;
-  std::string_view translated_sentence(size_t idx) const;
+  std::string_view source_sentence(size_t idx) const {
+    return source_.annotation.sentence(idx);
+  };
+  std::string_view translated_sentence(size_t idx) const {
+    return translation_.annotation.sentence(idx);
+  };
 
   /// Access to token level annotation.
   void load_source_sentence_tokens(
@@ -117,6 +123,33 @@ public:
 
   /// Returns alignment information for the i-th pair.
   Alignment alignment(size_t index) const { return alignments_[index]; }
+
+  const std::string_view getOriginalText() const {
+    std::cerr << "DeprecationWarning: getOriginalText() is deprecated in "
+                 "favour of source() to "
+                 "maintain consistency."
+              << std::endl;
+    return source();
+  }
+
+  const std::string_view getTranslatedText() const {
+    std::cerr << "DeprecationWarning: getTranslatedText() is deprecated in "
+                 "favour of translation() to "
+                 "maintain consistency."
+              << std::endl;
+    return translation();
+  }
+
+  typedef std::vector<std::pair<const std::string_view, const std::string_view>>
+      SentenceMappings;
+
+  SentenceMappings getSentenceMappings() const {
+    SentenceMappings mappings;
+    for (size_t idx = 0; idx < size(); idx++) {
+      mappings.emplace_back(source_sentence(idx), translated_sentence(idx));
+    }
+    return mappings;
+  };
 
 private:
   AnnotatedBlob source_;

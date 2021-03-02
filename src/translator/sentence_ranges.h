@@ -17,8 +17,15 @@ template <class string_view_type> class SentenceRangesT {
 public:
   typedef typename std::vector<string_view_type>::iterator WordIterator;
 
-  void addSentence(std::vector<string_view_type> &wordRanges);
-  void addSentence(WordIterator begin, WordIterator end);
+  void addSentence(std::vector<string_view_type> &wordRanges) {
+    addSentence(std::begin(wordRanges), std::end(wordRanges));
+  };
+  void addSentence(WordIterator begin, WordIterator end) {
+
+    size_t size = flatByteRanges_.size();
+    flatByteRanges_.insert(std::end(flatByteRanges_), begin, end);
+    sentenceBeginIds_.push_back(size);
+  };
 
   void clear() {
     flatByteRanges_.clear();
@@ -28,7 +35,24 @@ public:
   size_t numSentences() const { return sentenceBeginIds_.size(); }
 
   // Returns a string_view_type into the ith sentence.
-  string_view_type sentence(size_t index) const;
+  string_view_type sentence(size_t index) const {
+    size_t bos_id;
+    string_view_type eos, bos;
+
+    bos_id = sentenceBeginIds_[index];
+    bos = flatByteRanges_[bos_id];
+
+    if (index + 1 == numSentences()) {
+      eos = flatByteRanges_.back();
+    } else {
+      assert(index < numSentences());
+      size_t eos_id = sentenceBeginIds_[index + 1];
+      --eos_id;
+      eos = flatByteRanges_[eos_id];
+    }
+
+    return sentenceBetween(bos, eos);
+  };
 
   void words(size_t index, std::vector<string_view_type> &out) {
     wordsT<string_view_type>(index, out);
@@ -73,7 +97,12 @@ private:
   // Utility function to extract the string starting at firstWord and ending at
   // lastWord as a single string-view.
   string_view_type sentenceBetween(string_view_type firstWord,
-                                   string_view_type lastWord) const;
+                                   string_view_type lastWord) const {
+
+    const char *data = firstWord.data();
+    size_t size = lastWord.data() + lastWord.size() - firstWord.data();
+    return string_view_type(data, size);
+  };
 };
 
 typedef SentenceRangesT<string_view> SentenceRanges;

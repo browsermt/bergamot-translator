@@ -58,6 +58,11 @@ public:
   AnnotatedBlob source;
   AnnotatedBlob target;
 
+  const std::string &translation() {
+    LOG(info, "translation() will be deprecated now that target is public.");
+    return target.blob;
+  }
+
 private:
   Histories histories_;
   std::vector<Ptr<Vocab const>> *vocabs_;

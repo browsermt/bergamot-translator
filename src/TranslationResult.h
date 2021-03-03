@@ -130,7 +130,8 @@ public:
                  "favour of source() to "
                  "maintain consistency."
               << std::endl;
-    return source();
+    std::string_view sourceView(source_.blob);
+    return sourceView;
   }
 
   const std::string_view getTranslatedText() const {
@@ -138,7 +139,8 @@ public:
                  "favour of translation() to "
                  "maintain consistency."
               << std::endl;
-    return translation();
+    std::string_view translatedView(translation_.blob);
+    return translatedView;
   }
 
   typedef std::vector<std::pair<const std::string_view, const std::string_view>>

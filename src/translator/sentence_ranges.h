@@ -25,6 +25,7 @@
 
 #include "data/types.h"
 #include <cassert>
+#include <utility>
 #include <vector>
 
 namespace marian {
@@ -59,23 +60,20 @@ public:
   // Returns the number of sentences annotated in a blob.
   size_t numSentences() const { return sentenceBeginIds_.size(); }
 
+  std::pair<size_t, size_t> sentenceTerminals(size_t idx) const {
+    size_t bosId, eosId;
+    bosId = sentenceBeginIds_[idx];
+    eosId = idx + 1 < numSentences() ? sentenceBeginIds_[idx + 1] - 1
+                                     : flatByteRanges_.size() - 1;
+    return std::make_pair(bosId, eosId);
+  }
+
   // Returns a string_view_type into the ith sentence.
   string_view_type sentence(size_t index) const {
-    size_t bosId;
+    auto terminals = sentenceTerminals(index);
     string_view_type eos, bos;
-
-    bosId = sentenceBeginIds_[index];
-    bos = flatByteRanges_[bosId];
-
-    if (index + 1 == numSentences()) {
-      eos = flatByteRanges_.back();
-    } else {
-      assert(index < numSentences());
-      size_t eosId = sentenceBeginIds_[index + 1];
-      --eosId;
-      eos = flatByteRanges_[eosId];
-    }
-
+    bos = flatByteRanges_[terminals.first];
+    eos = flatByteRanges_[terminals.second];
     return sentenceBetween(bos, eos);
   };
 
@@ -84,6 +82,10 @@ public:
     size_t offset = sentenceBeginIds_[sentenceIdx];
     assert(offset + wordIdx < flatByteRanges_.size());
     return flatByteRanges_[offset + wordIdx];
+  }
+
+  string_view_type wordFromFlatIdx(size_t flatIdx) const {
+    return flatByteRanges_[flatIdx];
   }
 
   /// Allow emty construction, useful when I have translation and annotations
@@ -142,6 +144,7 @@ typedef SentenceRangesT<string_view> SentenceRanges;
 /// be move-constructible as a whole.
 
 template <class Annotation> struct AnnotatedBlobT {
+public:
   std::string blob;
   SentenceRangesT<Annotation> annotation;
   AnnotatedBlobT(){};
@@ -162,9 +165,46 @@ template <class Annotation> struct AnnotatedBlobT {
 
   /// AnnotatedBlobs are disallowed to copy-construct / copy-assign since the
   /// string_views are invalidated during copy-op.
-  AnnotatedBlobT(const AnnotatedBlobT &other) = delete;
-  AnnotatedBlobT &operator=(const AnnotatedBlobT &other) = delete;
   const size_t numSentences() const { return annotation.numSentences(); }
+
+  template <class other_annotation_type>
+  AnnotatedBlobT(const AnnotatedBlobT<other_annotation_type> &other) {
+    loadFrom(other);
+  }
+
+  template <class other_annotation_type>
+  AnnotatedBlobT &
+  operator=(const AnnotatedBlobT<other_annotation_type> &other) {
+    loadFrom(other);
+    return *this;
+  }
+
+private:
+  template <class other_annotation_type>
+  void loadFrom(const AnnotatedBlobT<other_annotation_type> &other) {
+    blob = other.blob; // Copy string.
+    annotation.clear();
+
+    other_annotation_type otherBlobView(other.blob);
+    Annotation blobView(blob);
+
+    // ByteRanges : work out the math, and create new byteRanges based on sizes
+    // relative to the new string.
+    const char *otherBegin = otherBlobView.data();
+    const char *thisBegin = blobView.data();
+
+    for (size_t idx = 0; idx < other.numSentences(); idx++) {
+      std::vector<Annotation> sentenceWords;
+      auto terminal = other.sentenceTerminals(idx);
+      for (size_t wordIdx = terminal.first; wordIdx <= terminal.second;
+           wordIdx++) {
+        other_annotation_type word = other.wordFromFlatIdx[wordIdx];
+        sentenceWords.emplace_back(
+            thisBegin + (size_t)(word.data() - otherBegin), word.size());
+      }
+      annotation.addSentence(sentenceWords);
+    }
+  }
 };
 
 } // namespace bergamot

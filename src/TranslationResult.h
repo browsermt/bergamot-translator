@@ -67,6 +67,8 @@ struct Quality {
 
 class TranslationResult {
 public:
+  // We can allow empty construction.
+  TranslationResult() {}
   TranslationResult(AnnotatedBlob &&source, AnnotatedBlob &&translation)
       : source_(std::move(source)), translation_(std::move(translation)) {
     assert(source_.numSentences() == translation_.numSentences());

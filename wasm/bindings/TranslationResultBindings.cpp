@@ -13,8 +13,7 @@ using namespace emscripten;
 // Binding code
 EMSCRIPTEN_BINDINGS(translation_result) {
   class_<TranslationResult>("TranslationResult")
-    .constructor<std::string, std::string, TranslationResult::SentenceMappings>()
-	  .function("getOriginalText", &TranslationResult::getOriginalText)
-	  .function("getTranslatedText", &TranslationResult::getTranslatedText)
-    ;
+      .constructor<>()
+      .function("getOriginalText", &TranslationResult::getOriginalText)
+      .function("getTranslatedText", &TranslationResult::getTranslatedText);
 }

@@ -16,7 +16,6 @@ namespace bergamot {
 
 typedef marian::data::SoftAlignment SoftAlignment;
 typedef marian::data::WordAlignment WordAlignment;
-typedef SentenceRangesT<string_view> SentenceRanges;
 typedef AnnotatedBlobT<string_view> AnnotatedBlob;
 
 class Response {
@@ -74,7 +73,6 @@ public:
 
   AnnotatedBlob source;
   AnnotatedBlob target;
-  std::vector<WordAlignment> alignments;
 
   const std::string &translation() {
     LOG(info, "translation() will be deprecated now that target is public.");

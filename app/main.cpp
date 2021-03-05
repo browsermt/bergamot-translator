@@ -88,17 +88,12 @@ int main(int argc, char **argv) {
                 << "), tokens below:" << std::endl;
       size_t wordIdx = 0;
       bool first = true;
-      std::cout << "tokens" << quality.word.size() << " "
-                << result.numTranslationWords(sentenceIdx) << std::endl;
-      // assert(quality.word.size() ==
-      //        result.numTranslationWords(sentenceIdx) + 1);
       for (auto &p : quality.word) {
         if (first) {
           first = false;
         } else {
           std::cout << " ";
         }
-        // assert(wordIdx < result.numTranslationWords(sentenceIdx));
         std::cout << result.translation_word(sentenceIdx, wordIdx) << "(" << p
                   << ")";
         wordIdx++;

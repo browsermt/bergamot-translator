@@ -86,6 +86,8 @@ public:
     eosId = sentenceIdx + 1 < numSentences()
                 ? sentenceBeginIds_[sentenceIdx + 1] - 1
                 : flatByteRanges_.size() - 1;
+    assert(bosId < flatByteRanges_.size());
+    assert(eosId < flatByteRanges_.size());
     return std::make_pair(bosId, eosId);
   }
 
@@ -102,12 +104,14 @@ public:
   /// sentence corresponding to sentenceIdx.
   string_view_type word(size_t sentenceIdx, size_t wordIdx) const {
     size_t offset = sentenceBeginIds_[sentenceIdx];
-    assert(offset + wordIdx < flatByteRanges_.size());
+    auto terminals = sentenceTerminals(sentenceIdx);
+    assert(offset + wordIdx <= terminals.second);
     return flatByteRanges_[offset + wordIdx];
   }
 
   /// Allows access to a string_view using flatIdx
   string_view_type wordFromFlatIdx(size_t flatIdx) const {
+    assert(flatIdx < flatByteRanges_.size());
     return flatByteRanges_[flatIdx];
   }
 
@@ -165,22 +169,21 @@ public:
   /// between string_views. This templated constructor allows for the same.
   template <class other_annotation_type>
   AnnotatedBlobT(std::string &&blob,
-                 AnnotationT<other_annotation_type> &&annotation)
+                 const AnnotationT<other_annotation_type> &annotation)
       : blob(std::move(blob)), // string is moved.
         annotation(annotation) // slightly-sneaky move. string_views are
                                // converted between types.
   {}
 
-  //  TODO(jerinphilip): verify why I need other_annotation_type here. Does not
-  //  compile without the template.
-  /// Move-constructor.
+  /// Move-constructor, moves string - copies annotation.
   template <class other_annotation_type>
   AnnotatedBlobT(AnnotatedBlobT<other_annotation_type> &&other)
-      : blob(std::move(other.blob)), annotation(std::move(other.annotation)) {}
+      : AnnotatedBlobT(std::move(other.blob), other.annotation) {}
 
   /// Returns the number of sentences in the annotation structure.
   const size_t numSentences() const { return annotation.numSentences(); }
 
+#ifdef WASM_BINDINGS
   /// CopyConstructor. See loadFrom.
   template <class other_annotation_type>
   AnnotatedBlobT(const AnnotatedBlobT<other_annotation_type> &other) {
@@ -194,6 +197,23 @@ public:
     loadFrom(other);
     return *this;
   }
+#else
+  // @jerinphilip: Copy-Constructor above, while works leads to possibilities
+  // of making unnecessary copies. Therefore in native development, the
+  // copy-constructor is turned off.
+  //
+  /// Disallow all forms of copy-construction to
+  /// catch errors.
+  AnnotatedBlobT(const AnnotatedBlobT<annotation_type> &other) = delete;
+  AnnotatedBlobT &
+  operator=(const AnnotatedBlobT<annotation_type> &other) = delete;
+  template <class other_annotation_type>
+  AnnotatedBlobT(const AnnotatedBlobT<other_annotation_type> &other) = delete;
+
+  template <class other_annotation_type>
+  AnnotatedBlobT &
+  operator=(const AnnotatedBlobT<other_annotation_type> &other) = delete;
+#endif
 
 private:
   /// loadFrom is reused for CopyConstruction and CopyAssignment.

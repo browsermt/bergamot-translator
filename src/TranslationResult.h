@@ -93,6 +93,16 @@ public:
   /// of the task).
   const size_t size() const { return source_.numSentences(); }
 
+  const size_t numSourceWords(size_t sentenceIdx) {
+    auto terminals = source_.annotation.sentenceTerminals(sentenceIdx);
+    return terminals.second - terminals.first + 1;
+  }
+
+  const size_t numTranslationWords(size_t sentenceIdx) {
+    auto terminals = translation_.annotation.sentenceTerminals(sentenceIdx);
+    return terminals.second - terminals.first + 1;
+  }
+
   /// Allows access to a sentence mapping, when accesed iterating through
   /// indices using size(). Intended to substitute for getSentenceMappings.
 
@@ -165,7 +175,8 @@ private:
   AnnotatedBlob translation_;
   std::vector<Alignment>
       alignments_; // Indices provided by alignments are consistent with the
-                   // word annotations for the i-th source and target sentence.
+                   // word annotations for the i-th source and target
+                   // sentence.
   std::vector<Quality>
       scores_; // Indices provided by scores_ are consistent with the word
                // annotations annotation for the i-th target sentence.

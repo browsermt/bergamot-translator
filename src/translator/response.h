@@ -58,7 +58,10 @@ public:
   const Histories &histories() const { return histories_; }
 
   std::vector<float> wordQuality(size_t sentenceIdx) {
-    return hypothesis(sentenceIdx)->tracebackWordScores();
+    auto wordQualities = hypothesis(sentenceIdx)->tracebackWordScores();
+    // Remove the eos token.
+    wordQualities.pop_back();
+    return wordQualities;
   }
 
   float sentenceQuality(size_t sentenceIdx) {

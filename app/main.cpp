@@ -64,6 +64,21 @@ int main(int argc, char **argv) {
                   << result.translation_word(idx, p.tgt) << ": " << p.prob
                   << std::endl;
       }
+
+      auto &quality = result.quality(idx);
+      std::cout << "Quality: whole(" << quality.sequence
+                << "), tokens below:" << std::endl;
+      size_t wordIdx = 0;
+      bool first = true;
+      for (auto &p : quality.word) {
+        if (first) {
+          first = false;
+        } else {
+          std::cout << " ";
+        }
+        std::cout << result.translation_word(idx, wordIdx) << "(" << p << ")";
+        wordIdx++;
+      }
     }
     std::cout << std::endl;
   }

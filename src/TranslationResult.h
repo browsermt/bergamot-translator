@@ -122,10 +122,14 @@ public:
   /// sparse-matrix constructions with indices (Alignment).
 
   /// Returns quality score associated with the i-th pair.
-  Quality quality(size_t index) const { return scores_[index]; }
+  const Quality &quality(size_t sentenceIdx) const {
+    return scores_[sentenceIdx];
+  }
 
   /// Returns alignment information for the i-th pair.
-  const Alignment &alignment(size_t index) const { return alignments_[index]; }
+  const Alignment &alignment(size_t sentenceIdx) const {
+    return alignments_[sentenceIdx];
+  }
 
   const std::string_view getOriginalText() const {
     std::cerr << "DeprecationWarning: getOriginalText() is deprecated in "

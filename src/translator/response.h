@@ -55,20 +55,26 @@ public:
   Response &operator=(const Response &) = delete;
 
   const size_t size() const { return source.numSentences(); }
-
   const Histories &histories() const { return histories_; }
 
-  const SoftAlignment softAlignment(int idx) {
-    NBestList onebest = histories_[idx]->nBest(1);
-    Result result = onebest[0]; // Expecting only one result;
-    auto hyp = std::get<1>(result);
-    auto alignment = hyp->tracebackAlignment();
-    return alignment;
+  std::vector<float> wordQuality(size_t sentenceIdx) {
+    return hypothesis(sentenceIdx)->tracebackWordScores();
   }
 
-  const WordAlignment hardAlignment(int idx, float threshold = 1.f) {
-    WordAlignment result;
-    return data::ConvertSoftAlignToHardAlign(softAlignment(idx), threshold);
+  float sentenceQuality(size_t sentenceIdx) {
+    NBestList onebest = histories_[sentenceIdx]->nBest(1);
+    Result result = onebest[0]; // Expecting only one result;
+    auto normalizedPathScore = std::get<2>(result);
+    return normalizedPathScore;
+  }
+
+  const SoftAlignment softAlignment(size_t sentenceIdx) {
+    return hypothesis(sentenceIdx)->tracebackAlignment();
+  }
+
+  const WordAlignment hardAlignment(size_t sentenceIdx, float threshold = 1.f) {
+    return data::ConvertSoftAlignToHardAlign(softAlignment(sentenceIdx),
+                                             threshold);
   }
 
   AnnotatedBlob source;
@@ -81,6 +87,13 @@ public:
 
 private:
   Histories histories_;
+
+  IPtr<Hypothesis> hypothesis(size_t sentenceIdx) {
+    NBestList onebest = histories_[sentenceIdx]->nBest(1);
+    Result result = onebest[0]; // Expecting only one result;
+    auto hyp = std::get<1>(result);
+    return hyp;
+  }
 };
 } // namespace bergamot
 } // namespace marian

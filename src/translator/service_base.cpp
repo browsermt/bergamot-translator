@@ -3,7 +3,7 @@
 namespace marian {
 namespace bergamot {
 
-ServiceBase::ServiceBase(Ptr<Options> options)
+ServiceBase::ServiceBase(Ptr<Options> options, const void * /*model_memory*/)
     : requestId_(0), vocabs_(std::move(loadVocabularies(options))),
       text_processor_(vocabs_, options), batcher_(options) {}
 
@@ -24,9 +24,9 @@ std::future<Response> ServiceBase::translate(std::string &&input) {
   return future;
 }
 
-NonThreadedService::NonThreadedService(Ptr<Options> options)
-    : ServiceBase(options),
-      translator_(DeviceId(0, DeviceType::cpu), vocabs_, options) {
+NonThreadedService::NonThreadedService(Ptr<Options> options, const void * model_memory)
+    : ServiceBase(options, model_memory),
+      translator_(DeviceId(0, DeviceType::cpu), vocabs_, options, model_memory) {
   translator_.initialize();
 }
 

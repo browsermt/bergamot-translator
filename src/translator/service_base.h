@@ -16,7 +16,11 @@ namespace bergamot {
 
 class ServiceBase {
 public:
-  explicit ServiceBase(Ptr<Options> options);
+  /**
+   * @param options Marian options object
+   * @param model_memory byte array (aligned to 64!!!) that contains the bytes of a model.bin. Provide a nullptr if not used.
+   */
+  explicit ServiceBase(Ptr<Options> options, const void * model_memory);
 
   // Transfers ownership of input string to Service, returns a future containing
   // an object which provides access to translations, other features like
@@ -44,7 +48,11 @@ protected:
 
 class NonThreadedService : public ServiceBase {
 public:
-  explicit NonThreadedService(Ptr<Options> options);
+  /**
+   * @param options Marian options object
+   * @param model_memory byte array (aligned to 64!!!) that contains the bytes of a model.bin. Provide a nullptr if not used.
+   */
+  explicit NonThreadedService(Ptr<Options> options, const void * model_memory);
   void stop() override{};
 
 private:

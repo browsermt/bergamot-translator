@@ -50,9 +50,9 @@ std::shared_ptr<marian::Options> parseOptions(const std::string &config) {
   return std::make_shared<marian::Options>(options);
 }
 
-TranslationModel::TranslationModel(const std::string &config)
+TranslationModel::TranslationModel(const std::string &config, const void * model_memory)
     : configOptions_(std::move(parseOptions(config))),
-      AbstractTranslationModel(), service_(configOptions_) {}
+      AbstractTranslationModel(), service_(configOptions_, model_memory) {}
 
 TranslationModel::~TranslationModel() {}
 

@@ -10,8 +10,9 @@ namespace bergamot {
 
 BatchTranslator::BatchTranslator(DeviceId const device,
                                  std::vector<Ptr<Vocab const>> &vocabs,
-                                 Ptr<Options> options)
-    : device_(device), options_(options), vocabs_(&vocabs) {}
+                                 Ptr<Options> options,
+                                 const void * model_memory)
+    : device_(device), options_(options), vocabs_(&vocabs), model_memory_(model_memory) {}
 
 void BatchTranslator::initialize() {
   // Initializes the graph.
@@ -29,7 +30,12 @@ void BatchTranslator::initialize() {
   graph_->setDevice(device_);
   graph_->getBackend()->configureDevice(options_);
   graph_->reserveWorkspaceMB(options_->get<size_t>("workspace"));
-  scorers_ = createScorers(options_);
+  if (model_memory_) { // If we have provided a byte array that contains the model memory, we can initialise the model from there, as opposed to from reading in the config file
+    const std::vector<const void *> container = {model_memory_}; // Marian supports multiple models initialised in this manner hence std::vector. However we will only ever use 1 during decoding.
+    scorers_ = createScorers(options_, container);
+  } else {
+    scorers_ = createScorers(options_);
+  }
   for (auto scorer : scorers_) {
     scorer->init(graph_);
     if (slgen_) {

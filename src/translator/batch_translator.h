@@ -26,8 +26,15 @@ class BatchTranslator {
   // shut down in Service which calls join() on the threads.
 
 public:
-  BatchTranslator(DeviceId const device, std::vector<Ptr<Vocab const>> &vocabs,
-                  Ptr<Options> options);
+  /**
+   * Initialise the marian translator.
+   * @param device DeviceId that performs translation. Could be CPU or GPU
+   * @param vocabs Vector that contains ptrs to two vocabs
+   * @param options Marian options object
+   * @param model_memory byte array (aligned to 64!!!) that contains the bytes of a model.bin. Provide a nullptr if not used.
+   */
+  explicit BatchTranslator(DeviceId const device, std::vector<Ptr<Vocab const>> &vocabs,
+                  Ptr<Options> options, const void * model_memory);
 
   // convenience function for logging. TODO(jerin)
   std::string _identifier() { return "worker" + std::to_string(device_.no); }
@@ -41,6 +48,7 @@ private:
   Ptr<ExpressionGraph> graph_;
   std::vector<Ptr<Scorer>> scorers_;
   Ptr<data::ShortlistGenerator const> slgen_;
+  const void * model_memory_;
 };
 
 } // namespace bergamot

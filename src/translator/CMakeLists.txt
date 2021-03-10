@@ -7,6 +7,7 @@ add_library(bergamot-translator STATIC
     TranslationModel.cpp
 
     # Following files added from browsermt/mts@nuke
+    byteArrayExample.cpp
     text_processor.cpp
     sentence_splitter.cpp
     batch_translator.cpp 

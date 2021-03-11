@@ -32,6 +32,9 @@
     <label>Choose the model to use</label>
     <input type="radio" name="modellang" value="enes"/><label>English to Spanish</label>
     <input type="radio" name="modellang" value="esen" checked/><label>Spanish to English</label>
+    <input type="radio" name="modellang" value="eten" checked/><label>Estonian to English</label>
+    <input type="radio" name="modellang" value="enet" checked/><label>English to Estonian</label>
+    <input type="radio" name="modellang" value="ende" checked/><label>English to German</label>
     <input type="button" id="load" value="Load Model"/>
 </div>
 
@@ -70,7 +73,7 @@ En consecuencia, durante el año 2011 se introdujeron 180 proyectos de ley que r
     // Set the Model Configuration as YAML formatted string.
     // For available configuration options, please check: https://marian-nmt.github.io/docs/cmd/marian-decoder/
     const modelConfig = `models:
-  - /${languagePair}/model.${languagePair}.intgemm.bin
+  - /${languagePair}/model.${languagePair}.intgemm.alphas.bin
 vocabs:
   - /${vocabLanguagePair}/vocab.${vocabLanguagePair}.spm
   - /${vocabLanguagePair}/vocab.${vocabLanguagePair}.spm

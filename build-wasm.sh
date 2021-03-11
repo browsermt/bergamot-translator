@@ -39,7 +39,7 @@ fi
 
 # 3. Download models (only required if you want to package files in wasm binary)
 if [ ! -d "bergamot-models" ]; then
-  git clone https://github.com/mozilla-applied-ml/bergamot-models
+  git clone --depth 1 --branch main --single-branch https://github.com/mozilla-applied-ml/bergamot-models
 else
   cd bergamot-models
   git fetch

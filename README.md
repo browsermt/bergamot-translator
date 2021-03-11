@@ -48,7 +48,7 @@ Bergamot translator provides a unified API for ([Marian NMT](https://marian-nmt.
     If you want to package bergamot project specific models, please follow these instructions:
     ```bash
     mkdir models
-    git clone https://github.com/mozilla-applied-ml/bergamot-models
+    git clone --depth 1 --branch main --single-branch https://github.com/mozilla-applied-ml/bergamot-models
     cp -rf bergamot-models/prod/* models
     gunzip models/*/*
     ```

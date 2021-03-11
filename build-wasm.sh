@@ -51,7 +51,7 @@ else
 fi
 mkdir -p models
 rm -rf models/*
-cp -rf bergamot-models/* models
+cp -rf bergamot-models/prod/* models
 gunzip models/*/*
 
 # 4. Compile

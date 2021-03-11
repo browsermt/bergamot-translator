@@ -49,7 +49,7 @@ Bergamot translator provides a unified API for ([Marian NMT](https://marian-nmt.
     ```bash
     mkdir models
     git clone https://github.com/mozilla-applied-ml/bergamot-models
-    cp -rf bergamot-models/* models
+    cp -rf bergamot-models/prod/* models
     gunzip models/*/*
     ```
 

@@ -33,6 +33,13 @@ jobs:
         working-directory: build-wasm
         run: emmake make -j2
 
+      - name: Instantiate simd wormhole
+        working-directory: build-wasm
+        run: |
+          sed -i.bak 's/var result = WebAssembly.instantiateStreaming(response, info);/var result = WebAssembly.instantiateStreaming(response, info, {simdWormhole:true});/g' wasm/bergamot-translator-worker.js
+          sed -i.bak 's/return WebAssembly.instantiate(binary, info);/return WebAssembly.instantiate(binary, info, {simdWormhole:true});/g' wasm/bergamot-translator-worker.js
+          sed -i.bak 's/var module = new WebAssembly.Module(bytes);/var module = new WebAssembly.Module(bytes, {simdWormhole:true});/g' wasm/bergamot-translator-worker.js
+
       - name: Check artifacts
         working-directory: build-wasm
         run: |

@@ -53,14 +53,14 @@ int main(int argc, char **argv) {
   // std::vector<TranslationResult> results = futureResults.get();
 
   for (auto &result : results) {
-    std::cout << "[original]: " << result.getOriginalText() << std::endl;
-    std::cout << "[translated]: " << result.getTranslatedText() << std::endl;
+    std::cout << "[original]: " << result.getOriginalText() << '\n';
+    std::cout << "[translated]: " << result.getTranslatedText() << '\n';
     for (int sentenceIdx = 0; sentenceIdx < result.size(); sentenceIdx++) {
       std::cout << " [src Sentence]: " << result.source_sentence(sentenceIdx)
-                << std::endl;
+                << '\n';
       std::cout << " [tgt Sentence]: "
-                << result.translated_sentence(sentenceIdx) << std::endl;
-      std::cout << "Alignments" << std::endl;
+                << result.translated_sentence(sentenceIdx) << '\n';
+      std::cout << "Alignments" << '\n';
       typedef std::pair<size_t, float> Point;
 
       // Initialize a point vector.
@@ -79,13 +79,13 @@ int main(int argc, char **argv) {
           std::cout << result.translation_word(sentenceIdx, p.first) << "("
                     << p.second << ") ";
         }
-        std::cout << std::endl;
+        std::cout << '\n';
       }
 
       // Handle quality.
       auto &quality = result.quality(sentenceIdx);
       std::cout << "Quality: whole(" << quality.sequence
-                << "), tokens below:" << std::endl;
+                << "), tokens below:" << '\n';
       size_t wordIdx = 0;
       bool first = true;
       for (auto &p : quality.word) {
@@ -98,10 +98,10 @@ int main(int argc, char **argv) {
                   << ")";
         wordIdx++;
       }
-      std::cout << std::endl;
+      std::cout << '\n';
     }
     std::cout << "--------------------------\n";
-    std::cout << std::endl;
+    std::cout << '\n';
   }
 
   return 0;

@@ -9,15 +9,15 @@ ServiceBase::ServiceBase(Ptr<Options> options)
 
 std::future<Response> ServiceBase::translate(std::string &&input) {
   Segments segments;
-  SentenceRanges sourceRanges;
-  text_processor_.process(input, segments, sourceRanges);
+  AnnotatedBlob source(std::move(input));
+  text_processor_.process(source, segments);
 
   std::promise<Response> responsePromise;
   auto future = responsePromise.get_future();
 
   Ptr<Request> request = New<Request>(
-      requestId_++, /* lineNumberBegin = */ 0, vocabs_, std::move(input),
-      std::move(segments), std::move(sourceRanges), std::move(responsePromise));
+      requestId_++, /* lineNumberBegin = */ 0, vocabs_, std::move(source),
+      std::move(segments), std::move(responsePromise));
 
   batcher_.addWholeRequest(request);
   enqueue();

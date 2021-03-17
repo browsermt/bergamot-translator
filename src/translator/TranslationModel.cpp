@@ -92,10 +92,8 @@ TranslationModel::translate(std::vector<std::string> &&texts,
       });
     }
 
-    marian::bergamot::AnnotatedBlobT<std::string_view> source =
-        std::move(marianResponse.source);
-    marian::bergamot::AnnotatedBlobT<std::string_view> target =
-        std::move(marianResponse.target);
+    marian::bergamot::AnnotatedBlob source = std::move(marianResponse.source);
+    marian::bergamot::AnnotatedBlob target = std::move(marianResponse.target);
 
     translationResults.emplace_back(std::move(source), std::move(target));
     translationResults.back().set_alignments(std::move(alignments));

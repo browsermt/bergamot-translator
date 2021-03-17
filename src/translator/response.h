@@ -16,7 +16,7 @@ namespace bergamot {
 
 typedef marian::data::SoftAlignment SoftAlignment;
 typedef marian::data::WordAlignment WordAlignment;
-typedef AnnotatedBlobT<string_view> AnnotatedBlob;
+// typedef AnnotatedBlobT<string_view> AnnotatedBlob;
 
 class Response {
   // Response is a marian internal class (not a bergamot-translator class)
@@ -38,10 +38,7 @@ class Response {
   //    sentenceMappings (for bergamot-translator)
 
 public:
-  Response(std::string &&source, SentenceRanges &&sourceRanges,
-           Histories &&histories,
-           // Required for constructing translation and TokenRanges within
-           // translation lazily.
+  Response(AnnotatedBlob &&source, Histories &&histories,
            std::vector<Ptr<Vocab const>> &vocabs);
 
   // Move constructor.

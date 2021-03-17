@@ -16,6 +16,8 @@ option(COMPILE_WASM "Compile for WASM" OFF)
 option(USE_WASM_COMPATIBLE_SOURCES "Use wasm compatible sources" ON)
 SET(PACKAGE_DIR "" CACHE STRING "Directory including all the files to be packaged (pre-loaded) in wasm builds")
 
+option(COMPILE_BERGAMOT_TESTS "Compile tests" ON)
+
 # Set marian (3rd party submodule) cmake options to compile for this project
 SET(COMPILE_CUDA OFF CACHE BOOL "Compile GPU version")
 SET(USE_SENTENCEPIECE ON CACHE BOOL "Download and compile SentencePiece")
@@ -73,3 +75,7 @@ if(COMPILE_WASM)
 else()
   add_subdirectory(app)
 endif(COMPILE_WASM)
+
+if(COMPILE_TESTS)
+    enable_testing()
+endif(COMPILE_TESTS)

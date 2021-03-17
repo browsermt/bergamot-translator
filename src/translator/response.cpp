@@ -8,11 +8,9 @@
 namespace marian {
 namespace bergamot {
 
-Response::Response(std::string &&sourceBlob, SentenceRanges &&sourceRanges,
-                   Histories &&histories, std::vector<Ptr<Vocab const>> &vocabs)
-    : source(std::move(sourceBlob), std::move(sourceRanges)),
-      histories_(std::move(histories)) {
-
+Response::Response(AnnotatedBlob &&source, Histories &&histories,
+                   std::vector<Ptr<Vocab const>> &vocabs)
+    : source(std::move(source)), histories_(std::move(histories)) {
   // Reserving length at least as much as source_ seems like a reasonable thing
   // to do to avoid reallocations.
   target.blob.reserve(source.blob.size());
@@ -77,7 +75,7 @@ Response::Response(std::string &&sourceBlob, SentenceRanges &&sourceRanges,
       targetMappings.emplace_back(data, size);
     }
 
-    target.annotation.addSentence(targetMappings);
+    target.addSentence(targetMappings);
   }
 }
 } // namespace bergamot

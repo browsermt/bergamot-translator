@@ -32,7 +32,7 @@
 /// AnnotatedBlob doesn't have restricting it to marian::bergamot only. For DRY
 /// for development and debugging purposes, it's typedef-ed using a structure
 /// currently marian internal.
-typedef marian::bergamot::AnnotatedBlobT<std::string_view> AnnotatedBlob;
+typedef marian::bergamot::AnnotatedBlob AnnotatedBlob;
 
 /// Alignment is stored as a sparse matrix, this pretty much aligns with marian
 /// internals but is brought here to maintain translator
@@ -94,36 +94,35 @@ public:
   const size_t size() const { return source_.numSentences(); }
 
   const size_t numSourceWords(size_t sentenceIdx) {
-    auto terminals = source_.annotation.sentenceTerminals(sentenceIdx);
-    return terminals.second - terminals.first + 1;
+    return source_.annotation.numWords(sentenceIdx);
   }
 
   const size_t numTranslationWords(size_t sentenceIdx) {
-    auto terminals = translation_.annotation.sentenceTerminals(sentenceIdx);
-    return terminals.second - terminals.first + 1;
+    return translation_.annotation.numWords(sentenceIdx);
   }
 
   /// Allows access to a sentence mapping, when accesed iterating through
   /// indices using size(). Intended to substitute for getSentenceMappings.
 
   /// Access to source sentences.
-  std::string_view source_sentence(size_t idx) const {
-    return source_.annotation.sentence(idx);
+  marian::string_view source_sentence(size_t idx) const {
+    return source_.sentence(idx);
   };
 
   /// Access to translated sentences.
-  std::string_view translated_sentence(size_t idx) const {
-    return translation_.annotation.sentence(idx);
+  marian::string_view translated_sentence(size_t idx) const {
+    return translation_.sentence(idx);
   };
 
   /// Access to word level annotation in source.
-  std::string_view source_word(size_t sentenceIdx, size_t wordIdx) const {
-    return source_.annotation.word(sentenceIdx, wordIdx);
+  marian::string_view source_word(size_t sentenceIdx, size_t wordIdx) const {
+    return source_.word(sentenceIdx, wordIdx);
   }
 
   /// Access to word level annotation in translation
-  std::string_view translation_word(size_t sentenceIdx, size_t wordIdx) const {
-    return translation_.annotation.word(sentenceIdx, wordIdx);
+  marian::string_view translation_word(size_t sentenceIdx,
+                                       size_t wordIdx) const {
+    return translation_.word(sentenceIdx, wordIdx);
   }
 
   /// Both quality and alignment will require tapping into token level.
@@ -159,13 +158,14 @@ public:
     return translatedView;
   }
 
-  typedef std::vector<std::pair<const std::string_view, const std::string_view>>
+  typedef std::vector<std::pair<const std::string, const std::string>>
       SentenceMappings;
 
   SentenceMappings getSentenceMappings() const {
     SentenceMappings mappings;
     for (size_t idx = 0; idx < size(); idx++) {
-      mappings.emplace_back(source_sentence(idx), translated_sentence(idx));
+      mappings.emplace_back(std::string(source_sentence(idx)),
+                            std::string(translated_sentence(idx)));
     }
     return mappings;
   };

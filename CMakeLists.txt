@@ -76,6 +76,6 @@ else()
   add_subdirectory(app)
 endif(COMPILE_WASM)
 
-if(COMPILE_TESTS)
+if(COMPILE_BERGAMOT_TESTS)
     enable_testing()
-endif(COMPILE_TESTS)
+endif(COMPILE_BERGAMOT_TESTS)

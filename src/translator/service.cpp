@@ -9,7 +9,7 @@ namespace marian {
 namespace bergamot {
 
 Service::Service(Ptr<Options> options, const void * model_memory)
-    : ServiceBase(options, model_memory), numWorkers_(options->get<int>("cpu-threads")),
+    : ServiceBase(options), numWorkers_(options->get<int>("cpu-threads")),
       pcqueue_(numWorkers_), model_memory_{model_memory} {
   if (numWorkers_ == 0) {
     ABORT("Fatal: Attempt to create multithreaded instance with --cpu-threads "

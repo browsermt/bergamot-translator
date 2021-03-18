@@ -18,9 +18,8 @@ class ServiceBase {
 public:
   /**
    * @param options Marian options object
-   * @param model_memory byte array (aligned to 64!!!) that contains the bytes of a model.bin. Provide a nullptr if not used.
    */
-  explicit ServiceBase(Ptr<Options> options, const void * model_memory);
+  explicit ServiceBase(Ptr<Options> options);
 
   // Transfers ownership of input string to Service, returns a future containing
   // an object which provides access to translations, other features like

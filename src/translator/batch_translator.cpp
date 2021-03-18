@@ -31,6 +31,10 @@ void BatchTranslator::initialize() {
   graph_->getBackend()->configureDevice(options_);
   graph_->reserveWorkspaceMB(options_->get<size_t>("workspace"));
   if (model_memory_) { // If we have provided a byte array that contains the model memory, we can initialise the model from there, as opposed to from reading in the config file
+    if ((uintptr_t)model_memory_ % 256 != 0) {
+      std::cerr << "The provided memory is not aligned to 256 bytes and will crash when vector instructions are used on it." << std::endl;
+      exit(1);
+    }
     const std::vector<const void *> container = {model_memory_}; // Marian supports multiple models initialised in this manner hence std::vector. However we will only ever use 1 during decoding.
     scorers_ = createScorers(options_, container);
   } else {

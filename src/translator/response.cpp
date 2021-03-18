@@ -52,6 +52,30 @@ Response::Response(AnnotatedBlob &&source, Histories &&histories,
     }
 
     offset += decoded.size();
+
+    // Alignments
+    // TODO(jerinphilip): The following double conversion might not be
+    // necessary. Hard alignment can directly be exported, but this would mean
+    // WASM bindings for a structure deep within marian source.
+    auto hyp = std::get<1>(result);
+    auto softAlignment = hyp->tracebackAlignment();
+    auto hardAlignment = data::ConvertSoftAlignToHardAlign(
+        softAlignment, /*threshold=*/0.2f); // TODO(jerinphilip): Make this a
+                                            // configurable parameter.
+
+    Alignment unified_alignment;
+    for (auto &p : hardAlignment) {
+      unified_alignment.emplace_back((Point){p.srcPos, p.tgtPos, p.prob});
+    }
+
+    alignments.push_back(std::move(unified_alignment));
+
+    // Quality scores: Sequence level is obtained as normalized path scores.
+    // Word level using hypothesis traceback. These are most-likely logprobs.
+    auto normalizedPathScore = std::get<2>(result);
+    auto wordQualities = hyp->tracebackWordScores();
+    wordQualities.pop_back();
+    qualityScores.push_back((Quality){normalizedPathScore, wordQualities});
   }
 
   // Once we have the indices in translation (which might be resized a few

@@ -19,37 +19,15 @@
  * for each of its text entry and TranslationRequest.
  */
 
+#include "translator/response.h"
 #include "translator/sentence_ranges.h"
 
-/// Annotation is a pseudo-2D container which holds a sequence of
-/// string_views that correspond to words in vocabulary from either source or
-/// the translation. The API allows adding a sentence, which accounts extra
-/// extra annotation to mark sentences in a flat vector<string_views> storing
-/// them in an efficient way.
+// The following are structures within Response, with no heavy marian
+// dependencies, hence ripe for exporting through WASM.
 
-/// With Annotation construct in place, we bind an std::string and string_views
-/// that are valid referring to the std::string in an AnnotatedBlob.
-/// AnnotatedBlob doesn't have restricting it to marian::bergamot only. For DRY
-/// for development and debugging purposes, it's typedef-ed using a structure
-/// currently marian internal.
 typedef marian::bergamot::AnnotatedBlob AnnotatedBlob;
-
-/// Alignment is stored as a sparse matrix, this pretty much aligns with marian
-/// internals but is brought here to maintain translator
-/// agnosticism/independence.
-struct Point {
-  size_t src; // Index pointing to source string_view.
-  size_t tgt; // Index pointing to target string_view.
-  float prob; // Score between [0, 1] on indicating degree of alignment.
-};
-
-typedef std::vector<Point> Alignment;
-
-struct Quality {
-  float sequence; /// Certainty/uncertainty score for sequence.
-  /// Certainty/uncertainty for each word in the sequence.
-  std::vector<float> word;
-};
+typedef marian::bergamot::Quality Quality;
+typedef marian::bergamot::Alignment Alignment;
 
 /// TranslationResult holds two annotated blobs of source and translation. It
 /// further extends and stores information like alignment (which is a function

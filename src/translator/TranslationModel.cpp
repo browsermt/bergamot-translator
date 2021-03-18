@@ -71,33 +71,16 @@ TranslationModel::translate(std::vector<std::string> &&texts,
     intermediate.wait();
     auto marianResponse(std::move(intermediate.get()));
 
+    auto scores = std::move(marianResponse.qualityScores);
+    auto alignments = std::move(marianResponse.alignments);
+
     // Handle alignments.
-    std::vector<Alignment> alignments;
-    for (int i = 0; i < marianResponse.size(); i++) {
-      auto alignment = marianResponse.hardAlignment(i, 0.2f);
-      Alignment unified_alignment;
-      for (auto &p : alignment) {
-        unified_alignment.emplace_back((Point){p.srcPos, p.tgtPos, p.prob});
-      }
-      alignments.push_back(std::move(unified_alignment));
-    }
-
-    std::vector<Quality> qualityScores;
-    // Handle QualityScores
-    for (int i = 0; i < marianResponse.size(); i++) {
-      qualityScores.emplace_back((Quality){
-          // sentenceQuality as a prob, single float score
-          marianResponse.sentenceQuality(i),
-          marianResponse.wordQuality(i) // wordQuality, vector of scores
-      });
-    }
-
     marian::bergamot::AnnotatedBlob source = std::move(marianResponse.source);
     marian::bergamot::AnnotatedBlob target = std::move(marianResponse.target);
 
     translationResults.emplace_back(std::move(source), std::move(target));
     translationResults.back().set_alignments(std::move(alignments));
-    translationResults.back().set_scores(std::move(qualityScores));
+    translationResults.back().set_scores(std::move(scores));
   }
 
   return translationResults;

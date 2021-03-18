@@ -16,7 +16,23 @@ namespace bergamot {
 
 typedef marian::data::SoftAlignment SoftAlignment;
 typedef marian::data::WordAlignment WordAlignment;
-// typedef AnnotatedBlobT<string_view> AnnotatedBlob;
+
+/// Alignment is stored as a sparse matrix, this pretty much aligns with marian
+/// internals but is brought here to maintain translator
+/// agnosticism/independence.
+struct Point {
+  size_t src; // Index pointing to source string_view.
+  size_t tgt; // Index pointing to target string_view.
+  float prob; // Score between [0, 1] on indicating degree of alignment.
+};
+
+typedef std::vector<Point> Alignment;
+
+struct Quality {
+  float sequence; /// Certainty/uncertainty score for sequence.
+  /// Certainty/uncertainty for each word in the sequence.
+  std::vector<float> word;
+};
 
 class Response {
   // Response is a marian internal class (not a bergamot-translator class)
@@ -44,6 +60,8 @@ public:
   // Move constructor.
   Response(Response &&other)
       : source(std::move(other.source)), target(std::move(other.target)),
+        alignments(std::move(other.alignments)),
+        qualityScores(std::move(other.qualityScores)),
         histories_(std::move(other.histories_)){};
 
   // Prevents CopyConstruction and CopyAssignment. sourceRanges_ is constituted
@@ -54,31 +72,10 @@ public:
   const size_t size() const { return source.numSentences(); }
   const Histories &histories() const { return histories_; }
 
-  std::vector<float> wordQuality(size_t sentenceIdx) {
-    auto wordQualities = hypothesis(sentenceIdx)->tracebackWordScores();
-    // Remove the eos token.
-    wordQualities.pop_back();
-    return wordQualities;
-  }
-
-  float sentenceQuality(size_t sentenceIdx) {
-    NBestList onebest = histories_[sentenceIdx]->nBest(1);
-    Result result = onebest[0]; // Expecting only one result;
-    auto normalizedPathScore = std::get<2>(result);
-    return normalizedPathScore;
-  }
-
-  const SoftAlignment softAlignment(size_t sentenceIdx) {
-    return hypothesis(sentenceIdx)->tracebackAlignment();
-  }
-
-  const WordAlignment hardAlignment(size_t sentenceIdx, float threshold = 1.f) {
-    return data::ConvertSoftAlignToHardAlign(softAlignment(sentenceIdx),
-                                             threshold);
-  }
-
   AnnotatedBlob source;
   AnnotatedBlob target;
+  std::vector<Quality> qualityScores;
+  std::vector<Alignment> alignments;
 
   const std::string &translation() {
     LOG(info, "translation() will be deprecated now that target is public.");
@@ -87,13 +84,6 @@ public:
 
 private:
   Histories histories_;
-
-  IPtr<Hypothesis> hypothesis(size_t sentenceIdx) {
-    NBestList onebest = histories_[sentenceIdx]->nBest(1);
-    Result result = onebest[0]; // Expecting only one result;
-    auto hyp = std::get<1>(result);
-    return hyp;
-  }
 };
 } // namespace bergamot
 } // namespace marian

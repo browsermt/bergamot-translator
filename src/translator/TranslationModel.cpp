@@ -71,16 +71,25 @@ TranslationModel::translate(std::vector<std::string> &&texts,
     intermediate.wait();
     auto marianResponse(std::move(intermediate.get()));
 
-    auto scores = std::move(marianResponse.qualityScores);
-    auto alignments = std::move(marianResponse.alignments);
+    // This mess because marian::string_view != std::string_view
+    std::string source, translation;
+    marian::bergamot::Response::SentenceMappings mSentenceMappings;
+    marianResponse.move(source, translation, mSentenceMappings);
 
-    // Handle alignments.
-    marian::bergamot::AnnotatedBlob source = std::move(marianResponse.source);
-    marian::bergamot::AnnotatedBlob target = std::move(marianResponse.target);
+    // Convert to UnifiedAPI::TranslationResult
+    TranslationResult::SentenceMappings sentenceMappings;
+    for (auto &p : mSentenceMappings) {
+      std::string_view src(p.first.data(), p.first.size()),
+          tgt(p.second.data(), p.second.size());
+      sentenceMappings.emplace_back(src, tgt);
+    }
 
-    translationResults.emplace_back(std::move(source), std::move(target));
-    translationResults.back().set_alignments(std::move(alignments));
-    translationResults.back().set_scores(std::move(scores));
+    // In place construction.
+    translationResults.emplace_back(
+        std::move(source),          // &&marianResponse.source_
+        std::move(translation),     // &&marianResponse.translation_
+        std::move(sentenceMappings) // &&sentenceMappings
+    );
   }
 
   return translationResults;

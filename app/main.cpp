@@ -6,9 +6,6 @@
  */
 
 #include <iostream>
-#include <map>
-#include <utility>
-#include <vector>
 
 #include "AbstractTranslationModel.h"
 #include "TranslationRequest.h"
@@ -50,58 +47,20 @@ int main(int argc, char **argv) {
   auto results = model->translate(std::move(texts), translationRequest);
 
   // Resolve the future and get the actual result
-  // std::vector<TranslationResult> results = futureResults.get();
+  //std::vector<TranslationResult> results = futureResults.get();
 
   for (auto &result : results) {
-    std::cout << "[original]: " << result.getOriginalText() << '\n';
-    std::cout << "[translated]: " << result.getTranslatedText() << '\n';
-    for (int sentenceIdx = 0; sentenceIdx < result.size(); sentenceIdx++) {
-      std::cout << " [src Sentence]: " << result.source_sentence(sentenceIdx)
-                << '\n';
-      std::cout << " [tgt Sentence]: "
-                << result.translated_sentence(sentenceIdx) << '\n';
-      std::cout << "Alignments" << '\n';
-      typedef std::pair<size_t, float> Point;
+    std::cout << "[original]: " << result.getOriginalText() << std::endl;
+    std::cout << "[translated]: " << result.getTranslatedText() << std::endl;
+    auto mappings = result.getSentenceMappings();
+    for (auto &p : mappings) {
+      std::string_view src = p.first;
+      std::string_view tgt = p.second;
 
-      // Initialize a point vector.
-      std::vector<std::vector<Point>> aggregate(
-          result.numSourceWords(sentenceIdx));
-
-      // Handle alignments
-      auto &alignments = result.alignment(sentenceIdx);
-      for (auto &p : alignments) {
-        aggregate[p.src].emplace_back(p.tgt, p.prob);
-      }
-
-      for (size_t src = 0; src < aggregate.size(); src++) {
-        std::cout << result.source_word(sentenceIdx, src) << ": ";
-        for (auto &p : aggregate[src]) {
-          std::cout << result.translation_word(sentenceIdx, p.first) << "("
-                    << p.second << ") ";
-        }
-        std::cout << '\n';
-      }
-
-      // Handle quality.
-      auto &quality = result.quality(sentenceIdx);
-      std::cout << "Quality: whole(" << quality.sequence
-                << "), tokens below:" << '\n';
-      size_t wordIdx = 0;
-      bool first = true;
-      for (auto &p : quality.word) {
-        if (first) {
-          first = false;
-        } else {
-          std::cout << " ";
-        }
-        std::cout << result.translation_word(sentenceIdx, wordIdx) << "(" << p
-                  << ")";
-        wordIdx++;
-      }
-      std::cout << '\n';
+      std::cout << " [src Sentence]: " << src << std::endl;
+      std::cout << " [tgt Sentence]: " << tgt << std::endl;
     }
-    std::cout << "--------------------------\n";
-    std::cout << '\n';
+    std::cout << std::endl;
   }
 
   return 0;

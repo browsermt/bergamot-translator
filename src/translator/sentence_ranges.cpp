@@ -12,10 +12,11 @@ void Annotation::addSentence(std::vector<ByteRange> &sentence) {
   sentenceBeginIds_.push_back(size);
 }
 
-void Annotation::clear() {
-  flatByteRanges_.clear();
-  sentenceBeginIds_.clear();
+size_t Annotation::numWords(size_t sentenceIdx) const {
+  auto terminals = sentenceTerminalIds(sentenceIdx);
+  return terminals.second - terminals.first + 1;
 }
+
 std::pair<size_t, size_t>
 Annotation::sentenceTerminalIds(size_t sentenceIdx) const {
   size_t bosId, eosId;
@@ -81,6 +82,12 @@ ByteRange AnnotatedBlob::wordAsByteRange(size_t sentenceIdx,
 
 ByteRange AnnotatedBlob::sentenceAsByteRange(size_t sentenceIdx) const {
   return annotation.sentence(sentenceIdx);
+}
+
+string_view AnnotatedBlob::asStringView(const ByteRange &byteRange) const {
+  const char *data = &blob[byteRange.begin_byte_offset];
+  size_t size = byteRange.size();
+  return string_view(data, size);
 }
 
 } // namespace bergamot

@@ -9,40 +9,32 @@
 namespace marian {
 namespace bergamot {
 
-/// ByteRange stores indices for begin and end in a string. This can be used to
-/// represent a sentence, word.
+/// ByteRange stores indices for begin and end (inclusive) in a string. Can be
+/// used to represent a sentence, word.
 struct ByteRange {
   size_t begin_byte_offset;
   size_t end_byte_offset;
   const size_t size() const { return end_byte_offset - begin_byte_offset + 1; }
 };
 
-/// An Annotation is a collection of ByteRanges which ancillary information on a
-/// blob of string.
-
+/// An Annotation is a collection of ByteRanges used to denote  ancillary
+/// information of sentences and words on a blob of string .
 class Annotation {
 public:
   /// Allow empty construction.
   Annotation() {}
 
-  /// clears internal containers, finds use in at least copy-assignment.
-  void clear();
-
   /// Returns the number of sentences annotated in a blob.
   size_t numSentences() const { return sentenceBeginIds_.size(); }
-  size_t numWords(size_t sentenceIdx) const {
-    auto terminals = sentenceTerminalIds(sentenceIdx);
-    return terminals.second - terminals.first + 1;
-  }
+
+  /// Returns number of words in the sentece identified by sentenceIdx.
+  size_t numWords(size_t sentenceIdx) const;
+
+  /// Adds a sentences from vector<ByteRange> representation, internally doing
+  /// extra bookkeeping for the sentence terminal markings.
   void addSentence(std::vector<ByteRange> &sentence);
 
-  /// Returns indices of terminal (word) ByteRanges of a sentence corresponding
-  /// to sentenceIdx
-  std::pair<ByteRange, ByteRange> sentenceTerminals(size_t sentenceIdx) const;
-  std::pair<size_t, size_t> sentenceTerminalIds(size_t sentenceIdx) const;
-
-  /// Provides access to the internal word corresponding to wordIdx, for the
-  /// sentence corresponding to sentenceIdx.
+  /// Returns a ByteRange representing wordIdx in sentenceIdx
   ByteRange word(size_t sentenceIdx, size_t wordIdx) const;
 
   /// Returns a ByteRange representing sentence corresponding to sentenceIdx.
@@ -56,11 +48,21 @@ private:
 
   /// Stores indices where sentences begin
   std::vector<size_t> sentenceBeginIds_;
+
+  /// Returns indices of terminal (word) ByteRanges of a sentence corresponding
+  /// to sentenceIdx
+  std::pair<ByteRange, ByteRange> sentenceTerminals(size_t sentenceIdx) const;
+  std::pair<size_t, size_t> sentenceTerminalIds(size_t sentenceIdx) const;
 };
 
-/// AnnotatedBlob is effectively std::string + Annotation.
-/// In addition there are accessor methods which allow string_views rather than
+/// AnnotatedBlob is effectively std::string blob + Annotation, providing the
+/// following two capabilities.
+///
+/// 1. There exist accessor methods which returns string_views rather than
 /// ByteRanges.
+///
+/// 2. Transparently converts string_views into ByteRanges for the Annotation
+/// referring to the blob.
 
 struct AnnotatedBlob {
 public:
@@ -81,13 +83,13 @@ public:
   }
 
   /// Adds a sentence, used to load from SentencePiece annotations conveniently.
-  /// encodeWithByteRanges and decodeWithByteRanges.
   void addSentence(std::vector<string_view> &wordRanges);
 
   /// Adds a sentence between two iterators, often useful while constructing
   /// from parts of a container.
   void addSentence(std::vector<string_view>::iterator begin,
                    std::vector<string_view>::iterator end);
+
   string_view word(size_t sentenceIdx, size_t wordIdx) const;
   string_view sentence(size_t sentenceIdx) const;
 
@@ -95,14 +97,8 @@ public:
   ByteRange sentenceAsByteRange(size_t sentenceIdx) const;
 
 private:
-  string_view asStringView(const ByteRange &byteRange) const {
-    const char *data = &blob[byteRange.begin_byte_offset];
-    size_t size = byteRange.size();
-    return string_view(data, size);
-  }
+  string_view asStringView(const ByteRange &byteRange) const;
 };
-
-typedef Annotation SentenceRanges;
 
 } // namespace bergamot
 } // namespace marian

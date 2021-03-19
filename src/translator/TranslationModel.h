@@ -29,9 +29,9 @@ public:
    */
   /**
    * @param config Marian yml config file in the form of a string
-   * @param model_memory byte array (aligned to 64!!!) that contains the bytes of a model.bin.
+   * @param model_memory optional byte array (aligned to 64!!!) that contains the bytes of a model.bin.
    */
-  TranslationModel(const std::string &config, const void * model_memory);
+  TranslationModel(const std::string &config, const void * model_memory = nullptr);
 
   ~TranslationModel();
 

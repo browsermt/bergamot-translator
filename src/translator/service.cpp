@@ -77,7 +77,8 @@ void Service::async_translate() {
 void Service::initialize_async_translators(Ptr<Options> options) {
   ABORT("Cannot run in async mode without multithreading.");
 }
-void Service::async_translate(Ptr<Options> options) {
+
+void Service::async_translate() {
   ABORT("Cannot run in async mode without multithreading.");
 }
 #endif // WITH_PTHREADS

@@ -89,7 +89,8 @@ private:
   const void *model_memory_; /// Model memory to load model passed as bytes.
 
   /// Holds instances of batch translators, just one in case
-  /// of single-threaded application.
+  /// of single-threaded application, numWorkers_ in case of multithreaded
+  /// setting.
   std::vector<BatchTranslator> translators_;
 
   /// Stores requestId of active request. Used to establish

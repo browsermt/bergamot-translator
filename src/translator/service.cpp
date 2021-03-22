@@ -19,15 +19,23 @@ Service::Service(Ptr<Options> options, const void *model_memory)
 {
 
   if (numWorkers_ == 0) {
-    initialize_blocking_translator(options);
+    build_translators(options, /*numTranslators=*/1);
+    initialize_blocking_translator();
   } else {
-    initialize_async_translators(options);
+    build_translators(options, numWorkers_);
+    initialize_async_translators();
   }
 }
 
-void Service::initialize_blocking_translator(Ptr<Options> options) {
-  DeviceId deviceId(0, DeviceType::cpu);
-  translators_.emplace_back(deviceId, vocabs_, options, model_memory_);
+void Service::build_translators(Ptr<Options> options, size_t numTranslators) {
+  translators_.reserve(numTranslators);
+  for (size_t cpuId = 0; cpuId < numTranslators; cpuId++) {
+    marian::DeviceId deviceId(cpuId, DeviceType::cpu);
+    translators_.emplace_back(deviceId, vocabs_, options, model_memory_);
+  }
+}
+
+void Service::initialize_blocking_translator() {
   translators_.back().initialize();
 }
 
@@ -40,15 +48,11 @@ void Service::blocking_translate() {
 }
 
 #ifdef WITH_PTHREADS
-void Service::initialize_async_translators(Ptr<Options> options) {
-  translators_.reserve(numWorkers_);
+void Service::initialize_async_translators() {
   workers_.reserve(numWorkers_);
 
   for (size_t cpuId = 0; cpuId < numWorkers_; cpuId++) {
-    marian::DeviceId deviceId(cpuId, DeviceType::cpu);
-    translators_.emplace_back(deviceId, vocabs_, options, model_memory_);
-    auto &translator = translators_.back();
-
+    auto &translator = translators_[cpuId];
     workers_.emplace_back([&translator, this] {
       translator.initialize();
 
@@ -74,7 +78,7 @@ void Service::async_translate() {
   }
 }
 #else  // WITH_PTHREADS
-void Service::initialize_async_translators(Ptr<Options> options) {
+void Service::initialize_async_translators() {
   ABORT("Cannot run in async mode without multithreading.");
 }
 

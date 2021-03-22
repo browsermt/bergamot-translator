@@ -27,6 +27,15 @@ void Service::initialize_blocking_translator(Ptr<Options> options) {
   translators_.back().initialize();
 }
 
+void Service::blocking_translate() {
+  Batch batch;
+  while (batcher_ >> batch) {
+    auto &translator = translators_.back();
+    translator.translate(batch);
+  }
+}
+
+#ifdef WITH_PTHREADS
 void Service::initialize_async_translators(Ptr<Options> options) {
   translators_.reserve(numWorkers_);
   workers_.reserve(numWorkers_);
@@ -54,20 +63,20 @@ void Service::initialize_async_translators(Ptr<Options> options) {
   }
 }
 
-void Service::blocking_translate() {
-  Batch batch;
-  while (batcher_ >> batch) {
-    auto &translator = translators_.back();
-    translator.translate(batch);
-  }
-}
-
 void Service::async_translate() {
   Batch batch;
   while (batcher_ >> batch) {
     pcqueue_.ProduceSwap(batch);
   }
 }
+#else  // WITH_PTHREADS
+void Service::initialize_async_translators(Ptr<Options> options) {
+  ABORT("Cannot run in async mode without multithreading.")
+}
+void Service::async_translate(Ptr<Options> options) {
+  ABORT("Cannot run in async mode without multithreading.")
+}
+#endif // WITH_PTHREADS
 
 std::future<Response> Service::translate(std::string &&input) {
   Segments segments;
@@ -91,7 +100,9 @@ std::future<Response> Service::translate(std::string &&input) {
 }
 
 Service::~Service() {
+#ifdef WITH_PTHREADS
   for (size_t workerId = 0; workerId < numWorkers_; workerId++) {
+
     Batch poison = Batch::poison();
     pcqueue_.ProduceSwap(poison);
   }
@@ -101,6 +112,7 @@ Service::~Service() {
       workers_[workerId].join();
     }
   }
+#endif
 }
 
 } // namespace bergamot

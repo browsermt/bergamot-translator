@@ -48,25 +48,26 @@ public:
 
 private:
   void initialize_blocking_translator(Ptr<Options> options);
-  void initialize_async_translators(Ptr<Options> options);
   void blocking_translate();
+  void initialize_async_translators(Ptr<Options> options);
   void async_translate();
 
-  // In addition to the common members (text_processor, requestId, vocabs_,
-  // batcher) extends with a producer-consumer queue, vector of translator
-  // instances owned by service each listening to the pcqueue in separate
-  // threads.
-
-  size_t numWorkers_;      // ORDER DEPENDENCY
-  PCQueue<Batch> pcqueue_; // ORDER DEPENDENCY
+  /// Number of workers to launch.
+  size_t numWorkers_; // ORDER DEPENDENCY (pcqueue_)
   const void *model_memory_;
-  std::vector<std::thread> workers_;
   std::vector<BatchTranslator> translators_;
 
   size_t requestId_;
-  std::vector<Ptr<Vocab const>> vocabs_; // ORDER DEPENDENCY
-  TextProcessor text_processor_;         // ORDER DEPENDENCY
+  std::vector<Ptr<Vocab const>> vocabs_; // ORDER DEPENDENCY (text_processor_)
+  TextProcessor text_processor_;         // ORDER DEPENDENCY (vocabs_)
   Batcher batcher_;
+
+  // The following constructs are required only if PTHREADS are enabled to
+  // provide WASM with a substandard-service.
+#ifdef WITH_PTHREADS
+  PCQueue<Batch> pcqueue_; // ORDER DEPENDENCY (numWorkers_)
+  std::vector<std::thread> workers_;
+#endif // WITH_PTHREADS
 };
 
 inline std::vector<Ptr<const Vocab>> loadVocabularies(Ptr<Options> options) {

@@ -12,7 +12,7 @@ Service::Service(Ptr<Options> options, const void *model_memory)
     : requestId_(0), vocabs_(std::move(loadVocabularies(options))),
       text_processor_(vocabs_, options), batcher_(options),
       numWorkers_(options->get<int>("cpu-threads")), model_memory_(model_memory)
-#ifdef WITH_PTHREADS
+#ifndef WASM_HIDE_THREADS
       ,
       pcqueue_(numWorkers_)
 #endif
@@ -47,7 +47,7 @@ void Service::blocking_translate() {
   }
 }
 
-#ifdef WITH_PTHREADS
+#ifndef WASM_HIDE_THREADS
 void Service::initialize_async_translators() {
   workers_.reserve(numWorkers_);
 
@@ -77,7 +77,7 @@ void Service::async_translate() {
     pcqueue_.ProduceSwap(batch);
   }
 }
-#else  // WITH_PTHREADS
+#else  // WASM_HIDE_THREADS
 void Service::initialize_async_translators() {
   ABORT("Cannot run in async mode without multithreading.");
 }
@@ -85,7 +85,7 @@ void Service::initialize_async_translators() {
 void Service::async_translate() {
   ABORT("Cannot run in async mode without multithreading.");
 }
-#endif // WITH_PTHREADS
+#endif // WASM_HIDE_THREADS
 
 std::future<Response> Service::translate(std::string &&input) {
   Segments segments;
@@ -109,7 +109,7 @@ std::future<Response> Service::translate(std::string &&input) {
 }
 
 Service::~Service() {
-#ifdef WITH_PTHREADS
+#ifndef WASM_HIDE_THREADS
   for (size_t workerId = 0; workerId < numWorkers_; workerId++) {
 
     Batch poison = Batch::poison();

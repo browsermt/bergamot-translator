@@ -12,7 +12,7 @@
 #include "translator/history.h"
 #include "translator/scorers.h"
 
-#ifdef WITH_PTHREADS
+#ifndef WASM_HIDE_THREADS
 #include "pcqueue.h"
 #endif
 

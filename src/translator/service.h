@@ -8,7 +8,7 @@
 #include "text_processor.h"
 #include "translator/parser.h"
 
-#ifdef WITH_PTHREADS
+#ifndef WASM_HIDE_THREADS
 #include "pcqueue.h"
 #endif
 
@@ -110,10 +110,10 @@ private:
 
   // The following constructs are required only if PTHREADS are enabled to
   // provide WASM with a substandard-service.
-#ifdef WITH_PTHREADS
+#ifndef WASM_HIDE_THREADS
   PCQueue<Batch> pcqueue_; // ORDER DEPENDENCY (numWorkers_)
   std::vector<std::thread> workers_;
-#endif // WITH_PTHREADS
+#endif // WASM_HIDE_THREADS
 };
 
 inline std::vector<Ptr<const Vocab>> loadVocabularies(Ptr<Options> options) {

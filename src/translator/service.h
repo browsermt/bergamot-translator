@@ -43,7 +43,6 @@ public:
   Ptr<Vocab const> targetVocab() const { return vocabs_.back(); }
 
   std::future<Response> translate(std::string &&input);
-  void stop() {}
 
   ~Service();
 

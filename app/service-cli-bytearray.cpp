@@ -30,9 +30,6 @@ int main(int argc, char *argv[]) {
   Response response = responseFuture.get();
   std::cout << response.translation() << std::endl;
 
-  // Stop Service.
-  service.stop();
-
   // Clear the memory used for the byte array
   free(model_bytes); // Ideally, this should be done after the translation model has been gracefully shut down.
 

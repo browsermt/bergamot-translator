@@ -24,9 +24,9 @@ std::future<Response> ServiceBase::translate(std::string &&input) {
   return future;
 }
 
-NonThreadedService::NonThreadedService(Ptr<Options> options)
+NonThreadedService::NonThreadedService(Ptr<Options> options, const void * model_memory)
     : ServiceBase(options),
-      translator_(DeviceId(0, DeviceType::cpu), vocabs_, options) {
+      translator_(DeviceId(0, DeviceType::cpu), vocabs_, options, model_memory) {
   translator_.initialize();
 }
 

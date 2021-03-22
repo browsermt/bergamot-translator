@@ -31,7 +31,11 @@ class Service : public ServiceBase {
   //  Response result = response.get();
 
 public:
-  explicit Service(Ptr<Options> options);
+  /**
+   * @param options Marian options object
+   * @param model_memory byte array (aligned to 64!!!) that contains the bytes of a model.bin. Optional, defaults to nullptr when not used
+   */
+  explicit Service(Ptr<Options> options, const void * model_memory=nullptr);
   // Implements enqueue and top through blocking methods.
   void stop() override;
   ~Service();
@@ -46,6 +50,7 @@ private:
 
   size_t numWorkers_;      // ORDER DEPENDENCY
   PCQueue<Batch> pcqueue_; // ORDER DEPENDENCY
+  const void * model_memory_;
   std::vector<std::thread> workers_;
   std::vector<BatchTranslator> translators_;
 };

@@ -51,6 +51,10 @@ public:
                    const void *model_memory = nullptr)
       : Service(parseOptions(config), model_memory) {}
 
+  /// Explicit destructor to clean up after any threads initialized in
+  /// asynchronous operation mode.
+  ~Service();
+
   /// Shared pointer to source-vocabulary.
   Ptr<Vocab const> sourceVocab() const { return vocabs_.front(); }
 
@@ -62,10 +66,6 @@ public:
   ///
   ///  @param [in] rvalue reference of string to be translated.
   std::future<Response> translate(std::string &&input);
-
-  /// Explicit destructor to clean up after any threads initialized in
-  /// asynchronous operation mode.
-  ~Service();
 
 private:
   /// Build numTranslators number of translators with options from options
@@ -108,8 +108,8 @@ private:
   /// packing-efficiency and priority optimization heuristics.
   Batcher batcher_;
 
-  // The following constructs are required only if PTHREADS are enabled to
-  // provide WASM with a substandard-service.
+  // The following constructs are available providing full capabilities on a non
+  // WASM platform, where one does not have to hide threads.
 #ifndef WASM_HIDE_THREADS
   PCQueue<Batch> pcqueue_; // ORDER DEPENDENCY (numWorkers_)
   std::vector<std::thread> workers_;

@@ -11,8 +11,12 @@ namespace bergamot {
 Service::Service(Ptr<Options> options, const void *model_memory)
     : requestId_(0), vocabs_(std::move(loadVocabularies(options))),
       text_processor_(vocabs_, options), batcher_(options),
-      numWorkers_(options->get<int>("cpu-threads")),
-      pcqueue_(numWorkers_), model_memory_{model_memory} {
+      numWorkers_(options->get<int>("cpu-threads")), model_memory_(model_memory)
+#ifdef WITH_PTHREADS
+      ,
+      pcqueue_(numWorkers_)
+#endif
+{
 
   if (numWorkers_ == 0) {
     initialize_blocking_translator(options);

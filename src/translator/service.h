@@ -7,6 +7,7 @@
 #include "pcqueue.h"
 #include "response.h"
 #include "text_processor.h"
+#include "translator/parser.h"
 
 #include <queue>
 #include <vector>
@@ -36,6 +37,10 @@ public:
    * of a model.bin. Optional, defaults to nullptr when not used
    */
   explicit Service(Ptr<Options> options, const void *model_memory = nullptr);
+
+  explicit Service(const std::string &config,
+                   const void *model_memory = nullptr)
+      : Service(parseOptions(config), model_memory) {}
 
   // Convenience accessor methods to extract these vocabulary outside service.
   // e.g: For use in decoding histories for marian-decoder replacement.

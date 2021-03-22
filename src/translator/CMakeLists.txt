@@ -30,9 +30,6 @@ else(COMPILE_WASM)
   target_compile_definitions(bergamot-translator PUBLIC)
 endif(COMPILE_WASM)
 
-
-
-
 target_link_libraries(bergamot-translator marian ssplit)
 
 target_include_directories(bergamot-translator

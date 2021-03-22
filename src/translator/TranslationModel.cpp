@@ -15,7 +15,7 @@
 // All local project includes
 #include "TranslationModel.h"
 #include "translator/parser.h"
-#include "translator/service_base.h"
+#include "translator/service.h"
 
 std::shared_ptr<marian::Options> parseOptions(const std::string &config) {
   marian::Options options;
@@ -50,7 +50,8 @@ std::shared_ptr<marian::Options> parseOptions(const std::string &config) {
   return std::make_shared<marian::Options>(options);
 }
 
-TranslationModel::TranslationModel(const std::string &config, const void * model_memory)
+TranslationModel::TranslationModel(const std::string &config,
+                                   const void *model_memory)
     : configOptions_(std::move(parseOptions(config))),
       AbstractTranslationModel(), service_(configOptions_, model_memory) {}
 

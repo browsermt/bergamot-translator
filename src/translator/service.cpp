@@ -8,14 +8,26 @@
 namespace marian {
 namespace bergamot {
 
-Service::Service(Ptr<Options> options, const void * model_memory)
-    : ServiceBase(options), numWorkers_(options->get<int>("cpu-threads")),
+Service::Service(Ptr<Options> options, const void *model_memory)
+    : requestId_(0), vocabs_(std::move(loadVocabularies(options))),
+      text_processor_(vocabs_, options), batcher_(options),
+      numWorkers_(options->get<int>("cpu-threads")),
       pcqueue_(numWorkers_), model_memory_{model_memory} {
-  if (numWorkers_ == 0) {
-    ABORT("Fatal: Attempt to create multithreaded instance with --cpu-threads "
-          "0. ");
-  }
 
+  if (numWorkers_ == 0) {
+    initialize_blocking_translator(options);
+  } else {
+    initialize_async_translators(options);
+  }
+}
+
+void Service::initialize_blocking_translator(Ptr<Options> options) {
+  DeviceId deviceId(0, DeviceType::cpu);
+  translators_.emplace_back(deviceId, vocabs_, options, model_memory_);
+  translators_.back().initialize();
+}
+
+void Service::initialize_async_translators(Ptr<Options> options) {
   translators_.reserve(numWorkers_);
   workers_.reserve(numWorkers_);
 
@@ -42,29 +54,54 @@ Service::Service(Ptr<Options> options, const void * model_memory)
   }
 }
 
-void Service::enqueue() {
+void Service::blocking_translate() {
+  Batch batch;
+  while (batcher_ >> batch) {
+    auto &translator = translators_.back();
+    translator.translate(batch);
+  }
+}
+
+void Service::async_translate() {
   Batch batch;
   while (batcher_ >> batch) {
     pcqueue_.ProduceSwap(batch);
   }
 }
 
-void Service::stop() {
-  for (auto &worker : workers_) {
+std::future<Response> Service::translate(std::string &&input) {
+  Segments segments;
+  SentenceRanges sourceRanges;
+  text_processor_.process(input, segments, sourceRanges);
+
+  std::promise<Response> responsePromise;
+  auto future = responsePromise.get_future();
+
+  Ptr<Request> request = New<Request>(
+      requestId_++, /* lineNumberBegin = */ 0, vocabs_, std::move(input),
+      std::move(segments), std::move(sourceRanges), std::move(responsePromise));
+
+  batcher_.addWholeRequest(request);
+  if (numWorkers_ == 0) {
+    blocking_translate();
+  } else {
+    async_translate();
+  }
+  return future;
+}
+
+Service::~Service() {
+  for (size_t workerId = 0; workerId < numWorkers_; workerId++) {
     Batch poison = Batch::poison();
     pcqueue_.ProduceSwap(poison);
   }
 
-  for (auto &worker : workers_) {
-    if (worker.joinable()) {
-      worker.join();
+  for (size_t workerId = 0; workerId < numWorkers_; workerId++) {
+    if (workers_[workerId].joinable()) {
+      workers_[workerId].join();
     }
   }
-
-  workers_.clear();
 }
-
-Service::~Service() { stop(); }
 
 } // namespace bergamot
 } // namespace marian

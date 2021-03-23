@@ -32,7 +32,7 @@ Service::Service(Ptr<Options> options, const void *model_memory)
     : requestId_(0), vocabs_(std::move(loadVocabularies(options))),
       text_processor_(vocabs_, options), batcher_(options),
       numWorkers_(options->get<int>("cpu-threads")), model_memory_(model_memory)
-#ifndef __EMSCRIPTEN__
+#ifndef WASM
       // 0 elements in PCQueue is illegal and can lead to failures. Adding a
       // guard to have at least one entry allocated. In the single-threaded
       // case, while initialized pcqueue_ remains unused.
@@ -70,7 +70,7 @@ void Service::blocking_translate() {
   }
 }
 
-#ifndef __EMSCRIPTEN__
+#ifndef WASM
 void Service::initialize_async_translators() {
   workers_.reserve(numWorkers_);
 
@@ -100,7 +100,7 @@ void Service::async_translate() {
     pcqueue_.ProduceSwap(batch);
   }
 }
-#else  // __EMSCRIPTEN__
+#else  // WASM
 void Service::initialize_async_translators() {
   ABORT("Cannot run in async mode without multithreading.");
 }
@@ -108,7 +108,7 @@ void Service::initialize_async_translators() {
 void Service::async_translate() {
   ABORT("Cannot run in async mode without multithreading.");
 }
-#endif // __EMSCRIPTEN__
+#endif // WASM
 
 std::future<Response> Service::translate(std::string &&input) {
   Segments segments;
@@ -132,7 +132,7 @@ std::future<Response> Service::translate(std::string &&input) {
 }
 
 Service::~Service() {
-#ifndef __EMSCRIPTEN__
+#ifndef WASM
   for (size_t workerId = 0; workerId < numWorkers_; workerId++) {
 
     Batch poison = Batch::poison();

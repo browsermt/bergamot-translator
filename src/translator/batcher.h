@@ -7,7 +7,7 @@
 #include "definitions.h"
 #include "request.h"
 
-#ifndef __EMSCRIPTEN__
+#ifndef WASM
 #include "pcqueue.h"
 #endif
 

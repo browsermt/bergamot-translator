@@ -8,7 +8,7 @@
 #include "text_processor.h"
 #include "translator/parser.h"
 
-#ifndef __EMSCRIPTEN__
+#ifndef WASM
 #include "pcqueue.h"
 #endif
 
@@ -111,10 +111,10 @@ private:
 
   // The following constructs are available providing full capabilities on a non
   // WASM platform, where one does not have to hide threads.
-#ifndef __EMSCRIPTEN__
+#ifndef WASM
   PCQueue<Batch> pcqueue_; // ORDER DEPENDENCY (numWorkers_)
   std::vector<std::thread> workers_;
-#endif // __EMSCRIPTEN__
+#endif // WASM
 };
 
 } // namespace bergamot

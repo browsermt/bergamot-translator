@@ -8,7 +8,11 @@
 #include "request.h"
 #include "request_tracker.h"
 
+#ifndef WASM
+#include "pcqueue.h"
 #include <mutex>
+#endif
+
 #include <set>
 #include <vector>
 

@@ -16,7 +16,7 @@
 
 // All local project includes
 #include "AbstractTranslationModel.h"
-#include "translator/service_base.h"
+#include "translator/service.h"
 
 /* A Translation model that translates a plain (without any markups and emojis)
  * UTF-8 encoded text. This implementation supports translation from 1 source
@@ -27,7 +27,13 @@ public:
   /* Construct the model using the model configuration options as yaml-formatted
    * string
    */
-  TranslationModel(const std::string &config);
+  /**
+   * @param config Marian yml config file in the form of a string
+   * @param model_memory optional byte array (aligned to 64!!!) that contains
+   * the bytes of a model.bin.
+   */
+  TranslationModel(const std::string &config,
+                   const void *model_memory = nullptr);
 
   ~TranslationModel();
 
@@ -65,7 +71,7 @@ public:
 private:
   // Model configuration options
   std::shared_ptr<marian::Options> configOptions_; // ORDER DEPENDECNY
-  marian::bergamot::NonThreadedService service_;   // ORDER DEPENDENCY
+  marian::bergamot::Service service_;              // ORDER DEPENDENCY
 };
 
 #endif /* SRC_TRANSLATOR_TRANSLATIONMODEL_H_ */

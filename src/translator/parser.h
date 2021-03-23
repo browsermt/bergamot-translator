@@ -1,6 +1,10 @@
 #ifndef SRC_BERGAMOT_PARSER_H
 #define SRC_BERGAMOT_PARSER_H
 
+#include "3rd_party/yaml-cpp/yaml.h"
+#include "common/config_parser.h"
+#include "common/config_validator.h"
+#include "common/options.h"
 #include "marian.h"
 #include <cstdint>
 
@@ -26,6 +30,40 @@ inline marian::ConfigParser createConfigParser() {
                     INT_MAX);
 
   return cp;
+}
+
+inline std::shared_ptr<marian::Options>
+parseOptions(const std::string &config) {
+  marian::Options options;
+
+  // @TODO(jerinphilip) There's something off here, @XapaJIaMnu suggests
+  // that should not be using the defaultConfig. This function only has access
+  // to std::string config and needs to be able to construct Options from the
+  // same.
+
+  // Absent the following code-segment, there is a parsing exception thrown on
+  // rebuilding YAML.
+  //
+  // Error: Unhandled exception of type 'N4YAML11InvalidNodeE': invalid node;
+  // this may result from using a map iterator as a sequence iterator, or
+  // vice-versa
+  //
+  // Error: Aborted from void unhandledException() in
+  // 3rd_party/marian-dev/src/common/logging.cpp:113
+
+  marian::ConfigParser configParser = createConfigParser();
+  const YAML::Node &defaultConfig = configParser.getConfig();
+
+  options.merge(defaultConfig);
+
+  // Parse configs onto defaultConfig.
+  options.parse(config);
+  YAML::Node configCopy = options.cloneToYamlNode();
+
+  marian::ConfigValidator validator(configCopy);
+  validator.validateOptions(marian::cli::mode::translation);
+
+  return std::make_shared<marian::Options>(options);
 }
 
 } //  namespace bergamot

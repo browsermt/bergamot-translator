@@ -33,8 +33,11 @@ Service::Service(Ptr<Options> options, const void *model_memory)
       text_processor_(vocabs_, options), batcher_(options),
       numWorkers_(options->get<int>("cpu-threads")), model_memory_(model_memory)
 #ifndef WASM_HIDE_THREADS
+      // 0 elements in PCQueue is illegal and can lead to failures. Adding a
+      // guard to have at least one entry allocated. In the single-threaded
+      // case, while initialized pcqueue_ remains unused.
       ,
-      pcqueue_(numWorkers_)
+      pcqueue_(std::max<size_t>(1, numWorkers_))
 #endif
 {
 

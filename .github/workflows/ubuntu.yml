@@ -103,13 +103,11 @@ jobs:
       working-directory: build
       run: make -j2
 
-    # Removing unit-tests, taken care of in browsermt/marian-dev
-    # TODO: add a flag to CMake to compile unit tests only on CPU
-    # - name: Run unit tests
-    #   working-directory: build
-    #   run: make test
-    #   # GitHub-hosted VMs do not have GPUs, so can not be run in CUDA builds
-    #   if: matrix.gpu == false
+    - name: Run unit tests
+      working-directory: build
+      run: make test
+      # GitHub-hosted VMs do not have GPUs, so can not be run in CUDA builds
+      if: matrix.gpu == false
 
     - name: Print versions
       working-directory: build

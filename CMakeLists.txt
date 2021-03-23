@@ -14,9 +14,9 @@ include(CMakeDependentOption)
 # Project specific cmake options
 option(COMPILE_WASM "Compile for WASM" OFF)
 option(USE_WASM_COMPATIBLE_SOURCES "Use wasm compatible sources" ON)
+
 SET(PACKAGE_DIR "" CACHE STRING "Directory including all the files to be packaged (pre-loaded) in wasm builds")
 
-option(COMPILE_BERGAMOT_TESTS "Compile tests" ON)
 
 # Set marian (3rd party submodule) cmake options to compile for this project
 SET(COMPILE_CUDA OFF CACHE BOOL "Compile GPU version")
@@ -30,7 +30,6 @@ if (USE_WASM_COMPATIBLE_SOURCES)
   SET(COMPILE_WITH_PTHREADS OFF CACHE BOOL "Compile with pthreads support")
   SET(USE_WASM_COMPATIBLE_BLAS ON CACHE BOOL "Compile with a WASM compatible blas for decoder only builds")
   SET(COMPILE_WITHOUT_EXCEPTIONS ON CACHE BOOL "Compile without exceptions")
-  SET(COMPILE_BERGAMOT_TESTS OFF CACHE BOOL "Do not compile tests which use Catch from marian disabled for WASM")
   if(COMPILE_WASM)
     # Set WORMHOLE to ON for marian whenever compiling for wasm platform
     SET(WORMHOLE ON CACHE BOOL "Use WASM wormhole in intgemm https://bugzilla.mozilla.org/show_bug.cgi?id=1672160")
@@ -39,6 +38,7 @@ endif()
 # Set ssplit (3rd party submodule) cmake options to compile for this project
 CMAKE_DEPENDENT_OPTION(USE_INTERNAL_PCRE2 "Use internal PCRE2 instead of system PCRE2" ON
                        "USE_WASM_COMPATIBLE_SOURCES" OFF)
+CMAKE_DEPENDENT_OPTION(COMPILE_BERGAMOT_TESTS "Compile tests" OFF "COMPILE_WASM" ON)
 
 # Documentation: https://cliutils.gitlab.io/modern-cmake/chapters/projects/submodule.html
 # Ensures the submodules are set correctly during a build.

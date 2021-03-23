@@ -1,6 +1,6 @@
-[submodule "3rd_party/ssplit-cpp"]
-	path = 3rd_party/ssplit-cpp
-	url = https://github.com/abhi-agg/ssplit-cpp
 [submodule "3rd_party/marian-dev"]
 	path = 3rd_party/marian-dev
 	url = https://github.com/browsermt/marian-dev
+[submodule "3rd_party/ssplit-cpp"]
+	path = 3rd_party/ssplit-cpp
+	url = https://github.com/browsermt/ssplit-cpp

@@ -76,7 +76,5 @@ int main(int argc, char *argv[]) {
   std::cout << "--------------------------\n";
   std::cout << '\n';
 
-  // Stop Service.
-  service.stop();
   return 0;
 }

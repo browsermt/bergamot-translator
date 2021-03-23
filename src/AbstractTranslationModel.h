@@ -28,8 +28,12 @@ public:
    * AbstractTranslationModel. The instance is created using translation model
    * configuration provided as yaml-formatted string.
    */
+  /**
+   * @param config Marian yml config file in the form of a string
+   * @param model_memory byte array (aligned to 64!!!) that contains the bytes of a model.bin. Optional, defaults to nullptr when not used
+   */
   static std::shared_ptr<AbstractTranslationModel>
-  createInstance(const std::string &config);
+  createInstance(const std::string &config, const void * model_memory=nullptr);
 
   AbstractTranslationModel() = default;
 

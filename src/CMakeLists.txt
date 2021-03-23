@@ -1,7 +1,7 @@
 add_subdirectory(translator)
 
-if(COMPILE_BERGAMOT_TESTS)
+if(COMPILE_TESTS)
   # Catch currently comes from marian sources.
   add_subdirectory(tests)
-endif(COMPILE_BERGAMOT_TESTS)
+endif(COMPILE_TESTS)
 

@@ -14,6 +14,7 @@ include(CMakeDependentOption)
 # Project specific cmake options
 option(COMPILE_WASM "Compile for WASM" OFF)
 option(USE_WASM_COMPATIBLE_SOURCES "Use wasm compatible sources" ON)
+option(COMPILE_TESTS "Compile bergamot-tests" OFF)
 
 SET(PACKAGE_DIR "" CACHE STRING "Directory including all the files to be packaged (pre-loaded) in wasm builds")
 
@@ -38,7 +39,6 @@ endif()
 # Set ssplit (3rd party submodule) cmake options to compile for this project
 CMAKE_DEPENDENT_OPTION(USE_INTERNAL_PCRE2 "Use internal PCRE2 instead of system PCRE2" ON
                        "USE_WASM_COMPATIBLE_SOURCES" OFF)
-CMAKE_DEPENDENT_OPTION(COMPILE_BERGAMOT_TESTS "Compile tests" OFF "COMPILE_WASM" ON)
 
 # Documentation: https://cliutils.gitlab.io/modern-cmake/chapters/projects/submodule.html
 # Ensures the submodules are set correctly during a build.
@@ -77,6 +77,6 @@ else()
   add_subdirectory(app)
 endif(COMPILE_WASM)
 
-if(COMPILE_BERGAMOT_TESTS)
+if(COMPILE_TESTS)
     enable_testing()
-endif(COMPILE_BERGAMOT_TESTS)
+endif(COMPILE_TESTS)

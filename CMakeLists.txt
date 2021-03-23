@@ -68,6 +68,11 @@ if(COMPILE_WASM)
   list(APPEND WASM_COMPILE_FLAGS -Wno-error=pthreads-mem-growth)
 endif(COMPILE_WASM)
 
+# Needs to be enabled before including the folder containing tests (src/tests)
+if(COMPILE_TESTS)
+    enable_testing()
+endif(COMPILE_TESTS)
+
 add_subdirectory(3rd_party)
 add_subdirectory(src)
 
@@ -77,6 +82,3 @@ else()
   add_subdirectory(app)
 endif(COMPILE_WASM)
 
-if(COMPILE_TESTS)
-    enable_testing()
-endif(COMPILE_TESTS)

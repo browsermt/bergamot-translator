@@ -30,6 +30,7 @@ if (USE_WASM_COMPATIBLE_SOURCES)
   SET(COMPILE_WITH_PTHREADS OFF CACHE BOOL "Compile with pthreads support")
   SET(USE_WASM_COMPATIBLE_BLAS ON CACHE BOOL "Compile with a WASM compatible blas for decoder only builds")
   SET(COMPILE_WITHOUT_EXCEPTIONS ON CACHE BOOL "Compile without exceptions")
+  SET(COMPILE_BERGAMOT_TESTS OFF CACHE BOOL "Do not compile tests which use Catch from marian disabled for WASM")
   if(COMPILE_WASM)
     # Set WORMHOLE to ON for marian whenever compiling for wasm platform
     SET(WORMHOLE ON CACHE BOOL "Use WASM wormhole in intgemm https://bugzilla.mozilla.org/show_bug.cgi?id=1672160")

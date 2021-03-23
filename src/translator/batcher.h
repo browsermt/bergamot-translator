@@ -7,7 +7,7 @@
 #include "definitions.h"
 #include "request.h"
 
-#ifndef WASM_HIDE_THREADS
+#ifndef __EMSCRIPTEN__
 #include "pcqueue.h"
 #endif
 

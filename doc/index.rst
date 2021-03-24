@@ -1,5 +1,5 @@
 Welcome to Bergamot Translator's documentation!
-==================================
+===============================================
 
 |buildcpu| |tests| |release| |license|
 

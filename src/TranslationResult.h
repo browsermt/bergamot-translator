@@ -1,7 +1,7 @@
 /*
  * TranslationResult.h
  *
- * The class that represents the result of AbstractTranslationModel::translate()
+ * The class that represents the result of TranslationModel::translate()
  * API for each of its text entry and TranslationRequest.
  */
 
@@ -13,7 +13,7 @@
 
 #include "QualityScore.h"
 
-/* This class represents the result of AbstractTranslationModel::translate() API
+/* This class represents the result of TranslationModel::translate() API
  * for each of its text entry and TranslationRequest.
  */
 class TranslationResult {

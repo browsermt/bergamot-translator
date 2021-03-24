@@ -1,7 +1,7 @@
 /*
  * TranslationModel.h
  *
- *  A implementation of AbstractTranslationModel interface.
+ * Main interface for translation API.
  */
 
 #ifndef SRC_TRANSLATOR_TRANSLATIONMODEL_H_
@@ -15,14 +15,15 @@
 #include "3rd_party/marian-dev/src/common/options.h"
 
 // All local project includes
-#include "AbstractTranslationModel.h"
+#include "TranslationRequest.h"
+#include "TranslationResult.h"
 #include "translator/service.h"
 
 /* A Translation model that translates a plain (without any markups and emojis)
  * UTF-8 encoded text. This implementation supports translation from 1 source
  * language to 1 target language.
  */
-class TranslationModel : public AbstractTranslationModel {
+class TranslationModel {
 public:
   /* Construct the model using the model configuration options as yaml-formatted
    * string
@@ -62,11 +63,11 @@ public:
    * object).
    */
   std::vector<TranslationResult> translate(std::vector<std::string> &&texts,
-                                           TranslationRequest request) override;
+                                           TranslationRequest request);
 
   /* Check if the model can provide alignment information b/w original and
    * translated text. */
-  bool isAlignmentSupported() const override;
+  bool isAlignmentSupported() const;
 
 private:
   // Model configuration options

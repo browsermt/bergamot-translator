@@ -2,7 +2,7 @@
  * TranslationRequest.h
  *
  *  This file defines the translation request class to be used in
- * AbstractTranslationModel::translate() API.
+ *  TranslationModel::translate() API.
  */
 
 #ifndef SRC_TRANSLATOR_TRANSLATIONREQUEST_H_

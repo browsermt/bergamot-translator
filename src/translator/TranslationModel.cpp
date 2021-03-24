@@ -13,7 +13,7 @@
 
 TranslationModel::TranslationModel(const std::string &config,
                                    const void *model_memory)
-    : AbstractTranslationModel(), service_(config, model_memory) {}
+    : service_(config, model_memory) {}
 
 TranslationModel::~TranslationModel() {}
 

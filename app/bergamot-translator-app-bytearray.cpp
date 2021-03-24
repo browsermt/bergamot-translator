@@ -7,9 +7,7 @@
 
 #include <iostream>
 
-#include "AbstractTranslationModel.h"
-#include "TranslationRequest.h"
-#include "TranslationResult.h"
+#include "TranslationModel.h"
 #include "translator/parser.h"
 #include "translator/byteArrayExample.h"
 
@@ -21,11 +19,9 @@ int main(int argc, char **argv) {
   auto options = configParser.parseOptions(argc, argv, true);
   std::string config = options->asYamlString();
 
-  // Route the config string to construct marian model through
-  // AbstractTranslationModel
+  // Route the config string to construct marian model through TranslationModel
   void * model_bytes = bergamot::getBinaryModelFromConfig(options);
-  std::shared_ptr<AbstractTranslationModel> model =
-      AbstractTranslationModel::createInstance(config, model_bytes);
+  auto model = std::make_shared<TranslationModel>(config, model_bytes);
 
   TranslationRequest translationRequest;
   std::vector<std::string> texts;

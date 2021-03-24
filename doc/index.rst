@@ -1,23 +1,22 @@
-Welcome to Marian's documentation!
+Welcome to Bergamot Translator's documentation!
 ==================================
 
-|buildgpu| |buildcpu| |tests| |release| |license|
+|buildcpu| |tests| |release| |license|
 
-Marian is an efficient and self-contained Neural Machine Translation framework with an integrated
-automatic differentiation engine based on dynamic computation graphs, written entirely in C++.
+Bergamot translator provides a unified API for (Marian NMT framework based)
+neural machine translation functionality in accordance with the Bergamot
+project that focuses on improving client-side machine translation in a web
+browser.
 
-This is developer documentation. User documentation is available at https://marian-nmt.github.io/docs/
+This is developer documentation. 
 
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
 
-   graph
-   operators
-
+   marian-integration
    api/library_index
 
-   contributing
 
 
 Indices and tables
@@ -26,22 +25,14 @@ Indices and tables
 * :ref:`genindex`
 
 
-.. |buildgpu| image:: https://img.shields.io/jenkins/s/http/vali.inf.ed.ac.uk/jenkins/view/marian/job/marian-dev-cuda-10.1.svg?label=CUDAC%20Build
-   :target: http://vali.inf.ed.ac.uk/jenkins/job/marian-dev/
-   :alt: GPU build status
-
-.. |buildcpu| image:: https://img.shields.io/jenkins/s/http/vali.inf.ed.ac.uk/jenkins/view/marian/job/marian-dev-cpu.svg?label=CPU%20Build
-   :target: http://vali.inf.ed.ac.uk/jenkins/job/marian-dev-cpu/
+.. |buildcpu| image:: https://img.shields.io/jenkins/s/http/vali.inf.ed.ac.uk/jenkins/view/browsermt/job/bergamot-translator.svg?label=CPU%20Build
+   :target: http://vali.inf.ed.ac.uk/jenkins/job/bergamot-translator
    :alt: CPU build status
 
-.. |tests| image:: https://img.shields.io/jenkins/s/http/vali.inf.ed.ac.uk/jenkins/view/marian/job/marian-regression-tests.svg?label=Tests
-   :target: http://vali.inf.ed.ac.uk/jenkins/job/marian-regression-tests/
+.. |tests| image:: https://img.shields.io/jenkins/s/http/vali.inf.ed.ac.uk/jenkins/view/marian/job/bergamot-translator-regression-tests.svg?label=Tests
+   :target: http://vali.inf.ed.ac.uk/jenkins/job/bergamot-translator-regression-tests/
    :alt: Tests status
 
-.. |release| image:: https://img.shields.io/github/release/marian-nmt/marian.svg?label=Release
-   :target: https://github.com/marian-nmt/marian/releases
-   :alt: Latest release
-
-.. |license| image:: https://img.shields.io/badge/License-MIT-blue.svg
-   :target: ../LICENSE.md
-   :alt: License: MIT
+.. |license| image:: https://img.shields.io/badge/License-MPL%202.0-brightgreen.svg
+   :target: https://opensource.org/licenses/MPL-2.0
+   :alt: License: MPL

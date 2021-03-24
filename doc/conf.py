@@ -25,7 +25,7 @@ author = 'Bergamot Translator Team'
 
 # The full version, including alpha/beta/rc tags
 # TODO: add GitHub commit hash to the version
-version_file = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'VERSION')
+version_file = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'BERGAMOT_VERSION')
 with open(os.path.abspath(version_file)) as f:
     version = f.read().strip()
 release = version + ' ' + str(datetime.date.today())

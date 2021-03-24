@@ -17,11 +17,14 @@ struct ByteRange {
   const size_t size() const { return end_byte_offset - begin_byte_offset + 1; }
 };
 
-/// An Annotation is a collection of ByteRanges used to denote  ancillary
-/// information of sentences and words on a blob of string .
+/// An Annotation is a collection of ByteRanges used to denote ancillary
+/// information of sentences and words on a blob of string. Annotation is meant
+/// for consumption on platforms where string_view creates problems (eg: exports
+/// through WASM). See AnnotatedBlob for cases where this is a non-issue.
 class Annotation {
 public:
-  /// Allow empty construction.
+  /// Annotation is constructed empty. See addSentence to populate it with
+  /// annotations.
   Annotation() {}
 
   /// Returns the number of sentences annotated in a blob.
@@ -31,7 +34,7 @@ public:
   size_t numWords(size_t sentenceIdx) const;
 
   /// Adds a sentences from vector<ByteRange> representation, internally doing
-  /// extra bookkeeping for the sentence terminal markings.
+  /// extra book-keeping for the sentence terminal markings.
   void addSentence(std::vector<ByteRange> &sentence);
 
   /// Returns a ByteRange representing wordIdx in sentenceIdx
@@ -56,28 +59,41 @@ private:
 };
 
 /// AnnotatedBlob is effectively std::string blob + Annotation, providing the
-/// following two capabilities.
+/// following additional desiderata.
 ///
-/// 1. There exist accessor methods which returns string_views rather than
-/// ByteRanges.
+/// 1. Access to processed string_views for convenience rather than ByteRanges
+/// (which only provides index information).
 ///
-/// 2. Transparently converts string_views into ByteRanges for the Annotation
-/// referring to the blob.
+/// 2. Transparently convert string_views into ByteRanges for the Annotation
+/// referring to the blob bound by this structure.
+///
+/// 3. Bind the blob and annotations together, to move around as a meaningful
+/// unit.
 
 struct AnnotatedBlob {
 public:
-  std::string blob;
-  Annotation annotation;
+  std::string blob;      ///< Blob of string elements in annotation refers to.
+  Annotation annotation; ///< sentence and (sub-) word annotations.
 
+  /// Construct an empty AnnotatedBlob. This is useful when the target string or
+  /// ByteRanges are not known yet, but the public members can be used to
+  /// populate it. One use-case, when translated-text is created decoding from
+  /// histories and the ByteRanges only known after the string has been
+  /// constructed.
   AnnotatedBlob() {}
-  // AnnotatedBlob(std::string blob) : blob(blob){};
+
+  /// Construct moving in a string (for efficiency purposes, copying string
+  /// constructor is disallowed).
   AnnotatedBlob(std::string &&blob) : blob(std::move(blob)){};
+
   AnnotatedBlob(AnnotatedBlob &&annotatedBlob)
       : blob(std::move(annotatedBlob.blob)),
         annotation(std::move(annotatedBlob.annotation)) {}
 
   /// Returns the number of sentences in the annotation structure.
   const size_t numSentences() const { return annotation.numSentences(); }
+
+  /// Returns number of words in the sentece identified by sentenceIdx.
   const size_t numWords(size_t sentenceIdx) const {
     return annotation.numWords(sentenceIdx);
   }

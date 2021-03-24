@@ -19,9 +19,9 @@ sys.path.insert(0, os.path.abspath('.'))
 
 # -- Project information -----------------------------------------------------
 
-project = 'Marian NMT'
-copyright = '2021, Marian NMT Team'
-author = 'Marian NMT Team'
+project = 'Bergamot Translator'
+copyright = '2021, Bergamot Translator Team'
+author = 'Bergamot Translator Team'
 
 # The full version, including alpha/beta/rc tags
 # TODO: add GitHub commit hash to the version
@@ -64,7 +64,7 @@ exclude_patterns = [
 # a list of builtin themes.
 #
 html_theme = 'sphinx_rtd_theme'
-htmlhelp_basename = 'marian'
+htmlhelp_basename = 'bergamot-translator'
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
@@ -73,13 +73,13 @@ html_static_path = ['_static']
 html_css_files = ['css/custom.css']
 
 # The base URL which points to the root of the HTML documentation
-html_baseurl = 'http://marian-nmt.github.io/docs/api'
+html_baseurl = 'http://jerinphilip.github.io/bergamot-translator'
 
 
 # -- Extension configuration -------------------------------------------------
 
-breathe_projects = { 'marian': './doxygen/xml' }
-breathe_default_project = 'marian'
+breathe_projects = { 'bergamot-translator': './doxygen/xml' }
+breathe_default_project = 'bergamot-translator'
 
 doxygen_config = """
 INPUT                = ../src

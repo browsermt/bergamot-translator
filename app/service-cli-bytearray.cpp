@@ -16,7 +16,10 @@ int main(int argc, char *argv[]) {
   auto options = cp.parseOptions(argc, argv, true);
 
   void * model_bytes = bergamot::getBinaryModelFromConfig(options);
-  marian::bergamot::Service service(options, model_bytes);
+  size_t model_memory_size = 0; // place-holder for size of model bytes
+  std::vector<char> shortlist_bytes = bergamot::getBinaryShortlistFromConfig(options);
+  marian::bergamot::Service service(options, model_bytes, model_memory_size,
+                                    shortlist_bytes.data(), shortlist_bytes.size());
 
   // Read a large input text blob from stdin
   std::ostringstream std_input;

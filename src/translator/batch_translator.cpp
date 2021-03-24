@@ -11,17 +11,30 @@ namespace bergamot {
 BatchTranslator::BatchTranslator(DeviceId const device,
                                  std::vector<Ptr<Vocab const>> &vocabs,
                                  Ptr<Options> options,
-                                 const void * model_memory)
-    : device_(device), options_(options), vocabs_(&vocabs), model_memory_(model_memory) {}
+                                 const void * model_memory,
+                                 const size_t model_memory_size,
+                                 const void * shortlist_memory,
+                                 const size_t shortlist_memory_size)
+    : device_(device), options_(options), vocabs_(&vocabs),
+    model_memory_(model_memory), model_memory_size_(model_memory_size),
+    shortlist_memory_(shortlist_memory), shortlist_memory_size_(shortlist_memory_size) {}
 
 void BatchTranslator::initialize() {
   // Initializes the graph.
   if (options_->hasAndNotEmpty("shortlist")) {
     int srcIdx = 0, trgIdx = 1;
     bool shared_vcb = vocabs_->front() == vocabs_->back();
-    slgen_ = New<data::LexicalShortlistGenerator>(options_, vocabs_->front(),
-                                                  vocabs_->back(), srcIdx,
-                                                  trgIdx, shared_vcb);
+    if (shortlist_memory_ != nullptr && shortlist_memory_size_ > 0) {
+        bool check = true;  // Whether to verify the shortlist content (not sure how to deal with this flag)
+        slgen_ = New<data::BinaryShortlistGenerator>(shortlist_memory_, shortlist_memory_size_,
+                                                     vocabs_->front(), vocabs_->back(),
+                                                     srcIdx, trgIdx, shared_vcb, check);
+    }
+    else {
+      slgen_ = New<data::LexicalShortlistGenerator>(options_, vocabs_->front(),
+                                                    vocabs_->back(), srcIdx,
+                                                    trgIdx, shared_vcb);
+    }
   }
 
   graph_ = New<ExpressionGraph>(true); // always optimize

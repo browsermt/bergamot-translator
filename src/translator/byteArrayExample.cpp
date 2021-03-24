@@ -42,4 +42,25 @@ void * getBinaryModelFromConfig(marian::Ptr<marian::Options> options) {
     }
 }
 
+std::vector<char> getBinaryShortlistFromFile(const std::string& filename){
+    std::ifstream input(filename, std::ios::binary);
+    if (input.bad()){
+        std::cerr << "Failed opening file: " << filename << std::endl;
+        std::exit(1);
+    }
+    std::vector<char> blob(std::istreambuf_iterator<char>(input), {});
+    return blob;
+}
+
+std::vector<char> getBinaryShortlistFromConfig(marian::Ptr<marian::Options> options){
+    std::vector<std::string> vals = options->get<std::vector<std::string>>("shortlist");
+    if (vals.empty()){
+        std::cerr << "No path to shortlist file given" << std::endl;
+        std::exit(1);
+    }
+    std::string filename = vals[0];
+    std::vector<char> shortlist_memory = getBinaryShortlistFromFile(filename);
+    return shortlist_memory;
+}
+
 } // namespace bergamot

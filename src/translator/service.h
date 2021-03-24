@@ -40,7 +40,8 @@ public:
   /// @param options Marian options object
   /// @param model_memory byte array (aligned to 64!!!) that contains the bytes
   /// of a model.bin. Optional, defaults to nullptr when not used
-  explicit Service(Ptr<Options> options, const void *model_memory = nullptr);
+  explicit Service(Ptr<Options> options, const void *model_memory = nullptr, size_t model_memory_size = 0,
+                   const void *shortlist_memory = nullptr, size_t shortlist_memory_size = 0);
 
   /// Construct Service from a string configuration.
   /// @param [in] config string parsable as YAML expected to adhere with marian
@@ -87,7 +88,9 @@ private:
   /// Number of workers to launch.
   size_t numWorkers_;        // ORDER DEPENDENCY (pcqueue_)
   const void *model_memory_; /// Model memory to load model passed as bytes.
-
+  const size_t model_memory_size_;
+  const void *shortlist_memory_;
+  const size_t shortlist_memory_size_;
   /// Holds instances of batch translators, just one in case
   /// of single-threaded application, numWorkers_ in case of multithreaded
   /// setting.

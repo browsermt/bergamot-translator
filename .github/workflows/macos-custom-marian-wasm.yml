@@ -33,6 +33,10 @@ jobs:
         working-directory: build-wasm
         run: emmake make -j2
 
+      - name: Instantiate simd wormhole
+        working-directory: build-wasm
+        run: bash ../wasm/patch-artifacts-enable-wormhole.sh
+
       - name: Check artifacts
         working-directory: build-wasm
         run: |

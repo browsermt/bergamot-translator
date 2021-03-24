@@ -46,8 +46,8 @@ Bergamot translator provides a unified API for ([Marian NMT](https://marian-nmt.
     If you want to package bergamot project specific models, please follow these instructions:
     ```bash
     mkdir models
-    git clone https://github.com/mozilla-applied-ml/bergamot-models
-    cp -rf bergamot-models/* models
+    git clone --depth 1 --branch main --single-branch https://github.com/mozilla-applied-ml/bergamot-models
+    cp -rf bergamot-models/prod/* models
     gunzip models/*/*
     ```
 
@@ -75,11 +75,16 @@ Bergamot translator provides a unified API for ([Marian NMT](https://marian-nmt.
             emmake make -j
             ```
 
-    The artefacts (.js and .wasm files) will be available in `wasm` folder of build directory ("build-wasm" in this case).
+        The wasm artifacts (.js and .wasm files) will be available in `wasm` folder of build directory ("build-wasm" in this case).
+
+    3. Enable SIMD Wormhole via Wasm instantiation API in generated artifacts
+        ```bash
+        bash ../wasm/patch-artifacts-enable-wormhole.sh
+        ```
 
 #### Recompiling
-As long as you don't update any submodule, just follow steps in `4.ii` to recompile.\
-If you update a submodule, execute following command before executing steps in `4.ii` to recompile.
+As long as you don't update any submodule, just follow steps in `4.ii` and `4.iii` to recompile.\
+If you update a submodule, execute following command before executing steps in `4.ii` and `4.iii` to recompile.
 ```bash
 git submodule update --init --recursive
 ```

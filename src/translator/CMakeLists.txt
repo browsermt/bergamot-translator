@@ -1,5 +1,4 @@
 add_library(bergamot-translator STATIC
-    AbstractTranslationModel.cpp
     TranslationModel.cpp
 
     byteArrayExample.cpp
@@ -30,7 +29,7 @@ endif(COMPILE_WASM)
 target_link_libraries(bergamot-translator marian ssplit)
 
 target_include_directories(bergamot-translator
-    PRIVATE ${CMAKE_SOURCE_DIR}
+    PUBLIC ${CMAKE_SOURCE_DIR}
     PUBLIC ${CMAKE_SOURCE_DIR}/src)
 
 

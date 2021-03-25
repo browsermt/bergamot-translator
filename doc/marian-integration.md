@@ -1,4 +1,4 @@
-# Marian Integration
+# Building marian code for bergamot
 
 This document summarizes the minimal build instructions develop for the
 marian-code powering bergamot-translator.

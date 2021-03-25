@@ -7,9 +7,7 @@
 
 #include <iostream>
 
-#include "AbstractTranslationModel.h"
-#include "TranslationRequest.h"
-#include "TranslationResult.h"
+#include "TranslationModel.h"
 #include "translator/parser.h"
 
 int main(int argc, char **argv) {
@@ -20,10 +18,8 @@ int main(int argc, char **argv) {
   auto options = configParser.parseOptions(argc, argv, true);
   std::string config = options->asYamlString();
 
-  // Route the config string to construct marian model through
-  // AbstractTranslationModel
-  std::shared_ptr<AbstractTranslationModel> model =
-      AbstractTranslationModel::createInstance(config);
+  // Route the config string to construct marian model through TranslationModel
+  auto model = std::make_shared<TranslationModel>(config);
 
   TranslationRequest translationRequest;
   std::vector<std::string> texts;

@@ -21,6 +21,24 @@ template <class T, typename... Args> UPtr<T> UNew(Args &&... args) {
 
 template <class T> UPtr<T> UNew(UPtr<T> p) { return UPtr<T>(p); }
 
+class MemoryGift{
+private:
+  const void *memory_;
+  const size_t memorySize_;
+public:
+  MemoryGift(const void *memory,const size_t memorySize)
+  :memory_(memory),memorySize_(memorySize){}
+  const void* data() const{
+    return memory_;
+  }
+  const size_t length() const{
+    return memorySize_;
+  }
+  void early_free(){
+    free((char *)memory_);
+  }
+};
+
 } // namespace bergamot
 } // namespace marian
 

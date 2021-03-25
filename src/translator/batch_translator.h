@@ -34,8 +34,7 @@ public:
    * @param model_memory byte array (aligned to 64!!!) that contains the bytes of a model.bin. Provide a nullptr if not used.
    */
   explicit BatchTranslator(DeviceId const device, std::vector<Ptr<Vocab const>> &vocabs,
-                  Ptr<Options> options, const void * model_memory, const size_t model_list_memory_size,
-                  const void *short_list_memory, const size_t short_list_memory_size);
+                  Ptr<Options> options, MemoryGift modelMemory, MemoryGift shortlistMemory);
 
   // convenience function for logging. TODO(jerin)
   std::string _identifier() { return "worker" + std::to_string(device_.no); }
@@ -49,10 +48,8 @@ private:
   Ptr<ExpressionGraph> graph_;
   std::vector<Ptr<Scorer>> scorers_;
   Ptr<data::ShortlistGenerator const> slgen_;
-  const void * model_memory_;
-  const size_t model_memory_size_;
-  const void * shortlist_memory_;
-  const size_t shortlist_memory_size_;
+  MemoryGift modelMemory_;
+  MemoryGift shortlistMemory_;
 };
 
 } // namespace bergamot

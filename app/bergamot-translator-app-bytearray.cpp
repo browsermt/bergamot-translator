@@ -9,7 +9,7 @@
 
 #include "TranslationModel.h"
 #include "translator/parser.h"
-#include "translator/byteArrayExample.h"
+#include "translator/byte_array_util.h"
 
 int main(int argc, char **argv) {
 
@@ -20,7 +20,7 @@ int main(int argc, char **argv) {
   std::string config = options->asYamlString();
 
   // Route the config string to construct marian model through TranslationModel
-  void * model_bytes = bergamot::getBinaryModelFromConfig(options);
+  const void * model_bytes = marian::bergamot::getBinaryModelFromConfig(options).data();
   auto model = std::make_shared<TranslationModel>(config, model_bytes);
 
   TranslationRequest translationRequest;
@@ -62,7 +62,7 @@ int main(int argc, char **argv) {
   }
 
   // Clear the memory used for the byte array
-  free(model_bytes); // Ideally, this should be done after the translation model has been gracefully shut down.
+  free((char *)model_bytes); // Ideally, this should be done after the translation model has been gracefully shut down.
 
   return 0;
 }

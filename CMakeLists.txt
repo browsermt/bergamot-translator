@@ -16,26 +16,17 @@ option(COMPILE_WASM "Compile for WASM" OFF)
 option(USE_WASM_COMPATIBLE_SOURCES "Use wasm compatible sources" ON)
 SET(PACKAGE_DIR "" CACHE STRING "Directory including all the files to be packaged (pre-loaded) in wasm builds")
 
-# Set marian (3rd party submodule) cmake options to compile for this project
+# Set 3rd party submodule specific cmake options for this project
 SET(COMPILE_CUDA OFF CACHE BOOL "Compile GPU version")
 SET(USE_SENTENCEPIECE ON CACHE BOOL "Download and compile SentencePiece")
 SET(USE_STATIC_LIBS ON CACHE BOOL "Link statically against non-system libs")
 if (USE_WASM_COMPATIBLE_SOURCES)
-  # If using wasm compatible marian then set following flags
+  # Setting the marian submodule specific cmake options for wasm
   SET(COMPILE_LIBRARY_ONLY ON CACHE BOOL "Build only the Marian library and exclude all executables.")
   SET(USE_MKL OFF CACHE BOOL "Compile with MKL support")
-  SET(COMPILE_DECODER_ONLY ON CACHE BOOL "Compile marian-decoder only")
-  SET(COMPILE_WITH_PTHREADS OFF CACHE BOOL "Compile with pthreads support")
-  SET(USE_WASM_COMPATIBLE_BLAS ON CACHE BOOL "Compile with a WASM compatible blas for decoder only builds")
-  SET(COMPILE_WITHOUT_EXCEPTIONS ON CACHE BOOL "Compile without exceptions")
-  if(COMPILE_WASM)
-    # Set WORMHOLE to ON for marian whenever compiling for wasm platform
-    SET(WORMHOLE ON CACHE BOOL "Use WASM wormhole in intgemm https://bugzilla.mozilla.org/show_bug.cgi?id=1672160")
-  endif()
+  # # Setting the ssplit-cpp submodule specific cmake options for wasm
+  SET(USE_INTERNAL_PCRE2 ON CACHE BOOL "Use internal PCRE2 instead of system PCRE2")
 endif()
-# Set ssplit (3rd party submodule) cmake options to compile for this project
-CMAKE_DEPENDENT_OPTION(USE_INTERNAL_PCRE2 "Use internal PCRE2 instead of system PCRE2" ON
-                       "USE_WASM_COMPATIBLE_SOURCES" OFF)
 
 # Documentation: https://cliutils.gitlab.io/modern-cmake/chapters/projects/submodule.html
 # Ensures the submodules are set correctly during a build.

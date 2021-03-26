@@ -26,6 +26,7 @@ if (USE_WASM_COMPATIBLE_SOURCES)
   # Setting the marian submodule specific cmake options for wasm
   SET(COMPILE_LIBRARY_ONLY ON CACHE BOOL "Build only the Marian library and exclude all executables.")
   SET(USE_MKL OFF CACHE BOOL "Compile with MKL support")
+  SET(USE_WASM_COMPATIBLE_MARIAN ON CACHE BOOL "Enable those marian sources that compile to wasm. Useful for debugging wasm failures by building same sources natively")
   # # Setting the ssplit-cpp submodule specific cmake options for wasm
   SET(USE_INTERNAL_PCRE2 ON CACHE BOOL "Use internal PCRE2 instead of system PCRE2")
 endif()

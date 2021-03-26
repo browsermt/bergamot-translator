@@ -27,33 +27,11 @@ loadVocabularies(marian::Ptr<marian::Options> options) {
 
 namespace marian {
 namespace bergamot {
-void Service::initialize(Ptr<Options> options){
-  requestId_ = 0;
-  vocabs_ = std::move(loadVocabularies(options));
-  if (numWorkers_ == 0) {
-    build_translators(options, /*numTranslators=*/1);
-    initialize_blocking_translator();
-  } else {
-    build_translators(options, numWorkers_);
-    initialize_async_translators();
-  }
-}
-
-Service::Service(Ptr<Options> options)
-    : numWorkers_(options->get<int>("cpu-threads")), text_processor_(vocabs_, options), batcher_(options)
-#ifndef WASM
-        // 0 elements in PCQueue is illegal and can lead to failures. Adding a
-        // guard to have at least one entry allocated. In the single-threaded
-        // case, while initialized pcqueue_ remains unused.
-        ,
-        pcqueue_(std::max<size_t>(1, numWorkers_))
-#endif
-{
-  initialize(options);
-}
 
 Service::Service(Ptr<Options> options, const MemoryGift* modelMemory, const MemoryGift* shortlistMemory)
-    : numWorkers_(options->get<int>("cpu-threads")), text_processor_(vocabs_, options), batcher_(options),
+    : requestId_(0), vocabs_(std::move(loadVocabularies(options))),
+      text_processor_(vocabs_, options), batcher_(options),
+      numWorkers_(options->get<int>("cpu-threads")),
       modelMemory_(modelMemory), shortlistMemory_(shortlistMemory)
 #ifndef WASM
       // 0 elements in PCQueue is illegal and can lead to failures. Adding a
@@ -63,35 +41,13 @@ Service::Service(Ptr<Options> options, const MemoryGift* modelMemory, const Memo
       pcqueue_(std::max<size_t>(1, numWorkers_))
 #endif
 {
-  initialize(options);
-}
 
-Service::Service(const std::string &config, const void* modelMemory, const void* shortlistMemory)
-    : numWorkers_(parseOptions(config)->get<int>("cpu-threads")),
-      text_processor_(vocabs_, parseOptions(config)), batcher_(parseOptions(config))
-#ifndef WASM
-      // 0 elements in PCQueue is illegal and can lead to failures. Adding a
-      // guard to have at least one entry allocated. In the single-threaded
-      // case, while initialized pcqueue_ remains unused.
-      ,
-      pcqueue_(std::max<size_t>(1, numWorkers_))
-#endif
-{
-  Ptr<Options> options = parseOptions(config);
-  initialize(options);
-  if(modelMemory != nullptr){
-    // MemoryGift* should be freed once it is no longer used; here is a hack to make TranslationModel works
-    const MemoryGift* modelGift = new MemoryGift(modelMemory,1);
-    modelMemory_ = modelGift;
-  }
-
-  if(shortlistMemory!= nullptr) {
-    // Hacks to obtain shortlist memory size as this will be checked during construction
-    size_t shortlistMemorySize = sizeof(uint64_t) * (6 + *((uint64_t*)shortlistMemory+4))
-            + sizeof(uint32_t) * *((uint64_t*)shortlistMemory+5);
-    // MemoryGift* should be freed once it is no longer used; here is a hack to make TranslationModel works
-    const MemoryGift* shortlistGift = new MemoryGift(shortlistMemory, shortlistMemorySize);
-    shortlistMemory_ = shortlistGift;
+  if (numWorkers_ == 0) {
+    build_translators(options, /*numTranslators=*/1);
+    initialize_blocking_translator();
+  } else {
+    build_translators(options, numWorkers_);
+    initialize_async_translators();
   }
 }
 

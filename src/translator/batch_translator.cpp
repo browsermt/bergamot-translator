@@ -16,11 +16,6 @@ BatchTranslator::BatchTranslator(DeviceId const device,
     : device_(device), options_(options), vocabs_(&vocabs),
     modelMemory_(modelMemory), shortlistMemory_(shortlistMemory) {}
 
-BatchTranslator::BatchTranslator(DeviceId const device,
-                                 std::vector<Ptr<Vocab const>> &vocabs,
-                                 Ptr<Options> options)
-    : device_(device), options_(options), vocabs_(&vocabs){}
-
 void BatchTranslator::initialize() {
   // Initializes the graph.
   if (options_->hasAndNotEmpty("shortlist")) {

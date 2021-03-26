@@ -26,7 +26,6 @@ class BatchTranslator {
   // shut down in Service which calls join() on the threads.
 
 public:
-  explicit BatchTranslator(DeviceId const device, std::vector<Ptr<Vocab const>> &vocabs, Ptr<Options> options);
   /**
    * Initialise the marian translator.
    * @param device DeviceId that performs translation. Could be CPU or GPU
@@ -36,6 +35,9 @@ public:
    */
   explicit BatchTranslator(DeviceId const device, std::vector<Ptr<Vocab const>> &vocabs,
                   Ptr<Options> options, const MemoryGift* modelMemory, const MemoryGift* shortlistMemory);
+
+  explicit BatchTranslator(DeviceId const device, std::vector<Ptr<Vocab const>> &vocabs, Ptr<Options> options)
+          :BatchTranslator(device,vocabs,options, nullptr, nullptr){}
 
   // convenience function for logging. TODO(jerin)
   std::string _identifier() { return "worker" + std::to_string(device_.no); }

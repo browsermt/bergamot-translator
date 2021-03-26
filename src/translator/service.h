@@ -18,6 +18,28 @@
 namespace marian {
 namespace bergamot {
 
+// Hack code to construct MemoryGift* from void*
+inline const MemoryGift* hackModel(const void* modelMemory) {
+  if(modelMemory != nullptr){
+    // MemoryGift* should be freed once it is no longer used; here is a hack to make TranslationModel works
+    const MemoryGift* modelGift = new MemoryGift(modelMemory,1);
+    return modelGift;
+  }
+  return nullptr;
+}
+
+inline const MemoryGift* hackShortLis(const void* shortlistMemory) {
+  if(shortlistMemory!= nullptr) {
+    // Hacks to obtain shortlist memory size as this will be checked during construction
+    size_t shortlistMemorySize = sizeof(uint64_t) * (6 + *((uint64_t*)shortlistMemory+4))
+                                 + sizeof(uint32_t) * *((uint64_t*)shortlistMemory+5);
+    // MemoryGift* should be freed once it is no longer used; here is a hack to make TranslationModel works
+    const MemoryGift* shortlistGift = new MemoryGift(shortlistMemory, shortlistMemorySize);
+    return shortlistGift;
+  }
+  return nullptr;
+}
+
 /// Service exposes methods to translate an incoming blob of text to the
 /// Consumer of bergamot API.
 ///
@@ -37,18 +59,21 @@ namespace bergamot {
 class Service {
 
 public:
-  explicit Service(Ptr<Options> options);
   /// @param options Marian options object
   /// @param model_memory byte array (aligned to 64!!!) that contains the bytes
   /// of a model.bin. Optional, defaults to nullptr when not used
   explicit Service(Ptr<Options> options, const MemoryGift* modelMemory, const MemoryGift* shortlistMemory);
-  /// Construct Service from a string configuration.
+
+  explicit Service(Ptr<Options> options) : Service(options, nullptr, nullptr){}
+
+/// Construct Service from a string configuration.
   /// @param [in] config string parsable as YAML expected to adhere with marian
   /// config
   /// @param [in] model_memory byte array (aligned to 64!!!) that contains the
   /// bytes of a model.bin. Optional, defaults to nullptr when not used
   explicit Service(const std::string &config,
-                   const void* modelMemory = nullptr, const void* shortlistMemory = nullptr);
+                   const void* modelMemory = nullptr, const void* shortlistMemory = nullptr)
+      : Service(parseOptions(config), hackModel(modelMemory), hackShortLis(shortlistMemory)) {}
 
   /// Explicit destructor to clean up after any threads initialized in
   /// asynchronous operation mode.
@@ -67,7 +92,6 @@ public:
   std::future<Response> translate(std::string &&input);
 
 private:
-  void initialize(Ptr<Options> options);
   /// Build numTranslators number of translators with options from options
   void build_translators(Ptr<Options> options, size_t numTranslators);
   /// Initializes a blocking translator without using std::thread
@@ -88,6 +112,8 @@ private:
   size_t numWorkers_;        // ORDER DEPENDENCY (pcqueue_)
   const MemoryGift* modelMemory_ = nullptr; /// Model memory to load model passed as bytes.
   const MemoryGift* shortlistMemory_ = nullptr;  /// Shortlist memory passed as bytes.
+  /// Holds instances of batch translators, just one in case
+
   /// Holds instances of batch translators, just one in case
   /// of single-threaded application, numWorkers_ in case of multithreaded
   /// setting.

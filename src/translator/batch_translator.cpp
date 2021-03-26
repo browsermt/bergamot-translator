@@ -11,24 +11,31 @@ namespace bergamot {
 BatchTranslator::BatchTranslator(DeviceId const device,
                                  std::vector<Ptr<Vocab const>> &vocabs,
                                  Ptr<Options> options,
-                                 MemoryGift modelMemory,
-                                 MemoryGift shortlistMemory)
+                                 const MemoryGift* modelMemory,
+                                 const MemoryGift* shortlistMemory)
     : device_(device), options_(options), vocabs_(&vocabs),
     modelMemory_(modelMemory), shortlistMemory_(shortlistMemory) {}
+
+BatchTranslator::BatchTranslator(DeviceId const device,
+                                 std::vector<Ptr<Vocab const>> &vocabs,
+                                 Ptr<Options> options)
+    : device_(device), options_(options), vocabs_(&vocabs){}
 
 void BatchTranslator::initialize() {
   // Initializes the graph.
   if (options_->hasAndNotEmpty("shortlist")) {
     int srcIdx = 0, trgIdx = 1;
     bool shared_vcb = vocabs_->front() == vocabs_->back();
-    if (shortlistMemory_.data() != nullptr && shortlistMemory_.length() > 0) {
-        bool check = true;  // Whether to verify the shortlist content (not sure how to deal with this flag)
-        slgen_ = New<data::BinaryShortlistGenerator>(shortlistMemory_.data(), shortlistMemory_.length(),
+    if (shortlistMemory_ != nullptr) {
+      bool check = options_->get<bool>("check-bytearray",true);
+      slgen_ = New<data::BinaryShortlistGenerator>(shortlistMemory_->data(), shortlistMemory_->length(),
                                                      vocabs_->front(), vocabs_->back(),
                                                      srcIdx, trgIdx, shared_vcb, check);
     }
     else {
-      slgen_ = New<data::LexicalShortlistGenerator>(options_, vocabs_->front(),
+      // Changed to BinaryShortlistGenerator to enable loading binary shortlist file
+      // This class also supports text shortlist file
+      slgen_ = New<data::BinaryShortlistGenerator>(options_, vocabs_->front(),
                                                     vocabs_->back(), srcIdx,
                                                     trgIdx, shared_vcb);
     }
@@ -40,12 +47,12 @@ void BatchTranslator::initialize() {
   graph_->setDevice(device_);
   graph_->getBackend()->configureDevice(options_);
   graph_->reserveWorkspaceMB(options_->get<size_t>("workspace"));
-  if (modelMemory_.data() != nullptr && modelMemory_.length() > 0) { // If we have provided a byte array that contains the model memory, we can initialise the model from there, as opposed to from reading in the config file
-    if ((uintptr_t)modelMemory_.data() % 256 != 0) {
+  if (modelMemory_ != nullptr) { // If we have provided a byte array that contains the model memory, we can initialise the model from there, as opposed to from reading in the config file
+    if ((uintptr_t)modelMemory_->data() % 256 != 0) {
       std::cerr << "The provided memory is not aligned to 256 bytes and will crash when vector instructions are used on it." << std::endl;
       exit(1);
     }
-    const std::vector<const void *> container = {modelMemory_.data()}; // Marian supports multiple models initialised in this manner hence std::vector. However we will only ever use 1 during decoding.
+    const std::vector<const void *> container = {modelMemory_->data()}; // Marian supports multiple models initialised in this manner hence std::vector. However we will only ever use 1 during decoding.
     scorers_ = createScorers(options_, container);
   } else {
     scorers_ = createScorers(options_);

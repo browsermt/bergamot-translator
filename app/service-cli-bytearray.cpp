@@ -15,9 +15,9 @@ int main(int argc, char *argv[]) {
   auto cp = marian::bergamot::createConfigParser();
   auto options = cp.parseOptions(argc, argv, true);
 
-  marian::bergamot::MemoryGift modelBytes = marian::bergamot::getBinaryModelFromConfig(options);
   marian::bergamot::MemoryGift shortlistBytes = marian::bergamot::getBinaryShortlistFromConfig(options);
-  marian::bergamot::Service service(options, modelBytes, shortlistBytes);
+  marian::bergamot::MemoryGift modelBytes = marian::bergamot::getBinaryModelFromConfig(options);
+  marian::bergamot::Service service(options, &modelBytes, &shortlistBytes);
 
   // Read a large input text blob from stdin
   std::ostringstream std_input;

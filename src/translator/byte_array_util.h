@@ -4,7 +4,7 @@
 namespace marian {
 namespace bergamot {
 
-MemoryGift loadFileToMemory(const std::string& filename);
+MemoryGift loadFileToMemory(const std::string& filename, bool isModelFile);
 MemoryGift getBinaryModelFromConfig(marian::Ptr<marian::Options> options);
 MemoryGift getBinaryShortlistFromConfig(marian::Ptr<marian::Options> options);
 

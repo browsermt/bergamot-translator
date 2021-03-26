@@ -1,4 +1,4 @@
-name: WASM on Ubuntu
+name: WASM (Custom Marian) Ubuntu
 
 on:
   push:
@@ -8,7 +8,7 @@ on:
 
 jobs:
   build-wasm:
-    name: WASM (With Custom Marian)
+    name: WASM (Custom Marian) Ubuntu
     runs-on: ubuntu-latest
 
     steps:

@@ -1,4 +1,4 @@
-name: MacOS
+name: Native (Full Marian) MacOS
 
 on:
   push:

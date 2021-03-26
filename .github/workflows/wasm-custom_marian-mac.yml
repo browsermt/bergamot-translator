@@ -1,4 +1,4 @@
-name: MacOS WASM (Custom)
+name: WASM (Custom Marian) MacOS
 
 on:
   push:
@@ -8,7 +8,7 @@ on:
 
 jobs:
   build-wasm:
-    name: WASM (With Custom Marian)
+    name: WASM (Custom Marian) MacOS
     runs-on: macos-10.15
 
     steps:

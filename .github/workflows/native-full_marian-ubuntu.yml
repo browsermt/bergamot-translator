@@ -1,4 +1,4 @@
-name: Ubuntu
+name: Native (Full Marian) Ubuntu
 
 on:
   push:

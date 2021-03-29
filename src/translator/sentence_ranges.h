@@ -9,12 +9,12 @@
 namespace marian {
 namespace bergamot {
 
-/// ByteRange stores indices for begin and end (inclusive) in a string. Can be
+/// ByteRange stores indices for [begin, end] in a string. Can be
 /// used to represent a sentence, word.
 struct ByteRange {
-  size_t begin_byte_offset;
-  size_t end_byte_offset;
-  const size_t size() const { return end_byte_offset - begin_byte_offset + 1; }
+  size_t begin;
+  size_t end;
+  const size_t size() const { return end - begin; }
 };
 
 /// An Annotation is a collection of ByteRanges used to denote ancillary
@@ -34,7 +34,8 @@ public:
   size_t numWords(size_t sentenceIdx) const;
 
   /// Adds a sentences from vector<ByteRange> representation, internally doing
-  /// extra book-keeping for the sentence terminal markings.
+  /// extra book-keeping for the sentence terminal markings. Sentences are
+  /// expected to be added in order as they occur in text.
   void addSentence(std::vector<ByteRange> &sentence);
 
   /// Returns a ByteRange representing wordIdx in sentenceIdx
@@ -52,9 +53,15 @@ private:
   /// Stores indices where sentences begin
   std::vector<size_t> sentenceBeginIds_;
 
-  /// Returns indices of terminal (word) ByteRanges of a sentence corresponding
-  /// to sentenceIdx
+  /// Returns ByteRanges corresponding to beginning and end words of sentence
+  /// corresponding to sentenceIdx. This is useful in using the information to
+  /// construct a ByteRange of a sentence taking the begin from the first and
   std::pair<ByteRange, ByteRange> sentenceTerminals(size_t sentenceIdx) const;
+
+  /// Returns indices of terminal (word) ByteRanges in sentenceIds_ of a
+  /// sentence corresponding to sentenceIdx. The distance can be used to compute
+  /// number of words in a sentence (numWords) and also to construct the
+  /// terminal ByteRanges (sentenceTerminals).
   std::pair<size_t, size_t> sentenceTerminalIds(size_t sentenceIdx) const;
 };
 

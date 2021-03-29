@@ -40,8 +40,7 @@ Annotation::sentenceTerminals(size_t sentenceIdx) const {
 
 ByteRange Annotation::sentence(size_t sentenceIdx) const {
   auto terminals = sentenceTerminals(sentenceIdx);
-  return (ByteRange){terminals.first.begin_byte_offset,
-                     terminals.second.end_byte_offset};
+  return (ByteRange){terminals.first.begin, terminals.second.end};
 }
 
 ByteRange Annotation::word(size_t sentenceIdx, size_t wordIdx) const {
@@ -53,7 +52,7 @@ ByteRange Annotation::word(size_t sentenceIdx, size_t wordIdx) const {
 
 string_view AnnotatedBlob::word(size_t sentenceIdx, size_t wordIdx) const {
   auto terminals = annotation.word(sentenceIdx, wordIdx);
-  return string_view(&blob[terminals.begin_byte_offset], terminals.size());
+  return string_view(&blob[terminals.begin], terminals.size());
 }
 
 string_view AnnotatedBlob::sentence(size_t sentenceIdx) const {
@@ -70,7 +69,7 @@ void AnnotatedBlob::addSentence(std::vector<string_view>::iterator begin,
   std::vector<ByteRange> sentence;
   for (auto p = begin; p != end; p++) {
     size_t begin_offset = p->data() - &blob[0];
-    sentence.push_back((ByteRange){begin_offset, begin_offset + p->size() - 1});
+    sentence.push_back((ByteRange){begin_offset, begin_offset + p->size()});
   }
   annotation.addSentence(sentence);
 };
@@ -85,7 +84,7 @@ ByteRange AnnotatedBlob::sentenceAsByteRange(size_t sentenceIdx) const {
 }
 
 string_view AnnotatedBlob::asStringView(const ByteRange &byteRange) const {
-  const char *data = &blob[byteRange.begin_byte_offset];
+  const char *data = &blob[byteRange.begin];
   size_t size = byteRange.size();
   return string_view(data, size);
 }

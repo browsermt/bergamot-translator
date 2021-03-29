@@ -5,9 +5,12 @@
 
 using namespace marian::bergamot;
 
-TEST_CASE("Random sentences test") {
+TEST_CASE("Test Annotation API with random sentences") {
   /// Objective here is to test insertion for sentences, and that whatever comes
-  /// out adheres to the way it was inserted.
+  /// out adheres to the way it was inserted. Towards this, we keep externally
+  /// which sentence went in where and try to use accessor methods on
+  /// AnnotatedBlob to check if what we have as ground-truth by construction is
+  /// consistent with what is returned.
   size_t sentences = 20;
   size_t maxWords = 40;
 
@@ -43,9 +46,8 @@ TEST_CASE("Random sentences test") {
   for (auto &sentence : sentenceWords) {
     std::vector<marian::string_view> wordByteRanges;
     for (auto &word : sentence) {
-      marian::string_view wordView(&text.blob[word.begin_byte_offset],
-                                   word.end_byte_offset -
-                                       word.begin_byte_offset + 1);
+      marian::string_view wordView(&text.blob[word.begin],
+                                   word.end - word.begin);
       wordByteRanges.push_back(wordView);
       // std::cout << std::string(wordView) << " ";
     }
@@ -60,8 +62,8 @@ TEST_CASE("Random sentences test") {
       ByteRange expected = sentenceWords[idx][idw];
       ByteRange obtained = text.wordAsByteRange(idx, idw);
       // std::cout << std::string(text.word(idx, idw)) << " ";
-      CHECK(expected.begin_byte_offset == obtained.begin_byte_offset);
-      CHECK(expected.end_byte_offset == obtained.end_byte_offset);
+      CHECK(expected.begin == obtained.begin);
+      CHECK(expected.end == obtained.end);
 
       std::string expected_string = std::string(byteRanges[idx][idw]);
       CHECK(expected_string == std::string(text.word(idx, idw)));

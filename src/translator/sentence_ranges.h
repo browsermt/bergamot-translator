@@ -9,7 +9,7 @@
 namespace marian {
 namespace bergamot {
 
-/// ByteRange stores indices for [begin, end] in a string. Can be
+/// ByteRange stores indices for half-interval [begin, end) in a string. Can be
 /// used to represent a sentence, word.
 struct ByteRange {
   size_t begin;
@@ -56,6 +56,7 @@ private:
   /// Returns ByteRanges corresponding to beginning and end words of sentence
   /// corresponding to sentenceIdx. This is useful in using the information to
   /// construct a ByteRange of a sentence taking the begin from the first and
+  /// end from the second.
   std::pair<ByteRange, ByteRange> sentenceTerminals(size_t sentenceIdx) const;
 
   /// Returns indices of terminal (word) ByteRanges in sentenceIds_ of a
@@ -113,10 +114,16 @@ public:
   void addSentence(std::vector<string_view>::iterator begin,
                    std::vector<string_view>::iterator end);
 
+  /// Returns a string_view representing wordIdx in sentenceIdx
   string_view word(size_t sentenceIdx, size_t wordIdx) const;
+
+  /// Returns a string_view representing sentence corresponding to sentenceIdx.
   string_view sentence(size_t sentenceIdx) const;
 
+  /// Returns a ByteRange representing wordIdx in sentenceIdx
   ByteRange wordAsByteRange(size_t sentenceIdx, size_t wordIdx) const;
+
+  /// Returns a ByteRange representing sentence corresponding to sentenceIdx.
   ByteRange sentenceAsByteRange(size_t sentenceIdx) const;
 
 private:

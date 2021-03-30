@@ -42,8 +42,8 @@ TranslationModel::translate(std::vector<std::string> &&texts,
 
     // In place construction.
     translationResults.emplace_back(
-        std::move(marianResponse.source.blob), // &&marianResponse.source_
-        std::move(marianResponse.target.blob), // &&marianResponse.translation_
+        std::move(marianResponse.source.text), // &&marianResponse.source_
+        std::move(marianResponse.target.text), // &&marianResponse.translation_
         std::move(sentenceMappings)            // &&sentenceMappings
     );
   }

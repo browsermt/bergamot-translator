@@ -12,7 +12,7 @@ namespace bergamot {
 
 // -----------------------------------------------------------------
 Request::Request(size_t Id, size_t lineNumberBegin,
-                 std::vector<Ptr<Vocab const>> &vocabs, AnnotatedBlob &&source,
+                 std::vector<Ptr<Vocab const>> &vocabs, AnnotatedText &&source,
                  Segments &&segments, std::promise<Response> responsePromise)
     : Id_(Id), lineNumberBegin_(lineNumberBegin), vocabs_(&vocabs),
       source_(std::move(source)), segments_(std::move(segments)),

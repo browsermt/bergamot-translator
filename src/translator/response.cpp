@@ -8,12 +8,12 @@
 namespace marian {
 namespace bergamot {
 
-Response::Response(AnnotatedBlob &&source, Histories &&histories,
+Response::Response(AnnotatedText &&source, Histories &&histories,
                    std::vector<Ptr<Vocab const>> &vocabs)
     : source(std::move(source)), histories_(std::move(histories)) {
   // Reserving length at least as much as source_ seems like a reasonable thing
   // to do to avoid reallocations.
-  target.blob.reserve(source.blob.size());
+  target.text.reserve(source.text.size());
 
   // In a first step, the decoded units (individual senteneces) are compiled
   // into a huge string. This is done by computing indices first and appending
@@ -39,12 +39,12 @@ Response::Response(AnnotatedBlob &&source, Histories &&histories,
     if (first) {
       first = false;
     } else {
-      target.blob += " ";
+      target.text += " ";
       ++offset;
     }
 
     sentenceBegins.push_back(translationRanges.size());
-    target.blob += decoded;
+    target.text += decoded;
     auto decodedStringBeginMarker = targetMappings.front().begin();
     for (auto &sview : targetMappings) {
       size_t startIdx = offset + sview.begin() - decodedStringBeginMarker;
@@ -94,7 +94,7 @@ Response::Response(AnnotatedBlob &&source, Histories &&histories,
       size_t begin_idx = p.first;
       size_t end_idx = p.second;
 
-      const char *data = &target.blob[begin_idx];
+      const char *data = &target.text[begin_idx];
       size_t size = end_idx - begin_idx;
       targetMappings.emplace_back(data, size);
     }

@@ -9,7 +9,7 @@ TEST_CASE("Test Annotation API with random sentences") {
   /// Objective here is to test insertion for sentences, and that whatever comes
   /// out adheres to the way it was inserted. Towards this, we keep externally
   /// which sentence went in where and try to use accessor methods on
-  /// AnnotatedBlob to check if what we have as ground-truth by construction is
+  /// AnnotatedText to check if what we have as ground-truth by construction is
   /// consistent with what is returned.
   size_t sentences = 20;
   size_t maxWords = 40;
@@ -17,23 +17,23 @@ TEST_CASE("Test Annotation API with random sentences") {
   std::mt19937 randomIntGen_;
   randomIntGen_.seed(42);
 
-  AnnotatedBlob text;
+  AnnotatedText text;
   std::vector<std::vector<ByteRange>> sentenceWords;
   std::vector<ByteRange> Words;
 
   for (size_t idx = 0; idx < sentences; idx++) {
     if (idx != 0)
-      text.blob += "\n";
+      text.text += "\n";
 
     Words.clear();
     size_t words = randomIntGen_() % maxWords + 1;
     Words.reserve(words);
     for (size_t idw = 0; idw < words; idw++) {
-      size_t before = text.blob.size();
+      size_t before = text.text.size();
       std::string word = std::to_string(idx) + "-" + std::to_string(idw);
-      text.blob += word;
+      text.text += word;
       if (idw != 0)
-        text.blob += " ";
+        text.text += " ";
       Words.push_back((ByteRange){before, before + word.size() - 1});
     }
     // std::cout << std::endl;
@@ -46,7 +46,7 @@ TEST_CASE("Test Annotation API with random sentences") {
   for (auto &sentence : sentenceWords) {
     std::vector<marian::string_view> wordByteRanges;
     for (auto &word : sentence) {
-      marian::string_view wordView(&text.blob[word.begin],
+      marian::string_view wordView(&text.text[word.begin],
                                    word.end - word.begin);
       wordByteRanges.push_back(wordView);
       // std::cout << std::string(wordView) << " ";

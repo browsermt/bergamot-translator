@@ -34,17 +34,17 @@ struct Quality {
   std::vector<float> word;
 };
 
-/// Response holds AnnotatedBlob(s) of source-text and translated text,
+/// Response holds AnnotatedText(s) of source-text and translated text,
 /// alignment information between source and target sub-words and sentences.
 ///
-/// AnnotatedBlob provides an API to access markings of (sub)-word and
+/// AnnotatedText provides an API to access markings of (sub)-word and
 /// sentences boundaries, which are required to interpret Quality and
 /// Alignment (s) at the moment.
 class Response {
 
 public:
   ///
-  Response(AnnotatedBlob &&source, Histories &&histories,
+  Response(AnnotatedText &&source, Histories &&histories,
            std::vector<Ptr<Vocab const>> &vocabs);
 
   /// \cond HIDDEN_PUBLIC
@@ -65,17 +65,17 @@ public:
 
   /// \endcond
 
-  /// Number of sentences translated. The processing of a blob of into sentences
+  /// Number of sentences translated. The processing of a text of into sentences
   /// are handled internally, and this information can be used to iterate
   /// through meaningful units of translation for which alignment and quality
   /// information are available.
   const size_t size() const { return source.numSentences(); }
 
   /// source text and annotations of (sub-)words and sentences.
-  AnnotatedBlob source;
+  AnnotatedText source;
 
   /// translated text and annotations of (sub-)words and sentences.
-  AnnotatedBlob target;
+  AnnotatedText target;
 
   /// -logprob of each word and negative log likelihood of sequence (sentence)
   /// normalized by length, for each sentence processed by the translator.

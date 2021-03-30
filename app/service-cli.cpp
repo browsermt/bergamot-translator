@@ -26,8 +26,8 @@ int main(int argc, char *argv[]) {
   responseFuture.wait();
   Response response = responseFuture.get();
 
-  std::cout << "[original]: " << response.source.blob << '\n';
-  std::cout << "[translated]: " << response.target.blob << '\n';
+  std::cout << "[original]: " << response.source.text << '\n';
+  std::cout << "[translated]: " << response.target.text << '\n';
   for (int sentenceIdx = 0; sentenceIdx < response.size(); sentenceIdx++) {
     std::cout << " [src Sentence]: " << response.source.sentence(sentenceIdx)
               << '\n';

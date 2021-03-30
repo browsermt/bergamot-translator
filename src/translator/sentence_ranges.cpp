@@ -50,41 +50,41 @@ ByteRange Annotation::word(size_t sentenceIdx, size_t wordIdx) const {
   return flatByteRanges_[offset + wordIdx];
 }
 
-string_view AnnotatedBlob::word(size_t sentenceIdx, size_t wordIdx) const {
+string_view AnnotatedText::word(size_t sentenceIdx, size_t wordIdx) const {
   auto terminals = annotation.word(sentenceIdx, wordIdx);
-  return string_view(&blob[terminals.begin], terminals.size());
+  return string_view(&text[terminals.begin], terminals.size());
 }
 
-string_view AnnotatedBlob::sentence(size_t sentenceIdx) const {
+string_view AnnotatedText::sentence(size_t sentenceIdx) const {
   auto sentenceAsByteRange = annotation.sentence(sentenceIdx);
   return asStringView(sentenceAsByteRange);
 }
 
-void AnnotatedBlob::addSentence(std::vector<string_view> &wordRanges) {
+void AnnotatedText::addSentence(std::vector<string_view> &wordRanges) {
   addSentence(std::begin(wordRanges), std::end(wordRanges));
 };
 
-void AnnotatedBlob::addSentence(std::vector<string_view>::iterator begin,
+void AnnotatedText::addSentence(std::vector<string_view>::iterator begin,
                                 std::vector<string_view>::iterator end) {
   std::vector<ByteRange> sentence;
   for (auto p = begin; p != end; p++) {
-    size_t begin_offset = p->data() - &blob[0];
+    size_t begin_offset = p->data() - &text[0];
     sentence.push_back((ByteRange){begin_offset, begin_offset + p->size()});
   }
   annotation.addSentence(sentence);
 };
 
-ByteRange AnnotatedBlob::wordAsByteRange(size_t sentenceIdx,
+ByteRange AnnotatedText::wordAsByteRange(size_t sentenceIdx,
                                          size_t wordIdx) const {
   return annotation.word(sentenceIdx, wordIdx);
 }
 
-ByteRange AnnotatedBlob::sentenceAsByteRange(size_t sentenceIdx) const {
+ByteRange AnnotatedText::sentenceAsByteRange(size_t sentenceIdx) const {
   return annotation.sentence(sentenceIdx);
 }
 
-string_view AnnotatedBlob::asStringView(const ByteRange &byteRange) const {
-  const char *data = &blob[byteRange.begin];
+string_view AnnotatedText::asStringView(const ByteRange &byteRange) const {
+  const char *data = &text[byteRange.begin];
   size_t size = byteRange.size();
   return string_view(data, size);
 }

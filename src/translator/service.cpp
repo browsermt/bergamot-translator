@@ -112,7 +112,7 @@ void Service::async_translate() {
 
 std::future<Response> Service::translate(std::string &&input) {
   Segments segments;
-  AnnotatedBlob source(std::move(input));
+  AnnotatedText source(std::move(input));
   text_processor_.process(source, segments);
 
   std::promise<Response> responsePromise;

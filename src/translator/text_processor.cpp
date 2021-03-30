@@ -25,9 +25,9 @@ TextProcessor::TextProcessor(std::vector<Ptr<Vocab const>> &vocabs,
   ABORT_IF(max_length_break_ < 0, "max-length-break cannot be < 0");
 }
 
-void TextProcessor::process(AnnotatedBlob &source, Segments &segments) {
+void TextProcessor::process(AnnotatedText &source, Segments &segments) {
 
-  string_view query = string_view(source.blob);
+  string_view query = string_view(source.text);
   auto sentenceStream = sentence_splitter_.createSentenceStream(query);
   std::string_view sentenceStringPiece;
 
@@ -49,7 +49,7 @@ void TextProcessor::process(AnnotatedBlob &source, Segments &segments) {
 
 void TextProcessor::truncate(Segment &segment,
                              std::vector<string_view> &wordRanges,
-                             Segments &segments, AnnotatedBlob &source) {
+                             Segments &segments, AnnotatedText &source) {
   for (size_t offset = 0; offset < segment.size();
        offset += max_length_break_) {
     auto start = segment.begin() + offset;

@@ -12,7 +12,7 @@ namespace bergamot {
 class SentenceSplitter {
   // A wrapper around @ugermann's ssplit-cpp compiled from several places in
   // mts. Constructed based on options. Used in TextProcessor below to create
-  // sentence-streams, which provide access to one sentence from text of text at
+  // sentence-streams, which provide access to one sentence from blob of text at
   // a time.
 public:
   explicit SentenceSplitter(Ptr<Options> options);

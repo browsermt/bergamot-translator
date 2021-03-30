@@ -18,7 +18,7 @@
 namespace marian {
 namespace bergamot {
 
-/// Service exposes methods to translate an incoming text of text to the
+/// Service exposes methods to translate an incoming blob of text to the
 /// Consumer of bergamot API.
 ///
 /// An example use of this API looks as follows:
@@ -101,7 +101,7 @@ private:
   /// Store vocabs representing source and target.
   std::vector<Ptr<Vocab const>> vocabs_; // ORDER DEPENDENCY (text_processor_)
 
-  /// TextProcesser takes a text of text and converts into format consumable by
+  /// TextProcesser takes a blob of text and converts into format consumable by
   /// the batch-translator and annotates sentences and words.
   TextProcessor text_processor_; // ORDER DEPENDENCY (vocabs_)
 

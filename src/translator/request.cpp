@@ -15,7 +15,7 @@ Request::Request(size_t Id, size_t lineNumberBegin, Segments &&segments,
                  ResponseBuilder &&responseBuilder)
     : Id_(Id), lineNumberBegin_(lineNumberBegin),
       segments_(std::move(segments)),
-      responseBuilder_(std::move(responseBuilder_))
+      responseBuilder_(std::move(responseBuilder))
 
 {
 

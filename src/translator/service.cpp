@@ -118,9 +118,12 @@ std::future<Response> Service::translate(std::string &&input) {
   std::promise<Response> responsePromise;
   auto future = responsePromise.get_future();
 
-  Ptr<Request> request = New<Request>(
-      requestId_++, /* lineNumberBegin = */ 0, vocabs_, std::move(source),
-      std::move(segments), std::move(responsePromise));
+  RequestParams requestParams; // TODO(jerinphilip): Take this in as argument
+  ResponseBuilder responseBuilder(requestParams, std::move(source), vocabs_,
+                                  std::move(responsePromise));
+  Ptr<Request> request =
+      New<Request>(requestId_++, /* lineNumberBegin = */ 0, std::move(segments),
+                   std::move(responseBuilder));
 
   batcher_.addWholeRequest(request);
   if (numWorkers_ == 0) {

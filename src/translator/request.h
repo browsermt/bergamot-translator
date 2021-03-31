@@ -19,6 +19,7 @@
 
 #include "definitions.h"
 #include "response.h"
+#include "response_builder.h"
 #include "sentence_ranges.h"
 
 #include "common/logging.h"
@@ -35,9 +36,8 @@ namespace bergamot {
 
 class Request {
 public:
-  Request(size_t Id, size_t lineNumberBegin,
-          std::vector<Ptr<Vocab const>> &vocabs_, AnnotatedText &&source,
-          Segments &&segments, std::promise<Response> responsePromise);
+  Request(size_t Id, size_t lineNumberBegin, Segments &&segments,
+          ResponseBuilder &&responseBuilder);
 
   // Obtain the count of tokens in the segment correponding to index. Used to
   // insert sentence from multiple requests into the corresponding size bucket.
@@ -60,7 +60,7 @@ public:
   void processHistory(size_t index, Ptr<History> history);
 
   // On completion of last segment, sets value of the promise.
-  void completeRequest();
+  // void completeRequest();
 
 private:
   size_t Id_;
@@ -76,7 +76,7 @@ private:
   // string_views of the text corresponding to these words, pointing to
   // sequences in source_. histories_ is a buffer which eventually stores the
   // translations of each segment in the corresponding index.
-  AnnotatedText source_;
+  // AnnotatedText source_;
   Segments segments_;
   std::vector<Ptr<History>> histories_;
 
@@ -84,10 +84,11 @@ private:
   // of translation of all segments. The promise below is set to this Response
   // value. future to this promise is made available to the user through
   // Service.
-  std::promise<Response> response_;
+  // std::promise<Response> response_;
 
   // Constructing Response requires the vocabs_ used to generate Request.
-  std::vector<Ptr<Vocab const>> *vocabs_;
+  // std::vector<Ptr<Vocab const>> *vocabs_;
+  ResponseBuilder responseBuilder_;
 };
 
 class RequestSentence {

@@ -12,7 +12,7 @@
 #include "translator/history.h"
 #include "translator/scorers.h"
 
-#ifndef WASM
+#ifndef WASM_COMPATIBLE_SOURCE
 #include "pcqueue.h"
 #endif
 

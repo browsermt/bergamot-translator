@@ -45,10 +45,9 @@ jobs:
       working-directory: build
       run: make -j2
 
-    # Removing unit-tests, taken care of in browsermt/marian-dev
-    # - name: Run unit tests
-    # - working-directory: build
-    # - run: make test
+    - name: Run unit tests
+      working-directory: build
+      run: make test
 
     - name: Print versions
       working-directory: build

@@ -5,6 +5,7 @@
 #include "batcher.h"
 #include "data/types.h"
 #include "response.h"
+#include "response_builder.h"
 #include "text_processor.h"
 #include "translator/parser.h"
 

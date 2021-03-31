@@ -1,0 +1,89 @@
+#include "response_builder.h"
+
+namespace marian {
+namespace bergamot {
+
+void ResponseBuilder::buildQualityScores(Histories &histories,
+                                         Response &response) {
+  std::vector<Quality> qualityScores;
+  for (auto &history : histories) {
+    // TODO(jerin): Change hardcode of nBest = 1
+    NBestList onebest = history->nBest(1);
+
+    Result result = onebest[0]; // Expecting only one result;
+    Words words = std::get<0>(result);
+    // Quality scores: Sequence level is obtained as normalized path scores.
+    // Word level using hypothesis traceback. These are most-likely
+    // logprobs.
+    auto normalizedPathScore = std::get<2>(result);
+    auto wordQualities = hyp->tracebackWordScores();
+    wordQualities.pop_back();
+    qualityScores.push_back((Quality){normalizedPathScore, wordQualities});
+  }
+}
+
+void ResponseBuilder::buildAlignments(Histories &histories,
+                                      Response &response) {
+  std::vector<Alignments> alignments;
+  for (auto &history : histories) {
+    // TODO(jerin): Change hardcode of nBest = 1
+    NBestList onebest = history->nBest(1);
+
+    Result result = onebest[0]; // Expecting only one result;
+    Words words = std::get<0>(result);
+    // Alignments
+    // TODO(jerinphilip): The following double conversion might not be
+    // necessary. Hard alignment can directly be exported, but this would
+    // mean WASM bindings for a structure deep within marian source.
+    auto hyp = std::get<1>(result);
+    auto softAlignment = hyp->tracebackAlignment();
+    auto hardAlignment = data::ConvertSoftAlignToHardAlign(
+        softAlignment, /*threshold=*/0.2f); // TODO(jerinphilip): Make this
+                                            // a configurable parameter.
+
+    Alignment unified_alignment;
+    for (auto &p : hardAlignment) {
+      unified_alignment.emplace_back((Point){p.srcPos, p.tgtPos, p.prob});
+    }
+
+    alignments.push_back(std::move(unified_alignment));
+  }
+}
+
+void ResponseBuilder::buildTranslatedText(Histories &histories,
+                                          Response &response) {
+  // Reserving length at least as much as source_ seems like a reasonable
+  // thing to do to avoid reallocations.
+  response.target.text.reserve(source.text.size());
+
+  size_t offset{0};
+  bool first{true};
+
+  for (auto &history : histories) {
+    // TODO(jerin): Change hardcode of nBest = 1
+    NBestList onebest = history->nBest(1);
+
+    Result result = onebest[0]; // Expecting only one result;
+    Words words = std::get<0>(result);
+    auto targetVocab = vocabs.back();
+
+    std::string decoded;
+    std::vector<string_view> targetSentenceMappings;
+    targetVocab->decodeWithByteRanges(words, decoded, targetSentenceMappings);
+
+    if (first) {
+      first = false;
+    } else {
+      response.target.text += " ";
+      ++offset;
+    }
+
+    response.target.text += decoded;
+    response.target.annotation.addSentence(targetSentenceMappings);
+
+    offset += decoded.size();
+  }
+}
+
+} // namespace bergamot
+} // namespace marian

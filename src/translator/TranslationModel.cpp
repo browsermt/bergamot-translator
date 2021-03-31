@@ -32,24 +32,19 @@ TranslationModel::translate(std::vector<std::string> &&texts,
     intermediate.wait();
     auto marianResponse(std::move(intermediate.get()));
 
-    // This mess because marian::string_view != std::string_view
-    std::string source, translation;
-    marian::bergamot::Response::SentenceMappings mSentenceMappings;
-    marianResponse.move(source, translation, mSentenceMappings);
-
-    // Convert to UnifiedAPI::TranslationResult
     TranslationResult::SentenceMappings sentenceMappings;
-    for (auto &p : mSentenceMappings) {
-      std::string_view src(p.first.data(), p.first.size()),
-          tgt(p.second.data(), p.second.size());
-      sentenceMappings.emplace_back(src, tgt);
+    for (size_t idx = 0; idx < marianResponse.size(); idx++) {
+      marian::string_view src = marianResponse.source.sentence(idx);
+      marian::string_view tgt = marianResponse.target.sentence(idx);
+      sentenceMappings.emplace_back(std::string_view(src.data(), src.size()),
+                                    std::string_view(tgt.data(), tgt.size()));
     }
 
     // In place construction.
     translationResults.emplace_back(
-        std::move(source),          // &&marianResponse.source_
-        std::move(translation),     // &&marianResponse.translation_
-        std::move(sentenceMappings) // &&sentenceMappings
+        std::move(marianResponse.source.text), // &&marianResponse.source_
+        std::move(marianResponse.target.text), // &&marianResponse.translation_
+        std::move(sentenceMappings)            // &&sentenceMappings
     );
   }
 

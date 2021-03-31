@@ -28,7 +28,7 @@ int main(int argc, char *argv[]) {
   std::future<Response> responseFuture = service.translate(std::move(input));
   responseFuture.wait();
   Response response = responseFuture.get();
-  std::cout << response.translation() << std::endl;
+  std::cout << response.target.text << std::endl;
 
   // Clear the memory used for the byte array
   free(model_bytes); // Ideally, this should be done after the translation model has been gracefully shut down.

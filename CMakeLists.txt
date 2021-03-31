@@ -14,6 +14,8 @@ include(CMakeDependentOption)
 # Project specific cmake options
 option(COMPILE_WASM "Compile for WASM" OFF)
 option(USE_WASM_COMPATIBLE_SOURCES "Use wasm compatible sources" ON)
+option(COMPILE_TESTS "Compile bergamot-tests" OFF)
+
 SET(PACKAGE_DIR "" CACHE STRING "Directory including all the files to be packaged (pre-loaded) in wasm builds")
 
 # Set 3rd party submodule specific cmake options for this project
@@ -56,6 +58,11 @@ if(COMPILE_WASM)
   list(APPEND WASM_COMPILE_FLAGS -Wno-error=pthreads-mem-growth)
 endif(COMPILE_WASM)
 
+# Needs to be enabled before including the folder containing tests (src/tests)
+if(COMPILE_TESTS)
+    enable_testing()
+endif(COMPILE_TESTS)
+
 add_subdirectory(3rd_party)
 add_subdirectory(src)
 
@@ -64,3 +71,4 @@ if(COMPILE_WASM)
 else()
   add_subdirectory(app)
 endif(COMPILE_WASM)
+

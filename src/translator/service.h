@@ -47,9 +47,9 @@ inline const MemoryGift* hackShortLis(const void* shortlistMemory) {
 ///
 ///  options = ...;
 ///  service = Service(options);
-///  std::string input_blob = "Hello World";
+///  std::string input_text = "Hello World";
 ///  std::future<Response>
-///      response = service.translate(std::move(input_blob));
+///      response = service.translate(std::move(input_text));
 ///  response.wait();
 ///  Response result = response.get();
 ///

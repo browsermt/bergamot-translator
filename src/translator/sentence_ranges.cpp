@@ -60,6 +60,20 @@ string_view AnnotatedText::sentence(size_t sentenceIdx) const {
   return asStringView(sentenceAsByteRange);
 }
 
+void AnnotatedText::appendSentence(std::string prefix, std::string &reference,
+                                   std::vector<string_view> &wordRanges) {
+  text += prefix;
+  size_t offset = text.size(); // Get size before to do ByteRange arithmetic
+  text += reference;           // Append reference to text
+  std::vector<ByteRange> sentence;
+  for (auto &wordView : wordRanges) {
+    size_t thisWordBegin = offset + wordView.data() - &reference[0];
+    sentence.push_back(
+        (ByteRange){thisWordBegin, thisWordBegin + wordView.size()});
+  }
+  annotation.addSentence(sentence);
+}
+
 void AnnotatedText::addSentence(std::vector<string_view> &wordRanges) {
   addSentence(std::begin(wordRanges), std::end(wordRanges));
 };

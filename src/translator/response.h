@@ -44,7 +44,7 @@ class Response {
 
 public:
   /// Empty constructor, harmoniously existing for now.
-  Response();
+  Response(){};
   Response(AnnotatedText &&source, Histories &&histories,
            std::vector<Ptr<Vocab const>> &vocabs);
 

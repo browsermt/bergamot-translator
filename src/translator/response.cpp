@@ -10,7 +10,7 @@ namespace bergamot {
 
 Response::Response(AnnotatedText &&source, Histories &&histories,
                    std::vector<Ptr<Vocab const>> &vocabs)
-    : source(std::move(source)), histories_(std::move(histories)) {
+    : source(std::move(source)) {
   // Reserving length at least as much as source_ seems like a reasonable thing
   // to do to avoid reallocations.
   target.text.reserve(source.text.size());

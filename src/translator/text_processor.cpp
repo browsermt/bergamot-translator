@@ -25,9 +25,9 @@ TextProcessor::TextProcessor(std::vector<Ptr<Vocab const>> &vocabs,
   ABORT_IF(max_length_break_ < 0, "max-length-break cannot be < 0");
 }
 
-void TextProcessor::process(const string_view &query, Segments &segments,
-                            SentenceRanges &sourceRanges) {
+void TextProcessor::process(AnnotatedText &source, Segments &segments) {
 
+  string_view query = string_view(source.text);
   auto sentenceStream = sentence_splitter_.createSentenceStream(query);
   std::string_view sentenceStringPiece;
 
@@ -42,14 +42,14 @@ void TextProcessor::process(const string_view &query, Segments &segments,
     // after normalization. 0 prevents any empty entries from being added.
     if (segment.size() > 0) {
       // Truncate segment into max_input_size segments.
-      truncate(segment, wordRanges, segments, sourceRanges);
+      truncate(segment, wordRanges, segments, source);
     }
   }
 }
 
 void TextProcessor::truncate(Segment &segment,
                              std::vector<string_view> &wordRanges,
-                             Segments &segments, SentenceRanges &sourceRanges) {
+                             Segments &segments, AnnotatedText &source) {
   for (size_t offset = 0; offset < segment.size();
        offset += max_length_break_) {
     auto start = segment.begin() + offset;
@@ -61,7 +61,7 @@ void TextProcessor::truncate(Segment &segment,
     segments.back().push_back(sourceEosId());
 
     auto astart = wordRanges.begin() + offset;
-    sourceRanges.addSentence(astart, astart + diff);
+    source.addSentence(astart, astart + diff);
   }
 }
 

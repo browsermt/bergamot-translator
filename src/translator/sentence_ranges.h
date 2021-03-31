@@ -94,9 +94,10 @@ public:
   /// constructor is disallowed).
   AnnotatedText(std::string &&text) : text(std::move(text)){};
 
-  AnnotatedText(AnnotatedText &&annotatedBlob)
-      : text(std::move(annotatedBlob.text)),
-        annotation(std::move(annotatedBlob.annotation)) {}
+  // @jerinphilip: We will try the default move constructor for now.
+  // AnnotatedText(AnnotatedText &&annotatedBlob)
+  //     : text(std::move(annotatedBlob.text)),
+  //       annotation(std::move(annotatedBlob.annotation)) {}
 
   /// Returns the number of sentences in the annotation structure.
   const size_t numSentences() const { return annotation.numSentences(); }

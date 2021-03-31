@@ -28,7 +28,7 @@ loadVocabularies(marian::Ptr<marian::Options> options) {
 namespace marian {
 namespace bergamot {
 
-Service::Service(Ptr<Options> options, const MemoryGift* modelMemory, const MemoryGift* shortlistMemory)
+Service::Service(Ptr<Options> options, const AlignedMemory* modelMemory, const AlignedMemory* shortlistMemory)
     : requestId_(0), vocabs_(std::move(loadVocabularies(options))),
       text_processor_(vocabs_, options), batcher_(options),
       numWorkers_(options->get<int>("cpu-threads")),

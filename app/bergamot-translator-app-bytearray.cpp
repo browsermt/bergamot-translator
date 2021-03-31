@@ -19,9 +19,15 @@ int main(int argc, char **argv) {
   auto options = configParser.parseOptions(argc, argv, true);
   std::string config = options->asYamlString();
 
+  // Prepare model byte array
+  using namespace marian::bergamot;
+  std::string modelFile = getModelFileFromConfig(options);
+  size_t modelMemorySize = getMemorySizeFromFile(modelFile, true);
+  AlignedMemory modelBytes(modelMemorySize);
+  loadFileToMemory(modelFile, modelBytes);
+
   // Route the config string to construct marian model through TranslationModel
-  const void * model_bytes = marian::bergamot::getBinaryModelFromConfig(options).data();
-  auto model = std::make_shared<TranslationModel>(config, model_bytes);
+  auto model = std::make_shared<TranslationModel>(config, modelBytes.begin());
 
   TranslationRequest translationRequest;
   std::vector<std::string> texts;
@@ -60,9 +66,6 @@ int main(int argc, char **argv) {
     }
     std::cout << std::endl;
   }
-
-  // Clear the memory used for the byte array
-  free((char *)model_bytes); // Ideally, this should be done after the translation model has been gracefully shut down.
 
   return 0;
 }

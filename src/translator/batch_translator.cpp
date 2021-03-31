@@ -11,8 +11,8 @@ namespace bergamot {
 BatchTranslator::BatchTranslator(DeviceId const device,
                                  std::vector<Ptr<Vocab const>> &vocabs,
                                  Ptr<Options> options,
-                                 const MemoryGift* modelMemory,
-                                 const MemoryGift* shortlistMemory)
+                                 const AlignedMemory* modelMemory,
+                                 const AlignedMemory* shortlistMemory)
     : device_(device), options_(options), vocabs_(&vocabs),
     modelMemory_(modelMemory), shortlistMemory_(shortlistMemory) {}
 
@@ -23,7 +23,7 @@ void BatchTranslator::initialize() {
     bool shared_vcb = vocabs_->front() == vocabs_->back();
     if (shortlistMemory_ != nullptr) {
       bool check = options_->get<bool>("check-bytearray",true);
-      slgen_ = New<data::BinaryShortlistGenerator>(shortlistMemory_->data(), shortlistMemory_->length(),
+      slgen_ = New<data::BinaryShortlistGenerator>(shortlistMemory_->begin(), shortlistMemory_->size(),
                                                      vocabs_->front(), vocabs_->back(),
                                                      srcIdx, trgIdx, shared_vcb, check);
     }
@@ -43,11 +43,11 @@ void BatchTranslator::initialize() {
   graph_->getBackend()->configureDevice(options_);
   graph_->reserveWorkspaceMB(options_->get<size_t>("workspace"));
   if (modelMemory_ != nullptr) { // If we have provided a byte array that contains the model memory, we can initialise the model from there, as opposed to from reading in the config file
-    if ((uintptr_t)modelMemory_->data() % 256 != 0) {
+    if ((uintptr_t)modelMemory_->size() % 256 != 0) {
       std::cerr << "The provided memory is not aligned to 256 bytes and will crash when vector instructions are used on it." << std::endl;
       exit(1);
     }
-    const std::vector<const void *> container = {modelMemory_->data()}; // Marian supports multiple models initialised in this manner hence std::vector. However we will only ever use 1 during decoding.
+    const std::vector<const void *> container = {modelMemory_->begin()}; // Marian supports multiple models initialised in this manner hence std::vector. However we will only ever use 1 during decoding.
     scorers_ = createScorers(options_, container);
   } else {
     scorers_ = createScorers(options_);

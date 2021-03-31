@@ -18,24 +18,27 @@
 namespace marian {
 namespace bergamot {
 
-// Hack code to construct MemoryGift* from void*
-inline const MemoryGift* hackModel(const void* modelMemory) {
+// Hack code to construct AlignedMemory* from void*
+inline const AlignedMemory* hackModel(const void* modelMemory) {
   if(modelMemory != nullptr){
-    // MemoryGift* should be freed once it is no longer used; here is a hack to make TranslationModel works
-    const MemoryGift* modelGift = new MemoryGift(modelMemory,1);
-    return modelGift;
+    // Here is a hack to make TranslationModel works
+    size_t modelMemorySize = 73837568;   // Hack: model memory size should be changed to actual model size
+    static AlignedMemory alignedMemory(modelMemorySize);
+    memcpy(alignedMemory.begin(), modelMemory, modelMemorySize);
+    return &alignedMemory;
   }
   return nullptr;
 }
 
-inline const MemoryGift* hackShortLis(const void* shortlistMemory) {
+inline const AlignedMemory* hackShortLis(const void* shortlistMemory) {
   if(shortlistMemory!= nullptr) {
     // Hacks to obtain shortlist memory size as this will be checked during construction
     size_t shortlistMemorySize = sizeof(uint64_t) * (6 + *((uint64_t*)shortlistMemory+4))
                                  + sizeof(uint32_t) * *((uint64_t*)shortlistMemory+5);
-    // MemoryGift* should be freed once it is no longer used; here is a hack to make TranslationModel works
-    const MemoryGift* shortlistGift = new MemoryGift(shortlistMemory, shortlistMemorySize);
-    return shortlistGift;
+    // Here is a hack to make TranslationModel works
+    static AlignedMemory alignedMemory(shortlistMemorySize);
+    memcpy(alignedMemory.begin(), shortlistMemory, shortlistMemorySize);
+    return &alignedMemory;
   }
   return nullptr;
 }
@@ -60,9 +63,10 @@ class Service {
 
 public:
   /// @param options Marian options object
-  /// @param model_memory byte array (aligned to 64!!!) that contains the bytes
+  /// @param modelMemory byte array (aligned to 64!!!) that contains the bytes
   /// of a model.bin. Optional, defaults to nullptr when not used
-  explicit Service(Ptr<Options> options, const MemoryGift* modelMemory, const MemoryGift* shortlistMemory);
+  /// @param shortlistMemory byte array of shortlist
+  explicit Service(Ptr<Options> options, const AlignedMemory* modelMemory, const AlignedMemory* shortlistMemory);
 
   explicit Service(Ptr<Options> options) : Service(options, nullptr, nullptr){}
 
@@ -110,8 +114,8 @@ private:
 
   /// Number of workers to launch.
   size_t numWorkers_;        // ORDER DEPENDENCY (pcqueue_)
-  const MemoryGift* modelMemory_ = nullptr; /// Model memory to load model passed as bytes.
-  const MemoryGift* shortlistMemory_ = nullptr;  /// Shortlist memory passed as bytes.
+  const AlignedMemory* modelMemory_{nullptr}; /// Model memory to load model passed as bytes.
+  const AlignedMemory* shortlistMemory_{nullptr};  /// Shortlist memory passed as bytes.
   /// Holds instances of batch translators, just one in case
 
   /// Holds instances of batch translators, just one in case

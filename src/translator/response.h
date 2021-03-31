@@ -1,9 +1,9 @@
 #ifndef SRC_BERGAMOT_RESPONSE_H_
 #define SRC_BERGAMOT_RESPONSE_H_
 
-#include "sentence_ranges.h"
 #include "data/types.h"
 #include "definitions.h"
+#include "sentence_ranges.h"
 #include "translator/beam_search.h"
 
 #include <cassert>
@@ -13,24 +13,6 @@
 namespace marian {
 namespace bergamot {
 class Response {
-  // Response is a marian internal class (not a bergamot-translator class)
-  // holding source blob of text, vector of TokenRanges corresponding to each
-  // sentence in the source text blob and histories obtained from translating
-  // these sentences.
-  //
-  // This class provides an API at a higher level in comparison to History to
-  // access translations and additionally use string_view manipulations to
-  // recover structure in translation from source-text's structure known through
-  // reference string and string_view. As many of these computations are not
-  // required until invoked, they are computed as required and stored in data
-  // members where it makes sense to do so (translation,translationTokenRanges).
-  //
-  // Examples of such use-cases are:
-  //    translation()
-  //    translationInSourceStructure() TODO(@jerinphilip)
-  //    alignment(idx) TODO(@jerinphilip)
-  //    sentenceMappings (for bergamot-translator)
-
 public:
   Response(std::string &&source, SentenceRanges &&sourceRanges,
            Histories &&histories,
@@ -44,7 +26,7 @@ public:
         translation_(std::move(other.translation_)),
         sourceRanges_(std::move(other.sourceRanges_)),
         targetRanges_(std::move(other.targetRanges_)),
-        histories_(std::move(other.histories_)),
+        sentenceMappings_(std::move(other.sentenceMappings_)),
         vocabs_(std::move(other.vocabs_)){};
 
   // Prevents CopyConstruction and CopyAssignment. sourceRanges_ is constituted
@@ -65,12 +47,9 @@ public:
   void move(std::string &source, std::string &translation,
             SentenceMappings &sentenceMappings);
 
-  const Histories &histories() const { return histories_; }
   const std::string &source() const { return source_; }
-  const std::string &translation() {
-    constructTranslation();
-    return translation_;
-  }
+  const std::string &translation() { return translation_; }
+  const SentenceMappings sentenceMappings() const { return sentenceMappings_; }
 
   // A convenience function provided to return translated text placed within
   // source's structure. This is useful when the source text is a multi-line
@@ -81,17 +60,13 @@ public:
   // const PendingAlignmentType alignment(size_t idx);
 
 private:
-  void constructTranslation();
-  void constructSentenceMappings(SentenceMappings &);
-
   std::string source_;
   SentenceRanges sourceRanges_;
-  Histories histories_;
 
   std::vector<Ptr<Vocab const>> *vocabs_;
-  bool translationConstructed_{false};
   std::string translation_;
   SentenceRanges targetRanges_;
+  SentenceMappings sentenceMappings_;
 };
 } // namespace bergamot
 } // namespace marian

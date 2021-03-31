@@ -1,7 +1,7 @@
 #include "response.h"
-#include "sentence_ranges.h"
 #include "common/logging.h"
 #include "data/alignment.h"
+#include "sentence_ranges.h"
 
 #include <utility>
 
@@ -11,30 +11,7 @@ namespace bergamot {
 Response::Response(std::string &&source, SentenceRanges &&sourceRanges,
                    Histories &&histories, std::vector<Ptr<Vocab const>> &vocabs)
     : source_(std::move(source)), sourceRanges_(std::move(sourceRanges)),
-      histories_(std::move(histories)), vocabs_(&vocabs) {}
-
-void Response::move(std::string &source, std::string &translation,
-                    SentenceMappings &sentenceMappings) {
-
-  // Construct required stuff first.
-  constructTranslation();
-  constructSentenceMappings(sentenceMappings);
-
-  // Move content out.
-  source = std::move(source_);
-  translation = std::move(translation_);
-
-  // The above assignment expects source, target be moved.
-  // which makes the following invalid, hence required to be cleared.
-  sourceRanges_.clear();
-  targetRanges_.clear();
-  histories_.clear();
-}
-
-void Response::constructTranslation() {
-  if (translationConstructed_) {
-    return;
-  }
+      vocabs_(&vocabs) {
 
   // Reserving length at least as much as source_ seems like a reasonable thing
   // to do to avoid reallocations.
@@ -48,7 +25,7 @@ void Response::constructTranslation() {
   size_t offset{0};
   bool first{true};
 
-  for (auto &history : histories_) {
+  for (auto &history : histories) {
     // TODO(jerin): Change hardcode of nBest = 1
     NBestList onebest = history->nBest(1);
 
@@ -82,17 +59,30 @@ void Response::constructTranslation() {
     targetRanges_.addSentence(targetMappings);
   }
 
-  translationConstructed_ = true;
-}
-
-void Response::constructSentenceMappings(
-    Response::SentenceMappings &sentenceMappings) {
-
   for (size_t i = 0; i < sourceRanges_.numSentences(); i++) {
     string_view src = sourceRanges_.sentence(i);
     string_view tgt = targetRanges_.sentence(i);
-    sentenceMappings.emplace_back(src, tgt);
+    sentenceMappings_.emplace_back(src, tgt);
   }
 }
+
+void Response::move(std::string &source, std::string &translation,
+                    SentenceMappings &sentenceMappings) {
+
+  // Construct required stuff first.
+  for (auto &mapping : sentenceMappings_) {
+    sentenceMappings.emplace_back(mapping.first, mapping.second);
+  }
+
+  // Move content out.
+  source = std::move(source_);
+  translation = std::move(translation_);
+
+  // The above assignment expects source, target be moved.
+  // which makes the following invalid, hence required to be cleared.
+  sourceRanges_.clear();
+  targetRanges_.clear();
+}
+
 } // namespace bergamot
 } // namespace marian

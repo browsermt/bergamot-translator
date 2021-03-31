@@ -38,10 +38,10 @@ public:
     // TODO(jerinphilip) load RequestParams into options and turn build
     // functions on or off.
     // PART 1: Freeze Response and fix Request pipeline.
-    existingBuild(std::move(histories));
+    // existingBuild(std::move(histories));
 
     // PART 2: Uncomment below and test the other half.
-    // replacementBuild(std::move(histories));
+    replacementBuild(std::move(histories));
   }
 
   void existingBuild(Histories &&histories) {

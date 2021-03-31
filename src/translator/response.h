@@ -41,6 +41,7 @@ struct Quality {
 /// sentences boundaries, which are required to interpret Quality and
 /// Alignment (s) at the moment.
 class Response {
+
 public:
   ///
   Response(AnnotatedText &&source, Histories &&histories,

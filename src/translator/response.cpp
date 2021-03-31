@@ -102,6 +102,5 @@ Response::Response(AnnotatedText &&source, Histories &&histories,
     target.addSentence(targetMappings);
   }
 }
-
 } // namespace bergamot
 } // namespace marian

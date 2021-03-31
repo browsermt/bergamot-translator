@@ -72,17 +72,15 @@ void ResponseBuilder::buildTranslatedText(Histories &histories,
     std::vector<string_view> targetSentenceMappings;
     targetVocab->decodeWithByteRanges(words, decoded, targetSentenceMappings);
 
+    // delimiter can be used to fill in the blanks from source as well.
+    std::string delimiter;
     if (first) {
       first = false;
     } else {
-      response.target.text += " ";
-      ++offset;
+      delimiter = " ";
     }
 
-    response.target.text += decoded;
-    response.target.addSentence(targetSentenceMappings);
-
-    offset += decoded.size();
+    response.target.appendSentence(delimiter, decoded, targetSentenceMappings);
   }
 }
 

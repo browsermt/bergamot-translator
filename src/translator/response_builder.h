@@ -1,4 +1,6 @@
-#pragma once
+#ifndef SRC_BERGAMOT_RESPONSE_BUILDER_H_
+#define SRC_BERGAMOT_RESPONSE_BUILDER_H_
+
 #include "response.h"
 
 namespace marian {
@@ -30,12 +32,14 @@ public:
     // TODO(jerinphilip) load RequestParams into options and turn build
     // functions on or off.
     //
-    ABORT_IF(source_.size() != histories.size());
+    ABORT_IF(source_.numSentences() != histories.size(),
+             "Mismatch in source and translated sentences");
     Response response;
 
     // Move source_ into response.
-    response.source_ = std::move(source_);
+    response.source = std::move(source_);
 
+    // Should be after source is set
     buildTranslatedText(histories, response);
 
     // Should always be after buildTranslatedText
@@ -76,3 +80,5 @@ private:
 };
 } // namespace bergamot
 } // namespace marian
+
+#endif //  SRC_BERGAMOT_RESPONSE_BUILDER_H_

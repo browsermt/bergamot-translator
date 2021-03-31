@@ -53,8 +53,7 @@ public:
   Response(Response &&other)
       : source(std::move(other.source)), target(std::move(other.target)),
         alignments(std::move(other.alignments)),
-        qualityScores(std::move(other.qualityScores)),
-        histories_(std::move(other.histories_)){};
+        qualityScores(std::move(other.qualityScores)){};
 
   // The following copy bans are not stricitly required anymore since Annotation
   // is composed of the ByteRange primitive (which was previously string_view
@@ -88,13 +87,6 @@ public:
   /// sparse matrix representation with indices corresponding
   /// to (sub-)words accessible through Annotation.
   std::vector<Alignment> alignments;
-
-  /// Access to histories, which holds rich information on translated text.
-  /// Not recommended to use, will be removed in future.
-  const Histories &histories() const { return histories_; }
-
-private:
-  Histories histories_;
 };
 } // namespace bergamot
 } // namespace marian

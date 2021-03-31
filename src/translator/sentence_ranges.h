@@ -107,6 +107,11 @@ public:
     return annotation.numWords(sentenceIdx);
   }
 
+  /// Appends a sentence to the existing text and transparently rebases
+  /// string_views
+  void appendSentence(std::string prefix, std::string &reference,
+                      std::vector<string_view> &wordRanges);
+
   /// Adds a sentence, used to load from SentencePiece annotations conveniently.
   void addSentence(std::vector<string_view> &wordRanges);
 

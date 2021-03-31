@@ -14,8 +14,8 @@
 namespace marian {
 namespace bergamot {
 
-/// Alignment is stored as a sparse matrix, this pretty much aligns with
-/// marian internals but is brought here to maintain translator
+/// Alignment is stored as a sparse matrix, this pretty much aligns with marian
+/// internals but is brought here to maintain translator
 /// agnosticism/independence.
 struct Point {
   size_t src; ///< Index pointing to source ByteRange
@@ -54,20 +54,20 @@ public:
         qualityScores(std::move(other.qualityScores)),
         histories_(std::move(other.histories_)){};
 
-  // The following copy bans are not stricitly required anymore since
-  // Annotation is composed of the ByteRange primitive (which was previously
-  // string_view and required to be bound to string), but makes movement
-  // efficient by banning these letting compiler complain about copies.
+  // The following copy bans are not stricitly required anymore since Annotation
+  // is composed of the ByteRange primitive (which was previously string_view
+  // and required to be bound to string), but makes movement efficient by
+  // banning these letting compiler complain about copies.
 
   Response(const Response &) = delete;
   Response &operator=(const Response &) = delete;
 
   /// \endcond
 
-  /// Number of sentences translated. The processing of a text of into
-  /// sentences are handled internally, and this information can be used to
-  /// iterate through meaningful units of translation for which alignment and
-  /// quality information are available.
+  /// Number of sentences translated. The processing of a text of into sentences
+  /// are handled internally, and this information can be used to iterate
+  /// through meaningful units of translation for which alignment and quality
+  /// information are available.
   const size_t size() const { return source.numSentences(); }
 
   /// source text and annotations of (sub-)words and sentences.

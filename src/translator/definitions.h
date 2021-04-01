@@ -3,6 +3,7 @@
 
 #include "data/types.h"
 #include "data/vocab_base.h"
+#include "aligned.h"
 #include <vector>
 
 namespace marian {
@@ -20,6 +21,9 @@ template <class T, typename... Args> UPtr<T> UNew(Args &&... args) {
 }
 
 template <class T> UPtr<T> UNew(UPtr<T> p) { return UPtr<T>(p); }
+
+/// Shortcut to AlignedVector<const void*> for byte arrays
+typedef AlignedVector<const void*> AlignedMemory;
 
 } // namespace bergamot
 } // namespace marian

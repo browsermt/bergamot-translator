@@ -23,7 +23,11 @@ inline marian::ConfigParser createConfigParser() {
       "--max-length-break", "Bergamot Options",
       "Maximum input tokens to be processed in a single sentence.", 128);
 
-  return cp;
+  cp.addOption<bool>(
+      "--check-bytearray", "Bergamot Options",
+      "Flag holds whether to check the content of the bytearray (true by default)", true);
+
+    return cp;
 }
 
 inline std::shared_ptr<marian::Options>

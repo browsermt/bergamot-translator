@@ -9,14 +9,17 @@
 #include "translator/parser.h"
 #include "translator/response.h"
 #include "translator/service.h"
-#include "translator/byteArrayExample.h"
+#include "translator/byte_array_util.h"
 
 int main(int argc, char *argv[]) {
   auto cp = marian::bergamot::createConfigParser();
   auto options = cp.parseOptions(argc, argv, true);
 
-  void * model_bytes = bergamot::getBinaryModelFromConfig(options);
-  marian::bergamot::Service service(options, model_bytes);
+  // Prepare memories for model and shortlist
+  marian::bergamot::AlignedMemory modelBytes = marian::bergamot::getModelMemoryFromConfig(options);
+  marian::bergamot::AlignedMemory shortlistBytes = marian::bergamot::getShortlistMemoryFromConfig(options);
+
+  marian::bergamot::Service service(options, std::move(modelBytes), std::move(shortlistBytes));
 
   // Read a large input text blob from stdin
   std::ostringstream std_input;
@@ -29,9 +32,6 @@ int main(int argc, char *argv[]) {
   responseFuture.wait();
   Response response = responseFuture.get();
   std::cout << response.target.text << std::endl;
-
-  // Clear the memory used for the byte array
-  free(model_bytes); // Ideally, this should be done after the translation model has been gracefully shut down.
 
   return 0;
 }

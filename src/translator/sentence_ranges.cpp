@@ -6,48 +6,38 @@ namespace marian {
 namespace bergamot {
 
 void Annotation::addSentence(std::vector<ByteRange> &sentence) {
-  size_t size = flatByteRanges_.size();
   flatByteRanges_.insert(std::end(flatByteRanges_), std::begin(sentence),
                          std::end(sentence));
-  sentenceBeginIds_.push_back(size);
+  size_t size = flatByteRanges_.size();
+  sentenceEndIds_.push_back(size);
 }
 
 size_t Annotation::numWords(size_t sentenceIdx) const {
   auto terminals = sentenceTerminalIds(sentenceIdx);
-  return terminals.second - terminals.first + 1;
+  return terminals.second - terminals.first;
 }
 
 std::pair<size_t, size_t>
 Annotation::sentenceTerminalIds(size_t sentenceIdx) const {
   size_t bosId, eosId;
-  bosId = sentenceBeginIds_[sentenceIdx];
-  eosId = sentenceIdx + 1 < numSentences()
-              ? sentenceBeginIds_[sentenceIdx + 1] - 1
-              : flatByteRanges_.size() - 1;
+  bosId = (sentenceIdx == 0)
+              ? 0                                 // Avoid -1 access
+              : sentenceEndIds_[sentenceIdx - 1]; // Half interval, so;
 
-  // Out of bound checks.
-  assert(bosId < flatByteRanges_.size());
-  assert(eosId < flatByteRanges_.size());
+  eosId = sentenceEndIds_[sentenceIdx];
   return std::make_pair(bosId, eosId);
 }
 
-std::pair<ByteRange, ByteRange>
-Annotation::sentenceTerminals(size_t sentenceIdx) const {
-  auto terminals = sentenceTerminalIds(sentenceIdx);
-  return std::make_pair(flatByteRanges_[terminals.first],
-                        flatByteRanges_[terminals.second]);
-}
-
 ByteRange Annotation::sentence(size_t sentenceIdx) const {
-  auto terminals = sentenceTerminals(sentenceIdx);
-  return (ByteRange){terminals.first.begin, terminals.second.end};
+  auto terminals = sentenceTerminalIds(sentenceIdx);
+  auto bos = flatByteRanges_[terminals.first];
+  auto eos = flatByteRanges_[terminals.second - 1];
+  return (ByteRange){bos.begin, eos.end};
 }
 
 ByteRange Annotation::word(size_t sentenceIdx, size_t wordIdx) const {
-  size_t offset = sentenceBeginIds_[sentenceIdx];
-  // auto terminals = sentenceTerminals(sentenceIdx);
-  // assert(offset + wordIdx <= terminals.second);
-  return flatByteRanges_[offset + wordIdx];
+  size_t bosOffset = (sentenceIdx == 0) ? 0 : sentenceEndIds_[sentenceIdx - 1];
+  return flatByteRanges_[bosOffset + wordIdx];
 }
 
 string_view AnnotatedText::word(size_t sentenceIdx, size_t wordIdx) const {

@@ -19,11 +19,8 @@ int main(int argc, char **argv) {
   auto options = configParser.parseOptions(argc, argv, true);
   std::string config = options->asYamlString();
 
-  // Prepare model byte array
-  marian::bergamot::AlignedMemory modelBytes = marian::bergamot::getModelMemoryFromConfig(options);
-
   // Route the config string to construct marian model through TranslationModel
-  TranslationModel model(config, modelBytes.begin());
+  TranslationModel model(config, marian::bergamot::getModelMemoryFromConfig(options));
 
   TranslationRequest translationRequest;
   std::vector<std::string> texts;

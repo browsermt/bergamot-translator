@@ -33,7 +33,7 @@ Service::Service(Ptr<Options> options, AlignedMemory modelMemory, AlignedMemory 
       text_processor_(vocabs_, options), batcher_(options),
       numWorkers_(options->get<int>("cpu-threads")),
       modelMemory_(std::move(modelMemory)), shortlistMemory_(std::move(shortlistMemory))
-#ifndef WASM
+#ifndef WASM_COMPATIBLE_SOURCE
       // 0 elements in PCQueue is illegal and can lead to failures. Adding a
       // guard to have at least one entry allocated. In the single-threaded
       // case, while initialized pcqueue_ remains unused.
@@ -71,7 +71,7 @@ void Service::blocking_translate() {
   }
 }
 
-#ifndef WASM
+#ifndef WASM_COMPATIBLE_SOURCE
 void Service::initialize_async_translators() {
   workers_.reserve(numWorkers_);
 
@@ -101,7 +101,7 @@ void Service::async_translate() {
     pcqueue_.ProduceSwap(batch);
   }
 }
-#else  // WASM
+#else  // WASM_COMPATIBLE_SOURCE
 void Service::initialize_async_translators() {
   ABORT("Cannot run in async mode without multithreading.");
 }
@@ -109,7 +109,7 @@ void Service::initialize_async_translators() {
 void Service::async_translate() {
   ABORT("Cannot run in async mode without multithreading.");
 }
-#endif // WASM
+#endif // WASM_COMPATIBLE_SOURCE
 
 std::future<Response> Service::translate(std::string &&input) {
   Segments segments;
@@ -133,7 +133,7 @@ std::future<Response> Service::translate(std::string &&input) {
 }
 
 Service::~Service() {
-#ifndef WASM
+#ifndef WASM_COMPATIBLE_SOURCE
   for (size_t workerId = 0; workerId < numWorkers_; workerId++) {
 
     Batch poison = Batch::poison();

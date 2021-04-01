@@ -34,8 +34,7 @@ Response::Response(AnnotatedText &&source, Histories &&histories,
 
     std::string decoded;
     std::vector<string_view> targetMappings;
-    targetVocab->decodeWithByteRanges(words, decoded, targetMappings,
-                                      /*ignoreEOS=*/false);
+    targetVocab->decodeWithByteRanges(words, decoded, targetMappings);
 
     if (first) {
       first = false;

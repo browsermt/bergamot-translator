@@ -141,4 +141,15 @@ TEST_CASE("Test Annotation API with random sentences") {
       std::cout << std::endl;
     }
   }
+
+  // Try inserting an empty Sentence.
+  // int emptySentenceIdx = sentences;
+  // std::vector<marian::string_view> emptySentence;
+  // testAnnotation.addSentence(emptySentence);
+  // CHECK(testAnnotation.numWords(emptySentenceIdx) == 0);
+
+  // std::string expectedEmptyString = "";
+  // marian::string_view emptyView = testAnnotation.sentence(emptySentenceIdx);
+  // std::string obtainedString = std::string(emptyView.data(),
+  // emptyView.size()); CHECK(expectedEmptyString == obtainedString);
 }

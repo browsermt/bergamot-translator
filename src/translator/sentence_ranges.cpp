@@ -13,26 +13,32 @@ void Annotation::addSentence(std::vector<ByteRange> &sentence) {
 }
 
 size_t Annotation::numWords(size_t sentenceIdx) const {
-  auto terminals = sentenceTerminalIds(sentenceIdx);
-  return terminals.second - terminals.first;
-}
-
-std::pair<size_t, size_t>
-Annotation::sentenceTerminalIds(size_t sentenceIdx) const {
   size_t bosId, eosId;
   bosId = (sentenceIdx == 0)
               ? 0                                 // Avoid -1 access
               : sentenceEndIds_[sentenceIdx - 1]; // Half interval, so;
 
   eosId = sentenceEndIds_[sentenceIdx];
-  return std::make_pair(bosId, eosId);
+  // Difference between eosId and bosId is the number of words.
+  return eosId - bosId;
 }
 
 ByteRange Annotation::sentence(size_t sentenceIdx) const {
-  auto terminals = sentenceTerminalIds(sentenceIdx);
-  auto bos = flatByteRanges_[terminals.first];
-  auto eos = flatByteRanges_[terminals.second - 1];
-  return (ByteRange){bos.begin, eos.end};
+  size_t bosId, eosId;
+  bosId = (sentenceIdx == 0)
+              ? 0                                 // Avoid -1 access
+              : sentenceEndIds_[sentenceIdx - 1]; // Half interval, so;
+
+  eosId = sentenceEndIds_[sentenceIdx];
+  ByteRange bos = flatByteRanges_[bosId];
+  ByteRange sentenceByteRange{bos.begin, bos.end};
+  if (bosId != eosId) {
+    auto bos = flatByteRanges_[bosId];
+    auto eos = flatByteRanges_[eosId - 1];
+
+    sentenceByteRange = (ByteRange){bos.begin, eos.end};
+  }
+  return sentenceByteRange;
 }
 
 ByteRange Annotation::word(size_t sentenceIdx, size_t wordIdx) const {

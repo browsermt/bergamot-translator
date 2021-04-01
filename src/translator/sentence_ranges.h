@@ -53,12 +53,6 @@ private:
   /// Stores indices where sentences end (not inclusive, aligned with C++ half
   /// interval notions)
   std::vector<size_t> sentenceEndIds_;
-
-  /// Returns indices of terminal (word) ByteRanges in sentenceIds_ of a
-  /// sentence corresponding to sentenceIdx. The distance can be used to compute
-  /// number of words in a sentence (numWords) and also to construct the
-  /// terminal ByteRanges (sentenceTerminals).
-  std::pair<size_t, size_t> sentenceTerminalIds(size_t sentenceIdx) const;
 };
 
 /// AnnotatedText is effectively std::string text + Annotation, providing the

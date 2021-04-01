@@ -28,11 +28,11 @@ loadVocabularies(marian::Ptr<marian::Options> options) {
 namespace marian {
 namespace bergamot {
 
-Service::Service(Ptr<Options> options, const AlignedMemory* modelMemory, const AlignedMemory* shortlistMemory)
+Service::Service(Ptr<Options> options, AlignedMemory modelMemory, AlignedMemory shortlistMemory)
     : requestId_(0), vocabs_(std::move(loadVocabularies(options))),
       text_processor_(vocabs_, options), batcher_(options),
       numWorkers_(options->get<int>("cpu-threads")),
-      modelMemory_(modelMemory), shortlistMemory_(shortlistMemory)
+      modelMemory_(std::move(modelMemory)), shortlistMemory_(std::move(shortlistMemory))
 #ifndef WASM
       // 0 elements in PCQueue is illegal and can lead to failures. Adding a
       // guard to have at least one entry allocated. In the single-threaded
@@ -55,7 +55,7 @@ void Service::build_translators(Ptr<Options> options, size_t numTranslators) {
   translators_.reserve(numTranslators);
   for (size_t cpuId = 0; cpuId < numTranslators; cpuId++) {
     marian::DeviceId deviceId(cpuId, DeviceType::cpu);
-    translators_.emplace_back(deviceId, vocabs_, options, modelMemory_, shortlistMemory_);
+    translators_.emplace_back(deviceId, vocabs_, options, std::move(modelMemory_), std::move(shortlistMemory_));
   }
 }
 

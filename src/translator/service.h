@@ -19,28 +19,30 @@ namespace marian {
 namespace bergamot {
 
 // Hack code to construct AlignedMemory* from void*
-inline const AlignedMemory* hackModel(const void* modelMemory) {
+inline AlignedMemory hackModel(const void* modelMemory) {
   if(modelMemory != nullptr){
     // Here is a hack to make TranslationModel works
     size_t modelMemorySize = 73837568;   // Hack: model memory size should be changed to actual model size
-    static AlignedMemory alignedMemory(modelMemorySize);
+    AlignedMemory alignedMemory(modelMemorySize);
     memcpy(alignedMemory.begin(), modelMemory, modelMemorySize);
-    return &alignedMemory;
+    return alignedMemory;
+  } else {
+    return AlignedMemory();
   }
-  return nullptr;
 }
 
-inline const AlignedMemory* hackShortLis(const void* shortlistMemory) {
+inline AlignedMemory hackShortLis(const void* shortlistMemory) {
   if(shortlistMemory!= nullptr) {
     // Hacks to obtain shortlist memory size as this will be checked during construction
     size_t shortlistMemorySize = sizeof(uint64_t) * (6 + *((uint64_t*)shortlistMemory+4))
                                  + sizeof(uint32_t) * *((uint64_t*)shortlistMemory+5);
     // Here is a hack to make TranslationModel works
-    static AlignedMemory alignedMemory(shortlistMemorySize);
+    AlignedMemory alignedMemory(shortlistMemorySize);
     memcpy(alignedMemory.begin(), shortlistMemory, shortlistMemorySize);
-    return &alignedMemory;
+    return alignedMemory;
+  }else {
+    return AlignedMemory();
   }
-  return nullptr;
 }
 
 /// Service exposes methods to translate an incoming blob of text to the
@@ -63,17 +65,17 @@ class Service {
 
 public:
   /// @param options Marian options object
-  /// @param modelMemory byte array (aligned to 64!!!) that contains the bytes
+  /// @param modelMemory byte array (aligned to 256!!!) that contains the bytes
   /// of a model.bin. Optional, defaults to nullptr when not used
   /// @param shortlistMemory byte array of shortlist
-  explicit Service(Ptr<Options> options, const AlignedMemory* modelMemory, const AlignedMemory* shortlistMemory);
+  explicit Service(Ptr<Options> options, AlignedMemory modelMemory, AlignedMemory shortlistMemory);
 
-  explicit Service(Ptr<Options> options) : Service(options, nullptr, nullptr){}
+  explicit Service(Ptr<Options> options) : Service(options, AlignedMemory(), AlignedMemory()){}
 
 /// Construct Service from a string configuration.
   /// @param [in] config string parsable as YAML expected to adhere with marian
   /// config
-  /// @param [in] model_memory byte array (aligned to 64!!!) that contains the
+  /// @param [in] model_memory byte array (aligned to 256!!!) that contains the
   /// bytes of a model.bin. Optional, defaults to nullptr when not used
   explicit Service(const std::string &config,
                    const void* modelMemory = nullptr, const void* shortlistMemory = nullptr)
@@ -114,8 +116,8 @@ private:
 
   /// Number of workers to launch.
   size_t numWorkers_;        // ORDER DEPENDENCY (pcqueue_)
-  const AlignedMemory* modelMemory_{nullptr}; /// Model memory to load model passed as bytes.
-  const AlignedMemory* shortlistMemory_{nullptr};  /// Shortlist memory passed as bytes.
+  AlignedMemory modelMemory_; /// Model memory to load model passed as bytes.
+  AlignedMemory shortlistMemory_;  /// Shortlist memory passed as bytes.
   /// Holds instances of batch translators, just one in case
 
   /// Holds instances of batch translators, just one in case

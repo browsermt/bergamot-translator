@@ -3,7 +3,7 @@
 
 #include "data/types.h"
 #include "data/vocab_base.h"
-#include "intgemm/aligned.h"
+#include "aligned.h"
 #include <vector>
 
 namespace marian {

@@ -20,14 +20,10 @@ int main(int argc, char **argv) {
   std::string config = options->asYamlString();
 
   // Prepare model byte array
-  using namespace marian::bergamot;
-  std::string modelFile = getModelFileFromConfig(options);
-  size_t modelMemorySize = getMemorySizeFromFile(modelFile, true);
-  AlignedMemory modelBytes(modelMemorySize);
-  loadFileToMemory(modelFile, modelBytes);
+  marian::bergamot::AlignedMemory modelBytes = marian::bergamot::getModelMemoryFromConfig(options);
 
   // Route the config string to construct marian model through TranslationModel
-  auto model = std::make_shared<TranslationModel>(config, modelBytes.begin());
+  TranslationModel model(config, modelBytes.begin());
 
   TranslationRequest translationRequest;
   std::vector<std::string> texts;
@@ -48,7 +44,7 @@ int main(int argc, char **argv) {
       "Prague, the University of Sheffield, University of Tartu, and "
       "Mozilla.");
 
-  auto results = model->translate(std::move(texts), translationRequest);
+  auto results = model.translate(std::move(texts), translationRequest);
 
   // Resolve the future and get the actual result
   //std::vector<TranslationResult> results = futureResults.get();

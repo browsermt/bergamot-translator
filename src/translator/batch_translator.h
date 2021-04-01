@@ -31,14 +31,14 @@ public:
    * @param device DeviceId that performs translation. Could be CPU or GPU
    * @param vocabs Vector that contains ptrs to two vocabs
    * @param options Marian options object
-   * @param modelMemory byte array (aligned to 64!!!) that contains the bytes of a model.bin. Provide a nullptr if not used.
+   * @param modelMemory byte array (aligned to 256!!!) that contains the bytes of a model.bin. Provide a nullptr if not used.
    * @param shortlistMemory byte array of shortlist
    */
   explicit BatchTranslator(DeviceId const device, std::vector<Ptr<Vocab const>> &vocabs,
-                  Ptr<Options> options, const AlignedMemory* modelMemory, const AlignedMemory* shortlistMemory);
+                  Ptr<Options> options, AlignedMemory modelMemory, AlignedMemory shortlistMemory);
 
   explicit BatchTranslator(DeviceId const device, std::vector<Ptr<Vocab const>> &vocabs, Ptr<Options> options)
-          :BatchTranslator(device,vocabs,options, nullptr, nullptr){}
+          :BatchTranslator(device, vocabs, options, AlignedMemory(), AlignedMemory()){}
 
   // convenience function for logging. TODO(jerin)
   std::string _identifier() { return "worker" + std::to_string(device_.no); }
@@ -52,8 +52,8 @@ private:
   Ptr<ExpressionGraph> graph_;
   std::vector<Ptr<Scorer>> scorers_;
   Ptr<data::ShortlistGenerator const> slgen_;
-  const AlignedMemory* modelMemory_{nullptr};
-  const AlignedMemory* shortlistMemory_{nullptr};
+  AlignedMemory modelMemory_;
+  AlignedMemory shortlistMemory_;
 };
 
 } // namespace bergamot

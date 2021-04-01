@@ -4,9 +4,8 @@
 namespace marian {
 namespace bergamot {
 
-void loadFileToMemory(const std::string& filename, AlignedMemory& alignedMemory);
-std::string getModelFileFromConfig(marian::Ptr<marian::Options> options);
-std::string getShortlistFileFromConfig(marian::Ptr<marian::Options> options);
-size_t getMemorySizeFromFile(const std::string& filename, bool isModelFile);
+AlignedMemory loadFileToMemory(const std::string& path, bool isModelFile);
+AlignedMemory getModelMemoryFromConfig(marian::Ptr<marian::Options> options);
+AlignedMemory getShortlistMemoryFromConfig(marian::Ptr<marian::Options> options);
 } // namespace bergamot
 } // namespace marian

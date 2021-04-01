@@ -11,24 +11,15 @@
 #include "translator/service.h"
 #include "translator/byte_array_util.h"
 
-using namespace marian::bergamot;
-
 int main(int argc, char *argv[]) {
   auto cp = marian::bergamot::createConfigParser();
   auto options = cp.parseOptions(argc, argv, true);
 
   // Prepare memories for model and shortlist
-  std::string modelFile = getModelFileFromConfig(options);
-  std::string shortlistFile = getShortlistFileFromConfig(options);
-  size_t modelMemorySize = getMemorySizeFromFile(modelFile, true);
-  size_t shortlistMemorySize = getMemorySizeFromFile(shortlistFile, false);
+  marian::bergamot::AlignedMemory modelBytes = marian::bergamot::getModelMemoryFromConfig(options);
+  marian::bergamot::AlignedMemory shortlistBytes = marian::bergamot::getShortlistMemoryFromConfig(options);
 
-  AlignedMemory modelBytes(modelMemorySize);
-  AlignedMemory shortlistBytes(shortlistMemorySize);
-  loadFileToMemory(modelFile, modelBytes);
-  loadFileToMemory(shortlistFile, shortlistBytes);
-
-  marian::bergamot::Service service(options, &modelBytes, &shortlistBytes);
+  marian::bergamot::Service service(options, std::move(modelBytes), std::move(shortlistBytes));
 
   // Read a large input text blob from stdin
   std::ostringstream std_input;

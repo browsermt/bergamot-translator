@@ -67,7 +67,7 @@ public:
   /// @param options Marian options object
   /// @param modelMemory byte array (aligned to 256!!!) that contains the bytes
   /// of a model.bin. Optional, defaults to nullptr when not used
-  /// @param shortlistMemory byte array of shortlist
+  /// @param shortlistMemory byte array of shortlist (aligned to 64)
   explicit Service(Ptr<Options> options, AlignedMemory modelMemory, AlignedMemory shortlistMemory);
 
   explicit Service(Ptr<Options> options) : Service(options, AlignedMemory(), AlignedMemory()){}
@@ -77,6 +77,7 @@ public:
   /// config
   /// @param [in] model_memory byte array (aligned to 256!!!) that contains the
   /// bytes of a model.bin. Optional, defaults to nullptr when not used
+  /// @param [in] shortlistMemory byte array of shortlist (aligned to 64)
   explicit Service(const std::string &config,
                    const void* modelMemory = nullptr, const void* shortlistMemory = nullptr)
       : Service(parseOptions(config), hackModel(modelMemory), hackShortLis(shortlistMemory)) {}
@@ -115,15 +116,16 @@ private:
   void async_translate();
 
   /// Number of workers to launch.
-  size_t numWorkers_;        // ORDER DEPENDENCY (pcqueue_)
-  AlignedMemory modelMemory_; /// Model memory to load model passed as bytes.
-  AlignedMemory shortlistMemory_;  /// Shortlist memory passed as bytes.
-  /// Holds instances of batch translators, just one in case
+  size_t numWorkers_;              // ORDER DEPENDENCY (pcqueue_)
+  /// Model memory to load model passed as bytes.
+  AlignedMemory modelMemory_;      // ORDER DEPENDENCY (translators_)
+  /// Shortlist memory passed as bytes.
+  AlignedMemory shortlistMemory_;  // ORDER DEPENDENCY (translators_)
 
   /// Holds instances of batch translators, just one in case
   /// of single-threaded application, numWorkers_ in case of multithreaded
   /// setting.
-  std::vector<BatchTranslator> translators_;
+  std::vector<BatchTranslator> translators_;  // ORDER DEPENDENCY (modelMemory_, shortlistMemory_)
 
   /// Stores requestId of active request. Used to establish
   /// ordering among requests and logging/book-keeping.

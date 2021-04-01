@@ -22,8 +22,8 @@ template <class T, typename... Args> UPtr<T> UNew(Args &&... args) {
 
 template <class T> UPtr<T> UNew(UPtr<T> p) { return UPtr<T>(p); }
 
-/// Shortcut to intgemm::AlignedVector<const void*> for byte arrays
-typedef intgemm::AlignedVector<const void*> AlignedMemory;
+/// Shortcut to AlignedVector<const void*> for byte arrays
+typedef AlignedVector<const void*> AlignedMemory;
 
 } // namespace bergamot
 } // namespace marian

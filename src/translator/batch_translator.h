@@ -32,7 +32,7 @@ public:
    * @param vocabs Vector that contains ptrs to two vocabs
    * @param options Marian options object
    * @param modelMemory byte array (aligned to 256!!!) that contains the bytes of a model.bin. Provide a nullptr if not used.
-   * @param shortlistMemory byte array of shortlist
+   * @param shortlistMemory byte array of shortlist (aligned to 64)
    */
   explicit BatchTranslator(DeviceId const device, std::vector<Ptr<Vocab const>> &vocabs,
                   Ptr<Options> options, const AlignedMemory* modelMemory, const AlignedMemory* shortlistMemory);

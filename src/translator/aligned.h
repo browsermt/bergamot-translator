@@ -7,7 +7,8 @@
 
 // Aligned simple vector.
 
-namespace intgemm {
+namespace marian {
+namespace bergamot {
 
 template <class T> class AlignedVector {
 public:
@@ -66,5 +67,5 @@ private:
   T *mem_;
   std::size_t size_;
 };
-
-} // namespace intgemm
+} // namespace bergamot
+} // namespace marian

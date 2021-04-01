@@ -55,7 +55,7 @@ void Service::build_translators(Ptr<Options> options, size_t numTranslators) {
   translators_.reserve(numTranslators);
   for (size_t cpuId = 0; cpuId < numTranslators; cpuId++) {
     marian::DeviceId deviceId(cpuId, DeviceType::cpu);
-    translators_.emplace_back(deviceId, vocabs_, options, std::move(modelMemory_), std::move(shortlistMemory_));
+    translators_.emplace_back(deviceId, vocabs_, options, &modelMemory_, &shortlistMemory_);
   }
 }
 

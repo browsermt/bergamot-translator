@@ -35,10 +35,7 @@ public:
    * @param shortlistMemory byte array of shortlist
    */
   explicit BatchTranslator(DeviceId const device, std::vector<Ptr<Vocab const>> &vocabs,
-                  Ptr<Options> options, AlignedMemory modelMemory, AlignedMemory shortlistMemory);
-
-  explicit BatchTranslator(DeviceId const device, std::vector<Ptr<Vocab const>> &vocabs, Ptr<Options> options)
-          :BatchTranslator(device, vocabs, options, AlignedMemory(), AlignedMemory()){}
+                  Ptr<Options> options, const AlignedMemory* modelMemory, const AlignedMemory* shortlistMemory);
 
   // convenience function for logging. TODO(jerin)
   std::string _identifier() { return "worker" + std::to_string(device_.no); }
@@ -52,8 +49,8 @@ private:
   Ptr<ExpressionGraph> graph_;
   std::vector<Ptr<Scorer>> scorers_;
   Ptr<data::ShortlistGenerator const> slgen_;
-  AlignedMemory modelMemory_;
-  AlignedMemory shortlistMemory_;
+  const AlignedMemory* modelMemory_{nullptr};
+  const AlignedMemory* shortlistMemory_{nullptr};
 };
 
 } // namespace bergamot

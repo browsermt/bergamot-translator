@@ -97,7 +97,7 @@ jobs:
           -DUSE_FBGEMM=${{ matrix.cpu }} \
           -DUSE_SENTENCEPIECE=on \
           -DUSE_STATIC_LIBS=on \
-          -DUSE_WASM_COMPATIBLE_SOURCES=off
+          -DUSE_WASM_COMPATIBLE_SOURCE=off
 
     - name: Compile
       working-directory: build

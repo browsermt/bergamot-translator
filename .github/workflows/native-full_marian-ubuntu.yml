@@ -2,9 +2,9 @@ name: Native (Full Marian) Ubuntu
 
 on:
   push:
-    branches: [ main, ci-sandbox ]
+    branches: [ main, ci-test ]
   pull_request:
-    branches: [ main, ci-sandbox ]
+    branches: [ main, ci-test ]
 
 jobs:
   build-ubuntu:

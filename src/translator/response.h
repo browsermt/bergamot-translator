@@ -40,13 +40,11 @@ struct Quality {
 /// AnnotatedText provides an API to access markings of (sub)-word and
 /// sentences boundaries, which are required to interpret Quality and
 /// Alignment (s) at the moment.
-class Response {
+struct Response {
 
 public:
   /// Empty constructor, harmoniously existing for now.
   Response(){};
-  Response(AnnotatedText &&source, Histories &&histories,
-           std::vector<Ptr<Vocab const>> &vocabs);
 
   /// \cond HIDDEN_PUBLIC
   // Move constructor.

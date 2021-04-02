@@ -50,12 +50,12 @@ public:
     buildTranslatedText(histories, response);
 
     // Should always be after buildTranslatedText
-    bool quality = responseOptions_->get<bool>("quality");
+    bool quality = responseOptions_->get<bool>("quality", false);
     if (quality) {
       buildQualityScores(histories, response);
     }
 
-    bool alignment = responseOptions_->get<bool>("alignment");
+    bool alignment = responseOptions_->get<bool>("alignment", false);
     if (alignment) {
       buildAlignments(histories, response);
     }

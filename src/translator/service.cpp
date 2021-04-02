@@ -119,9 +119,6 @@ std::future<Response> Service::translate(std::string &&input) {
       New<Options>(); // TODO(jerinphilip): Take this in as argument
 
   // Hardcode responseOptions for now
-  responseOptions->set<bool>("quality", true);
-  responseOptions->set<bool>("alignment", true);
-  responseOptions->set<float>("alignment-threshold", 0.2f);
   return translateWithOptions(std::move(input), responseOptions);
 }
 

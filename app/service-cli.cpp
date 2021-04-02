@@ -21,8 +21,14 @@ int main(int argc, char *argv[]) {
   std::string input = std_input.str();
   using marian::bergamot::Response;
 
+  marian::Ptr<marian::Options> responseOptions = marian::New<marian::Options>();
+  responseOptions->set<bool>("quality", true);
+  responseOptions->set<bool>("alignment", true);
+  responseOptions->set<float>("alignment-threshold", 0.2f);
+
   // Wait on future until Response is complete
-  std::future<Response> responseFuture = service.translate(std::move(input));
+  std::future<Response> responseFuture =
+      service.translateWithOptions(std::move(input), responseOptions);
   responseFuture.wait();
   Response response = responseFuture.get();
 

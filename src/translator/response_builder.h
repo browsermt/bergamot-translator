@@ -37,19 +37,6 @@ public:
   void operator()(Histories &&histories) {
     // TODO(jerinphilip) load RequestParams into options and turn build
     // functions on or off.
-    // PART 1: Freeze Response and fix Request pipeline.
-    // existingBuild(std::move(histories));
-
-    // PART 2: Uncomment below and test the other half.
-    replacementBuild(std::move(histories));
-  }
-
-  void existingBuild(Histories &&histories) {
-    Response response(std::move(source_), std::move(histories), *vocabs_);
-    promise_.set_value(std::move(response));
-  }
-
-  void replacementBuild(Histories &&histories) {
     // params_ is unused, but we can try something here.
     ABORT_IF(source_.numSentences() != histories.size(),
              "Mismatch in source and translated sentences");

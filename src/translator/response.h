@@ -43,10 +43,11 @@ struct Quality {
 struct Response {
 
 public:
-  /// Empty constructor, harmoniously existing for now.
+  /// \cond HIDDEN_PUBLIC
+  /// Empty constructor, since there's explicit constructors this is required to
+  /// mimic the case where a struct is deleted.
   Response(){};
 
-  /// \cond HIDDEN_PUBLIC
   // Move constructor.
   Response(Response &&other)
       : source(std::move(other.source)), target(std::move(other.target)),
@@ -63,10 +64,11 @@ public:
 
   /// \endcond
 
-  /// Number of sentences translated. The processing of a text of into sentences
-  /// are handled internally, and this information can be used to iterate
-  /// through meaningful units of translation for which alignment and quality
-  /// information are available.
+  /// Convenience function to obtain number of units translated. Same as
+  /// `.source.numSentences()` and `.target.numSentences().` The processing of a
+  /// text of into sentences are handled internally, and this information can be
+  /// used to iterate through meaningful units of translation for which
+  /// alignment and quality information are available.
   const size_t size() const { return source.numSentences(); }
 
   /// source text and annotations of (sub-)words and sentences.

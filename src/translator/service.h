@@ -8,7 +8,7 @@
 #include "text_processor.h"
 #include "translator/parser.h"
 
-#ifndef WASM
+#ifndef WASM_COMPATIBLE_SOURCE
 #include "pcqueue.h"
 #endif
 
@@ -17,6 +17,33 @@
 
 namespace marian {
 namespace bergamot {
+
+// Hack code to construct AlignedMemory* from void*
+inline AlignedMemory hackModel(const void* modelMemory) {
+  if(modelMemory != nullptr){
+    // Here is a hack to make TranslationModel works
+    size_t modelMemorySize = 73837568;   // Hack: model memory size should be changed to actual model size
+    AlignedMemory alignedMemory(modelMemorySize);
+    memcpy(alignedMemory.begin(), modelMemory, modelMemorySize);
+    return alignedMemory;
+  } else {
+    return AlignedMemory();
+  }
+}
+
+inline AlignedMemory hackShortLis(const void* shortlistMemory) {
+  if(shortlistMemory!= nullptr) {
+    // Hacks to obtain shortlist memory size as this will be checked during construction
+    size_t shortlistMemorySize = sizeof(uint64_t) * (6 + *((uint64_t*)shortlistMemory+4))
+                                 + sizeof(uint32_t) * *((uint64_t*)shortlistMemory+5);
+    // Here is a hack to make TranslationModel works
+    AlignedMemory alignedMemory(shortlistMemorySize);
+    memcpy(alignedMemory.begin(), shortlistMemory, shortlistMemorySize);
+    return alignedMemory;
+  }else {
+    return AlignedMemory();
+  }
+}
 
 /// Service exposes methods to translate an incoming blob of text to the
 /// Consumer of bergamot API.
@@ -38,18 +65,22 @@ class Service {
 
 public:
   /// @param options Marian options object
-  /// @param model_memory byte array (aligned to 64!!!) that contains the bytes
+  /// @param modelMemory byte array (aligned to 256!!!) that contains the bytes
   /// of a model.bin. Optional, defaults to nullptr when not used
-  explicit Service(Ptr<Options> options, const void *model_memory = nullptr);
+  /// @param shortlistMemory byte array of shortlist (aligned to 64)
+  explicit Service(Ptr<Options> options, AlignedMemory modelMemory, AlignedMemory shortlistMemory);
 
-  /// Construct Service from a string configuration.
+  explicit Service(Ptr<Options> options) : Service(options, AlignedMemory(), AlignedMemory()){}
+
+/// Construct Service from a string configuration.
   /// @param [in] config string parsable as YAML expected to adhere with marian
   /// config
-  /// @param [in] model_memory byte array (aligned to 64!!!) that contains the
+  /// @param [in] model_memory byte array (aligned to 256!!!) that contains the
   /// bytes of a model.bin. Optional, defaults to nullptr when not used
+  /// @param [in] shortlistMemory byte array of shortlist (aligned to 64)
   explicit Service(const std::string &config,
-                   const void *model_memory = nullptr)
-      : Service(parseOptions(config), model_memory) {}
+                   const void* modelMemory = nullptr, const void* shortlistMemory = nullptr)
+      : Service(parseOptions(config), hackModel(modelMemory), hackShortLis(shortlistMemory)) {}
 
   /// Explicit destructor to clean up after any threads initialized in
   /// asynchronous operation mode.
@@ -79,13 +110,16 @@ private:
   void async_translate();
 
   /// Number of workers to launch.
-  size_t numWorkers_;        // ORDER DEPENDENCY (pcqueue_)
-  const void *model_memory_; /// Model memory to load model passed as bytes.
+  size_t numWorkers_;              // ORDER DEPENDENCY (pcqueue_)
+  /// Model memory to load model passed as bytes.
+  AlignedMemory modelMemory_;      // ORDER DEPENDENCY (translators_)
+  /// Shortlist memory passed as bytes.
+  AlignedMemory shortlistMemory_;  // ORDER DEPENDENCY (translators_)
 
   /// Holds instances of batch translators, just one in case
   /// of single-threaded application, numWorkers_ in case of multithreaded
   /// setting.
-  std::vector<BatchTranslator> translators_;
+  std::vector<BatchTranslator> translators_;  // ORDER DEPENDENCY (modelMemory_, shortlistMemory_)
 
   /// Stores requestId of active request. Used to establish
   /// ordering among requests and logging/book-keeping.
@@ -105,10 +139,10 @@ private:
 
   // The following constructs are available providing full capabilities on a non
   // WASM platform, where one does not have to hide threads.
-#ifndef WASM
+#ifndef WASM_COMPATIBLE_SOURCE
   PCQueue<Batch> pcqueue_; // ORDER DEPENDENCY (numWorkers_)
   std::vector<std::thread> workers_;
-#endif // WASM
+#endif // WASM_COMPATIBLE_SOURCE
 };
 
 } // namespace bergamot

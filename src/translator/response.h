@@ -45,7 +45,8 @@ struct Response {
 public:
   /// \cond HIDDEN_PUBLIC
   /// Empty constructor, since there's explicit constructors this is required to
-  /// mimic the case where a struct is deleted.
+  /// mimic the case where a struct with empty members are created, to be moved
+  /// in with legal values as they're written into.
   Response(){};
 
   // Move constructor.
@@ -54,7 +55,7 @@ public:
         alignments(std::move(other.alignments)),
         qualityScores(std::move(other.qualityScores)){};
 
-  // The following copy bans are not stricitly required anymore since Annotation
+  // The following copy bans are not strictly required anymore since Annotation
   // is composed of the ByteRange primitive (which was previously string_view
   // and required to be bound to string), but makes movement efficient by
   // banning these letting compiler complain about copies.

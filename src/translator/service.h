@@ -91,7 +91,7 @@ public:
   ~Service();
 
   /// To stay efficient and to refer to the string for alignments, expects
-  /// ownership be moved through std::move(..)
+  /// ownership be moved through `std::move(..)`
   ///
   ///  @param [in] source: rvalue reference of string to be translated.
   std::future<Response> translate(std::string &&source);
@@ -102,8 +102,7 @@ public:
   ///
   /// @param [in] source: rvalue reference of the string to be translated
   /// @param [in] responseOptions: Options indicating whether or not to include
-  /// in the Response
-  
+  /// some member in the Response, also specify any additional configurable parameters.
   std::future<Response> translateWithOptions(std::string &&source,
           ResponseOptions options);
 

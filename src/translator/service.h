@@ -19,8 +19,20 @@
 namespace marian {
 namespace bergamot {
 
-/// Service exposes methods to translate an incoming blob of text to the
-/// Consumer of bergamot API.
+/// Service offers methods create an asynchronous translation service. This is
+/// intended to be similar to the ones provided for training or decoding in ML
+/// pipelines with the following additional capabilities:
+///
+///  1. Provision of a request -> response based translation flow unlike the
+///  usual a line based translation or decoding provided in most ML frameworks.
+///  2. Internal handling of normalization etc which changes source text to
+///  provide to client translation meta-information like alignments consistent
+///  with the unnormalized input text.
+///
+/// Service exposes methods to instantiate the service from a string
+/// configuration (which can cover most translators) and to translate an
+/// incoming blob of text.
+///
 ///
 /// An example use of this API looks as follows:
 /// ```cpp
@@ -28,9 +40,11 @@ namespace bergamot {
 ///  service = Service(options);
 ///  std::string input_text = "Hello World";
 ///  std::future<Response>
-///      response = service.translate(std::move(input_text));
-///  response.wait();
-///  Response result = response.get();
+///      responseFuture = service.translate(std::move(input_text));
+///  responseFuture.wait(); // Wait until translation has completed.
+///  Response response(std::move(response.get());
+///
+/// // Do things with response.
 /// ```
 ///
 /// Optionally Service can be initialized by also passing model_memory for
@@ -43,7 +57,8 @@ public:
   /// @param modelMemory byte array (aligned to 256!!!) that contains the bytes
   /// of a model.bin. Optional, defaults to nullptr when not used
   /// @param shortlistMemory byte array of shortlist (aligned to 64)
-  explicit Service(Ptr<Options> options, AlignedMemory modelMemory, AlignedMemory shortlistMemory);
+  explicit Service(Ptr<Options> options, AlignedMemory modelMemory,
+                   AlignedMemory shortlistMemory);
 
   /// Construct Service purely from Options. This expects options which
   /// marian-decoder expects to be set for loading model shortlist and
@@ -55,9 +70,9 @@ public:
   ///    Service(options, AlignedMemory(),  AlignedMemory())
   /// ```
   /// wherein empty memory is passed and internal flow defaults to file-based
-  /// model, shortlist loading. 
-  explicit Service(Ptr<Options> options) : Service(options, AlignedMemory(),
-          AlignedMemory()){}
+  /// model, shortlist loading.
+  explicit Service(Ptr<Options> options)
+      : Service(options, AlignedMemory(), AlignedMemory()) {}
 
   /// Construct Service from a string configuration.
   /// @param [in] config string parsable as YAML expected to adhere with marian
@@ -66,8 +81,10 @@ public:
   /// bytes of a model.bin. Optional.
   /// @param [in] shortlistMemory byte array of shortlist (aligned to 64)
   explicit Service(const std::string &config,
-                   AlignedMemory modelMemory = AlignedMemory(), AlignedMemory shortlistMemory = AlignedMemory())
-      : Service(parseOptions(config), std::move(modelMemory), std::move(shortlistMemory)) {}
+                   AlignedMemory modelMemory = AlignedMemory(),
+                   AlignedMemory shortlistMemory = AlignedMemory())
+      : Service(parseOptions(config), std::move(modelMemory),
+                std::move(shortlistMemory)) {}
 
   /// Explicit destructor to clean up after any threads initialized in
   /// asynchronous operation mode.
@@ -97,16 +114,17 @@ private:
   void async_translate();
 
   /// Number of workers to launch.
-  size_t numWorkers_;              // ORDER DEPENDENCY (pcqueue_)
+  size_t numWorkers_; // ORDER DEPENDENCY (pcqueue_)
   /// Model memory to load model passed as bytes.
-  AlignedMemory modelMemory_;      // ORDER DEPENDENCY (translators_)
+  AlignedMemory modelMemory_; // ORDER DEPENDENCY (translators_)
   /// Shortlist memory passed as bytes.
-  AlignedMemory shortlistMemory_;  // ORDER DEPENDENCY (translators_)
+  AlignedMemory shortlistMemory_; // ORDER DEPENDENCY (translators_)
 
   /// Holds instances of batch translators, just one in case
   /// of single-threaded application, numWorkers_ in case of multithreaded
   /// setting.
-  std::vector<BatchTranslator> translators_;  // ORDER DEPENDENCY (modelMemory_, shortlistMemory_)
+  std::vector<BatchTranslator>
+      translators_; // ORDER DEPENDENCY (modelMemory_, shortlistMemory_)
 
   /// Stores requestId of active request. Used to establish
   /// ordering among requests and logging/book-keeping.

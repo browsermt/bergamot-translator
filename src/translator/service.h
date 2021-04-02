@@ -102,9 +102,10 @@ public:
   ///
   /// @param [in] source: rvalue reference of the string to be translated
   /// @param [in] responseOptions: Options indicating whether or not to include
-  /// some member in the Response, also specify any additional configurable parameters.
+  /// some member in the Response, also specify any additional configurable
+  /// parameters.
   std::future<Response> translateWithOptions(std::string &&source,
-          ResponseOptions options);
+                                             ResponseOptions options);
 
 private:
   /// Build numTranslators number of translators with options from options

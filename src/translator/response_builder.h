@@ -7,8 +7,8 @@
 // For now we will work with this, to avoid complaints another structure is hard
 // to operate with.
 
-typedef marian::Ptr<marian::Options> RequestParams;
-// typedef TranslationRequest RequestParams;
+typedef marian::Ptr<marian::Options> ResponseOptions;
+// typedef TranslationRequest ResponseOptions;
 
 namespace marian {
 namespace bergamot {
@@ -21,23 +21,24 @@ namespace bergamot {
 
 class ResponseBuilder {
 public:
-  /// @param [in] params: RequestParams, also an alias for TranslationRequest
+  /// @param [in] responseOptions: ResponseOptions, indicating what to include
+  /// or not in the response and any additional configurable parameters.
   /// @param [in] vocabs: marian vocab object (used in decoding)
-  //  @param [in] promise: promise to set with the constructed Response
-  ResponseBuilder(RequestParams params, AnnotatedText &&source,
+  /// @param [in] promise: promise to set with the constructed Response.
+  ResponseBuilder(ResponseOptions responseOptions, AnnotatedText &&source,
                   std::vector<Ptr<Vocab const>> &vocabs,
                   std::promise<Response> &&promise)
-      : params_(params), source_(std::move(source)), vocabs_(&vocabs),
-        promise_(std::move(promise)) {}
+      : responseOptions_(responseOptions), source_(std::move(source)),
+        vocabs_(&vocabs), promise_(std::move(promise)) {}
 
   /// Constructs and sets the promise of a Response object from obtained
   /// histories after translating.
   /// @param [in] histories: Histories obtained after translating the Request
   /// from which this functor is called.
   void operator()(Histories &&histories) {
-    // TODO(jerinphilip) load RequestParams into options and turn build
+    // TODO(jerinphilip) load ResponseOptions into options and turn build
     // functions on or off.
-    // params_ is unused, but we can try something here.
+    // responseOptions_ is unused, but we can try something here.
     ABORT_IF(source_.numSentences() != histories.size(),
              "Mismatch in source and translated sentences");
     Response response;
@@ -49,9 +50,15 @@ public:
     buildTranslatedText(histories, response);
 
     // Should always be after buildTranslatedText
-    buildQualityScores(histories, response);
+    bool quality = responseOptions_->get<bool>("quality");
+    if (quality) {
+      buildQualityScores(histories, response);
+    }
 
-    buildAlignments(histories, response);
+    bool alignment = responseOptions_->get<bool>("alignment");
+    if (alignment) {
+      buildAlignments(histories, response);
+    }
 
     // Once complete, set promise.
     promise_.set_value(std::move(response));
@@ -77,7 +84,7 @@ private:
 
   // Data members are context/curried args for the functor.
 
-  RequestParams params_;
+  ResponseOptions responseOptions_;
   std::vector<Ptr<Vocab const>> *vocabs_; // vocabs are required for decoding
                                           // and any source validation checks.
   std::promise<Response> promise_; //  To be set when callback triggered and

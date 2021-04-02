@@ -93,8 +93,19 @@ public:
   /// To stay efficient and to refer to the string for alignments, expects
   /// ownership be moved through std::move(..)
   ///
-  ///  @param [in] rvalue reference of string to be translated.
-  std::future<Response> translate(std::string &&input);
+  ///  @param [in] source: rvalue reference of string to be translated.
+  std::future<Response> translate(std::string &&source);
+
+  /// Translate an input, providing Options to construct Response. This is
+  /// useful when one has to set/unset alignments or quality in the Response to
+  /// save compute spent in constructing these objects.
+  ///
+  /// @param [in] source: rvalue reference of the string to be translated
+  /// @param [in] responseOptions: Options indicating whether or not to include
+  /// in the Response
+  
+  std::future<Response> translateWithOptions(std::string &&source,
+          ResponseOptions options);
 
 private:
   /// Build numTranslators number of translators with options from options

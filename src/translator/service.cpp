@@ -115,6 +115,19 @@ void Service::async_translate() {
 #endif // WASM_COMPATIBLE_SOURCE
 
 std::future<Response> Service::translate(std::string &&input) {
+  ResponseOptions responseOptions =
+      New<Options>(); // TODO(jerinphilip): Take this in as argument
+
+  // Hardcode responseOptions for now
+  responseOptions->set<bool>("quality", true);
+  responseOptions->set<bool>("alignment", true);
+  responseOptions->set<float>("alignment-threshold", 0.2f);
+  return translateWithOptions(std::move(input), responseOptions);
+}
+
+std::future<Response>
+Service::translateWithOptions(std::string &&input,
+                              ResponseOptions responseOptions) {
   Segments segments;
   AnnotatedText source(std::move(input));
   text_processor_.process(source, segments);
@@ -122,8 +135,7 @@ std::future<Response> Service::translate(std::string &&input) {
   std::promise<Response> responsePromise;
   auto future = responsePromise.get_future();
 
-  RequestParams requestParams; // TODO(jerinphilip): Take this in as argument
-  ResponseBuilder responseBuilder(requestParams, std::move(source), vocabs_,
+  ResponseBuilder responseBuilder(responseOptions, std::move(source), vocabs_,
                                   std::move(responsePromise));
   Ptr<Request> request = New<Request>(requestId_++, std::move(segments),
                                       std::move(responseBuilder));

@@ -46,8 +46,19 @@ inline AlignedMemory hackShortLis(const void* shortlistMemory) {
   }
 }
 
-/// Service exposes methods to translate an incoming blob of text to the
-/// Consumer of bergamot API.
+/// Service offers methods create an asynchronous translation service. This is
+/// intended to be similar to the ones provided for training or decoding in ML
+/// pipelines with the following additional capabilities: 
+///
+///  1. Provision of a request -> response based translation flow unlike the
+///  usual a line based translation or decoding provided in most ML frameworks.
+///  2. Internal handling of normalization etc which changes source text to
+///  provide to client translation meta-information like alignments consistent
+///  with the unnormalized input text.
+///
+/// Service exposes methods to instantiate the service from a string configuration
+/// (which can cover most translators) and to translate an incoming blob of text.
+///
 ///
 /// An example use of this API looks as follows:
 /// ```cpp
@@ -55,9 +66,11 @@ inline AlignedMemory hackShortLis(const void* shortlistMemory) {
 ///  service = Service(options);
 ///  std::string input_text = "Hello World";
 ///  std::future<Response>
-///      response = service.translate(std::move(input_text));
-///  response.wait();
-///  Response result = response.get();
+///      responseFuture = service.translate(std::move(input_text));
+///  responseFuture.wait(); // Wait until translation has completed.
+///  Response response(std::move(response.get());
+///  
+/// // Do things with response.
 /// ```
 ///
 /// Optionally Service can be initialized by also passing model_memory for

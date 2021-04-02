@@ -18,8 +18,8 @@
 namespace marian {
 namespace bergamot {
 
-/// A Request is an internal representation used to represent a Request after
-/// processed by TextProcessor into sentences consituted by marian::Words.
+/// A Request is an internal representation used to represent a request after
+/// processed by TextProcessor into sentences constituted by marian::Words.
 ///
 /// The batching mechanism (Batcher) draws from multiple Requests and compiles
 /// sentences into a batch. When a batch completes translation (at

@@ -11,10 +11,9 @@ namespace marian {
 namespace bergamot {
 
 // -----------------------------------------------------------------
-Request::Request(size_t Id, size_t lineNumberBegin, Segments &&segments,
+Request::Request(size_t Id, Segments &&segments,
                  ResponseBuilder &&responseBuilder)
-    : Id_(Id), lineNumberBegin_(lineNumberBegin),
-      segments_(std::move(segments)),
+    : Id_(Id), segments_(std::move(segments)),
       responseBuilder_(std::move(responseBuilder))
 
 {
@@ -23,7 +22,6 @@ Request::Request(size_t Id, size_t lineNumberBegin, Segments &&segments,
   histories_.resize(segments_.size(), nullptr);
 }
 
-size_t Request::lineNumberBegin() const { return lineNumberBegin_; }
 size_t Request::numSegments() const { return segments_.size(); }
 
 size_t Request::segmentTokens(size_t index) const {
@@ -56,10 +54,6 @@ RequestSentence::RequestSentence(size_t index, Ptr<Request> request)
 
 size_t RequestSentence::numTokens() const {
   return (request_->segmentTokens(index_));
-}
-
-size_t RequestSentence::lineNumber() const {
-  return (request_->lineNumberBegin() + index_);
 }
 
 void RequestSentence::completeSentence(Ptr<History> history) {

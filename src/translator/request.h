@@ -1,19 +1,3 @@
-//
-// Defines:
-//
-// Request: holds the input text of a text, Segments (vector<Words>) which are
-// to go to the batching mechanism and alignments between the processed
-// segments and the input text (sourceTokenRanges). In addition, Request takes
-// care of the barrier which fires when all the Segments in a request are done
-// translating by the workers (BatchTranslator).
-// TODO(jerinphilip):  Extend Request with notions of Priority (sequence,
-// user-given).
-//
-// RequestSentence: is a tuple of (index, Ptr<Request>). This provides the
-// batching mechanism access to the segment within the request. The backref to
-// Request allows event triggering the barrier upon completion of the last
-// sentence by a worker.
-
 #ifndef SRC_BERGAMOT_REQUEST_H_
 #define SRC_BERGAMOT_REQUEST_H_
 
@@ -34,10 +18,35 @@
 namespace marian {
 namespace bergamot {
 
+/// A Request is an internal representation used to represent a Request after
+/// processed by TextProcessor into sentences consituted by marian::Words.
+///
+/// The batching mechanism (Batcher) draws from multiple Requests and compiles
+/// sentences into a batch. When a batch completes translation (at
+/// BatchTranslator, intended in a different thread), backward propogation
+/// happens through:
+///
+///   Batch::completeBatch(...)
+//        -> RequestSentence::completeSentence(..)
+///          -> Request::processHistory(...)
+///
+/// When all sentences in a Request are completed, responseBuilder is
+/// triggered with the compiled Histories, to construct the Response
+/// corresponding to the Request and set value of the promise which triggers the
+/// future at Client.
 class Request {
 public:
-  Request(size_t Id, size_t lineNumberBegin, Segments &&segments,
-          ResponseBuilder &&responseBuilder);
+  /// Constructs an internal representation of the Request identified by Id,
+  /// processed Segments and accepts a callback (ResponseBuilder) which builds
+  /// the Response upon completion of the Request.
+  ///
+  ///
+  /// @param [in] Id: Identifier assigned to Request by Service.
+  /// @param [in] segments: Each segment is a unit to be translated.
+  /// @param [in] responseBuilder: Callback function (of ResponseBuilder type)
+  /// to be triggered upon the completion of translation of all units in a
+  /// Request.
+  Request(size_t Id, Segments &&segments, ResponseBuilder &&responseBuilder);
 
   // Obtain the count of tokens in the segment correponding to index. Used to
   // insert sentence from multiple requests into the corresponding size bucket.
@@ -45,7 +54,6 @@ public:
 
   // Obtain number of segments in a request.
   size_t numSegments() const;
-  size_t lineNumberBegin() const;
 
   // Obtains segment corresponding to index  to create a batch of segments among
   // several requests.

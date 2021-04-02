@@ -23,7 +23,7 @@ namespace bergamot {
 /// Consumer of bergamot API.
 ///
 /// An example use of this API looks as follows:
-///
+/// ```cpp
 ///  options = ...;
 ///  service = Service(options);
 ///  std::string input_text = "Hello World";
@@ -31,6 +31,7 @@ namespace bergamot {
 ///      response = service.translate(std::move(input_text));
 ///  response.wait();
 ///  Response result = response.get();
+/// ```
 ///
 /// Optionally Service can be initialized by also passing model_memory for
 /// purposes of efficiency (which defaults to nullpointer and then reads from
@@ -44,7 +45,19 @@ public:
   /// @param shortlistMemory byte array of shortlist (aligned to 64)
   explicit Service(Ptr<Options> options, AlignedMemory modelMemory, AlignedMemory shortlistMemory);
 
-  explicit Service(Ptr<Options> options) : Service(options, AlignedMemory(), AlignedMemory()){}
+  /// Construct Service purely from Options. This expects options which
+  /// marian-decoder expects to be set for loading model shortlist and
+  /// vocabularies from files in addition to parameters that set unset desired
+  /// features (e.g: alignments, quality-scores).
+  ///
+  /// This is equivalent to a call to:
+  /// ```cpp
+  ///    Service(options, AlignedMemory(),  AlignedMemory())
+  /// ```
+  /// wherein empty memory is passed and internal flow defaults to file-based
+  /// model, shortlist loading. 
+  explicit Service(Ptr<Options> options) : Service(options, AlignedMemory(),
+          AlignedMemory()){}
 
   /// Construct Service from a string configuration.
   /// @param [in] config string parsable as YAML expected to adhere with marian

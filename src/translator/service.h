@@ -1,6 +1,7 @@
 #ifndef SRC_BERGAMOT_SERVICE_H_
 #define SRC_BERGAMOT_SERVICE_H_
 
+#include "TranslationRequest.h"
 #include "batch_translator.h"
 #include "batcher.h"
 #include "data/types.h"
@@ -104,10 +105,32 @@ public:
   /// @param [in] responseOptions: Options indicating whether or not to include
   /// some member in the Response, also specify any additional configurable
   /// parameters.
-  std::future<Response> translateWithOptions(std::string &&source,
-                                             ResponseOptions options);
+  std::future<Response> translate(std::string &&source,
+                                  ResponseOptions options);
+
+  /// Translate an input, providing TranslationRequest across all texts to
+  /// construct Response. Provides the browser with the ability to break texts
+  /// into multiple Request keeping gains from efficiently batching internally.
+  /// Also useful when one has to set/unset alignments or quality in the
+  /// Response to save compute spent in constructing these objects.
+
+  /// @param [in] source: rvalue reference of the string to be translated /
+  /// @param [in] translationRequest: TranslationRequest (Unified API)
+  /// indicating whether or not to include some member in the Response, also
+  /// specify any / additional configurable parameters.
+
+  std::vector<Response>
+  translateMultiple(std::vector<std::string> &&source,
+                    TranslationRequest translationRequest);
 
 private:
+  /// Queue an input for translation.
+  std::future<Response> queueRequest(std::string &&input,
+                                     ResponseOptions responseOptions);
+
+  /// Dispatch call to translate after inserting in queue
+  void dispatchTranslate();
+
   /// Build numTranslators number of translators with options from options
   void build_translators(Ptr<Options> options, size_t numTranslators);
   /// Initializes a blocking translator without using std::thread

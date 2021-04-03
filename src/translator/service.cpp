@@ -119,12 +119,36 @@ std::future<Response> Service::translate(std::string &&input) {
       New<Options>(); // TODO(jerinphilip): Take this in as argument
 
   // Hardcode responseOptions for now
-  return translateWithOptions(std::move(input), responseOptions);
+  return translate(std::move(input), responseOptions);
 }
 
-std::future<Response>
-Service::translateWithOptions(std::string &&input,
-                              ResponseOptions responseOptions) {
+std::vector<Response>
+Service::translateMultiple(std::vector<std::string> &&inputs,
+                           TranslationRequest translationRequest) {
+  ResponseOptions responseOptions = New<Options>();
+
+  // TODO(jerinphilip) Set options based on TranslationRequest, if and when it
+  // becomes non-dummy.
+
+  std::vector<std::future<Response>> responseFutures;
+  for (auto &input : inputs) {
+    std::future<Response> inputResponse =
+        queueRequest(std::move(input), responseOptions);
+    responseFutures.push_back(std::move(inputResponse));
+  }
+
+  dispatchTranslate();
+
+  std::vector<Response> responses;
+  for (auto &future : responseFutures) {
+    future.wait();
+    responses.push_back(std::move(future.get()));
+  }
+  return responses;
+}
+
+std::future<Response> Service::queueRequest(std::string &&input,
+                                            ResponseOptions responseOptions) {
   Segments segments;
   AnnotatedText source(std::move(input));
   text_processor_.process(source, segments);
@@ -138,12 +162,23 @@ Service::translateWithOptions(std::string &&input,
                                       std::move(responseBuilder));
 
   batcher_.addWholeRequest(request);
+  return future;
+}
+
+std::future<Response> Service::translate(std::string &&input,
+                                         ResponseOptions responseOptions) {
+  std::future<Response> future =
+      queueRequest(std::move(input), responseOptions);
+  dispatchTranslate();
+  return future;
+}
+
+void Service::dispatchTranslate() {
   if (numWorkers_ == 0) {
     blocking_translate();
   } else {
     async_translate();
   }
-  return future;
 }
 
 Service::~Service() {

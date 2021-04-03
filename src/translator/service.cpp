@@ -130,6 +130,8 @@ Service::translateMultiple(std::vector<std::string> &&inputs,
   // TODO(jerinphilip) Set options based on TranslationRequest, if and when it
   // becomes non-dummy.
 
+  // We queue the individual Requests so they get compiled at batches to be
+  // efficiently translated.
   std::vector<std::future<Response>> responseFutures;
   for (auto &input : inputs) {
     std::future<Response> inputResponse =
@@ -137,13 +139,18 @@ Service::translateMultiple(std::vector<std::string> &&inputs,
     responseFutures.push_back(std::move(inputResponse));
   }
 
+  // Dispatch is called once per request so compilation of sentences from
+  // multiple Requests happen.
   dispatchTranslate();
 
+  // Now wait for all Requests to complete, the future to fire and return the
+  // compiled Responses, we can probably return the future, but WASM quirks(?).
   std::vector<Response> responses;
   for (auto &future : responseFutures) {
     future.wait();
     responses.push_back(std::move(future.get()));
   }
+
   return responses;
 }
 

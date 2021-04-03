@@ -136,9 +136,9 @@ public:
   /// Also useful when one has to set/unset alignments or quality in the Response
   /// to save compute spent in constructing these objects.
   
-  /// @param [in] source: rvalue reference of the string to be translated /
+  /// @param [in] source: rvalue reference of the string to be translated 
   /// @param [in] translationRequest: TranslationRequest (Unified API) indicating
-  /// whether or not to include some member in the Response, also specify any /
+  /// whether or not to include some member in the Response, also specify any 
   /// additional configurable parameters.
   
   std::vector<Response> translateMultiple(std::vector<std::string> &&source,

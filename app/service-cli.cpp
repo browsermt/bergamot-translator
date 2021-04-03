@@ -28,7 +28,7 @@ int main(int argc, char *argv[]) {
 
   // Wait on future until Response is complete
   std::future<Response> responseFuture =
-      service.translateWithOptions(std::move(input), responseOptions);
+      service.translate(std::move(input), responseOptions);
   responseFuture.wait();
   Response response = responseFuture.get();
 

@@ -30,18 +30,12 @@ ByteRange Annotation::sentence(size_t sentenceIdx) const {
               : sentenceEndIds_[sentenceIdx - 1]; // Half interval, so;
 
   eosId = sentenceEndIds_[sentenceIdx];
-  ByteRange sentenceByteRange;
+  ByteRange bos = flatByteRanges_[bosId];
+  ByteRange sentenceByteRange{bos.end, bos.end};
+  if (bosId != eosId) {
+    auto bos = flatByteRanges_[bosId];
+    auto eos = flatByteRanges_[eosId - 1];
 
-  if (bosId == eosId) {
-    // We have an empty sentence. However, we want to be able to point where in
-    // target this happened through the ranges. We are looking for the end of
-    // the flatByteRange and non-empty sentence before and construct empty
-    // string-view equivalent ByteRange.
-    ByteRange eos = flatByteRanges_[eosId - 1];
-    sentenceByteRange = (ByteRange){eos.end, eos.end};
-  } else {
-    ByteRange bos = flatByteRanges_[bosId];
-    ByteRange eos = flatByteRanges_[eosId - 1];
     sentenceByteRange = (ByteRange){bos.begin, eos.end};
   }
   return sentenceByteRange;

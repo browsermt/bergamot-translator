@@ -28,7 +28,7 @@ public:
   Annotation() {}
 
   /// Returns the number of sentences annotated in a text.
-  size_t numSentences() const { return sentenceEndIds_.size(); }
+  size_t numSentences() const { return sentenceBeginIds_.size(); }
 
   /// Returns number of words in the sentece identified by sentenceIdx.
   size_t numWords(size_t sentenceIdx) const;
@@ -46,13 +46,18 @@ public:
 
 private:
   /// A flat storage for ByteRanges. Composed of word ByteRanges, extra
-  /// information in sentenceEndIds_ to denote sentence boundary markers as
+  /// information in sentenceBeginIds_ to denote sentence boundary markers as
   /// indices.
   std::vector<ByteRange> flatByteRanges_;
 
-  /// Stores indices where sentences end (not inclusive, aligned with C++ half
-  /// interval notions)
-  std::vector<size_t> sentenceEndIds_;
+  /// Stores indices where sentences begin
+  std::vector<size_t> sentenceBeginIds_;
+
+  /// Returns ByteRanges corresponding to beginning and end words of sentence
+  /// corresponding to sentenceIdx. This is useful in using the information to
+  /// construct a ByteRange of a sentence taking the begin from the first and
+  /// end from the second.
+  std::pair<ByteRange, ByteRange> sentenceTerminals(size_t sentenceIdx) const;
 
   /// Returns indices of terminal (word) ByteRanges in sentenceIds_ of a
   /// sentence corresponding to sentenceIdx. The distance can be used to compute

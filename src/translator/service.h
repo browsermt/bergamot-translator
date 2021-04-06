@@ -18,33 +18,6 @@
 namespace marian {
 namespace bergamot {
 
-// Hack code to construct AlignedMemory* from void*
-inline AlignedMemory hackModel(const void* modelMemory) {
-  if(modelMemory != nullptr){
-    // Here is a hack to make TranslationModel works
-    size_t modelMemorySize = 73837568;   // Hack: model memory size should be changed to actual model size
-    AlignedMemory alignedMemory(modelMemorySize);
-    memcpy(alignedMemory.begin(), modelMemory, modelMemorySize);
-    return alignedMemory;
-  } else {
-    return AlignedMemory();
-  }
-}
-
-inline AlignedMemory hackShortLis(const void* shortlistMemory) {
-  if(shortlistMemory!= nullptr) {
-    // Hacks to obtain shortlist memory size as this will be checked during construction
-    size_t shortlistMemorySize = sizeof(uint64_t) * (6 + *((uint64_t*)shortlistMemory+4))
-                                 + sizeof(uint32_t) * *((uint64_t*)shortlistMemory+5);
-    // Here is a hack to make TranslationModel works
-    AlignedMemory alignedMemory(shortlistMemorySize);
-    memcpy(alignedMemory.begin(), shortlistMemory, shortlistMemorySize);
-    return alignedMemory;
-  }else {
-    return AlignedMemory();
-  }
-}
-
 /// Service exposes methods to translate an incoming blob of text to the
 /// Consumer of bergamot API.
 ///
@@ -72,15 +45,15 @@ public:
 
   explicit Service(Ptr<Options> options) : Service(options, AlignedMemory(), AlignedMemory()){}
 
-/// Construct Service from a string configuration.
+  /// Construct Service from a string configuration.
   /// @param [in] config string parsable as YAML expected to adhere with marian
   /// config
   /// @param [in] model_memory byte array (aligned to 256!!!) that contains the
-  /// bytes of a model.bin. Optional, defaults to nullptr when not used
+  /// bytes of a model.bin. Optional.
   /// @param [in] shortlistMemory byte array of shortlist (aligned to 64)
   explicit Service(const std::string &config,
-                   const void* modelMemory = nullptr, const void* shortlistMemory = nullptr)
-      : Service(parseOptions(config), hackModel(modelMemory), hackShortLis(shortlistMemory)) {}
+                   AlignedMemory modelMemory = AlignedMemory(), AlignedMemory shortlistMemory = AlignedMemory())
+      : Service(parseOptions(config), std::move(modelMemory), std::move(shortlistMemory)) {}
 
   /// Explicit destructor to clean up after any threads initialized in
   /// asynchronous operation mode.

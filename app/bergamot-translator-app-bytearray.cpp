@@ -9,7 +9,7 @@
 
 #include "TranslationModel.h"
 #include "translator/parser.h"
-#include "translator/byteArrayExample.h"
+#include "translator/byte_array_util.h"
 
 int main(int argc, char **argv) {
 
@@ -20,8 +20,7 @@ int main(int argc, char **argv) {
   std::string config = options->asYamlString();
 
   // Route the config string to construct marian model through TranslationModel
-  void * model_bytes = bergamot::getBinaryModelFromConfig(options);
-  auto model = std::make_shared<TranslationModel>(config, model_bytes);
+  TranslationModel model(config, marian::bergamot::getModelMemoryFromConfig(options));
 
   TranslationRequest translationRequest;
   std::vector<std::string> texts;
@@ -42,7 +41,7 @@ int main(int argc, char **argv) {
       "Prague, the University of Sheffield, University of Tartu, and "
       "Mozilla.");
 
-  auto results = model->translate(std::move(texts), translationRequest);
+  auto results = model.translate(std::move(texts), translationRequest);
 
   // Resolve the future and get the actual result
   //std::vector<TranslationResult> results = futureResults.get();
@@ -60,9 +59,6 @@ int main(int argc, char **argv) {
     }
     std::cout << std::endl;
   }
-
-  // Clear the memory used for the byte array
-  free(model_bytes); // Ideally, this should be done after the translation model has been gracefully shut down.
 
   return 0;
 }

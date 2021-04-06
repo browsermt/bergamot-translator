@@ -3,50 +3,134 @@
 
 #include "data/types.h"
 #include <cassert>
+#include <utility>
 #include <vector>
 
 namespace marian {
 namespace bergamot {
 
-class SentenceRanges {
-  // SentenceRanges stores string_views into a source text, with additional
-  // annotations to mark sentence boundaries.
-  //
-  // Given the availability annotations, this container provides capabilty to
-  // add sentences, and access individual sentences.
+/// ByteRange stores indices for half-interval [begin, end) in a string. Can be
+/// used to represent a sentence, word.
+struct ByteRange {
+  size_t begin;
+  size_t end;
+  const size_t size() const { return end - begin; }
+};
+
+/// An Annotation is a collection of ByteRanges used to denote ancillary
+/// information of sentences and words on a text of string. Annotation is meant
+/// for consumption on platforms where string_view creates problems (eg: exports
+/// through WASM). See AnnotatedText for cases where this is a non-issue.
+class Annotation {
 public:
-  typedef std::vector<string_view>::iterator WordIterator;
+  /// Annotation is constructed empty. See addSentence to populate it with
+  /// annotations.
+  Annotation() {}
 
-  void addSentence(std::vector<string_view> &wordRanges);
-  void addSentence(WordIterator begin, WordIterator end);
-
-  void clear() {
-    flatByteRanges_.clear();
-    sentenceBeginIds_.clear();
-  }
-
+  /// Returns the number of sentences annotated in a text.
   size_t numSentences() const { return sentenceBeginIds_.size(); }
 
-  // Returns a string_view into the ith sentence.
-  string_view sentence(size_t index) const;
+  /// Returns number of words in the sentece identified by sentenceIdx.
+  size_t numWords(size_t sentenceIdx) const;
+
+  /// Adds a sentences from vector<ByteRange> representation, internally doing
+  /// extra book-keeping for the sentence terminal markings. Sentences are
+  /// expected to be added in order as they occur in text.
+  void addSentence(std::vector<ByteRange> &sentence);
+
+  /// Returns a ByteRange representing wordIdx in sentenceIdx
+  ByteRange word(size_t sentenceIdx, size_t wordIdx) const;
+
+  /// Returns a ByteRange representing sentence corresponding to sentenceIdx.
+  ByteRange sentence(size_t sentenceIdx) const;
 
 private:
-  // A flat storage for string_views. Can be words or sentences.
-  std::vector<string_view> flatByteRanges_;
+  /// A flat storage for ByteRanges. Composed of word ByteRanges, extra
+  /// information in sentenceBeginIds_ to denote sentence boundary markers as
+  /// indices.
+  std::vector<ByteRange> flatByteRanges_;
 
-  // The container grows dynamically with addSentence. size_t marking index is
-  // used to ensure the sentence boundaries stay same while underlying storage
-  // might be changed during reallocation.
+  /// Stores indices where sentences begin
   std::vector<size_t> sentenceBeginIds_;
 
-  // Utility function to extract the string starting at firstWord and ending at
-  // lastWord as a single string-view.
-  string_view sentenceBetween(string_view firstWord,
-                              string_view lastWord) const;
+  /// Returns ByteRanges corresponding to beginning and end words of sentence
+  /// corresponding to sentenceIdx. This is useful in using the information to
+  /// construct a ByteRange of a sentence taking the begin from the first and
+  /// end from the second.
+  std::pair<ByteRange, ByteRange> sentenceTerminals(size_t sentenceIdx) const;
+
+  /// Returns indices of terminal (word) ByteRanges in sentenceIds_ of a
+  /// sentence corresponding to sentenceIdx. The distance can be used to compute
+  /// number of words in a sentence (numWords) and also to construct the
+  /// terminal ByteRanges (sentenceTerminals).
+  std::pair<size_t, size_t> sentenceTerminalIds(size_t sentenceIdx) const;
+};
+
+/// AnnotatedText is effectively std::string text + Annotation, providing the
+/// following additional desiderata.
+///
+/// 1. Access to processed string_views for convenience rather than ByteRanges
+/// (which only provides index information).
+///
+/// 2. Transparently convert string_views into ByteRanges for the Annotation
+/// referring to the text bound by this structure.
+///
+/// 3. Bind the text and annotations together, to move around as a meaningful
+/// unit.
+
+struct AnnotatedText {
+public:
+  std::string text;      ///< Blob of string elements in annotation refers to.
+  Annotation annotation; ///< sentence and (sub-) word annotations.
+
+  /// Construct an empty AnnotatedText. This is useful when the target string or
+  /// ByteRanges are not known yet, but the public members can be used to
+  /// populate it. One use-case, when translated-text is created decoding from
+  /// histories and the ByteRanges only known after the string has been
+  /// constructed.
+  AnnotatedText() {}
+
+  /// Construct moving in a string (for efficiency purposes, copying string
+  /// constructor is disallowed).
+  AnnotatedText(std::string &&text) : text(std::move(text)){};
+
+  AnnotatedText(AnnotatedText &&annotatedBlob)
+      : text(std::move(annotatedBlob.text)),
+        annotation(std::move(annotatedBlob.annotation)) {}
+
+  /// Returns the number of sentences in the annotation structure.
+  const size_t numSentences() const { return annotation.numSentences(); }
+
+  /// Returns number of words in the sentece identified by sentenceIdx.
+  const size_t numWords(size_t sentenceIdx) const {
+    return annotation.numWords(sentenceIdx);
+  }
+
+  /// Adds a sentence, used to load from SentencePiece annotations conveniently.
+  void addSentence(std::vector<string_view> &wordRanges);
+
+  /// Adds a sentence between two iterators, often useful while constructing
+  /// from parts of a container.
+  void addSentence(std::vector<string_view>::iterator begin,
+                   std::vector<string_view>::iterator end);
+
+  /// Returns a string_view representing wordIdx in sentenceIdx
+  string_view word(size_t sentenceIdx, size_t wordIdx) const;
+
+  /// Returns a string_view representing sentence corresponding to sentenceIdx.
+  string_view sentence(size_t sentenceIdx) const;
+
+  /// Returns a ByteRange representing wordIdx in sentenceIdx
+  ByteRange wordAsByteRange(size_t sentenceIdx, size_t wordIdx) const;
+
+  /// Returns a ByteRange representing sentence corresponding to sentenceIdx.
+  ByteRange sentenceAsByteRange(size_t sentenceIdx) const;
+
+private:
+  string_view asStringView(const ByteRange &byteRange) const;
 };
 
 } // namespace bergamot
-
 } // namespace marian
 
 #endif //  BERGAMOT_SENTENCE_RANGES_H_

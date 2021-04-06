@@ -23,8 +23,7 @@ class TextProcessor {
 public:
   explicit TextProcessor(std::vector<Ptr<Vocab const>> &vocabs, Ptr<Options>);
 
-  void process(const string_view &query, Segments &segments,
-               SentenceRanges &sourceRanges);
+  void process(AnnotatedText &source, Segments &segments);
 
 private:
   // Tokenizes an input string, returns Words corresponding. Loads the
@@ -34,7 +33,7 @@ private:
 
   // Truncate sentence into max_input_size segments.
   void truncate(Segment &sentence, std::vector<string_view> &tokenRanges,
-                Segments &segments, SentenceRanges &sourceRanges);
+                Segments &segments, AnnotatedText &source);
 
   // shorthand, used only in truncate()
   const Word sourceEosId() const { return vocabs_->front()->getEosId(); }

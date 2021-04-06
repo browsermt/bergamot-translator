@@ -25,10 +25,13 @@ class Annotation {
 public:
   /// Annotation is constructed empty. See addSentence to populate it with
   /// annotations.
-  Annotation() {}
+  Annotation() {
+    // The -1-th sentence ends at 0.
+    sentenceEndIds_.push_back(0);
+  }
 
   /// Returns the number of sentences annotated in a text.
-  size_t numSentences() const { return sentenceEndIds_.size(); }
+  size_t numSentences() const { return sentenceEndIds_.size() - 1; }
 
   /// Returns number of words in the sentece identified by sentenceIdx.
   size_t numWords(size_t sentenceIdx) const;
@@ -50,8 +53,9 @@ private:
   /// indices.
   std::vector<ByteRange> flatByteRanges_;
 
-  /// Stores indices where sentences end (not inclusive, aligned with C++ half
-  /// interval notions)
+  /// Stores indices onto flatByteRanges_ of where sentences end (not inclusive,
+  /// aligned with C++ half interval notions). There is a 0 marker to simplify
+  /// sources, indicating where the -1-th sentence ends.
   std::vector<size_t> sentenceEndIds_;
 };
 

@@ -31,7 +31,7 @@ ByteRange Annotation::sentence(size_t sentenceIdx) const {
 
   eosId = sentenceEndIds_[sentenceIdx];
   ByteRange bos = flatByteRanges_[bosId];
-  ByteRange sentenceByteRange{bos.end, bos.end};
+  ByteRange sentenceByteRange{bos.begin, bos.end};
   if (bosId != eosId) {
     auto bos = flatByteRanges_[bosId];
     auto eos = flatByteRanges_[eosId - 1];

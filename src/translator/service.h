@@ -59,12 +59,6 @@ public:
   /// asynchronous operation mode.
   ~Service();
 
-  /// Shared pointer to source-vocabulary.
-  Ptr<Vocab const> sourceVocab() const { return vocabs_.front(); }
-
-  /// Shared pointer to target vocabulary.
-  Ptr<Vocab const> targetVocab() const { return vocabs_.back(); }
-
   /// To stay efficient and to refer to the string for alignments, expects
   /// ownership be moved through std::move(..)
   ///

@@ -15,7 +15,7 @@ Segment TextProcessor::tokenize(const string_view &segment,
   Segment words = vocabs_->front()->encodeWithByteRanges(
       segment, wordRanges, /*addEOS=*/false, /*inference=*/true);
   std::vector<std::pair<size_t, size_t>> faults;
-  for (size_t i = 1; i < segment.size(); i++) {
+  for (size_t i = 1; i < wordRanges.size(); i++) {
     string_view first = wordRanges[i - 1];
     string_view second = wordRanges[i];
     bool assertion = (first.data() + first.size()) == second.data();

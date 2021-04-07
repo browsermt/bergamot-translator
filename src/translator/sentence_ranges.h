@@ -19,11 +19,41 @@ struct ByteRange {
 
 /// An Annotation is a collection of ByteRanges used to denote ancillary
 /// information of sentences and words on a text of string. Annotation is meant
-/// for consumption on platforms where string_view creates problems (eg: exports
-/// through WASM). See AnnotatedText for cases where this is a non-issue.
+/// for consumption on platforms where `string_view` creates problems (eg:
+/// exports through WASM) conveniently rebasing them as required into
+/// ByteRanges. See AnnotatedText for cases where this is a non-issue.
+///
+/// **Usage**
+///
+/// To ensure rebasing is consistent during creation and updation, use
+/// Annotation best through AnnotatedText, which also holds the reference
+/// string.
+///
+/// If used separately, it's on the user to ensure the reference string
+/// is the same as what the Annotation refers to. For best results, an instance
+/// is expected to be read only in this mode of operation.
+///
+/// **Idea**
+///
+/// Annotation is the same structure conceptually as below, except the
+/// `std::vector<std::vector<...>>` hammered into a flat structure to avoid
+/// multiple reallocs keeping efficiency in mind. This is achieved by having
+/// markers of where sentence ends in the flat container storing word
+/// ByteRanges.
+///
+/// ```cpp
+/// typedef ByteRange Word;
+/// // std::vector<ByteRange>, a single sentence
+/// typedef std::vector<Word> Sentence;
+/// std::vector<std::vector<ByteRange> // multiple sentences
+/// typedef std::vector<Sentence> Annotation;
+///
+/// Annotation example;
+/// ```
+///
 class Annotation {
 public:
-  /// Annotation is constructed empty. See addSentence to populate it with
+  /// Annotation is constructed empty. See `addSentence()` to populate it with
   /// annotations.
   Annotation() {
     // The -1-th sentence ends at 0.
@@ -33,18 +63,22 @@ public:
   /// Returns the number of sentences annotated in a text.
   size_t numSentences() const { return sentenceEndIds_.size() - 1; }
 
-  /// Returns number of words in the sentece identified by sentenceIdx.
+  /// Returns number of words in the sentence identified by `sentenceIdx`.
   size_t numWords(size_t sentenceIdx) const;
 
-  /// Adds a sentences from vector<ByteRange> representation, internally doing
+  /// Adds a sentences from `vector<ByteRange>` representation, internally doing
   /// extra book-keeping for the sentence terminal markings. Sentences are
   /// expected to be added in order as they occur in text.
   void addSentence(std::vector<ByteRange> &sentence);
 
-  /// Returns a ByteRange representing wordIdx in sentenceIdx
+  /// Returns a ByteRange representing `wordIdx` in sentence indexed by
+  /// `sentenceIdx`. `wordIdx` follows 0-based indexing, and should be less than
+  /// `.numWords()` for `sentenceIdx` for defined behaviour.
   ByteRange word(size_t sentenceIdx, size_t wordIdx) const;
 
-  /// Returns a ByteRange representing sentence corresponding to sentenceIdx.
+  /// Returns a ByteRange representing sentence corresponding to `sentenceIdx`.
+  /// `sentenceIdx` follows 0-based indexing, and behaviour is defined only when
+  /// less than `.numSentences()`.
   ByteRange sentence(size_t sentenceIdx) const;
 
 private:

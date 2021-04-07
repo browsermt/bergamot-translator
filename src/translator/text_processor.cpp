@@ -1,4 +1,5 @@
 #include "text_processor.h"
+#include "bergamot_utils.h"
 #include "data/types.h"
 #include "definitions.h"
 #include "sentence_ranges.h"
@@ -14,45 +15,7 @@ Segment TextProcessor::tokenize(const string_view &segment,
                                 std::vector<string_view> &wordRanges) {
   Segment words = vocabs_->front()->encodeWithByteRanges(
       segment, wordRanges, /*addEOS=*/false, /*inference=*/true);
-  std::vector<std::pair<size_t, size_t>> faults;
-  for (size_t i = 1; i < wordRanges.size(); i++) {
-    string_view first = wordRanges[i - 1];
-    string_view second = wordRanges[i];
-    bool assertion = (first.data() + first.size()) == second.data();
-    if (assertion == false) {
-      faults.emplace_back(i - 1, i);
-    }
-    // ABORT_IF(assertion == false,
-    //          "Something's wrong, we don't have consecutive words");
-  }
-  if (faults.empty()) {
-    LOG(info, "All okay at line: {}", std::string(segment));
-  } else {
-    LOG(info, "Something's wrong in line(length={}): {}", segment.size(),
-        std::string(segment));
-    std::stringstream faultsStream;
-    bool first = true;
-    for (auto &p : faults) {
-      if (not first) {
-        first = false;
-      } else {
-        faultsStream << " ";
-      }
-      size_t i = p.first, j = p.second;
-
-      auto rebase = [&segment](const char *data) {
-        size_t diff = data - segment.data();
-        return diff;
-      };
-
-      faultsStream << "(" << rebase(wordRanges[i].data()) << ","
-                   << rebase(wordRanges[i].data() + wordRanges[i].size())
-                   << ")";
-      faultsStream << "-" << rebase(wordRanges[j].data());
-    }
-    LOG(info, "At: {} ", faultsStream.str());
-  }
-
+  debugContiguity("source-spiece", segment, wordRanges);
   return words;
 }
 
@@ -70,11 +33,31 @@ void TextProcessor::process(AnnotatedText &source, Segments &segments) {
   string_view query = string_view(source.text);
   auto sentenceStream = sentence_splitter_.createSentenceStream(query);
   std::string_view sentenceStringPiece;
+  const char *data = &(source.text[0]);
+  marian::string_view previousStringPiece(data, 0);
 
   std::vector<string_view> wordRanges;
+  size_t sentenceNumber{0};
   while (sentenceStream >> sentenceStringPiece) {
     marian::string_view sentence(sentenceStringPiece.data(),
                                  sentenceStringPiece.size());
+
+    bool assertion = (previousStringPiece.data() +
+                      previousStringPiece.size()) == sentence.data();
+
+    auto rebase = [data](const char *sdata) {
+      size_t diff = sdata - data;
+      return diff;
+    };
+
+    if (assertion == false) {
+      size_t previousEnd =
+          rebase(previousStringPiece.data() + previousStringPiece.size());
+      size_t currentBegin = rebase(sentence.data());
+      LOG(info, "[fail] at sentence {}, Byte(diff={}, {}, {}): {}",
+          sentenceNumber, currentBegin - previousEnd, previousEnd, currentBegin,
+          sentence);
+    }
 
     wordRanges.clear();
     Segment segment = tokenize(sentence, wordRanges);
@@ -85,6 +68,9 @@ void TextProcessor::process(AnnotatedText &source, Segments &segments) {
       // Truncate segment into max_input_size segments.
       truncate(segment, wordRanges, segments, source);
     }
+
+    previousStringPiece = sentence;
+    ++sentenceNumber;
   }
 }
 

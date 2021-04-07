@@ -1,4 +1,5 @@
 #include "response.h"
+#include "bergamot_utils.h"
 #include "common/logging.h"
 #include "data/alignment.h"
 #include "sentence_ranges.h"
@@ -42,6 +43,10 @@ Response::Response(AnnotatedText &&source, Histories &&histories,
       target.text += " ";
       ++offset;
     }
+
+    const char *data = &(decoded[0]);
+    string_view decodedView(data, decoded.size());
+    debugContiguity("target", decodedView, targetMappings);
 
     sentenceBegins.push_back(translationRanges.size());
     target.text += decoded;

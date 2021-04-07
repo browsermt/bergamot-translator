@@ -12,8 +12,21 @@ namespace bergamot {
 
 Segment TextProcessor::tokenize(const string_view &segment,
                                 std::vector<string_view> &wordRanges) {
-  return vocabs_->front()->encodeWithByteRanges(
+  Segment words = vocabs_->front()->encodeWithByteRanges(
       segment, wordRanges, /*addEOS=*/false, /*inference=*/true);
+  for (size_t i = 1; i < segment.size(); i++) {
+    string_view first = wordRanges[i - 1];
+    string_view second = wordRanges[i];
+    bool assertion = (first.data() + first.size()) == second.data();
+    if (assertion == false) {
+      LOG(info, "Something's wrong in line: {}", std::string(segment));
+      LOG(info, "Between: {} and {}", i - 1, i);
+    }
+    // ABORT_IF(assertion == false,
+    //          "Something's wrong, we don't have consecutive words");
+  }
+
+  return words;
 }
 
 TextProcessor::TextProcessor(std::vector<Ptr<Vocab const>> &vocabs,

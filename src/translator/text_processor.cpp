@@ -28,7 +28,8 @@ Segment TextProcessor::tokenize(const string_view &segment,
   if (faults.empty()) {
     LOG(info, "All okay at line: {}", std::string(segment));
   } else {
-    LOG(info, "Something's wrong in line: {}", std::string(segment));
+    LOG(info, "Something's wrong in line(length={}): {}", segment.size(),
+        std::string(segment));
     std::stringstream faultsStream;
     bool first = true;
     for (auto &p : faults) {
@@ -70,11 +71,12 @@ void TextProcessor::process(AnnotatedText &source, Segments &segments) {
   auto sentenceStream = sentence_splitter_.createSentenceStream(query);
   std::string_view sentenceStringPiece;
 
+  std::vector<string_view> wordRanges;
   while (sentenceStream >> sentenceStringPiece) {
     marian::string_view sentence(sentenceStringPiece.data(),
                                  sentenceStringPiece.size());
 
-    std::vector<string_view> wordRanges;
+    wordRanges.clear();
     Segment segment = tokenize(sentence, wordRanges);
 
     // There are some cases where SentencePiece or vocab returns no words

@@ -20,7 +20,7 @@ int main(int argc, char **argv) {
   std::string config = options->asYamlString();
 
   // Route the config string to construct marian model through TranslationModel
-  auto model = std::make_shared<TranslationModel>(config, marian::bergamot::getModelMemoryFromConfig(options));
+  TranslationModel model(config, marian::bergamot::getModelMemoryFromConfig(options));
 
   TranslationRequest translationRequest;
   std::vector<std::string> texts;
@@ -29,7 +29,7 @@ int main(int argc, char **argv) {
         texts.emplace_back(line);
   }
 
-  auto results = model->translate(std::move(texts), translationRequest);
+  auto results = model.translate(std::move(texts), translationRequest);
 
   // Resolve the future and get the actual result
   //std::vector<TranslationResult> results = futureResults.get();

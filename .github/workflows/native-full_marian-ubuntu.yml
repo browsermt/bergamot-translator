@@ -2,51 +2,21 @@ name: Native (Full Marian) Ubuntu
 
 on:
   push:
-    branches: [ main, ci-test ]
+    branches: [ main, ci-sandbox ]
   pull_request:
-    branches: [ main, ci-test ]
+    branches: [ main, ci-sandbox ]
 
 jobs:
   build-ubuntu:
     strategy:
       matrix:
         include:
-          # Ubuntu CPU-only build
           - name: "Ubuntu CPU-only"
             os: ubuntu-latest
             cuda: ""
             gcc: 8
-            cpu: true
-            gpu: false
-          # GPU Builds are commented out, for bergamot-translator CI runs.
-          # Ubuntu GPU-only build
-          # - name: "Ubuntu GPU-only"
-          #   os: ubuntu-latest
-          #   cuda: "10.2"
-          #   gcc: 7
-          #   cpu: false
-          #   gpu: true
-          # Ubuntu 20.04 supports CUDA 11+
-          #- name: "Ubuntu 20.04 CUDA 11.0 gcc-9"
-            #os: ubuntu-20.04
-            #cuda: "11.0"
-            #gcc: 9
-            #cpu: false
-            #gpu: true
-          # Ubuntu 18.04 supports CUDA 10.1+
-          # - name: "Ubuntu 18.04 CUDA 10.2 gcc-8"
-          #   os: ubuntu-18.04
-          #   cuda: "10.2"
-          #   gcc: 8
-          #   cpu: true
-          #   gpu: true
-          # Ubuntu 16.04 supports CUDA 8+
-          # - name: "Ubuntu 16.04 CUDA 9.2 gcc-7"
-          #   os: ubuntu-16.04
-          #   cuda: "9.2"
-          #   gcc: 7
-          #   cpu: true
-          #   gpu: true
+            cpu: 'ON'
+            gpu: 'OFF'
 
     runs-on: ${{ matrix.os }}
     name: ${{ matrix.name }}
@@ -62,7 +32,11 @@ jobs:
     # No need to install libprotobuf{17,10,9v5} on Ubuntu {20,18,16}.04 because
     # it is installed together with libprotobuf-dev
     - name: Install dependencies
-      run: sudo apt-get update && sudo apt-get install -y libgoogle-perftools-dev libprotobuf-dev protobuf-compiler libboost-all-dev g++-8
+      run: |
+        sudo apt-get update 
+        sudo apt-get install -y \
+            libgoogle-perftools-dev libprotobuf-dev protobuf-compiler  \
+            libboost-all-dev g++-${{ matrix.gcc }} ccache 
 
     # https://software.intel.com/content/www/us/en/develop/articles/installing-intel-free-libs-and-python-apt-repo.html
     - name: Install MKL
@@ -71,12 +45,28 @@ jobs:
         sudo sh -c "echo deb https://apt.repos.intel.com/mkl all main > /etc/apt/sources.list.d/intel-mkl.list"
         sudo apt-get update -o Dir::Etc::sourcelist="/etc/apt/sources.list.d/intel-mkl.list"
         sudo apt-get install -y --no-install-recommends intel-mkl-64bit-2020.0-088
-      if: matrix.cpu == true
+      if: matrix.cpu == 'ON'
 
     # The script simplifies installation of different versions of CUDA
     - name: Install CUDA
       run: ./3rd_party/marian-dev/scripts/ci/install_cuda_ubuntu.sh ${{ matrix.cuda }}
-      if: matrix.gpu == true
+      if: matrix.gpu == 'ON'
+
+    # Lifted from https://cristianadam.eu/20200113/speeding-up-c-plus-plus-github-actions-using-ccache/
+    - name: Prepare ccache timestamp
+      id: ccache_cache_timestamp
+      shell: cmake -P {0}
+      run: |
+        string(TIMESTAMP current_date "%Y-%m-%d-%H;%M;%S" UTC)
+        message("::set-output name=timestamp::${current_date}")
+
+    - name: Load ccache from previous build
+      uses: actions/cache@v2
+      with:
+        path: .ccache
+        key: ${{ matrix.name }}-ccache-${{ steps.ccache_cache_timestamp.outputs.timestamp }}
+        restore-keys: |
+           ${{ matrix.name }}-ccache-
 
     # Boost is installed on GitHub-hosted runners in a non-standard location
     # https://github.com/actions/virtual-environments/issues/687#issuecomment-610471671
@@ -87,19 +77,19 @@ jobs:
         CC=/usr/bin/gcc-${{ matrix.gcc }} CXX=/usr/bin/g++-${{ matrix.gcc }} CUDAHOSTCXX=/usr/bin/g++-${{ matrix.gcc }} \
         cmake .. \
           -DBoost_ARCHITECTURE=-x64 \
-          -DCMAKE_BUILD_TYPE=Release \
+          -DCMAKE_BUILD_TYPE=Slim \
+          -DUSE_CCACHE=on \
           -DCOMPILE_CPU=${{ matrix.cpu }} \
           -DCOMPILE_CUDA=${{ matrix.gpu }} \
-          -DCOMPILE_EXAMPLES=on \
-          -DCOMPILE_SERVER=on \
+          -DCOMPILE_EXAMPLES=off \
+          -DCOMPILE_SERVER=off \
           -DCOMPILE_TESTS=on \
           -DCUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda-${{ matrix.cuda }} \
-          -DUSE_FBGEMM=${{ matrix.cpu }} \
           -DUSE_SENTENCEPIECE=on \
           -DUSE_STATIC_LIBS=on \
           -DUSE_WASM_COMPATIBLE_SOURCE=off
 
-    - name: Compile
+    - name: Compile bergamot-translator
       working-directory: build
       run: make -j2
 
@@ -107,14 +97,70 @@ jobs:
       working-directory: build
       run: make test
       # GitHub-hosted VMs do not have GPUs, so can not be run in CUDA builds
-      if: matrix.gpu == false
+      if: matrix.gpu == 'OFF'
 
     - name: Print versions
       working-directory: build
       run: |
-        ./marian --version
-        ./marian-decoder --version
-        ./marian-scorer --version
-        ./marian-server --version
-        ./spm_encode --version
+        ./app/marian-decoder-new --version
 
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v2
+      with: 
+        name: bergamot-translator-artifacts
+        path: |
+            ./build/app/service-cli*
+            ./build/app/bergamot-translator-app*
+            ./build/app/marian-decoder-new
+
+  regression-tests:
+    strategy:
+      matrix:
+        include:
+          - name: "Regression Tests"
+            os: ubuntu-latest
+            cuda: ""
+            gcc: 8
+            cpu: 'ON'
+            gpu: 'OFF'
+
+    needs: build-ubuntu
+    runs-on: ${{ matrix.os }}
+    name: ${{ matrix.name }}
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+      with:
+        submodules: recursive
+
+    - name: Download bergamot-translator-build artifacts
+      uses: actions/download-artifact@v2
+      with: 
+        name: bergamot-translator-artifacts
+        path: build/app/
+
+    - name: Set permissions on apps
+      working-directory: build/app
+      run: |
+          chmod +x *
+          ls -l
+
+
+    - name: Install regression-test framework (BRT)
+      working-directory: bergamot-translator-tests
+      run : make install
+
+    - name: Run regression-tests (BRT)
+      working-directory: bergamot-translator-tests
+      run : MARIAN=../build ./run_brt.sh
+
+    - name: Upload regression-tests artifacts
+      uses: actions/upload-artifact@v2
+      if: ${{ always() }}
+      with: 
+        name: brt-artifacts
+        path: |
+            bergamot-translator-tests/**/*.expected
+            bergamot-translator-tests/**/*.log
+            bergamot-translator-tests/**/*.out

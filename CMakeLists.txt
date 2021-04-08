@@ -15,6 +15,7 @@ include(CMakeDependentOption)
 option(COMPILE_WASM "Compile for WASM" OFF)
 option(USE_WASM_COMPATIBLE_SOURCE "Use wasm compatible sources" ON)
 option(COMPILE_TESTS "Compile bergamot-tests" OFF)
+option(USE_CCACHE "Compile with ccache" OFF)
 
 SET(PACKAGE_DIR "" CACHE STRING "Directory including all the files to be packaged (pre-loaded) in wasm builds")
 
@@ -28,6 +29,29 @@ if (USE_WASM_COMPATIBLE_SOURCE)
   # # Setting the ssplit-cpp submodule specific cmake options for wasm
   SET(USE_INTERNAL_PCRE2 ON CACHE BOOL "Use internal PCRE2 instead of system PCRE2")
 endif()
+
+# use ccache (https://ccache.dev) for faster compilation if requested and available
+if(USE_CCACHE)
+  find_program(CCACHE_PROGRAM ccache)
+  if(CCACHE_PROGRAM)
+    message(STATUS "Will be using ccache for faster repeat compilation (use cmake -DUSE_CCACHE=off to disable).")
+
+    # Configurations so cache size doesn't exceed certain limits on GitHub runners.
+    if (DEFINED ENV{GITHUB_WORKSPACE})
+        file(TO_CMAKE_PATH "$ENV{GITHUB_WORKSPACE}" ccache_basedir)
+        set(ENV{CCACHE_BASEDIR} "${ccache_basedir}")
+        set(ENV{CCACHE_DIR} "${ccache_basedir}/.ccache")
+        set(ENV{CCACHE_COMPRESS} "true")
+        set(ENV{CCACHE_COMPRESSLEVEL} "6")
+        set(ENV{CCACHE_MAXSIZE} "1G")
+        message(STATUS "Setting ccache-dir to ${ccache_basedir}/.ccache")
+    endif()
+
+    set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "${CCACHE_PROGRAM}")
+  else(CCACHE_PROGRAM)
+    message(WARNING "Compilation with ccache requested but no ccache found.")
+  endif(CCACHE_PROGRAM)
+endif(USE_CCACHE)
 
 # Documentation: https://cliutils.gitlab.io/modern-cmake/chapters/projects/submodule.html
 # Ensures the submodules are set correctly during a build.

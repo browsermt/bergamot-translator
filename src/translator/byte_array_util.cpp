@@ -5,6 +5,8 @@
 namespace marian {
 namespace bergamot {
 
+namespace {
+
 // This is a basic validator that checks if the file has not been truncated
 // it basically loads up the header and checks
 
@@ -73,6 +75,8 @@ bool validateBinaryModel(AlignedMemory& model, uint64_t fileSize) {
     return false;
   }
 }
+
+} // Annonymous namespace
 
 AlignedMemory loadFileToMemory(const std::string& path, size_t alignment){
   uint64_t fileSize = filesystem::fileSize(path);

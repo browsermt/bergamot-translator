@@ -76,7 +76,7 @@ bool validateBinaryModel(AlignedMemory& model, uint64_t fileSize) {
   }
 }
 
-} // Annonymous namespace
+} // Anonymous namespace
 
 AlignedMemory loadFileToMemory(const std::string& path, size_t alignment){
   uint64_t fileSize = filesystem::fileSize(path);

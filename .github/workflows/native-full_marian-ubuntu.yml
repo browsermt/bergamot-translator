@@ -113,7 +113,7 @@ jobs:
             ./build/app/bergamot-translator-app*
             ./build/app/marian-decoder-new
     - name: Inspect cache to see if there are files from ccache run
-      run: find .cache
+      run: find .ccache
 
   regression-tests:
     strategy:

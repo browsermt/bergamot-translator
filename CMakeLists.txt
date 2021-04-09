@@ -37,14 +37,8 @@ if(USE_CCACHE)
     message(STATUS "Will be using ccache for faster repeat compilation (use cmake -DUSE_CCACHE=off to disable).")
 
     # Configurations so cache size doesn't exceed certain limits on GitHub runners.
-    if (DEFINED ENV{GITHUB_WORKSPACE})
-        file(TO_CMAKE_PATH "$ENV{GITHUB_WORKSPACE}" ccache_basedir)
-        set(ENV{CCACHE_BASEDIR} "${ccache_basedir}")
-        set(ENV{CCACHE_DIR} "${ccache_basedir}/.ccache")
-        set(ENV{CCACHE_COMPRESS} "true")
-        set(ENV{CCACHE_COMPRESSLEVEL} "6")
-        set(ENV{CCACHE_MAXSIZE} "1G")
-        message(STATUS "Setting ccache-dir to ${ccache_basedir}/.ccache")
+    if (DEFINED ENV{CCACHE_DIR})
+        message(STATUS "Setting ccache-dir to $ENV{CCACHE_DIR}")
     endif()
 
     set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "${CCACHE_PROGRAM}")

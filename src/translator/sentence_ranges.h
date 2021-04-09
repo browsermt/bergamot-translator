@@ -26,20 +26,20 @@ struct ByteRange {
 /// **Usage**
 ///
 /// To ensure rebasing is consistent during creation and updation, use
-/// Annotation best through AnnotatedText, which also holds the reference
-/// string.
+/// `Annotation` best through `AnnotatedText`, which also holds the reference
+/// string and can work with `string_views`.
 ///
-/// If used separately, it's on the user to ensure the reference string
+/// If used separately, it is on the user to ensure the reference string
 /// is the same as what the Annotation refers to. For best results, an instance
 /// is expected to be read only in this mode of operation.
 ///
 /// **Idea**
 ///
-/// Annotation is the same structure conceptually as below, except the
-/// `std::vector<std::vector<...>>` hammered into a flat structure to avoid
-/// multiple reallocs keeping efficiency in mind. This is achieved by having
-/// markers of where sentence ends in the flat container storing word
-/// ByteRanges.
+/// Annotation is intended to be the same structure conceptually as below,
+/// except the `std::vector<std::vector<ByteRange>>` hammered into a flat
+/// structure to avoid multiple reallocs keeping efficiency in mind. This is
+/// achieved by having markers of where sentence ends in the flat container
+/// storing word ByteRanges.
 ///
 /// ```cpp
 /// typedef ByteRange Word;
@@ -50,7 +50,11 @@ struct ByteRange {
 ///
 /// Annotation example;
 /// ```
-///
+/// This structure exists to provide a consistent API to access the nested
+/// sentences of varying lengths, which occur in source-text processed into
+/// multiple sentences, and target-text translated from source as multiple
+/// sentences, both composed of (sub)-words, providing a List[List] like access
+/// while storing it in a compact and efficient manner.
 class Annotation {
 public:
   /// Annotation is constructed empty. See `addSentence()` to populate it with

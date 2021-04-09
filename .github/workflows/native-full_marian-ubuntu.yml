@@ -36,7 +36,7 @@ jobs:
         sudo apt-get update 
         sudo apt-get install -y \
             libgoogle-perftools-dev libprotobuf-dev protobuf-compiler  \
-            libboost-all-dev g++-${{ matrix.gcc }} ccache 
+            libboost-all-dev g++-${{ matrix.gcc }} 
 
     # https://software.intel.com/content/www/us/en/develop/articles/installing-intel-free-libs-and-python-apt-repo.html
     - name: Install MKL
@@ -52,22 +52,6 @@ jobs:
       run: ./3rd_party/marian-dev/scripts/ci/install_cuda_ubuntu.sh ${{ matrix.cuda }}
       if: matrix.gpu == 'ON'
 
-    # Lifted from https://cristianadam.eu/20200113/speeding-up-c-plus-plus-github-actions-using-ccache/
-    - name: Prepare ccache timestamp
-      id: ccache_cache_timestamp
-      shell: cmake -P {0}
-      run: |
-        string(TIMESTAMP current_date "%Y-%m-%d-%H;%M;%S" UTC)
-        message("::set-output name=timestamp::${current_date}")
-
-    - name: Load ccache from previous build
-      uses: actions/cache@v2
-      with:
-        path: .ccache
-        key: ${{ matrix.name }}-ccache-${{ steps.ccache_cache_timestamp.outputs.timestamp }}
-        restore-keys: |
-           ${{ matrix.name }}-ccache-
-
     # Boost is installed on GitHub-hosted runners in a non-standard location
     # https://github.com/actions/virtual-environments/issues/687#issuecomment-610471671
     - name: Configure CMake
@@ -78,7 +62,6 @@ jobs:
         cmake .. \
           -DBoost_ARCHITECTURE=-x64 \
           -DCMAKE_BUILD_TYPE=Slim \
-          -DUSE_CCACHE=on \
           -DCOMPILE_CPU=${{ matrix.cpu }} \
           -DCOMPILE_CUDA=${{ matrix.gpu }} \
           -DCOMPILE_EXAMPLES=off \
@@ -112,8 +95,6 @@ jobs:
             ./build/app/service-cli*
             ./build/app/bergamot-translator-app*
             ./build/app/marian-decoder-new
-    - name: Inspect cache to see if there are files from ccache run
-      run: find .cache
 
   regression-tests:
     strategy:
@@ -142,7 +123,7 @@ jobs:
         name: bergamot-translator-artifacts
         path: build/app/
 
-    - name: Set permissions on apps
+    - name: Set permissions on test-apps
       working-directory: build/app
       run: |
           chmod +x *

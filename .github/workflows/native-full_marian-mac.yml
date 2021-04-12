@@ -19,6 +19,7 @@ jobs:
               COMPILE_TESTS: "ON"
               USE_WASM_COMPATIBLE_SOURCE: "OFF"
               USE_FBGEMM: "OFF"
+              USE_STATIC_LIBS: "OFF"
               COMPILE_SERVER: "OFF"
               COMPILE_EXAMPLES: "OFF"
               TEST_TAGS: ""
@@ -29,6 +30,7 @@ jobs:
               CMAKE_BUILD_TYPE: "Slim"
               COMPILE_TESTS: "ON"
               USE_WASM_COMPATIBLE_SOURCE: "OFF"
+              USE_STATIC_LIBS: "OFF"
               USE_FBGEMM: "OFF"
               COMPILE_SERVER: "OFF"
               COMPILE_EXAMPLES: "OFF"
@@ -41,6 +43,7 @@ jobs:
               COMPILE_TESTS: "ON"
               USE_WASM_COMPATIBLE_SOURCE: "OFF"
               USE_FBGEMM: "OFF"
+              USE_STATIC_LIBS: "OFF"
               COMPILE_SERVER: "OFF"
               COMPILE_EXAMPLES: "OFF"
               TEST_TAGS: "#wasm"
@@ -74,6 +77,7 @@ jobs:
           -DCOMPILE_TESTS=${{ matrix.cmake.COMPILE_TESTS }}\
           -DCOMPILE_EXAMPLES=${{ matrix.cmake.COMPILE_EXAMPLES }} \
           -DCOMPILE_SERVER=${{ matrix.cmake.COMPILE_SERVER }} \
+          -DUSE_STATIC_LIBS=$${ matrix.cmake.USE_STATIC_LIBS }} \
           -DUSE_WASM_COMPATIBLE_SOURCE=${{ matrix.cmake.USE_WASM_COMPATIBLE_SOURCE }} \
           -DUSE_FBGEMM=${{ matrix.cmake.USE_FBGEMM }}
 

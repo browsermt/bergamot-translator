@@ -95,7 +95,7 @@ jobs:
             ./build/app/service-cli*
             ./build/app/bergamot-translator-app*
             ./build/app/marian-decoder-new
-      if: matrix.cmake.CMAKE_BUILD_TYPE == "Slim"
+      if: matrix.cmake.CMAKE_BUILD_TYPE == 'Slim'
 
     - name: Install regression-test framework (BRT)
       working-directory: bergamot-translator-tests

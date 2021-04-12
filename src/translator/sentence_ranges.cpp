@@ -6,48 +6,44 @@ namespace marian {
 namespace bergamot {
 
 void Annotation::addSentence(std::vector<ByteRange> &sentence) {
-  size_t size = flatByteRanges_.size();
   flatByteRanges_.insert(std::end(flatByteRanges_), std::begin(sentence),
                          std::end(sentence));
-  sentenceBeginIds_.push_back(size);
+  size_t size = flatByteRanges_.size();
+  sentenceEndIds_.push_back(size);
 }
 
 size_t Annotation::numWords(size_t sentenceIdx) const {
-  auto terminals = sentenceTerminalIds(sentenceIdx);
-  return terminals.second - terminals.first + 1;
-}
-
-std::pair<size_t, size_t>
-Annotation::sentenceTerminalIds(size_t sentenceIdx) const {
   size_t bosId, eosId;
-  bosId = sentenceBeginIds_[sentenceIdx];
-  eosId = sentenceIdx + 1 < numSentences()
-              ? sentenceBeginIds_[sentenceIdx + 1] - 1
-              : flatByteRanges_.size() - 1;
-
-  // Out of bound checks.
-  assert(bosId < flatByteRanges_.size());
-  assert(eosId < flatByteRanges_.size());
-  return std::make_pair(bosId, eosId);
-}
-
-std::pair<ByteRange, ByteRange>
-Annotation::sentenceTerminals(size_t sentenceIdx) const {
-  auto terminals = sentenceTerminalIds(sentenceIdx);
-  return std::make_pair(flatByteRanges_[terminals.first],
-                        flatByteRanges_[terminals.second]);
+  bosId = sentenceEndIds_[sentenceIdx]; // Half interval, so;
+  eosId = sentenceEndIds_[sentenceIdx + 1];
+  // Difference between eosId and bosId is the number of words.
+  return eosId - bosId;
 }
 
 ByteRange Annotation::sentence(size_t sentenceIdx) const {
-  auto terminals = sentenceTerminals(sentenceIdx);
-  return (ByteRange){terminals.first.begin, terminals.second.end};
+  size_t bosId, eosId;
+  bosId = sentenceEndIds_[sentenceIdx]; // Half interval, so;
+  eosId = sentenceEndIds_[sentenceIdx + 1];
+  ByteRange sentenceByteRange;
+
+  if (bosId == eosId) {
+    // We have an empty sentence. However, we want to be able to point where in
+    // target this happened through the ranges. We are looking for the end of
+    // the flatByteRange and non-empty sentence before this happened and
+    // construct empty string-view equivalent ByteRange.
+    ByteRange eos = flatByteRanges_[eosId - 1];
+    sentenceByteRange = (ByteRange){eos.end, eos.end};
+  } else {
+    ByteRange bos = flatByteRanges_[bosId];
+    ByteRange eos = flatByteRanges_[eosId - 1];
+    sentenceByteRange = (ByteRange){bos.begin, eos.end};
+  }
+  return sentenceByteRange;
 }
 
 ByteRange Annotation::word(size_t sentenceIdx, size_t wordIdx) const {
-  size_t offset = sentenceBeginIds_[sentenceIdx];
-  // auto terminals = sentenceTerminals(sentenceIdx);
-  // assert(offset + wordIdx <= terminals.second);
-  return flatByteRanges_[offset + wordIdx];
+  size_t bosOffset = sentenceEndIds_[sentenceIdx];
+  return flatByteRanges_[bosOffset + wordIdx];
 }
 
 string_view AnnotatedText::word(size_t sentenceIdx, size_t wordIdx) const {

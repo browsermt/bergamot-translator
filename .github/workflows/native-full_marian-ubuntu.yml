@@ -138,7 +138,7 @@ jobs:
       uses: actions/upload-artifact@v2
       if: ${{ always() }}
       with: 
-        name: brt-artifacts
+        name: brt-artifacts-${{ matrix.name }}
         path: |
             bergamot-translator-tests/**/*.expected
             bergamot-translator-tests/**/*.log

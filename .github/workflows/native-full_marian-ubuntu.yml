@@ -31,7 +31,7 @@ jobs:
               CMAKE_BUILD_TYPE: "Release"
               COMPILE_TESTS: "OFF"
               USE_WASM_COMPATIBLE_SOURCE: "ON"
-              TEST_TAGS: "#native"
+              TEST_TAGS: "#wasm"
 
 
     runs-on: ${{ matrix.os }}
@@ -101,7 +101,7 @@ jobs:
 
     - name: Run regression-tests (BRT)
       working-directory: bergamot-translator-tests
-      run : MARIAN=../build ./run_brt.sh '#${{ matrix.cmake.TEST_TAGS }}'
+      run : MARIAN=../build ./run_brt.sh '${{ matrix.cmake.TEST_TAGS }}'
 
     - name: Upload regression-tests artifacts
       uses: actions/upload-artifact@v2

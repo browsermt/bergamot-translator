@@ -11,7 +11,7 @@ jobs:
     strategy:
       matrix:
         include:
-          - name: "Full Marian Release"
+          - name: "Full Marian"
             os: ubuntu-latest
             gcc: 8
             cpu: 'ON'
@@ -20,9 +20,24 @@ jobs:
               CMAKE_BUILD_TYPE: "Release"
               COMPILE_TESTS: "ON"
               USE_WASM_COMPATIBLE_SOURCE: "OFF"
+              COMPILE_SERVER: "OFF"
+              COMPILE_EXAMPLES: "OFF"
               TEST_TAGS: ""
 
-          - name: "Minimal Marian Release"
+          - name: "Full Marian (Slim)"
+            os: ubuntu-latest
+            gcc: 8
+            cpu: 'ON'
+            gpu: 'OFF'
+            cmake: 
+              CMAKE_BUILD_TYPE: "Slim"
+              COMPILE_TESTS: "ON"
+              USE_WASM_COMPATIBLE_SOURCE: "OFF"
+              COMPILE_SERVER: "OFF"
+              COMPILE_EXAMPLES: "OFF"
+              TEST_TAGS: ""
+
+          - name: "Minimal Marian"
             os: ubuntu-latest
             gcc: 8
             cpu: 'ON'
@@ -31,7 +46,9 @@ jobs:
               CMAKE_BUILD_TYPE: "Release"
               COMPILE_TESTS: "OFF"
               USE_WASM_COMPATIBLE_SOURCE: "ON"
-              TEST_TAGS: "#wasm"
+              COMPILE_SERVER: "OFF"
+              COMPILE_EXAMPLES: "OFF"
+              TEST_TAGS: "'#wasm'"
 
 
     runs-on: ${{ matrix.os }}
@@ -78,7 +95,9 @@ jobs:
         cmake .. \
           -DCMAKE_BUILD_TYPE=${{ matrix.cmake.CMAKE_BUILD_TYPE }}\
           -DCOMPILE_TESTS=${{ matrix.cmake.COMPILE_TESTS }}\
-          -DUSE_WASM_COMPATIBLE_SOURCE=${{ matrix.cmake.USE_WASM_COMPATIBLE_SOURCE }}
+          -DCOMPILE_EXAMPLES=${{ matrix.cmake.COMPILE_EXAMPLES }} \
+          -DCOMPILE_SERVER=${{ matrix.cmake.COMPILE_SERVER }}
+          -DUSE_WASM_COMPATIBLE_SOURCE=${{ matrix.cmake.USE_WASM_COMPATIBLE_SOURCE }} \
 
     - name: Compile bergamot-translator
       working-directory: build
@@ -95,13 +114,25 @@ jobs:
       run: |
         ./app/bergamot-translator-app --version
 
+
+    # Configure hooks to upload artifacts if the build is Slim
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v2
+      with: 
+        name: bergamot-translator-artifacts
+        path: |
+            ./build/app/service-cli*
+            ./build/app/bergamot-translator-app*
+            ./build/app/marian-decoder-new
+      if: matrix.cmake.CMAKE_BUILD_TYPE == "Slim"
+
     - name: Install regression-test framework (BRT)
       working-directory: bergamot-translator-tests
       run : make install
 
     - name: Run regression-tests (BRT)
       working-directory: bergamot-translator-tests
-      run : MARIAN=../build ./run_brt.sh '${{ matrix.cmake.TEST_TAGS }}'
+      run : MARIAN=../build ./run_brt.sh ${{ matrix.cmake.TEST_TAGS }}
 
     - name: Upload regression-tests artifacts
       uses: actions/upload-artifact@v2

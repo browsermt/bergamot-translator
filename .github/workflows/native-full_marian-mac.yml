@@ -9,8 +9,8 @@ on:
 jobs:
   build-macos:
     strategy: 
+      fail-fast: false
       matrix:
-        fail-fast: false
         include:
           - name: "MacOS Release"
             os: macos-10.15

@@ -9,8 +9,8 @@ on:
 jobs:
   build-ubuntu:
     strategy:
+      fail-fast: false
       matrix:
-        fail-fast: false
         include:
           - name: "Full Marian"
             os: ubuntu-latest

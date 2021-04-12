@@ -8,8 +8,41 @@ on:
 
 jobs:
   build-macos:
-    name: MacOS CPU-only
-    runs-on: macos-10.15
+    strategy: 
+      matrix:
+        include:
+          - name: "MacOS Release"
+            os: macos-10.15
+            cmake: 
+              CMAKE_BUILD_TYPE: "Release"
+              COMPILE_TESTS: "ON"
+              USE_WASM_COMPATIBLE_SOURCE: "OFF"
+              COMPILE_SERVER: "OFF"
+              COMPILE_EXAMPLES: "OFF"
+              TEST_TAGS: ""
+
+          - name: "MacOS Slim"
+            os: macos-10.15
+            cmake: 
+              CMAKE_BUILD_TYPE: "Slim"
+              COMPILE_TESTS: "ON"
+              USE_WASM_COMPATIBLE_SOURCE: "OFF"
+              COMPILE_SERVER: "OFF"
+              COMPILE_EXAMPLES: "OFF"
+              TEST_TAGS: ""
+
+          - name: "MacOS Minimal Release"
+            os: macos-10.15
+            cmake: 
+              CMAKE_BUILD_TYPE: "Release"
+              COMPILE_TESTS: "ON"
+              USE_WASM_COMPATIBLE_SOURCE: "OFF"
+              COMPILE_SERVER: "OFF"
+              COMPILE_EXAMPLES: "OFF"
+              TEST_TAGS: "#wasm"
+        
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
 
     steps:
     - name: Checkout
@@ -18,7 +51,9 @@ jobs:
         submodules: recursive
 
     - name: Install dependencies
-      run: brew install openblas protobuf
+      run: |
+          brew update
+          brew install openblas protobuf
 
     # Openblas location is exported explicitly because openblas is keg-only,
     # which means it was not symlinked into /usr/local/.
@@ -31,15 +66,11 @@ jobs:
         mkdir -p build
         cd build
         cmake .. \
-          -DCOMPILE_CPU=on \
-          -DCOMPILE_CUDA=off \
-          -DCOMPILE_EXAMPLES=on \
-          -DCOMPILE_SERVER=on \
-          -DCOMPILE_TESTS=on \
-          -DUSE_FBGEMM=on \
-          -DUSE_SENTENCEPIECE=on \
-          -DUSE_STATIC_LIBS=off \
-          -DUSE_WASM_COMPATIBLE_SOURCE=off
+          -DCMAKE_BUILD_TYPE=${{ matrix.cmake.CMAKE_BUILD_TYPE }}\
+          -DCOMPILE_TESTS=${{ matrix.cmake.COMPILE_TESTS }}\
+          -DCOMPILE_EXAMPLES=${{ matrix.cmake.COMPILE_EXAMPLES }} \
+          -DCOMPILE_SERVER=${{ matrix.cmake.COMPILE_SERVER }} \
+          -DUSE_WASM_COMPATIBLE_SOURCE=${{ matrix.cmake.USE_WASM_COMPATIBLE_SOURCE }} \
 
     - name: Compile
       working-directory: build
@@ -48,12 +79,38 @@ jobs:
     - name: Run unit tests
       working-directory: build
       run: make test
+      if: matrix.cmake.COMPILE_TESTS == 'ON'
 
     - name: Print versions
       working-directory: build
       run: |
-        ./marian --version
-        ./marian-decoder --version
-        ./marian-scorer --version
-        ./spm_encode --version
+        ./app/bergamot-translator-app --version
 
+    # Configure hooks to upload artifacts if the build is Slim
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v2
+      with: 
+        name: bergamot-translator-artifacts
+        path: |
+            ./build/app/service-cli*
+            ./build/app/bergamot-translator-app*
+            ./build/app/marian-decoder-new
+      if: matrix.cmake.CMAKE_BUILD_TYPE == "Slim"
+
+    - name: Install regression-test framework (BRT)
+      working-directory: bergamot-translator-tests
+      run : make install
+
+    - name: Run regression-tests (BRT)
+      working-directory: bergamot-translator-tests
+      run : MARIAN=../build ./run_brt.sh ${{ matrix.cmake.TEST_TAGS }}
+
+    - name: Upload regression-tests artifacts
+      uses: actions/upload-artifact@v2
+      if: ${{ always() }}
+      with: 
+        name: brt-artifacts
+        path: |
+            bergamot-translator-tests/**/*.expected
+            bergamot-translator-tests/**/*.log
+            bergamot-translator-tests/**/*.out

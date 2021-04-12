@@ -96,7 +96,7 @@ jobs:
           -DCMAKE_BUILD_TYPE=${{ matrix.cmake.CMAKE_BUILD_TYPE }}\
           -DCOMPILE_TESTS=${{ matrix.cmake.COMPILE_TESTS }}\
           -DCOMPILE_EXAMPLES=${{ matrix.cmake.COMPILE_EXAMPLES }} \
-          -DCOMPILE_SERVER=${{ matrix.cmake.COMPILE_SERVER }}
+          -DCOMPILE_SERVER=${{ matrix.cmake.COMPILE_SERVER }} \
           -DUSE_WASM_COMPATIBLE_SOURCE=${{ matrix.cmake.USE_WASM_COMPATIBLE_SOURCE }} \
 
     - name: Compile bergamot-translator

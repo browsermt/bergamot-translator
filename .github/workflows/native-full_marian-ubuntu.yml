@@ -101,7 +101,7 @@ jobs:
 
     - name: Run regression-tests (BRT)
       working-directory: bergamot-translator-tests
-      run : MARIAN=../build ./run_brt.sh ${{ matrix.cmake.TEST_TAGS }}
+      run : MARIAN=../build ./run_brt.sh '#${{ matrix.cmake.TEST_TAGS }}'
 
     - name: Upload regression-tests artifacts
       uses: actions/upload-artifact@v2

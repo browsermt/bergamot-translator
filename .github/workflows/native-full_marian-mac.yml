@@ -77,7 +77,7 @@ jobs:
           -DCOMPILE_TESTS=${{ matrix.cmake.COMPILE_TESTS }}\
           -DCOMPILE_EXAMPLES=${{ matrix.cmake.COMPILE_EXAMPLES }} \
           -DCOMPILE_SERVER=${{ matrix.cmake.COMPILE_SERVER }} \
-          -DUSE_STATIC_LIBS=$${ matrix.cmake.USE_STATIC_LIBS }} \
+          -DUSE_STATIC_LIBS=${{ matrix.cmake.USE_STATIC_LIBS }} \
           -DUSE_WASM_COMPATIBLE_SOURCE=${{ matrix.cmake.USE_WASM_COMPATIBLE_SOURCE }} \
           -DUSE_FBGEMM=${{ matrix.cmake.USE_FBGEMM }}
 

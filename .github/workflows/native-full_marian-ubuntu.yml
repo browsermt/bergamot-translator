@@ -61,7 +61,7 @@ jobs:
         sudo sh -c "echo deb https://apt.repos.intel.com/mkl all main > /etc/apt/sources.list.d/intel-mkl.list"
         sudo apt-get update -o Dir::Etc::sourcelist="/etc/apt/sources.list.d/intel-mkl.list"
         sudo apt-get install -y --no-install-recommends intel-mkl-64bit-2020.0-088
-      if: matrix.cmake.USE_WASM_COMPATIBLE_SOURCE == 'ON'
+      if: matrix.cmake.USE_WASM_COMPATIBLE_SOURCE == 'OFF'
 
     # The script simplifies installation of different versions of CUDA
     - name: Install CUDA

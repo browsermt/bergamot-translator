@@ -45,7 +45,7 @@ jobs:
             gpu: 'OFF'
             cmake:
               CMAKE_BUILD_TYPE: "Release"
-              COMPILE_TESTS: "OFF"
+              COMPILE_TESTS: "ON"
               USE_WASM_COMPATIBLE_SOURCE: "ON"
               COMPILE_SERVER: "OFF"
               COMPILE_EXAMPLES: "OFF"

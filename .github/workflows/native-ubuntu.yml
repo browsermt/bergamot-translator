@@ -17,39 +17,39 @@ jobs:
             gcc: 8
             cpu: 'ON'
             gpu: 'OFF'
+            test_tags: ""
             cmake: 
               CMAKE_BUILD_TYPE: "Release"
               COMPILE_TESTS: "ON"
               USE_WASM_COMPATIBLE_SOURCE: "OFF"
               COMPILE_SERVER: "OFF"
               COMPILE_EXAMPLES: "OFF"
-              TEST_TAGS: ""
 
           - name: "full-marian-slim"
             os: ubuntu-latest
             gcc: 8
             cpu: 'ON'
             gpu: 'OFF'
+            test_tags: ""
             cmake: 
               CMAKE_BUILD_TYPE: "Slim"
               COMPILE_TESTS: "ON"
               USE_WASM_COMPATIBLE_SOURCE: "OFF"
               COMPILE_SERVER: "OFF"
               COMPILE_EXAMPLES: "OFF"
-              TEST_TAGS: ""
 
           - name: "minimal-marian"
             os: ubuntu-latest
             gcc: 8
             cpu: 'ON'
             gpu: 'OFF'
+            test_tags: "'#wasm'"
             cmake:
               CMAKE_BUILD_TYPE: "Release"
               COMPILE_TESTS: "OFF" # Minimal marian has no sqlite support and COMPILE_TEST=ON fails.
               USE_WASM_COMPATIBLE_SOURCE: "ON"
               COMPILE_SERVER: "OFF"
               COMPILE_EXAMPLES: "OFF"
-              TEST_TAGS: "'#wasm'"
 
 
     runs-on: ${{ matrix.os }}
@@ -122,7 +122,7 @@ jobs:
 
     - name: Run regression-tests (BRT)
       working-directory: bergamot-translator-tests
-      run : MARIAN=../build ./run_brt.sh ${{ matrix.cmake.TEST_TAGS }}
+      run : MARIAN=../build ./run_brt.sh ${{ matrix.test_tags }}
 
     - name: Upload regression-tests artifacts
       uses: actions/upload-artifact@v2

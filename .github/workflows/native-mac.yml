@@ -43,7 +43,7 @@ jobs:
               COMPILE_TESTS: "ON"
               USE_WASM_COMPATIBLE_SOURCE: "ON"
               USE_FBGEMM: "OFF"
-              USE_STATIC_LIBS: "ON"
+              USE_STATIC_LIBS: "OFF"
               COMPILE_SERVER: "OFF"
               COMPILE_EXAMPLES: "OFF"
               TEST_TAGS: "#wasm"

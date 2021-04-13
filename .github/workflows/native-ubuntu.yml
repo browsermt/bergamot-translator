@@ -45,7 +45,7 @@ jobs:
             gpu: 'OFF'
             cmake:
               CMAKE_BUILD_TYPE: "Release"
-              COMPILE_TESTS: "ON"
+              COMPILE_TESTS: "OFF" # Minimal marian has no sqlite support and COMPILE_TEST=ON fails.
               USE_WASM_COMPATIBLE_SOURCE: "ON"
               COMPILE_SERVER: "OFF"
               COMPILE_EXAMPLES: "OFF"

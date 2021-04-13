@@ -40,7 +40,7 @@ jobs:
             os: macos-10.15
             cmake: 
               CMAKE_BUILD_TYPE: "Release"
-              COMPILE_TESTS: "ON"
+              COMPILE_TESTS: "OFF" # Minimal marian has no sqlite support and compile tests fail
               USE_WASM_COMPATIBLE_SOURCE: "ON"
               USE_FBGEMM: "OFF"
               USE_STATIC_LIBS: "OFF"

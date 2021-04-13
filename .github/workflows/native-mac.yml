@@ -70,7 +70,7 @@ jobs:
       run: |
           echo "LDFLAGS=-L/usr/local/opt/openblas/lib" >> $GITHUB_ENV
           echo "CPPFLAGS=-I/usr/local/opt/openblas/include" >> $GITHUB_ENV
-      if: ${{ matrix.cmake.USE_WASM_COMPATIBLE_SOURCE }} == 'OFF'
+      if: matrix.cmake.USE_WASM_COMPATIBLE_SOURCE == 'OFF'
 
     # CMake cannot find BLAS on GitHub runners if Marian is being compiled
     # statically, hence USE_STATIC_LIBS=off

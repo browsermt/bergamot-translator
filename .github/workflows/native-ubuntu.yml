@@ -12,7 +12,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: "Full Marian"
+          - name: "full-marian"
             os: ubuntu-latest
             gcc: 8
             cpu: 'ON'
@@ -25,7 +25,7 @@ jobs:
               COMPILE_EXAMPLES: "OFF"
               TEST_TAGS: ""
 
-          - name: "Full Marian (Slim)"
+          - name: "full-marian-slim"
             os: ubuntu-latest
             gcc: 8
             cpu: 'ON'
@@ -38,7 +38,7 @@ jobs:
               COMPILE_EXAMPLES: "OFF"
               TEST_TAGS: ""
 
-          - name: "Minimal Marian"
+          - name: "minimal-marian"
             os: ubuntu-latest
             gcc: 8
             cpu: 'ON'

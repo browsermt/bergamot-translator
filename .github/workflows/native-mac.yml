@@ -95,17 +95,6 @@ jobs:
       run: |
         ./app/bergamot-translator-app --version
 
-    # Configure hooks to upload artifacts if the build is Slim
-    - name: Upload build artifacts
-      uses: actions/upload-artifact@v2
-      with: 
-        name: bergamot-translator-artifacts
-        path: |
-            ./build/app/service-cli*
-            ./build/app/bergamot-translator-app*
-            ./build/app/marian-decoder-new
-      if: matrix.cmake.CMAKE_BUILD_TYPE == 'Slim'
-
     - name: Install regression-test framework (BRT)
       working-directory: bergamot-translator-tests
       run : make install

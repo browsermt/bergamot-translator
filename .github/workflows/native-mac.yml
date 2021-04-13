@@ -44,7 +44,9 @@ jobs:
               COMPILE_TESTS: "OFF" # Minimal marian has no sqlite support and compile tests fail
               USE_WASM_COMPATIBLE_SOURCE: "ON"
               USE_FBGEMM: "OFF"
-              USE_STATIC_LIBS: "OFF"
+              # explicitly set due to requirement of minimal marian being used
+              # within WASM. This is some yaml ugliness, but issok.
+              USE_STATIC_LIBS: "ON" 
               COMPILE_SERVER: "OFF"
               COMPILE_EXAMPLES: "OFF"
         

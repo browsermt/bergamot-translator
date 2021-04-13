@@ -41,9 +41,9 @@ jobs:
             cmake: 
               CMAKE_BUILD_TYPE: "Release"
               COMPILE_TESTS: "ON"
-              USE_WASM_COMPATIBLE_SOURCE: "OFF"
+              USE_WASM_COMPATIBLE_SOURCE: "ON"
               USE_FBGEMM: "OFF"
-              USE_STATIC_LIBS: "OFF"
+              USE_STATIC_LIBS: "ON"
               COMPILE_SERVER: "OFF"
               COMPILE_EXAMPLES: "OFF"
               TEST_TAGS: "#wasm"

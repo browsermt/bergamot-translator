@@ -60,7 +60,7 @@ jobs:
     - name: Install dependencies
       run: |
           brew update
-          brew install openblas protobuf
+          brew install openblas protobuf coreutils
 
     # Openblas location is exported explicitly because openblas is keg-only,
     # which means it was not symlinked into /usr/local/.

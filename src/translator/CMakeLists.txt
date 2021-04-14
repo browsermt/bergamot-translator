@@ -29,5 +29,5 @@ endif(COMPILE_WASM)
 target_link_libraries(bergamot-translator marian ssplit)
 
 target_include_directories(bergamot-translator
-    PUBLIC ${CMAKE_SOURCE_DIR}
-    PUBLIC ${CMAKE_SOURCE_DIR}/src)
+    PUBLIC ${PROJECT_SOURCE_DIR}
+           ${PROJECT_SOURCE_DIR}/src)

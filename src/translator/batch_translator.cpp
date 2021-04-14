@@ -36,7 +36,7 @@ void BatchTranslator::initialize() {
     }
   }
 
-  graph_ = New<ExpressionGraph>(true); // always optimize
+  graph_ = New<ExpressionGraph>(true); // set the graph to be inference only
   auto prec = options_->get<std::vector<std::string>>("precision", {"float32"});
   graph_->setDefaultElementType(typeFromString(prec[0]));
   graph_->setDevice(device_);

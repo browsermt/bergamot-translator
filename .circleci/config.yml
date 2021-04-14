@@ -3,7 +3,7 @@ jobs:
   build:
     docker:
       - image: 'emscripten/emsdk:2.0.9'
-    resource_class: xlarge
+    resource_class: medium
 
     working_directory: ~/checkout
 

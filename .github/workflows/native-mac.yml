@@ -24,18 +24,6 @@ jobs:
               COMPILE_SERVER: "OFF"
               COMPILE_EXAMPLES: "OFF"
 
-          - name: "full-marian-slim"
-            os: macos-10.15
-            test_tags: ""
-            cmake: 
-              CMAKE_BUILD_TYPE: "Slim"
-              COMPILE_TESTS: "ON"
-              USE_WASM_COMPATIBLE_SOURCE: "OFF"
-              USE_STATIC_LIBS: "OFF"
-              USE_FBGEMM: "OFF"
-              COMPILE_SERVER: "OFF"
-              COMPILE_EXAMPLES: "OFF"
-
           - name: "minimal-marian"
             os: macos-10.15
             test_tags: "'#wasm'"

@@ -25,19 +25,6 @@ jobs:
               COMPILE_SERVER: "OFF"
               COMPILE_EXAMPLES: "OFF"
 
-          - name: "full-marian-slim"
-            os: ubuntu-latest
-            gcc: 8
-            cpu: 'ON'
-            gpu: 'OFF'
-            test_tags: ""
-            cmake: 
-              CMAKE_BUILD_TYPE: "Slim"
-              COMPILE_TESTS: "ON"
-              USE_WASM_COMPATIBLE_SOURCE: "OFF"
-              COMPILE_SERVER: "OFF"
-              COMPILE_EXAMPLES: "OFF"
-
           - name: "minimal-marian"
             os: ubuntu-latest
             gcc: 8

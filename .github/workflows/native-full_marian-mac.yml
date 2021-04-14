@@ -1,4 +1,4 @@
-name: MacOS
+name: Native (Full Marian) MacOS
 
 on:
   push:
@@ -39,16 +39,15 @@ jobs:
           -DUSE_FBGEMM=on \
           -DUSE_SENTENCEPIECE=on \
           -DUSE_STATIC_LIBS=off \
-          -DUSE_WASM_COMPATIBLE_SOURCES=off
+          -DUSE_WASM_COMPATIBLE_SOURCE=off
 
     - name: Compile
       working-directory: build
       run: make -j2
 
-    # Removing unit-tests, taken care of in browsermt/marian-dev
-    # - name: Run unit tests
-    # - working-directory: build
-    # - run: make test
+    - name: Run unit tests
+      working-directory: build
+      run: make test
 
     - name: Print versions
       working-directory: build

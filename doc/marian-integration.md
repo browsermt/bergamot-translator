@@ -1,4 +1,4 @@
-# Marian Integration
+# Building marian code for bergamot
 
 This document summarizes the minimal build instructions develop for the
 marian-code powering bergamot-translator.
@@ -10,7 +10,7 @@ $ git clone https://github.com/browsermt/bergamot-translator
 $ cd bergamot-translator
 $ mkdir build
 $ cd build
-$ cmake .. -DUSE_WASM_COMPATIBLE_SOURCES=off -DCMAKE_BUILD_TYPE=Release
+$ cmake .. -DUSE_WASM_COMPATIBLE_SOURCE=off -DCMAKE_BUILD_TYPE=Release
 $ make -j
 ```
 

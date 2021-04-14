@@ -10,26 +10,46 @@ namespace bergamot {
 
 BatchTranslator::BatchTranslator(DeviceId const device,
                                  std::vector<Ptr<Vocab const>> &vocabs,
-                                 Ptr<Options> options)
-    : device_(device), options_(options), vocabs_(&vocabs) {}
+                                 Ptr<Options> options,
+                                 const AlignedMemory* modelMemory,
+                                 const AlignedMemory* shortlistMemory)
+    : device_(device), options_(options), vocabs_(&vocabs),
+    modelMemory_(modelMemory), shortlistMemory_(shortlistMemory) {}
 
 void BatchTranslator::initialize() {
   // Initializes the graph.
   if (options_->hasAndNotEmpty("shortlist")) {
     int srcIdx = 0, trgIdx = 1;
     bool shared_vcb = vocabs_->front() == vocabs_->back();
-    slgen_ = New<data::LexicalShortlistGenerator>(options_, vocabs_->front(),
-                                                  vocabs_->back(), srcIdx,
-                                                  trgIdx, shared_vcb);
+    if (shortlistMemory_->size() > 0 && shortlistMemory_->begin() != nullptr) {
+      bool check = options_->get<bool>("check-bytearray",true);
+      slgen_ = New<data::BinaryShortlistGenerator>(shortlistMemory_->begin(), shortlistMemory_->size(),
+                                                     vocabs_->front(), vocabs_->back(),
+                                                     srcIdx, trgIdx, shared_vcb, check);
+    }
+    else {
+      // Changed to BinaryShortlistGenerator to enable loading binary shortlist file
+      // This class also supports text shortlist file
+      slgen_ = New<data::BinaryShortlistGenerator>(options_, vocabs_->front(),
+                                                    vocabs_->back(), srcIdx,
+                                                    trgIdx, shared_vcb);
+    }
   }
 
-  graph_ = New<ExpressionGraph>(true); // always optimize
+  graph_ = New<ExpressionGraph>(true); // set the graph to be inference only
   auto prec = options_->get<std::vector<std::string>>("precision", {"float32"});
   graph_->setDefaultElementType(typeFromString(prec[0]));
   graph_->setDevice(device_);
   graph_->getBackend()->configureDevice(options_);
   graph_->reserveWorkspaceMB(options_->get<size_t>("workspace"));
-  scorers_ = createScorers(options_);
+  if (modelMemory_->size() > 0 && modelMemory_->begin() != nullptr) { // If we have provided a byte array that contains the model memory, we can initialise the model from there, as opposed to from reading in the config file
+    ABORT_IF((uintptr_t)modelMemory_->begin() % 256 != 0,
+             "The provided memory is not aligned to 256 bytes and will crash when vector instructions are used on it.");
+    const std::vector<const void *> container = {modelMemory_->begin()}; // Marian supports multiple models initialised in this manner hence std::vector. However we will only ever use 1 during decoding.
+    scorers_ = createScorers(options_, container);
+  } else {
+    scorers_ = createScorers(options_);
+  }
   for (auto scorer : scorers_) {
     scorer->init(graph_);
     if (slgen_) {

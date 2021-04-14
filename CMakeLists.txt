@@ -13,29 +13,21 @@ include(CMakeDependentOption)
 
 # Project specific cmake options
 option(COMPILE_WASM "Compile for WASM" OFF)
-option(USE_WASM_COMPATIBLE_SOURCES "Use wasm compatible sources" ON)
+option(USE_WASM_COMPATIBLE_SOURCE "Use wasm compatible sources" ON)
+option(COMPILE_TESTS "Compile bergamot-tests" OFF)
+
 SET(PACKAGE_DIR "" CACHE STRING "Directory including all the files to be packaged (pre-loaded) in wasm builds")
 
-# Set marian (3rd party submodule) cmake options to compile for this project
+# Set 3rd party submodule specific cmake options for this project
 SET(COMPILE_CUDA OFF CACHE BOOL "Compile GPU version")
 SET(USE_SENTENCEPIECE ON CACHE BOOL "Download and compile SentencePiece")
 SET(USE_STATIC_LIBS ON CACHE BOOL "Link statically against non-system libs")
-if (USE_WASM_COMPATIBLE_SOURCES)
-  # If using wasm compatible marian then set following flags
+if (USE_WASM_COMPATIBLE_SOURCE)
   SET(COMPILE_LIBRARY_ONLY ON CACHE BOOL "Build only the Marian library and exclude all executables.")
   SET(USE_MKL OFF CACHE BOOL "Compile with MKL support")
-  SET(COMPILE_DECODER_ONLY ON CACHE BOOL "Compile marian-decoder only")
-  SET(COMPILE_WITH_PTHREADS OFF CACHE BOOL "Compile with pthreads support")
-  SET(USE_WASM_COMPATIBLE_BLAS ON CACHE BOOL "Compile with a WASM compatible blas for decoder only builds")
-  SET(COMPILE_WITHOUT_EXCEPTIONS ON CACHE BOOL "Compile without exceptions")
-  if(COMPILE_WASM)
-    # Set WORMHOLE to ON for marian whenever compiling for wasm platform
-    SET(WORMHOLE ON CACHE BOOL "Use WASM wormhole in intgemm https://bugzilla.mozilla.org/show_bug.cgi?id=1672160")
-  endif()
+  # # Setting the ssplit-cpp submodule specific cmake options for wasm
+  SET(USE_INTERNAL_PCRE2 ON CACHE BOOL "Use internal PCRE2 instead of system PCRE2")
 endif()
-# Set ssplit (3rd party submodule) cmake options to compile for this project
-CMAKE_DEPENDENT_OPTION(USE_INTERNAL_PCRE2 "Use internal PCRE2 instead of system PCRE2" ON
-                       "USE_WASM_COMPATIBLE_SOURCES" OFF)
 
 # Documentation: https://cliutils.gitlab.io/modern-cmake/chapters/projects/submodule.html
 # Ensures the submodules are set correctly during a build.
@@ -60,10 +52,16 @@ if(NOT COMPILE_WASM)
 endif()
 
 if(COMPILE_WASM)
+  set(WORMHOLE ON CACHE BOOL "Use WASM wormhole in intgemm https://bugzilla.mozilla.org/show_bug.cgi?id=1672160")
   list(APPEND WASM_COMPILE_FLAGS -pthread -O3 -g2 -fPIC -mssse3 -msimd128)
   list(APPEND WASM_COMPILE_FLAGS "SHELL:-s WASM=1" "SHELL:-s ASSERTIONS=0" "SHELL:-s DISABLE_EXCEPTION_CATCHING=1" "SHELL:-s LLD_REPORT_UNDEFINED" "SHELL:-s FORCE_FILESYSTEM=1" "SHELL:-s ALLOW_MEMORY_GROWTH=1")
   list(APPEND WASM_COMPILE_FLAGS -Wno-error=pthreads-mem-growth)
 endif(COMPILE_WASM)
+
+# Needs to be enabled before including the folder containing tests (src/tests)
+if(COMPILE_TESTS)
+    enable_testing()
+endif(COMPILE_TESTS)
 
 add_subdirectory(3rd_party)
 add_subdirectory(src)
@@ -73,3 +71,4 @@ if(COMPILE_WASM)
 else()
   add_subdirectory(app)
 endif(COMPILE_WASM)
+

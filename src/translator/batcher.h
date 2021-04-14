@@ -7,7 +7,7 @@
 #include "definitions.h"
 #include "request.h"
 
-#ifdef WITH_PTHREADS
+#ifndef WASM_COMPATIBLE_SOURCE
 #include "pcqueue.h"
 #endif
 

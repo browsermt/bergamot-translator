@@ -77,17 +77,16 @@ Bergamot translator provides a unified API for ([Marian NMT](https://marian-nmt.
             emmake make -j
             ```
 
+        The wasm artifacts (.js and .wasm files) will be available in `wasm` folder of build directory ("build-wasm" in this case).
+
     3. Enable SIMD Wormhole via Wasm instantiation API in generated artifacts
+        ```bash
+        bash ../wasm/patch-artifacts-enable-wormhole.sh
         ```
-        sed -i.bak 's/var result = WebAssembly.instantiateStreaming(response, info);/var result = WebAssembly.instantiateStreaming(response, info, {simdWormhole:true});/g' wasm/bergamot-translator-worker.js
-        sed -i.bak 's/return WebAssembly.instantiate(binary, info);/return WebAssembly.instantiate(binary, info, {simdWormhole:true});/g' wasm/bergamot-translator-worker.js
-        sed -i.bak 's/var module = new WebAssembly.Module(bytes);/var module = new WebAssembly.Module(bytes, {simdWormhole:true});/g' wasm/bergamot-translator-worker.js
-        ```
-    The artefacts (.js and .wasm files) will be available in `wasm` folder of build directory ("build-wasm" in this case).
 
 #### Recompiling
-As long as you don't update any submodule, just follow steps in `4.ii` to recompile.\
-If you update a submodule, execute following command before executing steps in `4.ii` to recompile.
+As long as you don't update any submodule, just follow steps in `4.ii` and `4.iii` to recompile.\
+If you update a submodule, execute following command before executing steps in `4.ii` and `4.iii` to recompile.
 ```bash
 git submodule update --init --recursive
 ```

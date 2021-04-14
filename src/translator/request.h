@@ -1,9 +1,9 @@
 //
 // Defines:
 //
-// Request: holds the input blob of a text, Segments (vector<Words>) which are
+// Request: holds the input text of a text, Segments (vector<Words>) which are
 // to go to the batching mechanism and alignments between the processed
-// segments and the input blob (sourceTokenRanges). In addition, Request takes
+// segments and the input text (sourceTokenRanges). In addition, Request takes
 // care of the barrier which fires when all the Segments in a request are done
 // translating by the workers (BatchTranslator).
 // TODO(jerinphilip):  Extend Request with notions of Priority (sequence,
@@ -36,9 +36,8 @@ namespace bergamot {
 class Request {
 public:
   Request(size_t Id, size_t lineNumberBegin,
-          std::vector<Ptr<Vocab const>> &vocabs_, std::string &&source,
-          Segments &&segments, SentenceRanges &&sourceTokenRanges,
-          std::promise<Response> responsePromise);
+          std::vector<Ptr<Vocab const>> &vocabs_, AnnotatedText &&source,
+          Segments &&segments, std::promise<Response> responsePromise);
 
   // Obtain the count of tokens in the segment correponding to index. Used to
   // insert sentence from multiple requests into the corresponding size bucket.
@@ -77,9 +76,8 @@ private:
   // string_views of the text corresponding to these words, pointing to
   // sequences in source_. histories_ is a buffer which eventually stores the
   // translations of each segment in the corresponding index.
-  std::string source_;
+  AnnotatedText source_;
   Segments segments_;
-  SentenceRanges sourceRanges_;
   std::vector<Ptr<History>> histories_;
 
   // Members above are moved into newly constructed Response on completion

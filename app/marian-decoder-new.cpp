@@ -14,25 +14,11 @@
 #include "translator/response.h"
 #include "translator/service.h"
 
-void marian_decoder_minimal(const marian::Histories &histories,
-                            marian::Ptr<marian::Vocab const> targetVocab,
+void marian_decoder_minimal(const marian::bergamot::Response &response,
                             marian::Ptr<marian::Options> options) {
-
-  bool doNbest = options->get<bool>("n-best");
-  auto collector =
-      marian::New<marian::OutputCollector>(options->get<std::string>("output"));
-
-  // There is a dependency of vocabs here.
-  auto printer = marian::New<marian::OutputPrinter>(options, targetVocab);
-  if (options->get<bool>("quiet-translation"))
-    collector->setPrintingStrategy(marian::New<marian::QuietPrinting>());
-
-  for (auto &history : histories) {
-    std::stringstream best1;
-    std::stringstream bestn;
-    printer->print(history, best1, bestn);
-    collector->Write((long)history->getLineNum(), best1.str(), bestn.str(),
-                     doNbest);
+  // We are no longer marian-decoder compatible. Server ideas are on hold.
+  for (size_t sentenceIdx = 0; sentenceIdx < response.size(); sentenceIdx++) {
+    std::cout << response.target.sentence(sentenceIdx) << "\n";
   }
 }
 
@@ -53,9 +39,8 @@ int main(int argc, char *argv[]) {
   responseFuture.wait();
   const Response &response = responseFuture.get();
 
-  marian_decoder_minimal(response.histories(), service.targetVocab(), options);
+  marian_decoder_minimal(response, options);
 
   LOG(info, "Total time: {:.5f}s wall", decoderTimer.elapsed());
-  service.stop();
   return 0;
 }

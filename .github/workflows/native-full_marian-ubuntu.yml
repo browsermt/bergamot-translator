@@ -1,10 +1,10 @@
-name: Ubuntu
+name: Native (Full Marian) Ubuntu
 
 on:
   push:
-    branches: [ main, ci-sandbox ]
+    branches: [ main, ci-test ]
   pull_request:
-    branches: [ main, ci-sandbox ]
+    branches: [ main, ci-test ]
 
 jobs:
   build-ubuntu:
@@ -15,7 +15,7 @@ jobs:
           - name: "Ubuntu CPU-only"
             os: ubuntu-latest
             cuda: ""
-            gcc: 7
+            gcc: 8
             cpu: true
             gpu: false
           # GPU Builds are commented out, for bergamot-translator CI runs.
@@ -62,7 +62,7 @@ jobs:
     # No need to install libprotobuf{17,10,9v5} on Ubuntu {20,18,16}.04 because
     # it is installed together with libprotobuf-dev
     - name: Install dependencies
-      run: sudo apt-get install -y libgoogle-perftools-dev libprotobuf-dev protobuf-compiler libboost-all-dev
+      run: sudo apt-get update && sudo apt-get install -y libgoogle-perftools-dev libprotobuf-dev protobuf-compiler libboost-all-dev g++-8
 
     # https://software.intel.com/content/www/us/en/develop/articles/installing-intel-free-libs-and-python-apt-repo.html
     - name: Install MKL
@@ -97,19 +97,17 @@ jobs:
           -DUSE_FBGEMM=${{ matrix.cpu }} \
           -DUSE_SENTENCEPIECE=on \
           -DUSE_STATIC_LIBS=on \
-          -DUSE_WASM_COMPATIBLE_SOURCES=off
+          -DUSE_WASM_COMPATIBLE_SOURCE=off
 
     - name: Compile
       working-directory: build
       run: make -j2
 
-    # Removing unit-tests, taken care of in browsermt/marian-dev
-    # TODO: add a flag to CMake to compile unit tests only on CPU
-    # - name: Run unit tests
-    #   working-directory: build
-    #   run: make test
-    #   # GitHub-hosted VMs do not have GPUs, so can not be run in CUDA builds
-    #   if: matrix.gpu == false
+    - name: Run unit tests
+      working-directory: build
+      run: make test
+      # GitHub-hosted VMs do not have GPUs, so can not be run in CUDA builds
+      if: matrix.gpu == false
 
     - name: Print versions
       working-directory: build

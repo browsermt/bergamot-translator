@@ -12,7 +12,7 @@
 #include "translator/history.h"
 #include "translator/scorers.h"
 
-#ifdef WITH_PTHREADS
+#ifndef WASM_COMPATIBLE_SOURCE
 #include "pcqueue.h"
 #endif
 
@@ -26,8 +26,16 @@ class BatchTranslator {
   // shut down in Service which calls join() on the threads.
 
 public:
-  BatchTranslator(DeviceId const device, std::vector<Ptr<Vocab const>> &vocabs,
-                  Ptr<Options> options);
+  /**
+   * Initialise the marian translator.
+   * @param device DeviceId that performs translation. Could be CPU or GPU
+   * @param vocabs Vector that contains ptrs to two vocabs
+   * @param options Marian options object
+   * @param modelMemory byte array (aligned to 256!!!) that contains the bytes of a model.bin. Provide a nullptr if not used.
+   * @param shortlistMemory byte array of shortlist (aligned to 64)
+   */
+  explicit BatchTranslator(DeviceId const device, std::vector<Ptr<Vocab const>> &vocabs,
+                  Ptr<Options> options, const AlignedMemory* modelMemory, const AlignedMemory* shortlistMemory);
 
   // convenience function for logging. TODO(jerin)
   std::string _identifier() { return "worker" + std::to_string(device_.no); }
@@ -41,6 +49,8 @@ private:
   Ptr<ExpressionGraph> graph_;
   std::vector<Ptr<Scorer>> scorers_;
   Ptr<data::ShortlistGenerator const> slgen_;
+  const AlignedMemory* modelMemory_{nullptr};
+  const AlignedMemory* shortlistMemory_{nullptr};
 };
 
 } // namespace bergamot

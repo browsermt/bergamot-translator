@@ -66,10 +66,8 @@ emcmake cmake -DCOMPILE_WASM=on -DPACKAGE_DIR="../models/" ../
 emmake make -j3
 
 #     3. Enable SIMD Wormhole via Wasm instantiation API in generated artifacts
-sed -i.bak 's/var result = WebAssembly.instantiateStreaming(response, info);/var result = WebAssembly.instantiateStreaming(response, info,{simdWormhole:true});/g' wasm/bergamot-translator-worker.js
-sed -i.bak 's/return WebAssembly.instantiate(binary, info);/return WebAssembly.instantiate(binary, info, {simdWormhole:true});/g' wasm/bergamot-translator-worker.js
-sed -i.bak 's/var module = new WebAssembly.Module(bytes);/var module = new WebAssembly.Module(bytes, {simdWormhole:true});/g' wasm/bergamot-translator-worker.js
+bash ../wasm/patch-artifacts-enable-wormhole.sh
 
-# The artefacts (.js and .wasm files) will be available in `wasm` folder of build directory ("build-wasm" in this case).
+# The artifacts (.js and .wasm files) will be available in `wasm` folder of build directory ("build-wasm" in this case).
 
 exit 0

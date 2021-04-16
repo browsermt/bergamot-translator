@@ -4,3 +4,6 @@
 [submodule "3rd_party/ssplit-cpp"]
 	path = 3rd_party/ssplit-cpp
 	url = https://github.com/browsermt/ssplit-cpp
+[submodule "bergamot-translator-tests"]
+	path = bergamot-translator-tests
+	url = https://github.com/browsermt/bergamot-translator-tests

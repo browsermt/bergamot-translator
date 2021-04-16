@@ -1,0 +1,108 @@
+name: Native MacOS
+
+on:
+  push:
+    branches: [ main, ci-sandbox ]
+  pull_request:
+    branches: [ main, ci-sandbox ]
+
+jobs:
+  build-macos:
+    strategy: 
+      fail-fast: false
+      matrix:
+        include:
+          - name: "full-marian"
+            os: macos-10.15
+            test_tags: ""
+            cmake: 
+              CMAKE_BUILD_TYPE: "Release"
+              COMPILE_TESTS: "ON"
+              USE_WASM_COMPATIBLE_SOURCE: "OFF"
+              USE_FBGEMM: "OFF"
+              USE_STATIC_LIBS: "OFF"
+              COMPILE_SERVER: "OFF"
+              COMPILE_EXAMPLES: "OFF"
+
+          - name: "minimal-marian"
+            os: macos-10.15
+            test_tags: "'#wasm'"
+            cmake: 
+              CMAKE_BUILD_TYPE: "Release"
+              COMPILE_TESTS: "OFF" # Minimal marian has no sqlite support and compile tests fail
+              USE_WASM_COMPATIBLE_SOURCE: "ON"
+              USE_FBGEMM: "OFF"
+              # explicitly set due to requirement of minimal marian being used
+              # within WASM. This is some yaml ugliness, but issok.
+              USE_STATIC_LIBS: "ON" 
+              COMPILE_SERVER: "OFF"
+              COMPILE_EXAMPLES: "OFF"
+        
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+      with:
+        submodules: recursive
+
+    - name: Install dependencies
+      run: |
+          brew update
+          brew install openblas protobuf coreutils
+
+    # Openblas location is exported explicitly because openblas is keg-only,
+    # which means it was not symlinked into /usr/local/.
+    - name: Set BLAS Environment variables
+      run: |
+          echo "LDFLAGS=-L/usr/local/opt/openblas/lib" >> $GITHUB_ENV
+          echo "CPPFLAGS=-I/usr/local/opt/openblas/include" >> $GITHUB_ENV
+      if: matrix.cmake.USE_WASM_COMPATIBLE_SOURCE == 'OFF'
+
+    # CMake cannot find BLAS on GitHub runners if Marian is being compiled
+    # statically, hence USE_STATIC_LIBS=off
+    - name: Configure CMake
+      run: |
+        mkdir -p build
+        cd build
+        cmake .. \
+          -DCMAKE_BUILD_TYPE=${{ matrix.cmake.CMAKE_BUILD_TYPE }}\
+          -DCOMPILE_TESTS=${{ matrix.cmake.COMPILE_TESTS }}\
+          -DCOMPILE_EXAMPLES=${{ matrix.cmake.COMPILE_EXAMPLES }} \
+          -DCOMPILE_SERVER=${{ matrix.cmake.COMPILE_SERVER }} \
+          -DUSE_STATIC_LIBS=${{ matrix.cmake.USE_STATIC_LIBS }} \
+          -DUSE_WASM_COMPATIBLE_SOURCE=${{ matrix.cmake.USE_WASM_COMPATIBLE_SOURCE }} \
+          -DUSE_FBGEMM=${{ matrix.cmake.USE_FBGEMM }}
+
+    - name: Compile
+      working-directory: build
+      run: make -j2
+
+    - name: Run unit tests
+      working-directory: build
+      run: make test
+      if: matrix.cmake.COMPILE_TESTS == 'ON'
+
+    - name: Print versions
+      working-directory: build
+      run: |
+        ./app/bergamot-translator-app --version
+
+    - name: Install regression-test framework (BRT)
+      working-directory: bergamot-translator-tests
+      run : make install
+
+    - name: Run regression-tests (BRT)
+      working-directory: bergamot-translator-tests
+      run : MARIAN=../build ./run_brt.sh ${{ matrix.test_tags }}
+
+    - name: Upload regression-tests artifacts
+      uses: actions/upload-artifact@v2
+      if: ${{ always() }}
+      with: 
+        name: brt-artifacts-${{ matrix.name }}
+        path: |
+            bergamot-translator-tests/**/*.expected
+            bergamot-translator-tests/**/*.log
+            bergamot-translator-tests/**/*.out

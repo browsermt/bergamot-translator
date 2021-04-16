@@ -89,7 +89,7 @@ jobs:
 
     - name: Compile bergamot-translator
       working-directory: build
-      run: make -j2
+      run: make -j
 
     - name: Run unit tests
       working-directory: build

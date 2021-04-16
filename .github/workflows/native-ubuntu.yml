@@ -68,11 +68,6 @@ jobs:
         sudo apt-get install -y --no-install-recommends intel-mkl-64bit-2020.0-088
       if: matrix.cmake.USE_WASM_COMPATIBLE_SOURCE == 'OFF'
 
-    # The script simplifies installation of different versions of CUDA
-    - name: Install CUDA
-      run: ./3rd_party/marian-dev/scripts/ci/install_cuda_ubuntu.sh ${{ matrix.cuda }}
-      if: matrix.gpu == 'ON'
-
     # Boost is installed on GitHub-hosted runners in a non-standard location
     # https://github.com/actions/virtual-environments/issues/687#issuecomment-610471671
     - name: Configure CMake

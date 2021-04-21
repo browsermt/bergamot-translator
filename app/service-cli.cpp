@@ -7,6 +7,7 @@
 #include "common/utils.h"
 #include "marian.h"
 #include "translator/parser.h"
+#include "translator/print_utils.h"
 #include "translator/response.h"
 #include "translator/service.h"
 
@@ -32,55 +33,8 @@ int main(int argc, char *argv[]) {
   responseFuture.wait();
   Response response = responseFuture.get();
 
-  std::cout << "[original]: " << response.source.text << '\n';
-  std::cout << "[translated]: " << response.target.text << '\n';
-  for (int sentenceIdx = 0; sentenceIdx < response.size(); sentenceIdx++) {
-    std::cout << " [src Sentence]: " << response.source.sentence(sentenceIdx)
-              << '\n';
-    std::cout << " [tgt Sentence]: " << response.target.sentence(sentenceIdx)
-              << '\n';
-    std::cout << "Alignments" << '\n';
-    typedef std::pair<size_t, float> Point;
-
-    // Initialize a point vector.
-    std::vector<std::vector<Point>> aggregate(
-        response.source.numWords(sentenceIdx));
-
-    // Handle alignments
-    auto &alignments = response.alignments[sentenceIdx];
-    for (auto &p : alignments) {
-      aggregate[p.src].emplace_back(p.tgt, p.prob);
-    }
-
-    for (size_t src = 0; src < aggregate.size(); src++) {
-      std::cout << response.source.word(sentenceIdx, src) << ": ";
-      for (auto &p : aggregate[src]) {
-        std::cout << response.target.word(sentenceIdx, p.first) << "("
-                  << p.second << ") ";
-      }
-      std::cout << '\n';
-    }
-
-    // Handle quality.
-    auto &quality = response.qualityScores[sentenceIdx];
-    std::cout << "Quality: whole(" << quality.sequence
-              << "), tokens below:" << '\n';
-    size_t wordIdx = 0;
-    bool first = true;
-    for (auto &p : quality.word) {
-      if (first) {
-        first = false;
-      } else {
-        std::cout << " ";
-      }
-      std::cout << response.target.word(sentenceIdx, wordIdx) << "(" << p
-                << ")";
-      wordIdx++;
-    }
-    std::cout << '\n';
-  }
-  std::cout << "--------------------------\n";
-  std::cout << '\n';
+  marian::bergamot::Printer printer(response);
+  printer.print(std::cout);
 
   return 0;
 }

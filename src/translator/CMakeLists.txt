@@ -10,6 +10,7 @@ add_library(bergamot-translator STATIC
     response.cpp
     response_builder.cpp
     batch.cpp
+    print_utils.cpp
     sentence_ranges.cpp
     service.cpp
 )

@@ -20,9 +20,9 @@
 namespace marian {
 namespace bergamot {
 
-/// Service offers  an asynchronous translation service. This is intended to be
-/// similar to the ones provided for training or decoding in ML pipelines with
-/// the following additional capabilities:
+/// Service offers methods create an asynchronous translation service. This is
+/// intended to be similar to the ones provided for training or decoding in ML
+/// pipelines with the following additional capabilities:
 ///
 ///  1. Provision of a request -> response based translation flow unlike the
 ///  usual a line based translation or decoding provided in most ML frameworks.

@@ -39,7 +39,7 @@ namespace bergamot {
 class Semaphore {
   public:
     explicit Semaphore(int value) : task_(mach_task_self()) {
-      ABORT_IF(KERN_SUCCESS != semaphore_create(task_, &back_, SYNC_POLICY_FIFO, value), ErrnoException, "Could not create semaphore");
+      ABORT_IF(KERN_SUCCESS != semaphore_create(task_, &back_, SYNC_POLICY_FIFO, value), "Could not create semaphore");
     }
 
     ~Semaphore() {
@@ -50,11 +50,11 @@ class Semaphore {
     }
 
     void wait() {
-      ABORT_IF(KERN_SUCCESS != semaphore_wait(back_), Exception, "Wait for semaphore failed");
+      ABORT_IF(KERN_SUCCESS != semaphore_wait(back_), "Wait for semaphore failed");
     }
 
     void post() {
-      ABORT_IF(KERN_SUCCESS != semaphore_signal(back_), Exception, "Could not post to semaphore");
+      ABORT_IF(KERN_SUCCESS != semaphore_signal(back_), "Could not post to semaphore");
     }
 
   private:
@@ -71,7 +71,7 @@ inline void WaitSemaphore(Semaphore &semaphore) {
 class Semaphore {
   public:
     explicit Semaphore(unsigned int value) {
-      ABORT_IF(sem_init(&sem_, 0, value), ErrnoException, "Could not create semaphore");
+      ABORT_IF(sem_init(&sem_, 0, value), "Could not create semaphore");
     }
 
     ~Semaphore() {
@@ -83,12 +83,12 @@ class Semaphore {
 
     void wait() {
       while (-1 == sem_wait(&sem_)) {
-        ABORT_IF(errno != EINTR, ErrnoException, "Wait for semaphore failed");
+        ABORT_IF(errno != EINTR, "Wait for semaphore failed");
       }
     }
 
     void post() {
-      ABORT_IF(-1 == sem_post(&sem_), ErrnoException, "Could not post to semaphore");
+      ABORT_IF(-1 == sem_post(&sem_), "Could not post to semaphore");
     }
 
   private:
@@ -104,7 +104,7 @@ inline void WaitSemaphore(Semaphore &semaphore) {
 class Semaphore {
   public:
     explicit Semaphore(LONG value) : sem_(CreateSemaphoreA(NULL, value, 2147483647, NULL)) {
-      ABORT_IF(!sem_, Exception, "Could not CreateSemaphore " << GetLastError());
+      ABORT_IF(!sem_, "Could not CreateSemaphore {}", GetLastError());
     }
 
     ~Semaphore() {
@@ -118,17 +118,17 @@ class Semaphore {
           case WAIT_OBJECT_0:
             return;
           case WAIT_ABANDONED:
-            UTIL_ABORT(Exception, "A semaphore can't be abandoned, confused by Windows");
+            ABORT("A semaphore can't be abandoned, confused by Windows");
           case WAIT_TIMEOUT:
             continue;
           case WAIT_FAILED:
-            UTIL_ABORT(Exception, "Waiting on Semaphore failed " << GetLastError());
+            ABORT("Waiting on Semaphore failed {}", GetLastError());
         }
       }
     }
 
     void post() {
-      ABORT_IF(!ReleaseSemaphore(sem_, 1, NULL), Exception, "Failed to release Semaphore " << GetLastError());
+      ABORT_IF(!ReleaseSemaphore(sem_, 1, NULL), "Failed to release Semaphore {}", GetLastError());
     }
 
   private:

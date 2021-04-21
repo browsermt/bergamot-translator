@@ -13,8 +13,9 @@
 #include "translator/service.h"
 
 TranslationModel::TranslationModel(const std::string &config,
-                                   const void *model_memory)
-    : service_(config, model_memory) {}
+                                   marian::bergamot::AlignedMemory model_memory,
+                                   marian::bergamot::AlignedMemory lexical_memory)
+    : service_(config, std::move(model_memory), std::move(lexical_memory)) {}
 
 TranslationModel::~TranslationModel() {}
 

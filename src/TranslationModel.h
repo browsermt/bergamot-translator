@@ -17,6 +17,7 @@
 // All local project includes
 #include "TranslationRequest.h"
 #include "TranslationResult.h"
+#include "translator/definitions.h"
 #include "translator/service.h"
 
 /* A Translation model that translates a plain (without any markups and emojis)
@@ -34,7 +35,8 @@ public:
    * the bytes of a model.bin.
    */
   TranslationModel(const std::string &config,
-                   const void *model_memory = nullptr);
+                   marian::bergamot::AlignedMemory modelMemory = marian::bergamot::AlignedMemory(),
+                   marian::bergamot::AlignedMemory shortlistMemory = marian::bergamot::AlignedMemory());
 
   ~TranslationModel();
 

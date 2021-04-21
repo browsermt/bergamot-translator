@@ -2,9 +2,9 @@ name: WASM (Custom Marian) Ubuntu
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, ci-sandbox ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, ci-sandbox ]
 
 jobs:
   build-wasm:

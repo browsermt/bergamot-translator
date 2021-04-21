@@ -3,7 +3,9 @@
 namespace marian {
 namespace bergamot {
 
-void Printer::sentences(std::ostream &out) {
+void ResponsePrinter::print(std::ostream &out) {
+  out << "[original]: " << response_->source.text << '\n';
+  out << "[translated]: " << response_->target.text << '\n';
   for (int sentenceIdx = 0; sentenceIdx < response_->size(); sentenceIdx++) {
     sentence(out, sentenceIdx);
     alignments(out, sentenceIdx);
@@ -12,12 +14,13 @@ void Printer::sentences(std::ostream &out) {
   out << "--------------------------\n";
   out << '\n';
 }
-void Printer::sentence(std::ostream &out, size_t sentenceIdx) {
+
+void ResponsePrinter::sentence(std::ostream &out, size_t sentenceIdx) {
   out << " [src Sentence]: " << response_->source.sentence(sentenceIdx) << '\n';
   out << " [tgt Sentence]: " << response_->target.sentence(sentenceIdx) << '\n';
 }
 
-void Printer::alignments(std::ostream &out, size_t sentenceIdx) {
+void ResponsePrinter::alignments(std::ostream &out, size_t sentenceIdx) {
   out << "Alignments" << '\n';
   typedef std::pair<size_t, float> Point;
 
@@ -41,7 +44,7 @@ void Printer::alignments(std::ostream &out, size_t sentenceIdx) {
   }
 }
 
-void Printer::quality(std::ostream &out, size_t sentenceIdx) {
+void ResponsePrinter::quality(std::ostream &out, size_t sentenceIdx) {
   // Handle quality.
   auto &quality = response_->qualityScores[sentenceIdx];
   out << "Quality: whole(" << quality.sequence << "), tokens below:" << '\n';
@@ -57,11 +60,6 @@ void Printer::quality(std::ostream &out, size_t sentenceIdx) {
     wordIdx++;
   }
   out << '\n';
-}
-
-void Printer::text(std::ostream &out) {
-  out << "[original]: " << response_->source.text << '\n';
-  out << "[translated]: " << response_->target.text << '\n';
 }
 
 } // namespace bergamot

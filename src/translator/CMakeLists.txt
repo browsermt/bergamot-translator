@@ -4,7 +4,6 @@ add_library(bergamot-translator STATIC
     text_processor.cpp
     sentence_splitter.cpp
     batch_translator.cpp 
-    multifactor_priority.cpp 
     request.cpp 
     batcher.cpp
     response_builder.cpp

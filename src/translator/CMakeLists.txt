@@ -7,7 +7,6 @@ add_library(bergamot-translator STATIC
     multifactor_priority.cpp 
     request.cpp 
     batcher.cpp
-    response.cpp
     response_builder.cpp
     batch.cpp
     print_utils.cpp

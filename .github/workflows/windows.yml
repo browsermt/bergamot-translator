@@ -39,8 +39,8 @@ jobs:
     - name: Prepare vcpkg
       uses: lukka/run-vcpkg@v4
       with:
-        vcpkgArguments: protobuf pcre2 #@TODO separate versions?
-        #vcpkgGitCommitId: 6185aa76504a5025f36754324abf307cc776f3da
+        vcpkgArguments: protobuf pcre2
+        vcpkgGitCommitId: 6185aa76504a5025f36754324abf307cc776f3da a4eca5fabc1743e309e75736c6d8a2420f48193d
         vcpkgDirectory: ${{ github.workspace }}/vcpkg/
         vcpkgTriplet: x64-windows-static
 

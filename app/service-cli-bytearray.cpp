@@ -39,8 +39,8 @@ int main(int argc, char *argv[]) {
   responseFuture.wait();
   Response response = responseFuture.get();
 
-  marian::bergamot::ResponsePrinter responsePrinter(response);
-  responsePrinter.print(std::cout);
+  marian::bergamot::Printer printer(response);
+  printer.print(std::cout);
 
   return 0;
 }

@@ -112,17 +112,14 @@ void Service::async_translate() {
 #endif // WASM_COMPATIBLE_SOURCE
 
 std::future<Response> Service::translate(std::string &&input) {
-  ResponseOptions responseOptions =
-      New<Options>(); // TODO(jerinphilip): Take this in as argument
-
-  // Hardcode responseOptions for now
+  ResponseOptions responseOptions;  // Hardcode responseOptions for now
   return translate(std::move(input), responseOptions);
 }
 
 std::vector<Response>
 Service::translateMultiple(std::vector<std::string> &&inputs,
                            TranslationRequest translationRequest) {
-  ResponseOptions responseOptions = New<Options>();
+  ResponseOptions responseOptions;
 
   // TODO(jerinphilip) Set options based on TranslationRequest, if and when it
   // becomes non-dummy.

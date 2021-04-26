@@ -3,12 +3,10 @@
 
 #include "data/types.h"
 #include "response.h"
+#include "response_options.h"
 
 // For now we will work with this, to avoid complaints another structure is hard
 // to operate with.
-
-typedef marian::Ptr<marian::Options> ResponseOptions;
-// typedef TranslationRequest ResponseOptions;
 
 namespace marian {
 namespace bergamot {
@@ -50,13 +48,11 @@ public:
     buildTranslatedText(histories, response);
 
     // Should always be after buildTranslatedText
-    bool quality = responseOptions_->get<bool>("quality", false);
-    if (quality) {
+    if (responseOptions_.qualityScores) {
       buildQualityScores(histories, response);
     }
 
-    bool alignment = responseOptions_->get<bool>("alignment", false);
-    if (alignment) {
+    if (responseOptions_.alignment) {
       buildAlignments(histories, response);
     }
 

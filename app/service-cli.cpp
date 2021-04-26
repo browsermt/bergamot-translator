@@ -8,6 +8,7 @@
 #include "marian.h"
 #include "translator/parser.h"
 #include "translator/response.h"
+#include "translator/response_options.h"
 #include "translator/service.h"
 
 int main(int argc, char *argv[]) {
@@ -21,10 +22,10 @@ int main(int argc, char *argv[]) {
   std::string input = std_input.str();
   using marian::bergamot::Response;
 
-  marian::Ptr<marian::Options> responseOptions = marian::New<marian::Options>();
-  responseOptions->set<bool>("quality", true);
-  responseOptions->set<bool>("alignment", true);
-  responseOptions->set<float>("alignment-threshold", 0.2f);
+  marian::bergamot::ResponseOptions responseOptions;
+  responseOptions.qualityScores = true;
+  responseOptions.alignment = true;
+  responseOptions.alignmentThreshold = 0.2f;
 
   // Wait on future until Response is complete
   std::future<Response> responseFuture =

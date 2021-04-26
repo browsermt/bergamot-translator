@@ -27,6 +27,7 @@ if (USE_WASM_COMPATIBLE_SOURCE)
   SET(USE_MKL OFF CACHE BOOL "Compile with MKL support")
   # # Setting the ssplit-cpp submodule specific cmake options for wasm
   SET(SSPLIT_USE_INTERNAL_PCRE2 ON CACHE BOOL "Use internal PCRE2 instead of system PCRE2")
+  SET(SSPLIT_COMPILE_LIBRARY_ONLY ON CACHE BOOL "Do not compile ssplit tests")
 endif()
 
 # Documentation: https://cliutils.gitlab.io/modern-cmake/chapters/projects/submodule.html

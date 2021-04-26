@@ -106,9 +106,30 @@ maxi-batch-sort: src
 
     console.debug("modelConfig: ", modelConfig);
 
+    var alignedModelMemory = new Module.AlignedMemory(8, 256);
+    const alignedModelBytes = alignedModelMemory.getBytes();
+    alignedModelBytes.set([33, 34, 35, 36, 37, 38, 39, 40]);
+    alignedModelMemory.print();
+
+    var alignedShortlistMemory = new Module.AlignedMemory(8, 64);
+    const alignedShortlistBytes = alignedShortlistMemory.getBytes();
+    alignedShortlistBytes.set([64, 65, 66, 67, 68, 69, 70, 71]);
+    alignedShortlistMemory.print();
+    //console.debug("alignedMemory: ", alignedMemory);
+    //console.debug("alignedMemory size: ", alignedMemory.size());
+    //console.debug("alignedMemory: ", bytes);
+    //alignedMemory.print();
+
     // Instantiate the TranslationModel
     if (model) model.delete();
-    model = new Module.TranslationModel(modelConfig);
+    console.debug("Creating TranslationModel");
+    model = new Module.TranslationModel(modelConfig, alignedModelMemory, alignedShortlistMemory);
+    //model = new Module.TranslationModel(modelConfig);
+    console.debug("DONE Creating TranslationModel");
+    alignedModelMemory.print();
+    alignedShortlistMemory.print();
+    alignedModelMemory.delete();
+    alignedShortlistMemory.delete();
   }
 
   const translate = (paragraphs) => {

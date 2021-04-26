@@ -32,11 +32,11 @@ ByteRange Annotation::sentence(size_t sentenceIdx) const {
     // the flatByteRange and non-empty sentence before this happened and
     // construct empty string-view equivalent ByteRange.
     ByteRange eos = flatByteRanges_[eosId - 1];
-    sentenceByteRange = (ByteRange){eos.end, eos.end};
+    sentenceByteRange = ByteRange{eos.end, eos.end};
   } else {
     ByteRange bos = flatByteRanges_[bosId];
     ByteRange eos = flatByteRanges_[eosId - 1];
-    sentenceByteRange = (ByteRange){bos.begin, eos.end};
+    sentenceByteRange = ByteRange{bos.begin, eos.end};
   }
   return sentenceByteRange;
 }
@@ -65,7 +65,7 @@ void AnnotatedText::appendSentence(std::string prefix, std::string &reference,
   for (auto &wordView : wordRanges) {
     size_t thisWordBegin = offset + wordView.data() - &reference[0];
     sentence.push_back(
-        (ByteRange){thisWordBegin, thisWordBegin + wordView.size()});
+        ByteRange{thisWordBegin, thisWordBegin + wordView.size()});
   }
   annotation.addSentence(sentence);
 }
@@ -79,7 +79,7 @@ void AnnotatedText::addSentence(std::vector<string_view>::iterator begin,
   std::vector<ByteRange> sentence;
   for (auto p = begin; p != end; p++) {
     size_t begin_offset = p->data() - &text[0];
-    sentence.push_back((ByteRange){begin_offset, begin_offset + p->size()});
+    sentence.push_back(ByteRange{begin_offset, begin_offset + p->size()});
   }
   annotation.addSentence(sentence);
 };

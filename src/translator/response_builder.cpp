@@ -20,7 +20,7 @@ void ResponseBuilder::buildQualityScores(Histories &histories,
     auto wordQualities = hyp->tracebackWordScores();
     wordQualities.pop_back();
     response.qualityScores.push_back(
-        (Quality){normalizedPathScore, wordQualities});
+        Quality{normalizedPathScore, wordQualities});
   }
 }
 
@@ -43,7 +43,7 @@ void ResponseBuilder::buildAlignments(Histories &histories,
         data::ConvertSoftAlignToHardAlign(softAlignment, threshold);
     Alignment unified_alignment;
     for (auto &p : hardAlignment) {
-      unified_alignment.emplace_back((Point){p.srcPos, p.tgtPos, p.prob});
+      unified_alignment.emplace_back(Point{p.srcPos, p.tgtPos, p.prob});
     }
 
     response.alignments.push_back(std::move(unified_alignment));

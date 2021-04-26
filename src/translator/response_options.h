@@ -34,7 +34,10 @@ struct ResponseOptions {
   /// `alignment=true`.
   bool sentenceMappings{false};
 
-  /// Threshold to filter alignments into a sparse matrix. `1.0f` gives argmax.
+  /// Threshold between `[0.0f, 1.0f]` to filter alignments into a sparse
+  /// matrix. Higher value implies stronger filtering leading to provision of
+  /// higher-confidence matches. `1.0f` gives argmax (not the full-dense
+  /// matrix).
   float alignmentThreshold{0.2f};
 
   QualityScoreType qualityScoreType{QualityScoreType::FREE};

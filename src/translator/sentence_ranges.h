@@ -64,7 +64,6 @@ public:
     sentenceEndIds_.push_back(0);
   }
 
-  /// Returns the number of sentences annotated in a text.
   size_t numSentences() const { return sentenceEndIds_.size() - 1; }
 
   /// Returns number of words in the sentence identified by `sentenceIdx`.
@@ -125,10 +124,6 @@ public:
   /// constructor is disallowed).
   AnnotatedText(std::string &&text) : text(std::move(text)){};
 
-  AnnotatedText(AnnotatedText &&annotatedBlob)
-      : text(std::move(annotatedBlob.text)),
-        annotation(std::move(annotatedBlob.annotation)) {}
-
   /// Returns the number of sentences in the annotation structure.
   const size_t numSentences() const { return annotation.numSentences(); }
 
@@ -136,6 +131,11 @@ public:
   const size_t numWords(size_t sentenceIdx) const {
     return annotation.numWords(sentenceIdx);
   }
+
+  /// Appends a sentence to the existing text and transparently rebases
+  /// string_views
+  void appendSentence(std::string prefix, std::string &reference,
+                      std::vector<string_view> &wordRanges);
 
   /// Adds a sentence, used to load from SentencePiece annotations conveniently.
   void addSentence(std::vector<string_view> &wordRanges);

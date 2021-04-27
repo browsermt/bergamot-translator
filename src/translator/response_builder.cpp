@@ -1,4 +1,5 @@
 #include "response_builder.h"
+#include "response_options.h"
 
 namespace marian {
 namespace bergamot {
@@ -59,6 +60,7 @@ void ResponseBuilder::buildTranslatedText(Histories &histories,
   size_t offset{0};
   bool first{true};
 
+  size_t sentenceIdx{0};
   for (auto &history : histories) {
     // TODO(jerin): Change hardcode of nBest = 1
     NBestList onebest = history->nBest(1);
@@ -71,15 +73,35 @@ void ResponseBuilder::buildTranslatedText(Histories &histories,
     std::vector<string_view> targetSentenceMappings;
     targetVocab->decodeWithByteRanges(words, decoded, targetSentenceMappings);
 
-    // delimiter can be used to fill in the blanks from source as well.
-    std::string delimiter;
-    if (first) {
-      first = false;
-    } else {
-      delimiter = " ";
+    switch (responseOptions_.concatStrategy) {
+    case ConcatStrategy::FAITHFUL: {
+      string_view pre = response.source.pre(sentenceIdx);
+      response.target.appendSentence(std::string(pre.data(), pre.size()),
+                                     decoded, targetSentenceMappings);
+      if (sentenceIdx + 1 == histories.size()) {
+        string_view post = response.source.post(sentenceIdx);
+        response.target.text += std::string(post.data(), post.size());
+      }
+      break;
+    }
+    case ConcatStrategy::SPACE: {
+      std::string delimiter;
+      if (first) {
+        first = false;
+      } else {
+        delimiter = " ";
+      }
+
+      response.target.appendSentence(delimiter, decoded,
+                                     targetSentenceMappings);
+      break;
     }
 
-    response.target.appendSentence(delimiter, decoded, targetSentenceMappings);
+    default:
+      ABORT("Unknown concat-strategy");
+    }
+
+    ++sentenceIdx;
   }
 }
 

@@ -151,6 +151,14 @@ public:
   /// Returns a string_view representing sentence corresponding to sentenceIdx.
   string_view sentence(size_t sentenceIdx) const;
 
+  /// Returns the string_view of the filler between the previous sentence and
+  /// sentence described by sentenceIdx
+  string_view pre(size_t sentenceIdx) const;
+
+  /// Returns the string_view of the filler after the sentence corresponding to
+  /// sentenceIdx and the next sentence.
+  string_view post(size_t sentenceIdx) const;
+
   /// Returns a ByteRange representing wordIdx in sentenceIdx
   ByteRange wordAsByteRange(size_t sentenceIdx, size_t wordIdx) const;
 

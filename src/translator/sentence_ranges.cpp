@@ -99,5 +99,33 @@ string_view AnnotatedText::asStringView(const ByteRange &byteRange) const {
   return string_view(data, size);
 }
 
+string_view AnnotatedText::pre(size_t sentenceIdx) const {
+  const char *start{nullptr};
+  if (sentenceIdx == 0) {
+    start = &(text[0]);
+  } else {
+    string_view sentenceBefore = sentence(sentenceIdx - 1);
+    start = sentenceBefore.data() + sentenceBefore.size();
+  }
+
+  const char *end = sentence(sentenceIdx).data();
+  return string_view(start, end - start);
+}
+
+string_view AnnotatedText::post(size_t sentenceIdx) const {
+  const char *end{nullptr};
+  if (sentenceIdx == numSentences() - 1) {
+    const char *begin = &(text[0]);
+    end = begin + text.size();
+  } else {
+    string_view sentenceAfter = sentence(sentenceIdx + 1);
+    end = sentenceAfter.data();
+  }
+
+  string_view currentSentence = sentence(sentenceIdx);
+  const char *start = currentSentence.data() + currentSentence.size();
+  return string_view(start, end - start);
+}
+
 } // namespace bergamot
 } // namespace marian

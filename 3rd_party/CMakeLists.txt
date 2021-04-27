@@ -13,7 +13,7 @@ add_subdirectory(ssplit-cpp)
 get_property(INCDIRS DIRECTORY marian-dev/src PROPERTY INCLUDE_DIRECTORIES)
 target_include_directories(marian PUBLIC ${INCDIRS})
 
-get_property(INCLUDE_DIRECTORIES DIRECTORY ssplit-cpp PROPERTY INCLUDE_DIRECTORIES)
+get_property(INCLUDE_DIRECTORIES DIRECTORY ssplit-cpp/src PROPERTY INCLUDE_DIRECTORIES)
 target_include_directories(ssplit PUBLIC ${INCLUDE_DIRECTORIES})
 
 # Compilation flags 

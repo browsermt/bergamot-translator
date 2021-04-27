@@ -6,7 +6,7 @@ add_library(bergamot-translator STATIC
     batch_translator.cpp 
     request.cpp 
     batcher.cpp
-    response.cpp
+    response_builder.cpp
     batch.cpp
     sentence_ranges.cpp
     service.cpp

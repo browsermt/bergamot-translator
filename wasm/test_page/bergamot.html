@@ -2,7 +2,7 @@
 <html>
 <head>
     <link rel="icon" href="data:,">
-    <meta http-equiv="Content-Type" content="text/html;charset=ISO-8859-1">
+    <meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
 </head>
 <style>
     body, html, div {
@@ -135,21 +135,29 @@ quiet-translation: true
 // TODO: Use in model config when loading of binary models is supported and we use model.intgemm.alphas.bin:
 // gemm-precision: int8shiftAlphaAll
 
-    const modelFile = `http://localhost:8000/model.${languagePair}.intgemm.alphas.bin`;
+    const modelFile = `http://localhost:8000/models-unzipped/${languagePair}/model.${languagePair}.intgemm.alphas.bin`;
     console.debug("modelFile: ", modelFile);
 
-    const shortlistFile = `http://localhost:8000/lex.${languagePair}.s2t.bin`;
+    const shortlistFile = `http://localhost:8000/models-unzipped/${languagePair}/lex.${languagePair}.s2t.bin`;
     console.debug("shortlistFile: ", shortlistFile);
 
-    try {
-
-      const response = await fetch(modelFile);
+    const downloadAsArrayBuffer = async(url) => {
+      const response = await fetch(url);
       if (!checkStatus(response)) {
         throw Error("Invalid request status");
       }
-      const buffer = await response.arrayBuffer();
+      return response.arrayBuffer();
+    }
 
-      var byteArray = new Int8Array(buffer);
+    try {
+
+      // TODO: time download FROM HERE
+      const downloadedBuffers = await Promise.all([downloadAsArrayBuffer(modelFile), downloadAsArrayBuffer(shortlistFile)]);
+      const modelBuffer = downloadedBuffers[0];
+      const shortListBuffer = downloadedBuffers[1];
+      // TODO: time download TO HERE
+
+      var byteArray = new Int8Array(modelBuffer);
       console.debug("byteArray size: ", byteArray.byteLength);
       var alignedModelMemory = new Module.AlignedMemory(byteArray.byteLength, 256);
       const alignedModelBytes = alignedModelMemory.getBytes();
@@ -163,11 +171,6 @@ quiet-translation: true
         alignedModelMemory.print();
         alignedModelMemory.delete();
       } else {
-        const response = await fetch(shortlistFile);
-        if (!checkStatus(response)) {
-          throw Error("Invalid request status");
-        }
-        const buffer = await response.arrayBuffer();
         var byteArray = new Int8Array(buffer);
         console.debug("byteArray size: ", byteArray.byteLength);
         var alignedShortlistMemory = new Module.AlignedMemory(byteArray.byteLength, 64);
@@ -263,12 +266,14 @@ quiet-translation: true
   }
 
   document.querySelector("#load").addEventListener("click", async() => {
+    document.querySelector("#load").disabled = true;
     const lang = document.querySelector('input[name="modellang"]:checked').value;
     const from = lang.substring(0, 2);
     const to = lang.substring(2, 4);
     let start = Date.now();
     await loadModel(from, to);
     log(`model ${from}${to} loaded in ${(Date.now() - start) / 1000} secs`);
+    document.querySelector("#load").disabled = false;
     //log('Model Alignment:', model.isAlignmentSupported());
   });
 

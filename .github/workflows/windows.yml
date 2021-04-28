@@ -48,7 +48,7 @@ jobs:
     - name: Build Release
       uses: lukka/run-cmake@v3
       with:
-        buildDirectory: ${{ github.workspace }}/build/Debug
+        buildDirectory: ${{ github.workspace }}/build/Release
         cmakeAppendedArgs: '-G "Visual Studio 16 2019" -A x64
           -DCMAKE_BUILD_TYPE="Release"
           -DUSE_WASM_COMPATIBLE_SOURCE="OFF"
@@ -59,8 +59,8 @@ jobs:
 
 
     - name: Print versions
-      working-directory: build/
+      working-directory: build/Release
       run: |
-        .\app\bergamot-translator-app.exe --version
+        .\app\service-cli.exe --version
         dir *.exe
       shell: cmd

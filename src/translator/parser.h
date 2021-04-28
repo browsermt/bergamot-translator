@@ -31,7 +31,7 @@ inline marian::ConfigParser createConfigParser() {
 }
 
 inline std::shared_ptr<marian::Options>
-parseOptions(const std::string &config) {
+parseOptions(const std::string &config, bool validate = true) {
   marian::Options options;
 
   // @TODO(jerinphilip) There's something off here, @XapaJIaMnu suggests
@@ -58,8 +58,11 @@ parseOptions(const std::string &config) {
   options.parse(config);
   YAML::Node configCopy = options.cloneToYamlNode();
 
-  marian::ConfigValidator validator(configCopy);
-  validator.validateOptions(marian::cli::mode::translation);
+  if (validate) {
+    // Perform validation on parsed options only when requested
+    marian::ConfigValidator validator(configCopy);
+    validator.validateOptions(marian::cli::mode::translation);
+  }
 
   return std::make_shared<marian::Options>(options);
 }

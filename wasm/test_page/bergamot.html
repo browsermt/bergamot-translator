@@ -61,6 +61,7 @@ En consecuencia, durante el año 2011 se introdujeron 180 proyectos de ley que r
 </div>
 
 <script>
+  // This function downloads file from a url and returns the array buffer
   const downloadAsArrayBuffer = async(url) => {
     const response = await fetch(url);
     if (!response.ok) {
@@ -69,6 +70,7 @@ En consecuencia, durante el año 2011 se introdujeron 180 proyectos de ley que r
     return response.arrayBuffer();
   }
 
+  // This function constructs the AlignedMemory from the array buffer and the alignment size
   function constructAlignedMemoryFromBuffer(buffer, alignmentSize) {
     var byteArray = new Int8Array(buffer);
     console.debug("byteArray size: ", byteArray.byteLength);
@@ -158,12 +160,14 @@ quiet-translation: true
     console.debug("shortlistFile: ", shortlistFile);
 
     try {
+      // Download the files as buffers from the given urls
       let start = Date.now();
       const downloadedBuffers = await Promise.all([downloadAsArrayBuffer(modelFile), downloadAsArrayBuffer(shortlistFile)]);
       const modelBuffer = downloadedBuffers[0];
       const shortListBuffer = downloadedBuffers[1];
       log(`${languagePair} file download took ${(Date.now() - start) / 1000} secs`);
 
+      // Construct AlignedMemory objects with downloaded buffers
       var alignedModelMemory = constructAlignedMemoryFromBuffer(modelBuffer, 256);
       var alignedShortlistMemory = constructAlignedMemoryFromBuffer(shortListBuffer, 64);
 

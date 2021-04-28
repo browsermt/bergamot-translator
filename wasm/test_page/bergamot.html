@@ -130,12 +130,6 @@ quiet: true
 quiet-translation: true
 `;
 
-/*
-This config is not valid anymore in new APIs
-mini-batch: 32
-maxi-batch: 100
-maxi-batch-sort: src
-*/
 // TODO: Use in model config when wormhole is enabled:
 // gemm-precision: int8shift
 // TODO: Use in model config when loading of binary models is supported and we use model.intgemm.alphas.bin:
@@ -231,37 +225,6 @@ maxi-batch-sort: src
       throw new Error(`HTTP ${response.status} - ${response.statusText}`);
     }
     return response;
-  }
-
-  const readBinaryFile = (file, alignment) => {
-    var oReq = new XMLHttpRequest();
-    console.debug("Reading file: ", file);
-    oReq.open("GET", file, true);
-    oReq.responseType = "arraybuffer";
-    oReq.onload = function (oEvent) {
-      var buffer = oReq.response;
-      if (buffer) {
-        const byteArray = new Int8Array(buffer);
-        //console.debug("byteArray: ", byteArray);
-        var alignedMemory = new Module.AlignedMemory(byteArray.byteLength, alignment);
-        const alignedByteArrayView = alignedMemory.getBytes();
-        alignedByteArrayView.set(byteArray);
-
-        // Instantiate the TranslationModel
-        if (model) model.delete();
-        console.debug("Creating TranslationModel");
-        model = new Module.TranslationModel(modelConfig, alignedModelMemory/*, alignedShortlistMemory*/);
-        console.debug("DONE Creating TranslationModel");
-        alignedModelMemory.print();
-        //alignedShortlistMemory.print();
-        alignedModelMemory.delete();
-        //alignedShortlistMemory.delete();
-      }
-      else {
-        console.debug("Failed to read file");
-      }
-    };
-    oReq.send(null);
   }
 
   const translate = (paragraphs) => {

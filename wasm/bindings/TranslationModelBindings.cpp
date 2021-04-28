@@ -10,7 +10,7 @@
 
 using namespace emscripten;
 
-val getBytes(marian::bergamot::AlignedMemory& alignedMemory) {
+val getByteArrayView(marian::bergamot::AlignedMemory& alignedMemory) {
   return val(typed_memory_view(alignedMemory.size(), alignedMemory.as<char>()));
 }
 
@@ -27,7 +27,7 @@ EMSCRIPTEN_BINDINGS(aligned_memory) {
   class_<marian::bergamot::AlignedMemory>("AlignedMemory")
     .constructor<std::size_t, std::size_t>()
     .function("size", &marian::bergamot::AlignedMemory::size)
-	  .function("getBytes", &getBytes)
+	  .function("getByteArrayView", &getByteArrayView)
     .function("print", &print)
     ;
 }

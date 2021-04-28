@@ -171,11 +171,6 @@ quiet-translation: true
       if (translationModel) translationModel.delete();
       console.debug("Creating TranslationModel with config:", modelConfigWithoutModelAndShortList);
       translationModel = new Module.TranslationModel(modelConfigWithoutModelAndShortList, alignedModelMemory, alignedShortlistMemory);
-      console.debug("DONE Creating TranslationModel. Alignment supported: ", translationModel.isAlignmentSupported());
-      alignedModelMemory.print();
-      alignedShortlistMemory.print();
-      alignedModelMemory.delete();
-      alignedShortlistMemory.delete();
     } catch (error) {
       console.error(error);
     }

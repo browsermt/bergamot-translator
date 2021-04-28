@@ -62,7 +62,7 @@ En consecuencia, durante el año 2011 se introdujeron 180 proyectos de ley que r
 
 <script>
   var model, request, input = undefined;
-  const loadModel = (from, to) => {
+  const loadModel = async (from, to) => {
 
     const languagePair = `${from}${to}`;
 
@@ -141,48 +141,54 @@ quiet-translation: true
     const shortlistFile = `http://localhost:8000/lex.${languagePair}.s2t.bin`;
     console.debug("shortlistFile: ", shortlistFile);
 
-    fetch(modelFile)
-      .then(response => checkStatus(response) && response.arrayBuffer())
-      .then(buffer => {
-          var byteArray = new Int8Array(buffer);
-          console.debug("byteArray size: ", byteArray.byteLength);
-          var alignedModelMemory = new Module.AlignedMemory(byteArray.byteLength, 256);
-          const alignedModelBytes = alignedModelMemory.getBytes();
-          alignedModelBytes.set(byteArray);
+    try {
 
-          if (0) {
-            if (model) model.delete();
-            console.debug("Creating TranslationModel with config:", modelConfigWithoutModel);
-            model = new Module.TranslationModel(modelConfigWithoutModel, alignedModelMemory);
-            console.debug("DONE Creating TranslationModel. Alignment supported: ", model.isAlignmentSupported());
-            alignedModelMemory.print();
-            alignedModelMemory.delete();
-          }
-          else {
-            fetch(shortlistFile)
-              .then(response => checkStatus(response) && response.arrayBuffer())
-              .then(buffer => {
-                  var byteArray = new Int8Array(buffer);
-                  console.debug("byteArray size: ", byteArray.byteLength);
-                  var alignedShortlistMemory = new Module.AlignedMemory(byteArray.byteLength, 64);
-                  const alignedShortlistBytes = alignedShortlistMemory.getBytes();
-                  alignedShortlistBytes.set(byteArray);
+      const response = await fetch(modelFile);
+      if (!checkStatus(response)) {
+        throw Error("Invalid request status");
+      }
+      const buffer = await response.arrayBuffer();
 
-                  // Instantiate the TranslationModel
-                  if (model) model.delete();
-                  console.debug("Creating TranslationModel with config:", modelConfigWithoutModelAndShortList);
-                  //model = new Module.TranslationModel(modelConfigWithoutModelAndShortList, alignedModelMemory);
-                  model = new Module.TranslationModel(modelConfigWithoutModelAndShortList, alignedModelMemory, alignedShortlistMemory);
-                  console.debug("DONE Creating TranslationModel. Alignment supported: ", model.isAlignmentSupported());
-                  alignedModelMemory.print();
-                  alignedShortlistMemory.print();
-                  alignedModelMemory.delete();
-                  alignedShortlistMemory.delete();
-                })
-              .catch(error => console.error("Fetching " + shortlistFile + " failed with Error:" + error));
-          }
-      })
-      .catch(error => console.error("Fetching " + modelFile + " failed with Error:" + error));
+      var byteArray = new Int8Array(buffer);
+      console.debug("byteArray size: ", byteArray.byteLength);
+      var alignedModelMemory = new Module.AlignedMemory(byteArray.byteLength, 256);
+      const alignedModelBytes = alignedModelMemory.getBytes();
+      alignedModelBytes.set(byteArray);
+
+      if (0) {
+        if (model) model.delete();
+        console.debug("Creating TranslationModel with config:", modelConfigWithoutModel);
+        model = new Module.TranslationModel(modelConfigWithoutModel, alignedModelMemory);
+        console.debug("DONE Creating TranslationModel. Alignment supported: ", model.isAlignmentSupported());
+        alignedModelMemory.print();
+        alignedModelMemory.delete();
+      } else {
+        const response = await fetch(shortlistFile);
+        if (!checkStatus(response)) {
+          throw Error("Invalid request status");
+        }
+        const buffer = await response.arrayBuffer();
+        var byteArray = new Int8Array(buffer);
+        console.debug("byteArray size: ", byteArray.byteLength);
+        var alignedShortlistMemory = new Module.AlignedMemory(byteArray.byteLength, 64);
+        const alignedShortlistBytes = alignedShortlistMemory.getBytes();
+        alignedShortlistBytes.set(byteArray);
+
+        // Instantiate the TranslationModel
+        if (model) model.delete();
+        console.debug("Creating TranslationModel with config:", modelConfigWithoutModelAndShortList);
+        //model = new Module.TranslationModel(modelConfigWithoutModelAndShortList, alignedModelMemory);
+        model = new Module.TranslationModel(modelConfigWithoutModelAndShortList, alignedModelMemory, alignedShortlistMemory);
+        console.debug("DONE Creating TranslationModel. Alignment supported: ", model.isAlignmentSupported());
+        alignedModelMemory.print();
+        alignedShortlistMemory.print();
+        alignedModelMemory.delete();
+        alignedShortlistMemory.delete();
+      }
+
+    } catch (error) {
+      console.error("Fetching " + shortlistFile + " failed with Error:" + error)
+    }
 
     /*var oReq = new XMLHttpRequest();
     oReq.open("GET", modelFile, true);
@@ -256,12 +262,12 @@ quiet-translation: true
     return translatedParagraphs;
   }
 
-  document.querySelector("#load").addEventListener("click", () => {
+  document.querySelector("#load").addEventListener("click", async() => {
     const lang = document.querySelector('input[name="modellang"]:checked').value;
     const from = lang.substring(0, 2);
     const to = lang.substring(2, 4);
     let start = Date.now();
-    loadModel(from, to)
+    await loadModel(from, to);
     log(`model ${from}${to} loaded in ${(Date.now() - start) / 1000} secs`);
     //log('Model Alignment:', model.isAlignmentSupported());
   });

@@ -50,13 +50,13 @@ jobs:
       with:
         buildDirectory: ${{ github.workspace }}/build
         cmakeAppendedArgs: '-G "Visual Studio 16 2019" -A x64
-          -DconfigurationType="Release"
           -DCMAKE_BUILD_TYPE="Release"
           -DUSE_WASM_COMPATIBLE_SOURCE="OFF"
           -DUSE_STATIC_LIBS="TRUE"'
         cmakeListsOrSettingsJson: CMakeListsTxtAdvanced
         cmakeListsTxtPath: ${{ github.workspace }}/CMakeLists.txt
         useVcpkgToolchainFile: true
+        cmakeBuildType: Release
 
 
     - name: Print versions

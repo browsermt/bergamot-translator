@@ -73,8 +73,8 @@ En consecuencia, durante el año 2011 se introdujeron 180 proyectos de ley que r
     var byteArray = new Int8Array(buffer);
     console.debug("byteArray size: ", byteArray.byteLength);
     var alignedMemory = new Module.AlignedMemory(byteArray.byteLength, alignmentSize);
-    const alignedBytes = alignedMemory.getBytes();
-    alignedBytes.set(byteArray);
+    const alignedByteArrayView = alignedMemory.getByteArrayView();
+    alignedByteArrayView.set(byteArray);
     return alignedMemory;
   }
 

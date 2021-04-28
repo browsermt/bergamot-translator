@@ -9,6 +9,12 @@ project(bergamot_translator CXX C)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Note that with CMake MSVC build, the option CMAKE_BUILD_TYPE is automatically derived from the key
+# 'configurationType' in CMakeSettings.json configurations
+if(NOT CMAKE_BUILD_TYPE)
+  message(WARNING "CMAKE_BUILD_TYPE not set; setting to Release")
+  set(CMAKE_BUILD_TYPE "Release")
+endif()
 #MSVC can't seem to pick up correct flags otherwise:
 if(MSVC)
   add_definitions(-DUSE_SSE2=1) # Supposed to fix something in the sse_mathfun.h but not sure it does

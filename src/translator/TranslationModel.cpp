@@ -15,12 +15,7 @@
 TranslationModel::TranslationModel(const std::string &config,
                                    marian::bergamot::AlignedMemory model_memory,
                                    marian::bergamot::AlignedMemory lexical_memory)
-    : service_(config, std::move(model_memory), std::move(lexical_memory)) {
-      /*std::cout << "TranslationModel::TranslationModel alignedModelMemory size: " << alignedModelMemory->size() << std::endl;
-      for (std::size_t index = 0; index < alignedModelMemory->size(); index++) {
-        std::cout << " Value is: " << (*alignedModelMemory)[index] << std::endl;
-      }*/
-    }
+    : service_(config, std::move(model_memory), std::move(lexical_memory)) {}
 
 TranslationModel::~TranslationModel() {}
 

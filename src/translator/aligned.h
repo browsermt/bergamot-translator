@@ -12,13 +12,10 @@ namespace bergamot {
 
 template <class T> class AlignedVector {
 public:
-  AlignedVector() : mem_(nullptr), size_(0) {
-    std::cout << "Default Constructor AlignedVector with size: " << size_ << std::endl;
-  }
+  AlignedVector() : mem_(nullptr), size_(0) {}
 
   explicit AlignedVector(std::size_t size, std::size_t alignment = 64 /* CPU cares about this */)
           : size_(size) {
-    std::cout << "Explicit Constructor AlignedVector with size: " << size << " and bytes: " << size * sizeof(T) << std::endl;
 #ifdef _MSC_VER
     mem_ = static_cast<T*>(_aligned_malloc(size * sizeof(T), alignment));
       if (!mem_) throw std::bad_alloc();
@@ -30,13 +27,11 @@ public:
   }
 
   AlignedVector(AlignedVector &&from) : mem_(from.mem_), size_(from.size_) {
-    std::cout << "Move Constructor AlignedVector with size: " << from.size_ << std::endl;
     from.mem_ = nullptr;
     from.size_ = 0;
   }
 
   AlignedVector &operator=(AlignedVector &&from) {
-    std::cout << "Move Assignment AlignedVector with size: " << from.size_ << std::endl;
     mem_ = from.mem_;
     size_ = from.size_;
     from.mem_ = nullptr;
@@ -48,7 +43,6 @@ public:
   AlignedVector& operator=(const AlignedVector&) = delete;
 
   ~AlignedVector() {
-    std::cout << "Destructor AlignedVector with size: " << size_ << std::endl;
 #ifdef _MSC_VER
     _aligned_free(mem_);
 #else

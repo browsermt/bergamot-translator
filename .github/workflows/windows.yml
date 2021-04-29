@@ -47,9 +47,10 @@ jobs:
     # Windows CPU only minimal build
     - name: Build Release
       uses: lukka/run-cmake@v3
-      with:
-        buildDirectory: ${{ github.workspace }}/build
+      with: # At the moment VS builds a debug build because it is supposed to take the argument configurationType from CMakeLists.json https://github.com/microsoft/vscode-cmake-tools/issues/1298
+        buildDirectory: ${{ github.workspace }}/build # but ninja is broken for us at the moment due to https://github.com/lukka/run-cmake/issues/47#issuecomment-828942167
         cmakeAppendedArgs: '-G "Visual Studio 16 2019" -A x64
+          -DconfigurationType="Release"
           -DCMAKE_BUILD_TYPE="Release"
           -DUSE_WASM_COMPATIBLE_SOURCE="OFF"
           -DUSE_STATIC_LIBS="TRUE"'

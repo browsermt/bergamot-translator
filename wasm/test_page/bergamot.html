@@ -134,9 +134,9 @@ quiet-translation: true
 // TODO: Use in model config when loading of binary models is supported and we use model.intgemm.alphas.bin:
 // gemm-precision: int8shiftAlphaAll
 
-    const modelFile = `${languagePair}/model.${languagePair}.intgemm.alphas.bin`;
+    const modelFile = `models/${languagePair}/model.${languagePair}.intgemm.alphas.bin`;
     console.debug("modelFile: ", modelFile);
-    const shortlistFile = `${languagePair}/lex.${languagePair}.s2t.bin`;
+    const shortlistFile = `models/${languagePair}/lex.50.50.${languagePair}.s2t.bin`;
     console.debug("shortlistFile: ", shortlistFile);
 
     try {

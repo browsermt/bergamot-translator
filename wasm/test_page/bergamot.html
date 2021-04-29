@@ -2,7 +2,7 @@
 <html>
 <head>
     <link rel="icon" href="data:,">
-    <meta http-equiv="Content-Type" content="text/html;charset=ISO-8859-1">
+    <meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
 </head>
 <style>
     body, html, div {
@@ -61,9 +61,27 @@ En consecuencia, durante el año 2011 se introdujeron 180 proyectos de ley que r
 </div>
 
 <script>
+  // This function downloads file from a url and returns the array buffer
+  const downloadAsArrayBuffer = async(url) => {
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw Error(`HTTP ${response.status} - ${response.statusText}`);
+    }
+    return response.arrayBuffer();
+  }
 
-  var model, request, input = undefined;
-  const loadModel = (from, to) => {
+  // This function constructs the AlignedMemory from the array buffer and the alignment size
+  function constructAlignedMemoryFromBuffer(buffer, alignmentSize) {
+    var byteArray = new Int8Array(buffer);
+    console.debug("byteArray size: ", byteArray.byteLength);
+    var alignedMemory = new Module.AlignedMemory(byteArray.byteLength, alignmentSize);
+    const alignedByteArrayView = alignedMemory.getByteArrayView();
+    alignedByteArrayView.set(byteArray);
+    return alignedMemory;
+  }
+
+  var translationModel, request, input = undefined;
+  const constructTranslationModel = async (from, to) => {
 
     const languagePair = `${from}${to}`;
 
@@ -72,7 +90,7 @@ En consecuencia, durante el año 2011 se introdujeron 180 proyectos de ley que r
 
     // Set the Model Configuration as YAML formatted string.
     // For available configuration options, please check: https://marian-nmt.github.io/docs/cmd/marian-decoder/
-    const modelConfig = `models:
+    /*const modelConfig = `models:
   - /${languagePair}/model.${languagePair}.intgemm.alphas.bin
 vocabs:
   - /${vocabLanguagePair}/vocab.${vocabLanguagePair}.spm
@@ -93,22 +111,53 @@ shortlist:
     - 50
     - 50
 `;
-/*
-This config is not valid anymore in new APIs
-mini-batch: 32
-maxi-batch: 100
-maxi-batch-sort: src
 */
+
+const modelConfigWithoutModelAndShortList = `vocabs:
+  - /${vocabLanguagePair}/vocab.${vocabLanguagePair}.spm
+  - /${vocabLanguagePair}/vocab.${vocabLanguagePair}.spm
+beam-size: 1
+normalize: 1.0
+word-penalty: 0
+max-length-break: 128
+mini-batch-words: 1024
+workspace: 128
+max-length-factor: 2.0
+skip-cost: true
+cpu-threads: 0
+quiet: true
+quiet-translation: true
+`;
+
 // TODO: Use in model config when wormhole is enabled:
 // gemm-precision: int8shift
 // TODO: Use in model config when loading of binary models is supported and we use model.intgemm.alphas.bin:
 // gemm-precision: int8shiftAlphaAll
 
-    console.debug("modelConfig: ", modelConfig);
+    const modelFile = `${languagePair}/model.${languagePair}.intgemm.alphas.bin`;
+    console.debug("modelFile: ", modelFile);
+    const shortlistFile = `${languagePair}/lex.${languagePair}.s2t.bin`;
+    console.debug("shortlistFile: ", shortlistFile);
 
-    // Instantiate the TranslationModel
-    if (model) model.delete();
-    model = new Module.TranslationModel(modelConfig);
+    try {
+      // Download the files as buffers from the given urls
+      let start = Date.now();
+      const downloadedBuffers = await Promise.all([downloadAsArrayBuffer(modelFile), downloadAsArrayBuffer(shortlistFile)]);
+      const modelBuffer = downloadedBuffers[0];
+      const shortListBuffer = downloadedBuffers[1];
+      log(`${languagePair} file download took ${(Date.now() - start) / 1000} secs`);
+
+      // Construct AlignedMemory objects with downloaded buffers
+      var alignedModelMemory = constructAlignedMemoryFromBuffer(modelBuffer, 256);
+      var alignedShortlistMemory = constructAlignedMemoryFromBuffer(shortListBuffer, 64);
+
+      // Instantiate the TranslationModel
+      if (translationModel) translationModel.delete();
+      console.debug("Creating TranslationModel with config:", modelConfigWithoutModelAndShortList);
+      translationModel = new Module.TranslationModel(modelConfigWithoutModelAndShortList, alignedModelMemory, alignedShortlistMemory);
+    } catch (error) {
+      console.error(error);
+    }
   }
 
   const translate = (paragraphs) => {
@@ -127,16 +176,9 @@ maxi-batch-sort: src
     })
     // Access input (just for debugging)
     console.log('Input size=', input.size());
-    /*
-    for (let i = 0; i < input.size(); i++) {
-      console.log(' val:' + input.get(i));
-    }
-    */
 
     // Translate the input; the result is a vector<TranslationResult>
-    let result = model.translate(input, request);
-    // Access original and translated text from each entry of vector<TranslationResult>
-    //console.log('Result size=', result.size(), ' - TimeDiff - ', (Date.now() - start)/1000);
+    let result = translationModel.translate(input, request);
     const translatedParagraphs = [];
     for (let i = 0; i < result.size(); i++) {
       translatedParagraphs.push(result.get(i).getTranslatedText());
@@ -147,14 +189,16 @@ maxi-batch-sort: src
     return translatedParagraphs;
   }
 
-  document.querySelector("#load").addEventListener("click", () => {
+  document.querySelector("#load").addEventListener("click", async() => {
+    document.querySelector("#load").disabled = true;
     const lang = document.querySelector('input[name="modellang"]:checked').value;
     const from = lang.substring(0, 2);
     const to = lang.substring(2, 4);
     let start = Date.now();
-    loadModel(from, to)
-    log(`model ${from}${to} loaded in ${(Date.now() - start) / 1000} secs`);
-    //log('Model Alignment:', model.isAlignmentSupported());
+    await constructTranslationModel(from, to);
+    log(`translation model ${from}${to} construction took ${(Date.now() - start) / 1000} secs`);
+    document.querySelector("#load").disabled = false;
+    //log('Model Alignment:', translationModel.isAlignmentSupported());
   });
 
   const translateCall = () => {

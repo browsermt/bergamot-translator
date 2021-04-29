@@ -7,9 +7,9 @@
 
 #include <iostream>
 
-#include "TranslationModel.h"
-#include "translator/parser.h"
 #include "translator/byte_array_util.h"
+#include "translator/parser.h"
+#include "translator/service.h"
 
 int main(int argc, char **argv) {
 
@@ -20,19 +20,20 @@ int main(int argc, char **argv) {
   std::string config = options->asYamlString();
 
   // Route the config string to construct marian model through TranslationModel
-  TranslationModel model(config, marian::bergamot::getModelMemoryFromConfig(options));
+  marian::bergamot::Service model(
+      config, marian::bergamot::getModelMemoryFromConfig(options));
 
   TranslationRequest translationRequest;
   std::vector<std::string> texts;
 
   for (std::string line; std::getline(std::cin, line);) {
-        texts.emplace_back(line);
+    texts.emplace_back(line);
   }
 
-  auto results = model.translate(std::move(texts), translationRequest);
+  auto results = model.translateMultiple(std::move(texts), translationRequest);
 
   // Resolve the future and get the actual result
-  //std::vector<TranslationResult> results = futureResults.get();
+  // std::vector<TranslationResult> results = futureResults.get();
 
   for (auto &result : results) {
     std::cout << result.getTranslatedText() << std::endl;

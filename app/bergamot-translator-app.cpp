@@ -1,16 +1,17 @@
 /*
  * main.cpp
  *
- * An application which accepts line separated texts in stdin and returns translated ones in stdout.
- * It is convenient for batch processing and can be used with tools like SacreBLEU.
+ * An application which accepts line separated texts in stdin and returns
+ * translated ones in stdout. It is convenient for batch processing and can be
+ * used with tools like SacreBLEU.
  *
  */
 
 #include <iostream>
 #include <string>
 
-#include "TranslationModel.h"
 #include "translator/parser.h"
+#include "translator/service.h"
 
 int main(int argc, char **argv) {
 
@@ -21,19 +22,19 @@ int main(int argc, char **argv) {
   std::string config = options->asYamlString();
 
   // Route the config string to construct marian model through TranslationModel
-  TranslationModel model(config);
+  marian::bergamot::Service model(config);
 
   TranslationRequest translationRequest;
   std::vector<std::string> texts;
 
   for (std::string line; std::getline(std::cin, line);) {
-        texts.emplace_back(line);
+    texts.emplace_back(line);
   }
 
-  auto results = model.translate(std::move(texts), translationRequest);
+  auto results = model.translateMultiple(std::move(texts), translationRequest);
 
   // Resolve the future and get the actual result
-  //std::vector<TranslationResult> results = futureResults.get();
+  // std::vector<TranslationResult> results = futureResults.get();
 
   for (auto &result : results) {
     std::cout << result.getTranslatedText() << std::endl;

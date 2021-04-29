@@ -123,6 +123,12 @@ public:
   translateMultiple(std::vector<std::string> &&source,
                     TranslationRequest translationRequest);
 
+  /// Returns if model is alignment capable or not. Exists for not breaking
+  /// things at the extension.
+  bool isAlignmentSupported() const {
+    return options_->hasAndNotEmpty("alignment");
+  }
+
 private:
   /// Queue an input for translation.
   std::future<Response> queueRequest(std::string &&input,
@@ -149,6 +155,10 @@ private:
 
   /// Number of workers to launch.
   size_t numWorkers_; // ORDER DEPENDENCY (pcqueue_)
+
+  /// Options object holding the options Service was instantiated with.
+  Ptr<Options> options_;
+
   /// Model memory to load model passed as bytes.
   AlignedMemory modelMemory_; // ORDER DEPENDENCY (translators_)
   /// Shortlist memory passed as bytes.

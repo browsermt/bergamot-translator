@@ -32,9 +32,6 @@ int main(int argc, char **argv) {
 
   auto results = model.translateMultiple(std::move(texts), translationRequest);
 
-  // Resolve the future and get the actual result
-  // std::vector<TranslationResult> results = futureResults.get();
-
   for (auto &result : results) {
     std::cout << result.getTranslatedText() << std::endl;
   }

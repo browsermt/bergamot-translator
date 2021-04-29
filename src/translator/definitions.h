@@ -28,4 +28,13 @@ typedef AlignedVector<char> AlignedMemory;
 } // namespace bergamot
 } // namespace marian
 
+#if defined(__GNUC__) && __GNUC__ < 6 && !defined(__clang__)
+#include <experimental/string_view>
+namespace std {
+  using string_view = std::experimental::string_view;
+} // namespace std
+#else
+#include <string_view>
+#endif
+
 #endif // SRC_BERGAMOT_DEFINITIONS_H_

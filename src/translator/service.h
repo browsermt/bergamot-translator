@@ -84,9 +84,10 @@ public:
   /// @param [in] shortlistMemory byte array of shortlist (aligned to 64)
   explicit Service(const std::string &config,
                    AlignedMemory modelMemory = AlignedMemory(),
+
                    AlignedMemory shortlistMemory = AlignedMemory(),
                    const std::vector<string_view> *vocabsMemoryView = nullptr)
-      : Service(parseOptions(config), std::move(modelMemory),
+      : Service(parseOptions(config, /*validate=*/false), std::move(modelMemory),
                 std::move(shortlistMemory), vocabsMemoryView) {}
 
   /// Explicit destructor to clean up after any threads initialized in

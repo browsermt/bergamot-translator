@@ -17,11 +17,37 @@ gunzip models/*/*
 
 ```js
 // The model configuration as YAML formatted string. For available configuration options, please check: https://marian-nmt.github.io/docs/cmd/marian-decoder/
-// This example captures the most relevant options: model file, vocabulary files and shortlist file
-const modelConfig = "{\"models\":[\"/esen/model.esen.npz\"],\"vocabs\":[\"/esen/vocab.esen.spm\",\"/esen/vocab.esen.spm\"],\"shortlist\":[\"/esen/lex.esen.s2t\"],\"beam-size\":1}";
+// This example captures some of the most relevant options
+const modelConfig = `vocabs:
+  - /esen/vocab.esen.spm
+  - /esen/vocab.esen.spm
+beam-size: 1
+normalize: 1.0
+word-penalty: 0
+max-length-break: 128
+mini-batch-words: 1024
+workspace: 128
+max-length-factor: 2.0
+skip-cost: true
+cpu-threads: 0
+quiet: true
+quiet-translation: true
+gemm-precision: int8shift
+`;
+
+// Download model and shortlist files and read them into buffers
+const modelFile = `models/esen/model.esen.intgemm.alphas.bin`;
+const shortlistFile = `models/esen/lex.50.50.esen.s2t.bin`;
+const downloadedBuffers = await Promise.all([downloadAsArrayBuffer(modelFile), downloadAsArrayBuffer(shortlistFile)]); // Please refer to bergamot.html in test_page folder for this function
+const modelBuffer = downloadedBuffers[0];
+const shortListBuffer = downloadedBuffers[1];
+
+// Construct AlignedMemory instances from the buffers
+var alignedModelMemory = constructAlignedMemoryFromBuffer(modelBuffer, 256); // Please refer to bergamot.html in test_page folder for this function
+var alignedShortlistMemory = constructAlignedMemoryFromBuffer(shortListBuffer, 64); // Please refer to bergamot.html in test_page folder for this function
 
 // Instantiate the TranslationModel
-const model = new Module.TranslationModel(modelConfig);
+const model = new Module.TranslationModel(modelConfig, alignedModelMemory, alignedShortlistMemory);
 
 // Instantiate the arguments of translate() API i.e. TranslationRequest and input (vector<string>)
 const request = new Module.TranslationRequest();

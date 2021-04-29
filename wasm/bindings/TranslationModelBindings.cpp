@@ -25,9 +25,6 @@ EMSCRIPTEN_BINDINGS(aligned_memory) {
 TranslationModel* TranslationModelFactory(const std::string &config,
                                           marian::bergamot::AlignedMemory* modelMemory,
                                           marian::bergamot::AlignedMemory* shortlistMemory) {
-  if (modelMemory == nullptr || shortlistMemory == nullptr) {
-    return nullptr;
-  }
   return new TranslationModel(config, std::move(*modelMemory), std::move(*shortlistMemory));
 }
 

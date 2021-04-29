@@ -1,9 +1,19 @@
 ## Using Bergamot Translator in JavaScript
 The example file `bergamot.html` in the folder `test_page` demonstrates how to use the bergamot translator in JavaScript via a `<script>` tag.
 
-Please note that everything below assumes that the [bergamot project specific model files](https://github.com/mozilla-applied-ml/bergamot-models) were packaged in wasm binary (using the compile instructions given in the top level README).
+### <a name="Pre-requisite"></a> Pre-requisite: Download files required for translation
 
-### Using JS APIs
+Please note that [Using JS APIs](#Using-JS-APIs) and [Demo](#Demo) section below assumes that the [bergamot project specific model files](https://github.com/mozilla-applied-ml/bergamot-models) are already downloaded and present in the `test_page` folder. If this is not done then use following instructions to do so:
+
+```bash
+cd test_page
+mkdir models
+git clone --depth 1 --branch main --single-branch https://github.com/mozilla-applied-ml/bergamot-models
+cp -rf bergamot-models/prod/* models
+gunzip models/*/*
+```
+
+### <a name="Using-JS-APIs"></a> Using JS APIs
 
 ```js
 // The model configuration as YAML formatted string. For available configuration options, please check: https://marian-nmt.github.io/docs/cmd/marian-decoder/
@@ -34,13 +44,16 @@ request.delete();
 input.delete();
 ```
 
-### Demo (see everything in action)
+### <a name="Demo"></a> Demo (see everything in action)
+
+* Make sure that you followed [Pre-requisite](#Pre-requisite) instructions before moving forward.
 
 * Start the test webserver (ensure you have the latest nodejs installed)
     ```bash
     cd test_page
     bash start_server.sh
     ```
+
 * Open any of the browsers below
     * Firefox Nightly +87: make sure the following prefs are on (about:config)
         ```

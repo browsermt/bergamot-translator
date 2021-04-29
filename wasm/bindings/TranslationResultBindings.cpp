@@ -6,7 +6,6 @@
 #include <emscripten/bind.h>
 #include <vector>
 
-// #include "TranslationResult.h"
 #include "response.h"
 
 typedef marian::bergamot::Response TranslationResult;

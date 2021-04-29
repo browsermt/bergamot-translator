@@ -59,7 +59,8 @@ public:
   /// of a model.bin. Optional, defaults to nullptr when not used
   /// @param shortlistMemory byte array of shortlist (aligned to 64)
   explicit Service(Ptr<Options> options, AlignedMemory modelMemory,
-                   AlignedMemory shortlistMemory);
+                   AlignedMemory shortlistMemory,
+                   const std::vector<string_view>* vocabsMemoryView);
 
   /// Construct Service purely from Options. This expects options which
   /// marian-decoder expects to be set for loading model shortlist and
@@ -73,7 +74,7 @@ public:
   /// wherein empty memory is passed and internal flow defaults to file-based
   /// model, shortlist loading.
   explicit Service(Ptr<Options> options)
-      : Service(options, AlignedMemory(), AlignedMemory()) {}
+      : Service(options, AlignedMemory(), AlignedMemory(), nullptr) {}
 
   /// Construct Service from a string configuration.
   /// @param [in] config string parsable as YAML expected to adhere with marian
@@ -83,9 +84,10 @@ public:
   /// @param [in] shortlistMemory byte array of shortlist (aligned to 64)
   explicit Service(const std::string &config,
                    AlignedMemory modelMemory = AlignedMemory(),
-                   AlignedMemory shortlistMemory = AlignedMemory())
+                   AlignedMemory shortlistMemory = AlignedMemory(),
+                   const std::vector<string_view> *vocabsMemoryView = nullptr)
       : Service(parseOptions(config), std::move(modelMemory),
-                std::move(shortlistMemory)) {}
+                std::move(shortlistMemory), vocabsMemoryView) {}
 
   /// Explicit destructor to clean up after any threads initialized in
   /// asynchronous operation mode.

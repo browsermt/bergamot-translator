@@ -1,9 +1,7 @@
 #include <cstdlib>
 #include <future>
 #include <iostream>
-#include <sstream>
 
-#include "common/definitions.h"
 #include "common/utils.h"
 #include "marian.h"
 #include "translator/parser.h"
@@ -18,8 +16,11 @@ int main(int argc, char *argv[]) {
   // Prepare memories for model and shortlist
   marian::bergamot::AlignedMemory modelBytes = marian::bergamot::getModelMemoryFromConfig(options);
   marian::bergamot::AlignedMemory shortlistBytes = marian::bergamot::getShortlistMemoryFromConfig(options);
+  std::vector<marian::bergamot::AlignedMemory> vocabsBytes;  // holds actual vocabs memory
+  std::vector<marian::string_view> vocabsBytesSV; // holds pointers to actual vocabs memory
+  marian::bergamot::getVocabsMemoryFromConfig(options, vocabsBytes, vocabsBytesSV);
 
-  marian::bergamot::Service service(options, std::move(modelBytes), std::move(shortlistBytes));
+  marian::bergamot::Service service(options, std::move(modelBytes), std::move(shortlistBytes), &vocabsBytesSV);
 
   // Read a large input text blob from stdin
   std::ostringstream std_input;

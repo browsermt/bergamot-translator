@@ -20,6 +20,13 @@ Request::Request(size_t Id, Segments &&segments,
 
   counter_ = segments_.size();
   histories_.resize(segments_.size(), nullptr);
+
+  // If there are no segments_, we are never able to trigger the responseBuilder
+  // calls from a different thread. However, in this case we want an empty valid
+  // response.
+  if (segments_.size() == 0) {
+    responseBuilder_(std::move(histories_));
+  }
 }
 
 size_t Request::numSegments() const { return segments_.size(); }

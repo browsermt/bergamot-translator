@@ -84,7 +84,7 @@ public:
   explicit Service(const std::string &config,
                    AlignedMemory modelMemory = AlignedMemory(),
                    AlignedMemory shortlistMemory = AlignedMemory())
-      : Service(parseOptions(config), std::move(modelMemory),
+      : Service(parseOptions(config, /*validate=*/false), std::move(modelMemory),
                 std::move(shortlistMemory)) {}
 
   /// Explicit destructor to clean up after any threads initialized in

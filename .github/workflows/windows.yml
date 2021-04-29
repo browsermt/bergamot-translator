@@ -45,7 +45,7 @@ jobs:
         vcpkgTriplet: x64-windows-static
 
     # Windows CPU only minimal build
-    - name: Build Release
+    - name: Build Release # @TODO this is actually a debug build until the ninja generator gets fixed
       uses: lukka/run-cmake@v3
       with: # At the moment VS builds a debug build because it is supposed to take the argument configurationType from CMakeLists.json https://github.com/microsoft/vscode-cmake-tools/issues/1298
         buildDirectory: ${{ github.workspace }}/build # but ninja is broken for us at the moment due to https://github.com/lukka/run-cmake/issues/47#issuecomment-828942167
@@ -61,7 +61,7 @@ jobs:
 
 
     - name: Print versions
-      working-directory: build/Release
+      working-directory: build/Debug # This is meant to be changed to release, but currently the generator is broken.
       run: |
         .\app\service-cli.exe --version
         dir *.exe

@@ -6,15 +6,15 @@
 #include <utility>
 
 inline std::vector<marian::Ptr<const marian::Vocab>>
-loadVocabularies(marian::Ptr<marian::Options> options, const std::vector<marian::string_view> *vocabsMemoryView) {
+loadVocabularies(marian::Ptr<marian::Options> options, const std::vector<marian::bergamot::AlignedMemory>& vocabMemorySet) {
   // @TODO: parallelize vocab loading for faster startup
   std::vector<marian::Ptr<marian::Vocab const>> vocabs;
-  if(vocabsMemoryView != nullptr){
+  if(!vocabMemorySet.empty()){
     // load vocabs from buffer
-    vocabs.resize(vocabsMemoryView->size());
+    vocabs.resize(vocabMemorySet.size());
     for (size_t i = 0; i < vocabs.size(); i++) {
       marian::Ptr<marian::Vocab> vocab = marian::New<marian::Vocab>(options, i);
-      vocab->loadFromSerialized((*vocabsMemoryView)[i]);
+      vocab->loadFromSerialized(absl::string_view(vocabMemorySet[i].begin(), vocabMemorySet[i].size()));
       vocabs[i] = vocab;
     }
   } else {
@@ -40,8 +40,10 @@ namespace marian {
 namespace bergamot {
 
 Service::Service(Ptr<Options> options, AlignedMemory modelMemory, AlignedMemory shortlistMemory,
-                 const std::vector<marian::string_view> *vocabsMemoryView)
-    : requestId_(0), vocabs_(std::move(loadVocabularies(options, vocabsMemoryView))),
+                 std::vector<AlignedMemory> vocabMemorySet)
+    : requestId_(0),
+      vocabMemorySet_(std::move(vocabMemorySet)),
+      vocabs_(std::move(loadVocabularies(options, vocabMemorySet_))),
       text_processor_(vocabs_, options), batcher_(options),
       numWorkers_(options->get<int>("cpu-threads")),
       modelMemory_(std::move(modelMemory)),

@@ -16,11 +16,10 @@ int main(int argc, char *argv[]) {
   // Prepare memories for model and shortlist
   marian::bergamot::AlignedMemory modelBytes = marian::bergamot::getModelMemoryFromConfig(options);
   marian::bergamot::AlignedMemory shortlistBytes = marian::bergamot::getShortlistMemoryFromConfig(options);
-  std::vector<marian::bergamot::AlignedMemory> vocabsBytes;  // holds actual vocabs memory
-  std::vector<marian::string_view> vocabsBytesSV; // holds pointers to actual vocabs memory
-  marian::bergamot::getVocabsMemoryFromConfig(options, vocabsBytes, vocabsBytesSV);
+  std::vector<marian::bergamot::AlignedMemory> vocabsBytes;
+  marian::bergamot::getVocabsMemoryFromConfig(options, vocabsBytes);
 
-  marian::bergamot::Service service(options, std::move(modelBytes), std::move(shortlistBytes), &vocabsBytesSV);
+  marian::bergamot::Service service(options, std::move(modelBytes), std::move(shortlistBytes), std::move(vocabsBytes));
 
   // Read a large input text blob from stdin
   std::ostringstream std_input;

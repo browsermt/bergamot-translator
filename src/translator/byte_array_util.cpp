@@ -105,19 +105,12 @@ AlignedMemory getShortlistMemoryFromConfig(marian::Ptr<marian::Options> options)
 }
 
 void getVocabsMemoryFromConfig(marian::Ptr<marian::Options> options,
-                               std::vector<AlignedMemory>& vocabsMemory,
-                               std::vector<string_view>& vocabsMemorySV){
+                               std::vector<AlignedMemory>& vocabMemorySet){
   auto vfiles = options->get<std::vector<std::string>>("vocabs");
   ABORT_IF(vfiles.size() < 2, "Insufficient number of vocabularies.");
-  vocabsMemorySV.resize(vfiles.size());
-  std::unordered_map<std::string, string_view> vmap; // avoid duplicate loading
+  vocabMemorySet.resize(vfiles.size());
   for (size_t i = 0; i < vfiles.size(); ++i) {
-    auto m = vmap.emplace(std::make_pair(vfiles[i], string_view()));
-    if (m.second) { // new: load the vocab
-      vocabsMemory.push_back(loadFileToMemory(vfiles[i], 64));
-      m.first->second = string_view(vocabsMemory.back().begin(), vocabsMemory.back().size());
-    }
-    vocabsMemorySV[i] = m.first->second;
+    vocabMemorySet[i] = loadFileToMemory(vfiles[i], 64);
   }
 }
 

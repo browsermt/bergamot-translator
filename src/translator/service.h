@@ -60,7 +60,7 @@ public:
   /// @param shortlistMemory byte array of shortlist (aligned to 64)
   explicit Service(Ptr<Options> options, AlignedMemory modelMemory,
                    AlignedMemory shortlistMemory,
-                   const std::vector<string_view>* vocabsMemoryView);
+                   std::vector<AlignedMemory> vocabMemorySet);
 
   /// Construct Service purely from Options. This expects options which
   /// marian-decoder expects to be set for loading model shortlist and
@@ -74,7 +74,7 @@ public:
   /// wherein empty memory is passed and internal flow defaults to file-based
   /// model, shortlist loading.
   explicit Service(Ptr<Options> options)
-      : Service(options, AlignedMemory(), AlignedMemory(), nullptr) {}
+      : Service(options, AlignedMemory(), AlignedMemory(), {}) {}
 
   /// Construct Service from a string configuration.
   /// @param [in] config string parsable as YAML expected to adhere with marian
@@ -84,11 +84,10 @@ public:
   /// @param [in] shortlistMemory byte array of shortlist (aligned to 64)
   explicit Service(const std::string &config,
                    AlignedMemory modelMemory = AlignedMemory(),
-
                    AlignedMemory shortlistMemory = AlignedMemory(),
-                   const std::vector<string_view> *vocabsMemoryView = nullptr)
+                   std::vector<AlignedMemory> vocabsMemorySet = {})
       : Service(parseOptions(config, /*validate=*/false), std::move(modelMemory),
-                std::move(shortlistMemory), vocabsMemoryView) {}
+                std::move(shortlistMemory), std::move(vocabsMemorySet)) {}
 
   /// Explicit destructor to clean up after any threads initialized in
   /// asynchronous operation mode.
@@ -167,13 +166,14 @@ private:
   /// ordering among requests and logging/book-keeping.
 
   size_t requestId_;
-
+  /// Set of Vocabulary memory passed as bytes
+  std::vector<AlignedMemory> vocabMemorySet_; // ORDER DEPENDENCY (vocabs_)
   /// Store vocabs representing source and target.
-  std::vector<Ptr<Vocab const>> vocabs_; // ORDER DEPENDENCY (text_processor_)
+  std::vector<Ptr<Vocab const>> vocabs_; // ORDER DEPENDENCY (vocabMemorySet_, text_processor_)
 
   /// TextProcesser takes a blob of text and converts into format consumable by
   /// the batch-translator and annotates sentences and words.
-  TextProcessor text_processor_; // ORDER DEPENDENCY (vocabs_)
+  TextProcessor text_processor_; // ORDER DEPENDENCY (vocabMemorySet_, vocabs_)
 
   /// Batcher handles generation of batches from a request, subject to
   /// packing-efficiency and priority optimization heuristics.

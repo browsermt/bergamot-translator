@@ -63,7 +63,7 @@ void AnnotatedText::appendSentence(std::string prefix, std::string &reference,
   text += reference;           // Append reference to text
   std::vector<ByteRange> sentence;
   for (auto &wordView : wordRanges) {
-    size_t thisWordBegin = offset + wordView.data() - &reference[0];
+    size_t thisWordBegin = offset + wordView.data() - reference.data();
     sentence.push_back(
         ByteRange{thisWordBegin, thisWordBegin + wordView.size()});
   }
@@ -78,7 +78,7 @@ void AnnotatedText::addSentence(std::vector<string_view>::iterator begin,
                                 std::vector<string_view>::iterator end) {
   std::vector<ByteRange> sentence;
   for (auto p = begin; p != end; p++) {
-    size_t begin_offset = p->data() - &text[0];
+    size_t begin_offset = p->data() - text.data();
     sentence.push_back(ByteRange{begin_offset, begin_offset + p->size()});
   }
   annotation.addSentence(sentence);
@@ -105,7 +105,7 @@ string_view AnnotatedText::pre(size_t sentenceIdx) const {
   const char *start{nullptr};
   if (sentenceIdx == 0) {
     // If first sentence, filler begins at start of whole-text.
-    start = &(text[0]);
+    start = text.data();
   } else {
     // Otherwise, filler begins at end of previous sentence.
     string_view sentenceBefore = sentence(sentenceIdx - 1);
@@ -122,7 +122,7 @@ string_view AnnotatedText::post(size_t sentenceIdx) const {
   const char *end{nullptr};
   if (sentenceIdx + 1 == numSentences()) {
     // If last sentence, manually find end of whole-text.
-    const char *begin = &(text[0]);
+    const char *begin = text.data();
     end = begin + text.size();
   } else {
     // Otherwise, the filler ends at the start of next sentence.

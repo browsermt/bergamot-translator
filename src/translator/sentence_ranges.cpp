@@ -102,7 +102,7 @@ string_view AnnotatedText::asStringView(const ByteRange &byteRange) const {
 string_view AnnotatedText::pre(size_t sentenceIdx) const {
   // Find start of filler-text before, there's a corner case when there's no
   // sentence before.
-  const char *start{nullptr};
+  const char *start;
   if (sentenceIdx == 0) {
     // If first sentence, filler begins at start of whole-text.
     start = text.data();
@@ -119,7 +119,7 @@ string_view AnnotatedText::pre(size_t sentenceIdx) const {
 
 string_view AnnotatedText::post(size_t sentenceIdx) const {
   // Find end of filler-text, but there is a corner-case to handle.
-  const char *end{nullptr};
+  const char *end;
   if (sentenceIdx + 1 == numSentences()) {
     // If last sentence, manually find end of whole-text.
     const char *begin = text.data();

@@ -65,7 +65,7 @@ En consecuencia, durante el año 2011 se introdujeron 180 proyectos de ley que r
   const downloadAsArrayBuffer = async(url) => {
     const response = await fetch(url);
     if (!response.ok) {
-      throw Error(`HTTP ${response.status} - ${response.statusText}`);
+      throw Error(`Downloading ${url} failed: HTTP ${response.status} - ${response.statusText}`);
     }
     return response.arrayBuffer();
   }
@@ -134,9 +134,9 @@ quiet-translation: true
 // TODO: Use in model config when loading of binary models is supported and we use model.intgemm.alphas.bin:
 // gemm-precision: int8shiftAlphaAll
 
-    const modelFile = `${languagePair}/model.${languagePair}.intgemm.alphas.bin`;
+    const modelFile = `models/${languagePair}/model.${languagePair}.intgemm.alphas.bin`;
     console.debug("modelFile: ", modelFile);
-    const shortlistFile = `${languagePair}/lex.${languagePair}.s2t.bin`;
+    const shortlistFile = `models/${languagePair}/lex.50.50.${languagePair}.s2t.bin`;
     console.debug("shortlistFile: ", shortlistFile);
 
     try {
@@ -156,7 +156,7 @@ quiet-translation: true
       console.debug("Creating TranslationModel with config:", modelConfigWithoutModelAndShortList);
       translationModel = new Module.TranslationModel(modelConfigWithoutModelAndShortList, alignedModelMemory, alignedShortlistMemory);
     } catch (error) {
-      console.error(error);
+      log(error);
     }
   }
 

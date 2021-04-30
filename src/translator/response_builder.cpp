@@ -57,12 +57,10 @@ void ResponseBuilder::buildTranslatedText(Histories &histories,
   // thing to do to avoid reallocations.
   response.target.text.reserve(response.source.text.size());
 
-  size_t offset{0};
-  bool first{true};
-
-  size_t sentenceIdx{0};
-  for (auto &history : histories) {
+  for (size_t sentenceIdx = 0; sentenceIdx < histories.size(); sentenceIdx++) {
     // TODO(jerin): Change hardcode of nBest = 1
+
+    auto &history = histories[sentenceIdx];
     NBestList onebest = history->nBest(1);
 
     Result result = onebest[0]; // Expecting only one result;
@@ -91,13 +89,7 @@ void ResponseBuilder::buildTranslatedText(Histories &histories,
       break;
     }
     case ConcatStrategy::SPACE: {
-      std::string delimiter;
-      if (first) {
-        first = false;
-      } else {
-        delimiter = " ";
-      }
-
+      std::string delimiter = (sentenceIdx == 0) ? "" : " ";
       response.target.appendSentence(delimiter, decoded,
                                      targetSentenceMappings);
       break;
@@ -106,8 +98,6 @@ void ResponseBuilder::buildTranslatedText(Histories &histories,
     default:
       ABORT("Unknown concat-strategy");
     }
-
-    ++sentenceIdx;
   }
 }
 

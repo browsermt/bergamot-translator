@@ -8,6 +8,7 @@
 
 #include <string>
 #include <vector>
+#include "translator/definitions.h"
 
 /* All possible Granularities for which Quality Scores can be returned for
  * translated text. */

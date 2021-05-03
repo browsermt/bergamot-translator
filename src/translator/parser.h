@@ -25,11 +25,11 @@ inline marian::ConfigParser createConfigParser() {
 
   cp.addOption<bool>(
       "--bytearray", "Bergamot Options",
-      "Enable loads through ByteArrays to enable testing of byte-array codepath", true);
+      "Enable loads through ByteArrays to enable testing of byte-array codepath", false);
 
   cp.addOption<bool>(
       "--check-bytearray", "Bergamot Options",
-      "Flag holds whether to check the content of the bytearray (true by default)", true);
+      "Flag holds whether to check the content of the bytearray (true by default)", false);
 
     return cp;
 }

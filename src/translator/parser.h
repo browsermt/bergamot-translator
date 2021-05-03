@@ -24,6 +24,10 @@ inline marian::ConfigParser createConfigParser() {
       "Maximum input tokens to be processed in a single sentence.", 128);
 
   cp.addOption<bool>(
+      "--bytearray", "Bergamot Options",
+      "Enable loads through ByteArrays to enable testing of byte-array codepath", true);
+
+  cp.addOption<bool>(
       "--check-bytearray", "Bergamot Options",
       "Flag holds whether to check the content of the bytearray (true by default)", true);
 

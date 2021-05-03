@@ -77,8 +77,10 @@ input.delete();
 * Start the test webserver (ensure you have the latest nodejs installed)
     ```bash
     cd test_page
-    bash start_server.sh
+    bash start_server.sh ../../build-wasm
     ```
+
+    Provide the folder containing the wasm artifacts as the first argument of `start_server.sh` script (`../../build-wasm` in this case).
 
 * Open any of the browsers below
     * Firefox Nightly +87: make sure the following prefs are on (about:config)

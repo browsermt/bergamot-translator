@@ -20,15 +20,22 @@
 namespace marian {
 namespace bergamot {
 
-/// Service offers methods create an asynchronous translation service. This is
-/// intended to be similar to the ones provided for training or decoding in ML
-/// pipelines with the following additional capabilities:
+/// Service offers methods create an asynchronous translation service that
+/// translates a plain (without any markups and emojis)  UTF-8 encoded text.
+/// This implementation supports translation from 1 source language to 1 target
+/// language.
+///
+///  This is intended to be similar to the ones  provided for training or
+///  decoding in ML pipelines with the following  additional capabilities:
 ///
 ///  1. Provision of a request -> response based translation flow unlike the
 ///  usual a line based translation or decoding provided in most ML frameworks.
 ///  2. Internal handling of normalization etc which changes source text to
 ///  provide to client translation meta-information like alignments consistent
 ///  with the unnormalized input text.
+///  3. The API splits each text entry into sentences internally, which are then
+///  translated independent of each other. The translated sentences are then
+///  joined back together and returned in Response.
 ///
 /// Service exposes methods to instantiate the service from a string
 /// configuration (which can cover most translators) and to translate an
@@ -48,9 +55,10 @@ namespace bergamot {
 /// // Do things with response.
 /// ```
 ///
-/// Optionally Service can be initialized by also passing model_memory for
+/// Optionally Service can be initialized by also passing model memory for
 /// purposes of efficiency (which defaults to nullpointer and then reads from
 /// file supplied through config).
+///
 class Service {
 
 public:
@@ -84,8 +92,8 @@ public:
   explicit Service(const std::string &config,
                    AlignedMemory modelMemory = AlignedMemory(),
                    AlignedMemory shortlistMemory = AlignedMemory())
-      : Service(parseOptions(config, /*validate=*/false), std::move(modelMemory),
-                std::move(shortlistMemory)) {}
+      : Service(parseOptions(config, /*validate=*/false),
+                std::move(modelMemory), std::move(shortlistMemory)) {}
 
   /// Explicit destructor to clean up after any threads initialized in
   /// asynchronous operation mode.
@@ -108,12 +116,18 @@ public:
   std::future<Response> translate(std::string &&source,
                                   ResponseOptions options);
 
-  /// Translate an input, providing TranslationRequest across all texts to
-  /// construct Response. Provides the browser with the ability to break texts
-  /// into multiple Request keeping gains from efficiently batching internally.
-  /// Also useful when one has to set/unset alignments or quality in the
-  /// Response to save compute spent in constructing these objects.
-
+  /// Translate multiple text-blobs in a single *blocking* API call, providing
+  /// TranslationRequest which applies across all text-blobs dictating how to
+  /// construct Response. TranslationRequest can be used to enable/disable
+  /// additional information like quality-scores, alignments etc.
+  ///
+  /// All texts are combined to efficiently construct batches together providing
+  /// speedups compared to calling translate() indepdently on individual
+  /// text-blob. Note that there will be minor differences in output when
+  /// text-blobs are individually translated due to approximations but similar
+  /// quality nonetheless. If you have async/multithread capabilities, it is
+  /// recommended to work with futures and translate() API.
+  ///
   /// @param [in] source: rvalue reference of the string to be translated
   /// @param [in] translationRequest: TranslationRequest (Unified API)
   /// indicating whether or not to include some member in the Response, also
@@ -122,6 +136,11 @@ public:
   std::vector<Response>
   translateMultiple(std::vector<std::string> &&source,
                     TranslationRequest translationRequest);
+
+  /// Returns if model is alignment capable or not.
+  bool isAlignmentSupported() const {
+    return options_->hasAndNotEmpty("alignment");
+  }
 
 private:
   /// Queue an input for translation.
@@ -149,6 +168,10 @@ private:
 
   /// Number of workers to launch.
   size_t numWorkers_; // ORDER DEPENDENCY (pcqueue_)
+
+  /// Options object holding the options Service was instantiated with.
+  Ptr<Options> options_;
+
   /// Model memory to load model passed as bytes.
   AlignedMemory modelMemory_; // ORDER DEPENDENCY (translators_)
   /// Shortlist memory passed as bytes.

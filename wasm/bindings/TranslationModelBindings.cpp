@@ -6,9 +6,13 @@
 
 #include <emscripten/bind.h>
 
-#include "TranslationModel.h"
+#include "response.h"
+#include "service.h"
 
 using namespace emscripten;
+
+typedef marian::bergamot::Service TranslationModel;
+typedef marian::bergamot::Response TranslationResult;
 
 val getByteArrayView(marian::bergamot::AlignedMemory& alignedMemory) {
   return val(typed_memory_view(alignedMemory.size(), alignedMemory.as<char>()));
@@ -31,9 +35,11 @@ TranslationModel* TranslationModelFactory(const std::string &config,
 EMSCRIPTEN_BINDINGS(translation_model) {
   class_<TranslationModel>("TranslationModel")
     .constructor(&TranslationModelFactory, allow_raw_pointers())
-    .function("translate", &TranslationModel::translate)
+    .function("translate", &TranslationModel::translateMultiple)
 	  .function("isAlignmentSupported", &TranslationModel::isAlignmentSupported)
     ;
+  // ^ We redirect Service::translateMultiple to WASMBound::translate instead. Sane API is
+  // translate. If and when async comes, we can be done with this inconsistency.
 
   register_vector<std::string>("VectorString");
   register_vector<TranslationResult>("VectorTranslationResult");

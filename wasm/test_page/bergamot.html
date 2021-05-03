@@ -93,8 +93,8 @@ En consecuencia, durante el año 2011 se introdujeron 180 proyectos de ley que r
     /*const modelConfig = `models:
   - /${languagePair}/model.${languagePair}.intgemm.alphas.bin
 vocabs:
-  - /${vocabLanguagePair}/vocab.${vocabLanguagePair}.spm
-  - /${vocabLanguagePair}/vocab.${vocabLanguagePair}.spm
+  - /${languagePair}/vocab.${vocabLanguagePair}.spm
+  - /${languagePair}/vocab.${vocabLanguagePair}.spm
 beam-size: 1
 normalize: 1.0
 word-penalty: 0
@@ -114,8 +114,8 @@ shortlist:
 */
 
 const modelConfigWithoutModelAndShortList = `vocabs:
-  - /${vocabLanguagePair}/vocab.${vocabLanguagePair}.spm
-  - /${vocabLanguagePair}/vocab.${vocabLanguagePair}.spm
+  - /${languagePair}/vocab.${vocabLanguagePair}.spm
+  - /${languagePair}/vocab.${vocabLanguagePair}.spm
 beam-size: 1
 normalize: 1.0
 word-penalty: 0

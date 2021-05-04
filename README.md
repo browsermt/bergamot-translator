@@ -9,7 +9,7 @@ Bergamot translator provides a unified API for ([Marian NMT](https://marian-nmt.
 ### Build Natively
 1. Clone the repository using these instructions:
     ```bash
-    git clone https://github.com/browsermt/bergamot-translator
+    git clone https://github.com/mozilla/bergamot-translator
     cd bergamot-translator
     ```
 2. Compile
@@ -34,7 +34,7 @@ Bergamot translator provides a unified API for ([Marian NMT](https://marian-nmt.
 
 2. Clone the repository using these instructions:
     ```bash
-    git clone https://github.com/browsermt/bergamot-translator
+    git clone https://github.com/mozilla/bergamot-translator
     cd bergamot-translator
     ```
 

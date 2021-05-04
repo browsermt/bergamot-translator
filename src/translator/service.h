@@ -84,15 +84,15 @@ public:
   ///    Service(options, AlignedMemory(), AlignedMemory(), {}, {})
   /// ```
   /// wherein empty memory is passed and internal flow defaults to file-based
-  /// model, shortlist loading.
+  /// model, shortlist loading. AlignedMemory()
   explicit Service(Ptr<Options> options)
       : Service(options, AlignedMemory(), AlignedMemory(), {}, {}) {}
 
   /// Construct Service from a string configuration.
   /// @param [in] config string parsable as YAML expected to adhere with marian
   /// config
-  /// @param [in] model_memory byte array (aligned to 256!!!) that contains the
-  /// bytes of a model.bin. Optional.
+  /// @param [in] modelMemory byte array (aligned to 256!!!) that contains the
+  /// bytes of a model.bin. Optional. AlignedMemory() corresponds to empty memory
   /// @param [in] shortlistMemory byte array of shortlist (aligned to 64). Optional.
   /// @param [in] vocabMemories vector of unique vocabulary memories (aligned to 64). Optional.
   /// @param [in] vocabIndices vector of vocabulary memory indices where each vocabulary

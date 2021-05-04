@@ -14,6 +14,19 @@ jobs:
           name: Build WASM
           command: bash build-wasm.sh
 
+      - run:
+          name: Check artifacts
+          working_directory: build-wasm
+          command: |
+            ls -all bergamot*
+            if ls bergamot*.wasm &>/dev/null && ls bergamot*.js &>/dev/null && ls bergamot*.data &>/dev/null
+            then
+              echo "Artifacts Successfully Generated"
+            else
+              echo "Failure: Artifacts Not Present"
+              exit 1
+            fi
+
       - store_artifacts:
-          path: "build-wasm/wasm"
-          destination: "build-wasm/wasm"
+          path: "build-wasm"
+          destination: "build-wasm"

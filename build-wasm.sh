@@ -37,7 +37,7 @@ if [ "$EMSDK" == "" ]; then
   source ./emsdk/emsdk_env.sh
 fi
 
-# 3. Download models (only required if you want to package files in wasm binary)
+# 3. Download models (required to perform inference using build artifacts)
 if [ ! -d "bergamot-models" ]; then
   git clone --depth 1 --branch main --single-branch https://github.com/mozilla-applied-ml/bergamot-models
 else
@@ -53,21 +53,22 @@ mkdir -p models
 rm -rf models/*
 cp -rf bergamot-models/prod/* models
 gunzip models/*/*
+find models \( -type f -name "model*" -or -type f -name "lex*" \) -delete
 
 # 4. Compile
-#     1. Create a folder where you want to build all the artefacts (`build-wasm` in this case)
+#     1. Create a folder where you want to build all the artifacts (`build-wasm` in this case)
 if [ ! -d "build-wasm" ]; then
   mkdir build-wasm
 fi
 cd build-wasm
 
-#     2. Compile the artefacts
+#     2. Compile the artifacts
 emcmake cmake -DCOMPILE_WASM=on -DPACKAGE_DIR="../models/" ../
 emmake make -j3
 
 #     3. Enable SIMD Wormhole via Wasm instantiation API in generated artifacts
 bash ../wasm/patch-artifacts-enable-wormhole.sh
 
-# The artifacts (.js and .wasm files) will be available in `wasm` folder of build directory ("build-wasm" in this case).
+# The artifacts (.js and .wasm files) will be available in the build directory ("build-wasm" in this case).
 
 exit 0

@@ -56,11 +56,15 @@ class Service {
 public:
   /// @param options Marian options object
   /// @param modelMemory byte array (aligned to 256!!!) that contains the bytes
-  /// of a model.bin. Optional, defaults to nullptr when not used
+  ///        of a model.bin.
   /// @param shortlistMemory byte array of shortlist (aligned to 64)
+  /// @param vocabMemories vector of unique vocabulary memories (aligned to 64)
+  /// @param vocabIndices vector of vocabulary memory indices where each vocabulary
+  ///        are loaded
   explicit Service(Ptr<Options> options, AlignedMemory modelMemory,
                    AlignedMemory shortlistMemory,
-                   std::vector<AlignedMemory> vocabMemorySet);
+                   std::vector<AlignedMemory> vocabMemories,
+                   std::vector<size_t> vocabIndices);
 
   /// Construct Service purely from Options. This expects options which
   /// marian-decoder expects to be set for loading model shortlist and
@@ -69,12 +73,12 @@ public:
   ///
   /// This is equivalent to a call to:
   /// ```cpp
-  ///    Service(options, AlignedMemory(),  AlignedMemory())
+  ///    Service(options, AlignedMemory(), AlignedMemory(), {}, {})
   /// ```
   /// wherein empty memory is passed and internal flow defaults to file-based
   /// model, shortlist loading.
   explicit Service(Ptr<Options> options)
-      : Service(options, AlignedMemory(), AlignedMemory(), {}) {}
+      : Service(options, AlignedMemory(), AlignedMemory(), {}, {}) {}
 
   /// Construct Service from a string configuration.
   /// @param [in] config string parsable as YAML expected to adhere with marian
@@ -85,9 +89,13 @@ public:
   explicit Service(const std::string &config,
                    AlignedMemory modelMemory = AlignedMemory(),
                    AlignedMemory shortlistMemory = AlignedMemory(),
-                   std::vector<AlignedMemory> vocabsMemorySet = {})
-      : Service(parseOptions(config, /*validate=*/false), std::move(modelMemory),
-                std::move(shortlistMemory), std::move(vocabsMemorySet)) {}
+                   std::vector<AlignedMemory> vocabsMemories = {},
+                   std::vector<size_t> vocabIndices = {})
+      : Service(parseOptions(config, /*validate=*/false),
+                std::move(modelMemory),
+                std::move(shortlistMemory),
+                std::move(vocabsMemories),
+                std::move(vocabIndices)) {}
 
   /// Explicit destructor to clean up after any threads initialized in
   /// asynchronous operation mode.
@@ -166,14 +174,12 @@ private:
   /// ordering among requests and logging/book-keeping.
 
   size_t requestId_;
-  /// Set of Vocabulary memory passed as bytes
-  std::vector<AlignedMemory> vocabMemorySet_; // ORDER DEPENDENCY (vocabs_)
   /// Store vocabs representing source and target.
-  std::vector<Ptr<Vocab const>> vocabs_; // ORDER DEPENDENCY (vocabMemorySet_, text_processor_)
+  std::vector<Ptr<Vocab const>> vocabs_; // ORDER DEPENDENCY (text_processor_)
 
   /// TextProcesser takes a blob of text and converts into format consumable by
   /// the batch-translator and annotates sentences and words.
-  TextProcessor text_processor_; // ORDER DEPENDENCY (vocabMemorySet_, vocabs_)
+  TextProcessor text_processor_; // ORDER DEPENDENCY (vocabs_)
 
   /// Batcher handles generation of batches from a request, subject to
   /// packing-efficiency and priority optimization heuristics.

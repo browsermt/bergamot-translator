@@ -8,7 +8,8 @@ AlignedMemory loadFileToMemory(const std::string& path, size_t alignment);
 AlignedMemory getModelMemoryFromConfig(marian::Ptr<marian::Options> options);
 AlignedMemory getShortlistMemoryFromConfig(marian::Ptr<marian::Options> options);
 void getVocabsMemoryFromConfig(marian::Ptr<marian::Options> options,
-                               std::vector<AlignedMemory>& vocabMemorySet);
+                               std::vector<AlignedMemory>& vocabMemories,
+                               std::vector<size_t>& vocabIndices);
 
 } // namespace bergamot
 } // namespace marian

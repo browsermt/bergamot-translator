@@ -89,13 +89,17 @@ AlignedMemory loadFileToMemory(const std::string& path, size_t alignment){
 }
 
 AlignedMemory getModelMemoryFromConfig(marian::Ptr<marian::Options> options){
-    auto models = options->get<std::vector<std::string>>("models");
-    ABORT_IF(models.size() != 1, "Loading multiple binary models is not supported for now as it is not necessary.");
-    marian::filesystem::Path modelPath(models[0]);
-    ABORT_IF(modelPath.extension() != marian::filesystem::Path(".bin"), "The file of binary model should end with .bin");
-    AlignedMemory alignedMemory = loadFileToMemory(models[0], 256);
-    ABORT_IF(!validateBinaryModel(alignedMemory, alignedMemory.size()), "The binary file is invalid. Incomplete or corrupted download?");
-    return alignedMemory;
+  auto models = options->get<std::vector<std::string>>("models");
+  ABORT_IF(models.size() != 1, "Loading multiple binary models is not supported for now as it is not necessary.");
+  marian::filesystem::Path modelPath(models[0]);
+  ABORT_IF(modelPath.extension() != marian::filesystem::Path(".bin"), "The file of binary model should end with .bin");
+  AlignedMemory alignedMemory = loadFileToMemory(models[0], 256);
+  bool check = options->get<bool>("check-bytearray",true);
+  if (check) {
+    ABORT_IF(!validateBinaryModel(alignedMemory, alignedMemory.size()),
+             "The binary file is invalid. Incomplete or corrupted download?");
+  }
+  return alignedMemory;
 }
 
 AlignedMemory getShortlistMemoryFromConfig(marian::Ptr<marian::Options> options){
@@ -105,12 +109,18 @@ AlignedMemory getShortlistMemoryFromConfig(marian::Ptr<marian::Options> options)
 }
 
 void getVocabsMemoryFromConfig(marian::Ptr<marian::Options> options,
-                               std::vector<AlignedMemory>& vocabMemorySet){
+                               std::vector<AlignedMemory>& vocabMemories,
+                               std::vector<size_t>& vocabIndices){
   auto vfiles = options->get<std::vector<std::string>>("vocabs");
   ABORT_IF(vfiles.size() < 2, "Insufficient number of vocabularies.");
-  vocabMemorySet.resize(vfiles.size());
+  vocabIndices.resize(vfiles.size());
+  std::unordered_map<std::string, size_t> vocabMap;
   for (size_t i = 0; i < vfiles.size(); ++i) {
-    vocabMemorySet[i] = loadFileToMemory(vfiles[i], 64);
+    auto m = vocabMap.emplace(std::make_pair(vfiles[i], i));
+    if (m.second) {
+      vocabMemories.push_back(loadFileToMemory(vfiles[i], 64));
+    }
+    vocabIndices[i] = m.first->second;
   }
 }
 

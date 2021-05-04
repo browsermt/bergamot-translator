@@ -84,7 +84,7 @@ public:
   ///    Service(options, AlignedMemory(), AlignedMemory(), {}, {})
   /// ```
   /// wherein empty memory is passed and internal flow defaults to file-based
-  /// model, shortlist loading. AlignedMemory()
+  /// model, shortlist loading. AlignedMemory() corresponds to empty memory
   explicit Service(Ptr<Options> options)
       : Service(options, AlignedMemory(), AlignedMemory(), {}, {}) {}
 

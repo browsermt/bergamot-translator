@@ -23,6 +23,7 @@ jobs:
               USE_STATIC_LIBS: "OFF"
               COMPILE_SERVER: "OFF"
               COMPILE_EXAMPLES: "OFF"
+              USE_APPLE_ACCELERATE: "OFF"
 
           - name: "minimal-marian"
             os: macos-10.15
@@ -37,6 +38,8 @@ jobs:
               USE_STATIC_LIBS: "ON" 
               COMPILE_SERVER: "OFF"
               COMPILE_EXAMPLES: "OFF"
+              USE_APPLE_ACCELERATE: "OFF"
+
         
     name: ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
@@ -65,6 +68,7 @@ jobs:
           -DCOMPILE_SERVER=${{ matrix.cmake.COMPILE_SERVER }} \
           -DUSE_STATIC_LIBS=${{ matrix.cmake.USE_STATIC_LIBS }} \
           -DUSE_WASM_COMPATIBLE_SOURCE=${{ matrix.cmake.USE_WASM_COMPATIBLE_SOURCE }} \
+          -DUSE_APPLE_ACCELERATE=${{ matrix.cmake.USE_APPLE_ACCELERATE }} \
           -DUSE_FBGEMM=${{ matrix.cmake.USE_FBGEMM }}
 
     - name: Compile

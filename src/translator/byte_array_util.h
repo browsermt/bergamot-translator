@@ -10,6 +10,6 @@ AlignedMemory getShortlistMemoryFromConfig(marian::Ptr<marian::Options> options)
 void getVocabsMemoryFromConfig(marian::Ptr<marian::Options> options,
                                std::vector<AlignedMemory>& vocabMemories,
                                std::vector<size_t>& vocabIndices);
-bool validateBinaryModel(const AlignedMemory *model, uint64_t fileSize);
+bool validateBinaryModel(const AlignedMemory& model, uint64_t fileSize);
 } // namespace bergamot
 } // namespace marian

@@ -5,6 +5,7 @@
 namespace marian {
 namespace bergamot {
 
+namespace {
 // This is a basic validator that checks if the file has not been truncated
 // it basically loads up the header and checks
 
@@ -24,9 +25,10 @@ const T* get(const void*& current, uint64_t num = 1) {
   current = (const T*)current + num;
   return ptr;
 }
+} // Anonymous namespace
 
-bool validateBinaryModel(const AlignedMemory *model, uint64_t fileSize) {
-  const void * current = model->begin();
+bool validateBinaryModel(const AlignedMemory& model, uint64_t fileSize) {
+  const void * current = model.begin();
   uint64_t memoryNeeded = sizeof(uint64_t)*2; // We keep track of how much memory we would need if we have a complete file
   uint64_t numHeaders;
   if (fileSize >= memoryNeeded) { // We have enough filesize to fetch the headers.

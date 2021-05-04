@@ -47,7 +47,7 @@ void BatchTranslator::initialize() {
     ABORT_IF((uintptr_t)modelMemory_->begin() % 256 != 0,
              "The provided memory is not aligned to 256 bytes and will crash when vector instructions are used on it.");
     if (check) {
-      ABORT_IF(!validateBinaryModel(modelMemory_, modelMemory_->size()),
+      ABORT_IF(!validateBinaryModel(*modelMemory_, modelMemory_->size()),
                "The binary file is invalid. Incomplete or corrupted download?");
     }
     const std::vector<const void *> container = {modelMemory_->begin()}; // Marian supports multiple models initialised in this manner hence std::vector. However we will only ever use 1 during decoding.

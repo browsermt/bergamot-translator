@@ -19,6 +19,8 @@ jobs:
               CMAKE_BUILD_TYPE: "Release"
               COMPILE_TESTS: "ON"
               USE_WASM_COMPATIBLE_SOURCE: "OFF"
+              # We need WASM compatible BLAS to activate some intgemm + backend.
+              USE_WASM_COMPATIBLE_BLAS: "ON"
               USE_FBGEMM: "OFF"
               USE_STATIC_LIBS: "OFF"
               COMPILE_SERVER: "OFF"
@@ -32,6 +34,7 @@ jobs:
               CMAKE_BUILD_TYPE: "Release"
               COMPILE_TESTS: "OFF" # Minimal marian has no sqlite support and compile tests fail
               USE_WASM_COMPATIBLE_SOURCE: "ON"
+              USE_WASM_COMPATIBLE_BLAS: "ON"
               USE_FBGEMM: "OFF"
               # explicitly set due to requirement of minimal marian being used
               # within WASM. This is some yaml ugliness, but issok.
@@ -68,6 +71,7 @@ jobs:
           -DCOMPILE_SERVER=${{ matrix.cmake.COMPILE_SERVER }} \
           -DUSE_STATIC_LIBS=${{ matrix.cmake.USE_STATIC_LIBS }} \
           -DUSE_WASM_COMPATIBLE_SOURCE=${{ matrix.cmake.USE_WASM_COMPATIBLE_SOURCE }} \
+          -DUSE_WASM_COMPATIBLE_BLAS=${{ matrix.cmake.USE_WASM_COMPATIBLE_BLAS }} \
           -DUSE_APPLE_ACCELERATE=${{ matrix.cmake.USE_APPLE_ACCELERATE }} \
           -DUSE_FBGEMM=${{ matrix.cmake.USE_FBGEMM }}
 

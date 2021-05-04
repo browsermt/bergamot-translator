@@ -20,6 +20,12 @@ if (NOT PACKAGE_DIR STREQUAL "")
   set(LINKER_FLAGS "${LINKER_FLAGS} --preload-file ${REALPATH_PACKAGE_DIR}@/")
 endif()
 
+# Enable worker file system
+set(LINKER_FLAGS "${LINKER_FLAGS} -lworkerfs.js")
+
+# Avoid node.js-code in emscripten glue-code
+set(LINKER_FLAGS "${LINKER_FLAGS} -s ENVIRONMENT=web,worker")
+
 set_target_properties(bergamot-translator-worker PROPERTIES
                         SUFFIX ".js"
                         LINK_FLAGS ${LINKER_FLAGS}

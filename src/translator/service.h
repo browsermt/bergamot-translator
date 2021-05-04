@@ -64,11 +64,11 @@ class Service {
 public:
   /// @param options Marian options object
   /// @param modelMemory byte array (aligned to 256!!!) that contains the bytes
-  ///        of a model.bin.
+  /// of a model.bin.
   /// @param shortlistMemory byte array of shortlist (aligned to 64)
   /// @param vocabMemories vector of unique vocabulary memories (aligned to 64)
   /// @param vocabIndices vector of vocabulary memory indices where each vocabulary
-  ///        are loaded
+  /// are loaded
   explicit Service(Ptr<Options> options, AlignedMemory modelMemory,
                    AlignedMemory shortlistMemory,
                    std::vector<AlignedMemory> vocabMemories,
@@ -93,7 +93,10 @@ public:
   /// config
   /// @param [in] model_memory byte array (aligned to 256!!!) that contains the
   /// bytes of a model.bin. Optional.
-  /// @param [in] shortlistMemory byte array of shortlist (aligned to 64)
+  /// @param [in] shortlistMemory byte array of shortlist (aligned to 64). Optional.
+  /// @param [in] vocabMemories vector of unique vocabulary memories (aligned to 64). Optional.
+  /// @param [in] vocabIndices vector of vocabulary memory indices where each vocabulary
+  /// are loaded. Optional.
   explicit Service(const std::string &config,
                    AlignedMemory modelMemory = AlignedMemory(),
                    AlignedMemory shortlistMemory = AlignedMemory(),

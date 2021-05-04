@@ -7,18 +7,18 @@
 
 inline std::vector<marian::Ptr<const marian::Vocab>>
 loadVocabularies(marian::Ptr<marian::Options> options,
-                 std::vector<marian::bergamot::AlignedMemory>&& vocabMemorySet,
+                 std::vector<marian::bergamot::AlignedMemory>&& vocabMemories,
                  std::vector<size_t>&& vocabIndices) {
   // @TODO: parallelize vocab loading for faster startup
   std::vector<marian::Ptr<marian::Vocab const>> vocabs;
-  if(!vocabMemorySet.empty()){
+  if(!vocabMemories.empty()){
     // load vocabs from buffer
     ABORT_IF(vocabIndices.size() < 2, "Insufficient number of vocabularies.");
-    vocabs.resize(vocabMemorySet.size());
+    vocabs.resize(vocabMemories.size());
     for (size_t i = 0; i < vocabs.size(); i++) {
       marian::Ptr<marian::Vocab> vocab = marian::New<marian::Vocab>(options, i);
-      vocab->loadFromSerialized(absl::string_view(vocabMemorySet[vocabIndices[i]].begin(),
-                                                  vocabMemorySet[vocabIndices[i]].size()));
+      vocab->loadFromSerialized(absl::string_view(vocabMemories[vocabIndices[i]].begin(),
+                                                  vocabMemories[vocabIndices[i]].size()));
       vocabs[i] = vocab;
     }
   } else {

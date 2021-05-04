@@ -64,7 +64,7 @@ jobs:
       run: |
         mkdir -p build
         cd build
-        cmake .. \
+        cmake -L .. \
           -DCMAKE_BUILD_TYPE=${{ matrix.cmake.CMAKE_BUILD_TYPE }}\
           -DCOMPILE_TESTS=${{ matrix.cmake.COMPILE_TESTS }}\
           -DCOMPILE_EXAMPLES=${{ matrix.cmake.COMPILE_EXAMPLES }} \

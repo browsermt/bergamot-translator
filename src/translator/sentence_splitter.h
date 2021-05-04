@@ -4,6 +4,7 @@
 #include "common/options.h"
 #include "data/types.h"
 #include "ssplit.h"
+#include "definitions.h"
 #include <string>
 
 namespace marian {

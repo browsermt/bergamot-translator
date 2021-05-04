@@ -63,11 +63,14 @@ void BatchTranslator::translate(Batch &batch) {
   std::vector<data::SentenceTuple> batchVector;
 
   auto &sentences = batch.sentences();
+  size_t batchSequenceNumber{0};
   for (auto &sentence : sentences) {
-    data::SentenceTuple sentence_tuple(sentence.lineNumber());
+    data::SentenceTuple sentence_tuple(batchSequenceNumber);
     Segment segment = sentence.getUnderlyingSegment();
     sentence_tuple.push_back(segment);
     batchVector.push_back(sentence_tuple);
+
+    ++batchSequenceNumber;
   }
 
   size_t batchSize = batchVector.size();

@@ -2,9 +2,9 @@ name: WASM (Custom Marian) Ubuntu
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, ci-sandbox ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, ci-sandbox ]
 
 jobs:
   build-wasm:
@@ -40,9 +40,8 @@ jobs:
       - name: Check artifacts
         working-directory: build-wasm
         run: |
-          export WASM_ARTIFACTS_DIR=wasm
-          ls -all ${WASM_ARTIFACTS_DIR}
-          if ls ${WASM_ARTIFACTS_DIR}/*.wasm &>/dev/null && ls ${WASM_ARTIFACTS_DIR}/*.js &>/dev/null
+          ls -all bergamot*
+          if ls bergamot*.wasm &>/dev/null && ls bergamot*.js &>/dev/null
           then
             echo "Artifacts Successfully Generated"
           else

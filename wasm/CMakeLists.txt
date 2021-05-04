@@ -23,6 +23,7 @@ endif()
 set_target_properties(bergamot-translator-worker PROPERTIES
                         SUFFIX ".js"
                         LINK_FLAGS ${LINKER_FLAGS}
-                        )
+                        RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
+                      )
 
 target_link_libraries(bergamot-translator-worker bergamot-translator)

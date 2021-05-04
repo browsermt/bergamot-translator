@@ -28,8 +28,8 @@ loadVocabularies(marian::Ptr<marian::Options> options) {
 namespace marian {
 namespace bergamot {
 
-Service::Service(Ptr<Options> options, AlignedMemory modelMemory, AlignedMemory shortlistMemory)
-    : requestId_(0), vocabs_(std::move(loadVocabularies(options))),
+Service::Service(Ptr<Options> options, AlignedMemory modelMemory, AlignedMemory shortlistMemory) 
+    : requestId_(0), options_(options), vocabs_(std::move(loadVocabularies(options))),
       text_processor_(vocabs_, options), batcher_(options),
       numWorkers_(options->get<int>("cpu-threads")),
       modelMemory_(std::move(modelMemory)), shortlistMemory_(std::move(shortlistMemory))
@@ -112,6 +112,44 @@ void Service::async_translate() {
 #endif // WASM_COMPATIBLE_SOURCE
 
 std::future<Response> Service::translate(std::string &&input) {
+  ResponseOptions responseOptions;  // Hardcode responseOptions for now
+  return translate(std::move(input), responseOptions);
+}
+
+std::vector<Response>
+Service::translateMultiple(std::vector<std::string> &&inputs,
+                           TranslationRequest translationRequest) {
+  ResponseOptions responseOptions;
+
+  // TODO(jerinphilip) Set options based on TranslationRequest, if and when it
+  // becomes non-dummy.
+
+  // We queue the individual Requests so they get compiled at batches to be
+  // efficiently translated.
+  std::vector<std::future<Response>> responseFutures;
+  for (auto &input : inputs) {
+    std::future<Response> inputResponse =
+        queueRequest(std::move(input), responseOptions);
+    responseFutures.push_back(std::move(inputResponse));
+  }
+
+  // Dispatch is called once per request so compilation of sentences from
+  // multiple Requests happen.
+  dispatchTranslate();
+
+  // Now wait for all Requests to complete, the future to fire and return the
+  // compiled Responses, we can probably return the future, but WASM quirks(?).
+  std::vector<Response> responses;
+  for (auto &future : responseFutures) {
+    future.wait();
+    responses.push_back(std::move(future.get()));
+  }
+
+  return responses;
+}
+
+std::future<Response> Service::queueRequest(std::string &&input,
+                                            ResponseOptions responseOptions) {
   Segments segments;
   AnnotatedText source(std::move(input));
   text_processor_.process(source, segments);
@@ -119,17 +157,29 @@ std::future<Response> Service::translate(std::string &&input) {
   std::promise<Response> responsePromise;
   auto future = responsePromise.get_future();
 
-  Ptr<Request> request = New<Request>(
-      requestId_++, /* lineNumberBegin = */ 0, vocabs_, std::move(source),
-      std::move(segments), std::move(responsePromise));
+  ResponseBuilder responseBuilder(responseOptions, std::move(source), vocabs_,
+                                  std::move(responsePromise));
+  Ptr<Request> request = New<Request>(requestId_++, std::move(segments),
+                                      std::move(responseBuilder));
 
   batcher_.addWholeRequest(request);
+  return future;
+}
+
+std::future<Response> Service::translate(std::string &&input,
+                                         ResponseOptions responseOptions) {
+  std::future<Response> future =
+      queueRequest(std::move(input), responseOptions);
+  dispatchTranslate();
+  return future;
+}
+
+void Service::dispatchTranslate() {
   if (numWorkers_ == 0) {
     blocking_translate();
   } else {
     async_translate();
   }
-  return future;
 }
 
 Service::~Service() {

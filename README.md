@@ -38,19 +38,18 @@ Bergamot translator provides a unified API for ([Marian NMT](https://marian-nmt.
     cd bergamot-translator
     ```
 
-3. Download files (only required if you want to package files in wasm binary)
+3. Download files (only required if you want to perform inference using build artifacts)
 
-    This step is only required if you want to package files (e.g. models, vocabularies etc.)
-    into wasm binary. If you don't then just skip this step.
+    It packages the vocabulary files into wasm binary, which is required only if you want to perform inference.
+    The compilation commands will preload these files in Emscripten’s virtual file system.
 
-    The build preloads the files in Emscripten’s virtual file system.
-
-    If you want to package bergamot project specific models, please follow these instructions:
+    If you want to package bergamot project specific files, please follow these instructions:
     ```bash
-    mkdir models
     git clone --depth 1 --branch main --single-branch https://github.com/mozilla-applied-ml/bergamot-models
+    mkdir models
     cp -rf bergamot-models/prod/* models
     gunzip models/*/*
+    find models \( -type f -name "model*" -or -type f -name "lex*" \) -delete
     ```
 
 4. Compile
@@ -61,14 +60,14 @@ Bergamot translator provides a unified API for ([Marian NMT](https://marian-nmt.
         ```
 
     2. Compile the artefacts
-        * If you want to package files into wasm binary then execute following commands (Replace `FILES_TO_PACKAGE` with the path of the
-        directory containing the files to be packaged in wasm binary)
+        * If you want to package files into wasm binary then execute following commands (Replace `FILES_TO_PACKAGE` with the
+        directory containing all the files to be packaged)
 
             ```bash
             emcmake cmake -DCOMPILE_WASM=on -DPACKAGE_DIR=FILES_TO_PACKAGE ../
             emmake make -j
             ```
-            e.g. If you want to package bergamot project specific models (downloaded using step 3 above) then
+            e.g. If you want to package bergamot project specific files (downloaded using step 3 above) then
             replace `FILES_TO_PACKAGE` with `../models`
 
         * If you don't want to package any file into wasm binary then execute following commands:
@@ -77,7 +76,7 @@ Bergamot translator provides a unified API for ([Marian NMT](https://marian-nmt.
             emmake make -j
             ```
 
-        The wasm artifacts (.js and .wasm files) will be available in `wasm` folder of build directory ("build-wasm" in this case).
+        The wasm artifacts (.js and .wasm files) will be available in the build directory ("build-wasm" in this case).
 
     3. Enable SIMD Wormhole via Wasm instantiation API in generated artifacts
         ```bash

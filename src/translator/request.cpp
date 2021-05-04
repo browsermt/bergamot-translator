@@ -11,18 +11,24 @@ namespace marian {
 namespace bergamot {
 
 // -----------------------------------------------------------------
-Request::Request(size_t Id, size_t lineNumberBegin,
-                 std::vector<Ptr<Vocab const>> &vocabs, AnnotatedText &&source,
-                 Segments &&segments, std::promise<Response> responsePromise)
-    : Id_(Id), lineNumberBegin_(lineNumberBegin), vocabs_(&vocabs),
-      source_(std::move(source)), segments_(std::move(segments)),
-      response_(std::move(responsePromise)) {
+Request::Request(size_t Id, Segments &&segments,
+                 ResponseBuilder &&responseBuilder)
+    : Id_(Id), segments_(std::move(segments)),
+      responseBuilder_(std::move(responseBuilder))
+
+{
 
   counter_ = segments_.size();
   histories_.resize(segments_.size(), nullptr);
+
+  // If there are no segments_, we are never able to trigger the responseBuilder
+  // calls from a different thread. However, in this case we want an empty valid
+  // response.
+  if (segments_.size() == 0) {
+    responseBuilder_(std::move(histories_));
+  }
 }
 
-size_t Request::lineNumberBegin() const { return lineNumberBegin_; }
 size_t Request::numSegments() const { return segments_.size(); }
 
 size_t Request::segmentTokens(size_t index) const {
@@ -39,15 +45,8 @@ void Request::processHistory(size_t index, Ptr<History> history) {
   // In case this is last request in, completeRequest is called, which sets the
   // value of the promise.
   if (--counter_ == 0) {
-    completeRequest();
+    responseBuilder_(std::move(histories_));
   }
-}
-
-void Request::completeRequest() {
-  // Request no longer needs to hold the content, can transfer it to
-  // Response.
-  Response response(std::move(source_), std::move(histories_), *vocabs_);
-  response_.set_value(std::move(response));
 }
 
 bool Request::operator<(const Request &b) const {
@@ -62,10 +61,6 @@ RequestSentence::RequestSentence(size_t index, Ptr<Request> request)
 
 size_t RequestSentence::numTokens() const {
   return (request_->segmentTokens(index_));
-}
-
-size_t RequestSentence::lineNumber() const {
-  return (request_->lineNumberBegin() + index_);
 }
 
 void RequestSentence::completeSentence(Ptr<History> history) {

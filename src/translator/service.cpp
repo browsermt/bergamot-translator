@@ -45,7 +45,7 @@ namespace bergamot {
 
 Service::Service(Ptr<Options> options, AlignedMemory modelMemory, AlignedMemory shortlistMemory,
                  std::vector<AlignedMemory> vocabMemories, std::vector<size_t> vocabIndices)
-    : requestId_(0),
+    : requestId_(0), options_(options),
       vocabs_(std::move(loadVocabularies(options, std::move(vocabMemories), std::move(vocabIndices)))),
       text_processor_(vocabs_, options), batcher_(options),
       numWorkers_(options->get<int>("cpu-threads")),

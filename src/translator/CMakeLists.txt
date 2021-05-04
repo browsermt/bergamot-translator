@@ -1,5 +1,4 @@
 add_library(bergamot-translator STATIC
-    TranslationModel.cpp
     byte_array_util.cpp
     text_processor.cpp
     sentence_splitter.cpp

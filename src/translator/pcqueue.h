@@ -114,7 +114,7 @@ class Semaphore {
 
     void wait() {
       while (true) {
-        switch (WaitForSingleObject(sem_, 0L)) {
+        switch (WaitForSingleObject(sem_, INFINITE)) {
           case WAIT_OBJECT_0:
             return;
           case WAIT_ABANDONED:

@@ -151,13 +151,18 @@ public:
   /// Returns a string_view representing sentence corresponding to sentenceIdx.
   string_view sentence(size_t sentenceIdx) const;
 
-  /// Returns the string_view of the filler between the previous sentence and
-  /// sentence described by sentenceIdx
-  string_view pre(size_t sentenceIdx) const;
+  /// Returns the string_view of the gap between two sentences in the container.
+  ///
+  /// More precisely where `i = sentenceIdx, N = numSentences()` for brevity:
+  ///
+  /// * For `i = 0`: The gap between the start of text and the first sentence.
+  /// * For `i = 1...N-1`, returns the text comprising of the gap
+  ///   between the `i-1`-th and `i`-th sentence.
+  /// * For `i = N`, the gap between the last sentence and end of
+  ///   text.
 
-  /// Returns the string_view of the filler after the sentence corresponding to
-  /// sentenceIdx and the next sentence.
-  string_view post(size_t sentenceIdx) const;
+  /// @param sentenceIdx: Can be between `[0, numSentences()]`.
+  string_view gap(size_t sentenceIdx) const;
 
   /// Returns a ByteRange representing wordIdx in sentenceIdx
   ByteRange wordAsByteRange(size_t sentenceIdx, size_t wordIdx) const;

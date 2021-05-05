@@ -75,7 +75,7 @@ void ResponseBuilder::buildTranslatedText(Histories &histories,
     case ConcatStrategy::FAITHFUL: {
       // For each sentence, prepend the filler text between the corresponding
       // source-sentence and the source-sentence before.
-      string_view pre = response.source.pre(sentenceIdx);
+      string_view pre = response.source.gap(sentenceIdx);
       response.target.appendSentence(std::string(pre.data(), pre.size()),
                                      decoded, targetSentenceMappings);
 
@@ -83,7 +83,7 @@ void ResponseBuilder::buildTranslatedText(Histories &histories,
       // constructed, append the text till the end, which could be spaces or
       // empty.
       if (sentenceIdx + 1 == histories.size()) {
-        string_view post = response.source.post(sentenceIdx);
+        string_view post = response.source.gap(sentenceIdx + 1);
         response.target.text += std::string(post.data(), post.size());
       }
       break;

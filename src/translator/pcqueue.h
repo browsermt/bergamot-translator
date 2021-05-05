@@ -113,17 +113,15 @@ class Semaphore {
 
 
     void wait() {
-      while (true) {
-        switch (WaitForSingleObject(sem_, 0L)) {
-          case WAIT_OBJECT_0:
-            return;
-          case WAIT_ABANDONED:
-            ABORT("A semaphore can't be abandoned, confused by Windows");
-          case WAIT_TIMEOUT:
-            continue;
-          case WAIT_FAILED:
-            ABORT("Waiting on Semaphore failed {}", GetLastError());
-        }
+      switch (WaitForSingleObject(sem_, INFINITE)) {
+        case WAIT_OBJECT_0:
+          return;
+        case WAIT_ABANDONED:
+          ABORT("A semaphore can't be abandoned, confused by Windows");
+        case WAIT_TIMEOUT:
+          ABORT("Timeout on an infinite wait?");
+        case WAIT_FAILED:
+          ABORT("Waiting on Semaphore failed {}", GetLastError());
       }
     }
 

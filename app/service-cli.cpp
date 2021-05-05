@@ -19,13 +19,10 @@ int main(int argc, char *argv[]) {
   // Prepare memories for model and shortlist
   marian::bergamot::AlignedMemory modelBytes, shortlistBytes;
 
-  if (options->get<bool>("bytearray")) {
+  if (options->get<bool>("check-bytearray")) {
     // Load legit values into bytearrays.
     modelBytes = marian::bergamot::getModelMemoryFromConfig(options);
     shortlistBytes = marian::bergamot::getShortlistMemoryFromConfig(options);
-
-    // Service command line always has check-bytearray on.
-    options->set<bool>("check-bytearray", true);
   }
 
   marian::bergamot::Service service(options, std::move(modelBytes),

@@ -120,7 +120,6 @@ class Semaphore {
           ABORT("A semaphore can't be abandoned, confused by Windows");
         case WAIT_TIMEOUT:
           ABORT("Timeout on an infinite wait?");
-          continue;
         case WAIT_FAILED:
           ABORT("Waiting on Semaphore failed {}", GetLastError());
       }

@@ -63,7 +63,7 @@ void AnnotatedText::appendSentence(std::string prefix, std::string &reference,
   text += reference;           // Append reference to text
   std::vector<ByteRange> sentence;
   for (auto &wordView : wordRanges) {
-    size_t thisWordBegin = offset + wordView.data() - &reference[0];
+    size_t thisWordBegin = offset + wordView.data() - reference.data();
     sentence.push_back(
         ByteRange{thisWordBegin, thisWordBegin + wordView.size()});
   }
@@ -78,7 +78,7 @@ void AnnotatedText::addSentence(std::vector<string_view>::iterator begin,
                                 std::vector<string_view>::iterator end) {
   std::vector<ByteRange> sentence;
   for (auto p = begin; p != end; p++) {
-    size_t begin_offset = p->data() - &text[0];
+    size_t begin_offset = p->data() - text.data();
     sentence.push_back(ByteRange{begin_offset, begin_offset + p->size()});
   }
   annotation.addSentence(sentence);
@@ -97,6 +97,34 @@ string_view AnnotatedText::asStringView(const ByteRange &byteRange) const {
   const char *data = &text[byteRange.begin];
   size_t size = byteRange.size();
   return string_view(data, size);
+}
+
+string_view AnnotatedText::gap(size_t sentenceIdx) const {
+  // Find start of filler-text before, there's a corner case when there's no
+  // sentence before.
+  const char *start = nullptr;
+  if (sentenceIdx == 0) {
+    // If first sentence, filler begins at start of whole-text.
+    start = text.data();
+  } else {
+    // Otherwise, filler begins at end of previous sentence.
+    string_view sentenceBefore = sentence(sentenceIdx - 1);
+    start = sentenceBefore.data() + sentenceBefore.size();
+  }
+
+  // Find end of filler-text, but there is a corner-case to handle.
+  const char *end = nullptr;
+  if (sentenceIdx == numSentences()) {
+    // If last sentence, manually find end of whole-text.
+    const char *begin = text.data();
+    end = begin + text.size();
+  } else {
+    // Otherwise, the filler ends at the start of next sentence.
+    string_view sentenceAfter = sentence(sentenceIdx);
+    end = sentenceAfter.data();
+  }
+
+  return string_view(start, end - start);
 }
 
 } // namespace bergamot

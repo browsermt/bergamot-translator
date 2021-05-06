@@ -7,18 +7,16 @@
 
 inline std::vector<marian::Ptr<const marian::Vocab>>
 loadVocabularies(marian::Ptr<marian::Options> options,
-                 std::vector<marian::bergamot::AlignedMemory>&& vocabMemories,
-                 std::vector<size_t>&& vocabIndices) {
+                 std::vector<marian::Ptr<marian::bergamot::AlignedMemory>>&& vocabMemories) {
   // @TODO: parallelize vocab loading for faster startup
   std::vector<marian::Ptr<marian::Vocab const>> vocabs;
   if(!vocabMemories.empty()){
     // load vocabs from buffer
-    ABORT_IF(vocabIndices.size() < 2, "Insufficient number of vocabularies.");
+    ABORT_IF(vocabMemories.size() < 2, "Insufficient number of vocabularies.");
     vocabs.resize(vocabMemories.size());
     for (size_t i = 0; i < vocabs.size(); i++) {
       marian::Ptr<marian::Vocab> vocab = marian::New<marian::Vocab>(options, i);
-      vocab->loadFromSerialized(absl::string_view(vocabMemories[vocabIndices[i]].begin(),
-                                                  vocabMemories[vocabIndices[i]].size()));
+      vocab->loadFromSerialized(absl::string_view(vocabMemories[i]->begin(), vocabMemories[i]->size()));
       vocabs[i] = vocab;
     }
   } else {
@@ -44,9 +42,9 @@ namespace marian {
 namespace bergamot {
 
 Service::Service(Ptr<Options> options, AlignedMemory modelMemory, AlignedMemory shortlistMemory,
-                 std::vector<AlignedMemory> vocabMemories, std::vector<size_t> vocabIndices)
+                 std::vector<Ptr<AlignedMemory>> vocabMemories)
     : requestId_(0), options_(options),
-      vocabs_(std::move(loadVocabularies(options, std::move(vocabMemories), std::move(vocabIndices)))),
+      vocabs_(std::move(loadVocabularies(options, std::move(vocabMemories)))),
       text_processor_(vocabs_, options), batcher_(options),
       numWorkers_(options->get<int>("cpu-threads")),
       modelMemory_(std::move(modelMemory)),

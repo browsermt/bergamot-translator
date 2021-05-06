@@ -66,13 +66,10 @@ public:
   /// @param modelMemory byte array (aligned to 256!!!) that contains the bytes
   /// of a model.bin.
   /// @param shortlistMemory byte array of shortlist (aligned to 64)
-  /// @param vocabMemories vector of unique vocabulary memories (aligned to 64)
-  /// @param vocabIndices vector of vocabulary memory indices where each vocabulary
-  /// are loaded
+  /// @param vocabMemories vector of vocabulary memories (aligned to 64)
   explicit Service(Ptr<Options> options, AlignedMemory modelMemory,
                    AlignedMemory shortlistMemory,
-                   std::vector<AlignedMemory> vocabMemories,
-                   std::vector<size_t> vocabIndices);
+                   std::vector<Ptr<AlignedMemory>> vocabMemories);
 
   /// Construct Service purely from Options. This expects options which
   /// marian-decoder expects to be set for loading model shortlist and
@@ -81,12 +78,12 @@ public:
   ///
   /// This is equivalent to a call to:
   /// ```cpp
-  ///    Service(options, AlignedMemory(), AlignedMemory(), {}, {})
+  ///    Service(options, AlignedMemory(), AlignedMemory(), {})
   /// ```
   /// wherein empty memory is passed and internal flow defaults to file-based
   /// model, shortlist loading. AlignedMemory() corresponds to empty memory
   explicit Service(Ptr<Options> options)
-      : Service(options, AlignedMemory(), AlignedMemory(), {}, {}) {}
+      : Service(options, AlignedMemory(), AlignedMemory(), {}) {}
 
   /// Construct Service from a string configuration.
   /// @param [in] config string parsable as YAML expected to adhere with marian
@@ -94,19 +91,15 @@ public:
   /// @param [in] modelMemory byte array (aligned to 256!!!) that contains the
   /// bytes of a model.bin. Optional. AlignedMemory() corresponds to empty memory
   /// @param [in] shortlistMemory byte array of shortlist (aligned to 64). Optional.
-  /// @param [in] vocabMemories vector of unique vocabulary memories (aligned to 64). Optional.
-  /// @param [in] vocabIndices vector of vocabulary memory indices where each vocabulary
-  /// are loaded. Optional.
+  /// @param [in] vocabMemories vector of vocabulary memories (aligned to 64). Optional.
   explicit Service(const std::string &config,
                    AlignedMemory modelMemory = AlignedMemory(),
                    AlignedMemory shortlistMemory = AlignedMemory(),
-                   std::vector<AlignedMemory> vocabsMemories = {},
-                   std::vector<size_t> vocabIndices = {})
+                   std::vector<Ptr<AlignedMemory>> vocabsMemories = {})
       : Service(parseOptions(config, /*validate=*/false),
                 std::move(modelMemory),
                 std::move(shortlistMemory),
-                std::move(vocabsMemories),
-                std::move(vocabIndices)) {}
+                std::move(vocabsMemories)) {}
 
   /// Explicit destructor to clean up after any threads initialized in
   /// asynchronous operation mode.

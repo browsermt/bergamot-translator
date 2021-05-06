@@ -92,6 +92,8 @@ public:
   /// bytes of a model.bin. Optional. AlignedMemory() corresponds to empty memory
   /// @param [in] shortlistMemory byte array of shortlist (aligned to 64). Optional.
   /// @param [in] vocabMemories vector of vocabulary memories (aligned to 64). Optional.
+  /// If two vocabularies are the same (based on the filenames), two entries (shared
+  /// pointers) will be generated which share the same AlignedMemory object.
   explicit Service(const std::string &config,
                    AlignedMemory modelMemory = AlignedMemory(),
                    AlignedMemory shortlistMemory = AlignedMemory(),

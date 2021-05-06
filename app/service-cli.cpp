@@ -18,7 +18,7 @@ int main(int argc, char *argv[]) {
 
   // Prepare memories for model and shortlist
   marian::bergamot::AlignedMemory modelBytes, shortlistBytes;
-  std::vector<marian::Ptr<marian::bergamot::AlignedMemory>> vocabsBytes;
+  std::vector<std::shared_ptr<marian::bergamot::AlignedMemory>> vocabsBytes;
 
   if (options->get<bool>("check-bytearray")) {
     // Load legit values into bytearrays.

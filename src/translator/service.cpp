@@ -7,7 +7,7 @@
 
 inline std::vector<marian::Ptr<const marian::Vocab>>
 loadVocabularies(marian::Ptr<marian::Options> options,
-                 std::vector<marian::Ptr<marian::bergamot::AlignedMemory>>&& vocabMemories) {
+                 std::vector<std::shared_ptr<marian::bergamot::AlignedMemory>>&& vocabMemories) {
   // @TODO: parallelize vocab loading for faster startup
   std::vector<marian::Ptr<marian::Vocab const>> vocabs;
   if(!vocabMemories.empty()){
@@ -42,7 +42,7 @@ namespace marian {
 namespace bergamot {
 
 Service::Service(Ptr<Options> options, AlignedMemory modelMemory, AlignedMemory shortlistMemory,
-                 std::vector<Ptr<AlignedMemory>> vocabMemories)
+                 std::vector<std::shared_ptr<AlignedMemory>> vocabMemories)
     : requestId_(0), options_(options),
       vocabs_(std::move(loadVocabularies(options, std::move(vocabMemories)))),
       text_processor_(vocabs_, options), batcher_(options),

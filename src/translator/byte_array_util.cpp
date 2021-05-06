@@ -1,6 +1,7 @@
 #include "byte_array_util.h"
 #include <stdlib.h>
 #include <iostream>
+#include <memory>
 
 namespace marian {
 namespace bergamot {
@@ -102,15 +103,15 @@ AlignedMemory getShortlistMemoryFromConfig(marian::Ptr<marian::Options> options)
 }
 
 void getVocabsMemoryFromConfig(marian::Ptr<marian::Options> options,
-                               std::vector<marian::Ptr<AlignedMemory>>& vocabMemories){
+                               std::vector<std::shared_ptr<AlignedMemory>>& vocabMemories){
   auto vfiles = options->get<std::vector<std::string>>("vocabs");
   ABORT_IF(vfiles.size() < 2, "Insufficient number of vocabularies.");
   vocabMemories.resize(vfiles.size());
-  std::unordered_map<std::string, marian::Ptr<AlignedMemory>> vocabMap;
+  std::unordered_map<std::string, std::shared_ptr<AlignedMemory>> vocabMap;
   for (size_t i = 0; i < vfiles.size(); ++i) {
-    auto m = vocabMap.emplace(std::make_pair(vfiles[i], marian::Ptr<AlignedMemory>()));
+    auto m = vocabMap.emplace(std::make_pair(vfiles[i], std::shared_ptr<AlignedMemory>()));
     if (m.second) {
-      m.first->second = New<AlignedMemory>(loadFileToMemory(vfiles[i], 64));
+      m.first->second = std::make_shared<AlignedMemory>(loadFileToMemory(vfiles[i], 64));
     }
     vocabMemories[i] = m.first->second;
   }

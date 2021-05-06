@@ -69,7 +69,7 @@ public:
   /// @param vocabMemories vector of vocabulary memories (aligned to 64)
   explicit Service(Ptr<Options> options, AlignedMemory modelMemory,
                    AlignedMemory shortlistMemory,
-                   std::vector<Ptr<AlignedMemory>> vocabMemories);
+                   std::vector<std::shared_ptr<AlignedMemory>> vocabMemories);
 
   /// Construct Service purely from Options. This expects options which
   /// marian-decoder expects to be set for loading model shortlist and
@@ -95,7 +95,7 @@ public:
   explicit Service(const std::string &config,
                    AlignedMemory modelMemory = AlignedMemory(),
                    AlignedMemory shortlistMemory = AlignedMemory(),
-                   std::vector<Ptr<AlignedMemory>> vocabsMemories = {})
+                   std::vector<std::shared_ptr<AlignedMemory>> vocabsMemories = {})
       : Service(parseOptions(config, /*validate=*/false),
                 std::move(modelMemory),
                 std::move(shortlistMemory),

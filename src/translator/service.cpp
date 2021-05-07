@@ -6,21 +6,34 @@
 #include <utility>
 
 inline std::vector<marian::Ptr<const marian::Vocab>>
-loadVocabularies(marian::Ptr<marian::Options> options) {
+loadVocabularies(marian::Ptr<marian::Options> options,
+                 std::vector<std::shared_ptr<marian::bergamot::AlignedMemory>>&& vocabMemories) {
   // @TODO: parallelize vocab loading for faster startup
-  auto vfiles = options->get<std::vector<std::string>>("vocabs");
-  // with the current setup, we need at least two vocabs: src and trg
-  ABORT_IF(vfiles.size() < 2, "Insufficient number of vocabularies.");
-  std::vector<marian::Ptr<marian::Vocab const>> vocabs(vfiles.size());
-  std::unordered_map<std::string, marian::Ptr<marian::Vocab>> vmap;
-  for (size_t i = 0; i < vocabs.size(); ++i) {
-    auto m =
-        vmap.emplace(std::make_pair(vfiles[i], marian::Ptr<marian::Vocab>()));
-    if (m.second) { // new: load the vocab
-      m.first->second = marian::New<marian::Vocab>(options, i);
-      m.first->second->load(vfiles[i]);
+  std::vector<marian::Ptr<marian::Vocab const>> vocabs;
+  if(!vocabMemories.empty()){
+    // load vocabs from buffer
+    ABORT_IF(vocabMemories.size() < 2, "Insufficient number of vocabularies.");
+    vocabs.resize(vocabMemories.size());
+    for (size_t i = 0; i < vocabs.size(); i++) {
+      marian::Ptr<marian::Vocab> vocab = marian::New<marian::Vocab>(options, i);
+      vocab->loadFromSerialized(absl::string_view(vocabMemories[i]->begin(), vocabMemories[i]->size()));
+      vocabs[i] = vocab;
     }
-    vocabs[i] = m.first->second;
+  } else {
+    // load vocabs from file
+    auto vfiles = options->get<std::vector<std::string>>("vocabs");
+    // with the current setup, we need at least two vocabs: src and trg
+    ABORT_IF(vfiles.size() < 2, "Insufficient number of vocabularies.");
+    vocabs.resize(vfiles.size());
+    std::unordered_map<std::string, marian::Ptr<marian::Vocab>> vmap;
+    for (size_t i = 0; i < vocabs.size(); ++i) {
+      auto m = vmap.emplace(std::make_pair(vfiles[i], marian::Ptr<marian::Vocab>()));
+      if (m.second) { // new: load the vocab
+        m.first->second = marian::New<marian::Vocab>(options, i);
+        m.first->second->load(vfiles[i]);
+      }
+      vocabs[i] = m.first->second;
+    }
   }
   return vocabs;
 }
@@ -28,11 +41,14 @@ loadVocabularies(marian::Ptr<marian::Options> options) {
 namespace marian {
 namespace bergamot {
 
-Service::Service(Ptr<Options> options, AlignedMemory modelMemory, AlignedMemory shortlistMemory) 
-    : requestId_(0), options_(options), vocabs_(std::move(loadVocabularies(options))),
+Service::Service(Ptr<Options> options, AlignedMemory modelMemory, AlignedMemory shortlistMemory,
+                 std::vector<std::shared_ptr<AlignedMemory>> vocabMemories)
+    : requestId_(0), options_(options),
+      vocabs_(std::move(loadVocabularies(options, std::move(vocabMemories)))),
       text_processor_(vocabs_, options), batcher_(options),
       numWorkers_(options->get<int>("cpu-threads")),
-      modelMemory_(std::move(modelMemory)), shortlistMemory_(std::move(shortlistMemory))
+      modelMemory_(std::move(modelMemory)),
+      shortlistMemory_(std::move(shortlistMemory))
 #ifndef WASM_COMPATIBLE_SOURCE
       // 0 elements in PCQueue is illegal and can lead to failures. Adding a
       // guard to have at least one entry allocated. In the single-threaded

@@ -4,7 +4,7 @@
 #include "definitions.h"
 #include "response.h"
 #include "response_builder.h"
-#include "sentence_ranges.h"
+#include "annotation.h"
 
 #include "common/logging.h"
 #include "data/types.h"

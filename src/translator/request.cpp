@@ -1,7 +1,7 @@
 #include "request.h"
 #include "definitions.h"
 #include "response.h"
-#include "sentence_ranges.h"
+#include "annotation.h"
 
 #include "common/logging.h"
 

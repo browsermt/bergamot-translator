@@ -4,7 +4,7 @@
 #include "data/types.h"
 #include "data/vocab.h"
 #include "definitions.h"
-#include "sentence_ranges.h"
+#include "annotation.h"
 
 #include "sentence_splitter.h"
 

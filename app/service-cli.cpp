@@ -18,15 +18,17 @@ int main(int argc, char *argv[]) {
 
   // Prepare memories for model and shortlist
   marian::bergamot::AlignedMemory modelBytes, shortlistBytes;
+  std::vector<std::shared_ptr<marian::bergamot::AlignedMemory>> vocabsBytes;
 
   if (options->get<bool>("check-bytearray")) {
     // Load legit values into bytearrays.
     modelBytes = marian::bergamot::getModelMemoryFromConfig(options);
     shortlistBytes = marian::bergamot::getShortlistMemoryFromConfig(options);
+    marian::bergamot::getVocabsMemoryFromConfig(options, vocabsBytes);
   }
 
   marian::bergamot::Service service(options, std::move(modelBytes),
-                                    std::move(shortlistBytes));
+                                    std::move(shortlistBytes), std::move(vocabsBytes));
 
   // Read a large input text blob from stdin
   std::ostringstream std_input;

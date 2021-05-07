@@ -1,5 +1,5 @@
 #include "catch.hpp"
-#include "translator/sentence_ranges.h"
+#include "translator/annotation.h"
 #include <random>
 #include <vector>
 

@@ -4,7 +4,7 @@
 #include "data/alignment.h"
 #include "data/types.h"
 #include "definitions.h"
-#include "sentence_ranges.h"
+#include "annotation.h"
 #include "translator/beam_search.h"
 
 #include <cassert>

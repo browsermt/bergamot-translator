@@ -1,7 +1,7 @@
 #include "text_processor.h"
 #include "data/types.h"
 #include "definitions.h"
-#include "sentence_ranges.h"
+#include "annotation.h"
 
 #include "common/options.h"
 #include "data/vocab.h"

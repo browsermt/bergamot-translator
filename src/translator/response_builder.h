@@ -22,12 +22,12 @@ public:
   /// @param [in] responseOptions: ResponseOptions, indicating what to include
   /// or not in the response and any additional configurable parameters.
   /// @param [in] vocabs: marian vocab object (used in decoding)
-  /// @param [in] promise: promise to set with the constructed Response.
+  /// @param [in] callback: callback with operates on the constructed Response.
   ResponseBuilder(ResponseOptions responseOptions, AnnotatedText &&source,
                   std::vector<Ptr<Vocab const>> &vocabs,
-                  std::promise<Response> &&promise)
+                  std::function<void(Response &&)> callback)
       : responseOptions_(responseOptions), source_(std::move(source)),
-        vocabs_(&vocabs), promise_(std::move(promise)) {}
+        vocabs_(&vocabs), callback_(std::move(callback)) {}
 
   /// Constructs and sets the promise of a Response object from obtained
   /// histories after translating.
@@ -56,8 +56,7 @@ public:
       buildAlignments(histories, response);
     }
 
-    // Once complete, set promise.
-    promise_.set_value(std::move(response));
+    callback_(std::move(response));
   }
 
 private:
@@ -83,8 +82,9 @@ private:
   ResponseOptions responseOptions_;
   std::vector<Ptr<Vocab const>> *vocabs_; // vocabs are required for decoding
                                           // and any source validation checks.
-  std::promise<Response> promise_; //  To be set when callback triggered and
-                                   //  after Response constructed.
+  std::function<void(Response &&)>
+      callback_; //  To be set when callback triggered and
+                 //  after Response constructed.
   AnnotatedText source_;
 };
 } // namespace bergamot

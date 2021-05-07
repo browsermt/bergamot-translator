@@ -71,7 +71,8 @@ void Service::build_translators(Ptr<Options> options, size_t numTranslators) {
   translators_.reserve(numTranslators);
   for (size_t cpuId = 0; cpuId < numTranslators; cpuId++) {
     marian::DeviceId deviceId(cpuId, DeviceType::cpu);
-    translators_.emplace_back(deviceId, vocabs_, options, &modelMemory_, &shortlistMemory_);
+    translators_.emplace_back(deviceId, vocabs_, options, &modelMemory_,
+                              &shortlistMemory_);
   }
 }
 
@@ -128,7 +129,7 @@ void Service::async_translate() {
 #endif // WASM_COMPATIBLE_SOURCE
 
 std::future<Response> Service::translate(std::string &&input) {
-  ResponseOptions responseOptions;  // Hardcode responseOptions for now
+  ResponseOptions responseOptions; // Hardcode responseOptions for now
   return translate(std::move(input), responseOptions);
 }
 
@@ -164,8 +165,8 @@ Service::translateMultiple(std::vector<std::string> &&inputs,
   return responses;
 }
 
-std::future<Response> Service::queueRequest(std::string &&input,
-                                            ResponseOptions responseOptions) {
+void Service::queueRequest(std::string &&input,
+                           ResponseOptions responseOptions) {
   Segments segments;
   AnnotatedText source(std::move(input));
   text_processor_.process(source, segments);

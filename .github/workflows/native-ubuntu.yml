@@ -24,6 +24,7 @@ jobs:
               USE_WASM_COMPATIBLE_SOURCE: "OFF"
               COMPILE_SERVER: "OFF"
               COMPILE_EXAMPLES: "OFF"
+              USE_CCACHE: "ON"
 
           - name: "minimal-marian"
             os: ubuntu-latest
@@ -37,6 +38,7 @@ jobs:
               USE_WASM_COMPATIBLE_SOURCE: "ON"
               COMPILE_SERVER: "OFF"
               COMPILE_EXAMPLES: "OFF"
+              USE_CCACHE: "ON"
 
 
     runs-on: ${{ matrix.os }}
@@ -106,12 +108,14 @@ jobs:
         mkdir -p build
         cd build
         CC=/usr/bin/gcc-${{ matrix.gcc }} CXX=/usr/bin/g++-${{ matrix.gcc }} CUDAHOSTCXX=/usr/bin/g++-${{ matrix.gcc }} \
-        cmake .. \
+        # TODO(jerinphilip): Remove -L
+        cmake -L .. \
           -DCMAKE_BUILD_TYPE=${{ matrix.cmake.CMAKE_BUILD_TYPE }}\
           -DCOMPILE_TESTS=${{ matrix.cmake.COMPILE_TESTS }}\
           -DCOMPILE_EXAMPLES=${{ matrix.cmake.COMPILE_EXAMPLES }} \
           -DCOMPILE_SERVER=${{ matrix.cmake.COMPILE_SERVER }} \
           -DUSE_WASM_COMPATIBLE_SOURCE=${{ matrix.cmake.USE_WASM_COMPATIBLE_SOURCE }} \
+          -DUSE_CCACHE=${{ matrix.cmake.USE_CCACHE }}
 
     - name: Compile bergamot-translator
       working-directory: build

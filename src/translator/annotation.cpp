@@ -20,7 +20,7 @@ void AnnotatedText::appendSentence(string_view prefix, std::vector<string_view>:
   // Appending sentence text.
   std::size_t offset = text.size();
   if (begin != end) {
-    text.append(begin->data(), (end - 1)->data() + (end - 1)->size() + 1);
+    text.append(begin->data(), (end - 1)->data() + (end - 1)->size());
   }
   for (std::vector<string_view>::iterator token = begin; token != end; ++token) {
     offset += token->size();

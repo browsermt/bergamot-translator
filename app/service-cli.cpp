@@ -6,14 +6,29 @@
 #include "common/definitions.h"
 #include "common/utils.h"
 #include "marian.h"
+#include "translator/byte_array_util.h"
 #include "translator/parser.h"
 #include "translator/response.h"
+#include "translator/response_options.h"
 #include "translator/service.h"
 
 int main(int argc, char *argv[]) {
   auto cp = marian::bergamot::createConfigParser();
   auto options = cp.parseOptions(argc, argv, true);
-  marian::bergamot::Service service(options);
+
+  // Prepare memories for model and shortlist
+  marian::bergamot::AlignedMemory modelBytes, shortlistBytes;
+  std::vector<std::shared_ptr<marian::bergamot::AlignedMemory>> vocabsBytes;
+
+  if (options->get<bool>("check-bytearray")) {
+    // Load legit values into bytearrays.
+    modelBytes = marian::bergamot::getModelMemoryFromConfig(options);
+    shortlistBytes = marian::bergamot::getShortlistMemoryFromConfig(options);
+    marian::bergamot::getVocabsMemoryFromConfig(options, vocabsBytes);
+  }
+
+  marian::bergamot::Service service(options, std::move(modelBytes),
+                                    std::move(shortlistBytes), std::move(vocabsBytes));
 
   // Read a large input text blob from stdin
   std::ostringstream std_input;
@@ -21,8 +36,14 @@ int main(int argc, char *argv[]) {
   std::string input = std_input.str();
   using marian::bergamot::Response;
 
+  marian::bergamot::ResponseOptions responseOptions;
+  responseOptions.qualityScores = true;
+  responseOptions.alignment = true;
+  responseOptions.alignmentThreshold = 0.2f;
+
   // Wait on future until Response is complete
-  std::future<Response> responseFuture = service.translate(std::move(input));
+  std::future<Response> responseFuture =
+      service.translate(std::move(input), responseOptions);
   responseFuture.wait();
   Response response = responseFuture.get();
 

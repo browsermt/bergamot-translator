@@ -4,7 +4,7 @@
 #include "data/alignment.h"
 #include "data/types.h"
 #include "definitions.h"
-#include "sentence_ranges.h"
+#include "annotation.h"
 #include "translator/beam_search.h"
 
 #include <cassert>
@@ -40,34 +40,12 @@ struct Quality {
 /// AnnotatedText provides an API to access markings of (sub)-word and
 /// sentences boundaries, which are required to interpret Quality and
 /// Alignment (s) at the moment.
-class Response {
-
-public:
-  ///
-  Response(AnnotatedText &&source, Histories &&histories,
-           std::vector<Ptr<Vocab const>> &vocabs);
-
-  /// \cond HIDDEN_PUBLIC
-  // Move constructor.
-  Response(Response &&other)
-      : source(std::move(other.source)), target(std::move(other.target)),
-        alignments(std::move(other.alignments)),
-        qualityScores(std::move(other.qualityScores)){};
-
-  // The following copy bans are not stricitly required anymore since Annotation
-  // is composed of the ByteRange primitive (which was previously string_view
-  // and required to be bound to string), but makes movement efficient by
-  // banning these letting compiler complain about copies.
-
-  Response(const Response &) = delete;
-  Response &operator=(const Response &) = delete;
-
-  /// \endcond
-
-  /// Number of sentences translated. The processing of a text of into sentences
-  /// are handled internally, and this information can be used to iterate
-  /// through meaningful units of translation for which alignment and quality
-  /// information are available.
+struct Response {
+  /// Convenience function to obtain number of units translated. Same as
+  /// `.source.numSentences()` and `.target.numSentences().` The processing of a
+  /// text of into sentences are handled internally, and this information can be
+  /// used to iterate through meaningful units of translation for which
+  /// alignment and quality information are available.
   const size_t size() const { return source.numSentences(); }
 
   /// source text and annotations of (sub-)words and sentences.
@@ -86,6 +64,10 @@ public:
   /// sparse matrix representation with indices corresponding
   /// to (sub-)words accessible through Annotation.
   std::vector<Alignment> alignments;
+
+  const std::string &getOriginalText() const { return source.text; }
+
+  const std::string &getTranslatedText() const { return target.text; }
 };
 } // namespace bergamot
 } // namespace marian

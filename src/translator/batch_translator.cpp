@@ -4,6 +4,7 @@
 #include "data/corpus.h"
 #include "data/text_input.h"
 #include "translator/beam_search.h"
+#include "byte_array_util.h"
 
 namespace marian {
 namespace bergamot {
@@ -18,11 +19,11 @@ BatchTranslator::BatchTranslator(DeviceId const device,
 
 void BatchTranslator::initialize() {
   // Initializes the graph.
+  bool check = options_->get<bool>("check-bytearray",false); // Flag holds whether validate the bytearray (model and shortlist)
   if (options_->hasAndNotEmpty("shortlist")) {
     int srcIdx = 0, trgIdx = 1;
     bool shared_vcb = vocabs_->front() == vocabs_->back();
     if (shortlistMemory_->size() > 0 && shortlistMemory_->begin() != nullptr) {
-      bool check = options_->get<bool>("check-bytearray",true);
       slgen_ = New<data::BinaryShortlistGenerator>(shortlistMemory_->begin(), shortlistMemory_->size(),
                                                      vocabs_->front(), vocabs_->back(),
                                                      srcIdx, trgIdx, shared_vcb, check);
@@ -36,7 +37,7 @@ void BatchTranslator::initialize() {
     }
   }
 
-  graph_ = New<ExpressionGraph>(true); // always optimize
+  graph_ = New<ExpressionGraph>(true); // set the graph to be inference only
   auto prec = options_->get<std::vector<std::string>>("precision", {"float32"});
   graph_->setDefaultElementType(typeFromString(prec[0]));
   graph_->setDevice(device_);
@@ -45,6 +46,10 @@ void BatchTranslator::initialize() {
   if (modelMemory_->size() > 0 && modelMemory_->begin() != nullptr) { // If we have provided a byte array that contains the model memory, we can initialise the model from there, as opposed to from reading in the config file
     ABORT_IF((uintptr_t)modelMemory_->begin() % 256 != 0,
              "The provided memory is not aligned to 256 bytes and will crash when vector instructions are used on it.");
+    if (check) {
+      ABORT_IF(!validateBinaryModel(*modelMemory_, modelMemory_->size()),
+               "The binary file is invalid. Incomplete or corrupted download?");
+    }
     const std::vector<const void *> container = {modelMemory_->begin()}; // Marian supports multiple models initialised in this manner hence std::vector. However we will only ever use 1 during decoding.
     scorers_ = createScorers(options_, container);
   } else {
@@ -63,11 +68,14 @@ void BatchTranslator::translate(Batch &batch) {
   std::vector<data::SentenceTuple> batchVector;
 
   auto &sentences = batch.sentences();
+  size_t batchSequenceNumber{0};
   for (auto &sentence : sentences) {
-    data::SentenceTuple sentence_tuple(sentence.lineNumber());
+    data::SentenceTuple sentence_tuple(batchSequenceNumber);
     Segment segment = sentence.getUnderlyingSegment();
     sentence_tuple.push_back(segment);
     batchVector.push_back(sentence_tuple);
+
+    ++batchSequenceNumber;
   }
 
   size_t batchSize = batchVector.size();

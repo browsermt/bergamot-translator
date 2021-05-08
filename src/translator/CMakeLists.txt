@@ -1,15 +1,13 @@
 add_library(bergamot-translator STATIC
-    TranslationModel.cpp
     byte_array_util.cpp
     text_processor.cpp
     sentence_splitter.cpp
     batch_translator.cpp 
-    multifactor_priority.cpp 
     request.cpp 
     batcher.cpp
-    response.cpp
+    response_builder.cpp
     batch.cpp
-    sentence_ranges.cpp
+    annotation.cpp
     service.cpp
 )
 if (USE_WASM_COMPATIBLE_SOURCE)
@@ -29,5 +27,5 @@ endif(COMPILE_WASM)
 target_link_libraries(bergamot-translator marian ssplit)
 
 target_include_directories(bergamot-translator
-    PUBLIC ${CMAKE_SOURCE_DIR}
-    PUBLIC ${CMAKE_SOURCE_DIR}/src)
+    PUBLIC ${PROJECT_SOURCE_DIR}
+           ${PROJECT_SOURCE_DIR}/src)

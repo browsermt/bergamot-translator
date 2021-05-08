@@ -5,126 +5,59 @@
 namespace marian {
 namespace bergamot {
 
-void Annotation::addSentence(std::vector<ByteRange> &sentence) {
-  flatByteRanges_.insert(std::end(flatByteRanges_), std::begin(sentence),
-                         std::end(sentence));
-  size_t size = flatByteRanges_.size();
-  sentenceEndIds_.push_back(size);
+AnnotatedText::AnnotatedText(std::string &&t) : text(std::move(t)) {
+  // Treat the entire text as a gap that recordExistingSentence will break.
+  annotation.token_begin_.back() = t.size();
 }
 
-size_t Annotation::numWords(size_t sentenceIdx) const {
-  size_t bosId, eosId;
-  bosId = sentenceEndIds_[sentenceIdx]; // Half interval, so;
-  eosId = sentenceEndIds_[sentenceIdx + 1];
-  // Difference between eosId and bosId is the number of words.
-  return eosId - bosId;
+void AnnotatedText::appendSentence(string_view prefix, std::vector<string_view>::iterator begin, std::vector<string_view>::iterator end) {
+  // We'll be adding tokens from the sentence and another gap.
+  annotation.token_begin_.reserve(annotation.token_begin_.size() + (end - begin) + 1);
+
+  // prefix is just end of the previous one.
+  appendEndingWhitespace(prefix);
+
+  // Appending sentence text.
+  std::size_t offset = text.size();
+  if (begin != end) {
+    text.append(begin->data(), (end - 1)->data() + (end - 1)->size() + 1);
+  }
+  for (std::vector<string_view>::iterator token = begin; token != end; ++token) {
+    offset += token->size();
+    annotation.token_begin_.push_back(offset);
+  }
+
+  // Add the gap after the sentence.  This is empty for now, but will be
+  // extended with appendEndingWhitespace or another appendSentence.
+  annotation.gap_.push_back(annotation.token_begin_.size());
+  annotation.token_begin_.push_back(offset);
 }
 
-ByteRange Annotation::sentence(size_t sentenceIdx) const {
-  size_t bosId, eosId;
-  bosId = sentenceEndIds_[sentenceIdx]; // Half interval, so;
-  eosId = sentenceEndIds_[sentenceIdx + 1];
-  ByteRange sentenceByteRange;
+void AnnotatedText::appendEndingWhitespace(string_view whitespace) {
+  text.append(whitespace.data(), whitespace.size());
+  annotation.token_begin_.back() = text.size();
+}
 
-  if (bosId == eosId) {
-    // We have an empty sentence. However, we want to be able to point where in
-    // target this happened through the ranges. We are looking for the end of
-    // the flatByteRange and non-empty sentence before this happened and
-    // construct empty string-view equivalent ByteRange.
-    ByteRange eos = flatByteRanges_[eosId - 1];
-    sentenceByteRange = ByteRange{eos.end, eos.end};
+void AnnotatedText::recordExistingSentence(std::vector<string_view>::iterator begin, std::vector<string_view>::iterator end, const char *sentence_begin) {
+  assert(sentence_begin >= text.data());
+  assert(sentence_begin <= text.data() + text.size());
+  assert(begin == end || sentence_begin == begin->data());
+  // Clip off size token ending.
+  assert(annotation.token_begin_.back() == text.size());
+  annotation.token_begin_.resize(annotation.token_begin_.size() - 1);
+  for (std::vector<string_view>::iterator i = begin; i != end; ++i) {
+    annotation.token_begin_.push_back(i->data() - text.data());
+  }
+  // Gap token after sentence.
+  annotation.gap_.push_back(annotation.token_begin_.size());
+  if (begin != end) {
+    annotation.token_begin_.push_back((end - 1)->data() + (end - 1)->size() - text.data());
   } else {
-    ByteRange bos = flatByteRanges_[bosId];
-    ByteRange eos = flatByteRanges_[eosId - 1];
-    sentenceByteRange = ByteRange{bos.begin, eos.end};
+    // empty sentence.
+    annotation.token_begin_.push_back(sentence_begin - text.data());
   }
-  return sentenceByteRange;
-}
-
-ByteRange Annotation::word(size_t sentenceIdx, size_t wordIdx) const {
-  size_t bosOffset = sentenceEndIds_[sentenceIdx];
-  return flatByteRanges_[bosOffset + wordIdx];
-}
-
-string_view AnnotatedText::word(size_t sentenceIdx, size_t wordIdx) const {
-  auto terminals = annotation.word(sentenceIdx, wordIdx);
-  return string_view(&text[terminals.begin], terminals.size());
-}
-
-string_view AnnotatedText::sentence(size_t sentenceIdx) const {
-  auto sentenceAsByteRange = annotation.sentence(sentenceIdx);
-  return asStringView(sentenceAsByteRange);
-}
-
-void AnnotatedText::appendSentence(std::string prefix, std::string &reference,
-                                   std::vector<string_view> &wordRanges) {
-  text += prefix;
-  size_t offset = text.size(); // Get size before to do ByteRange arithmetic
-  text += reference;           // Append reference to text
-  std::vector<ByteRange> sentence;
-  for (auto &wordView : wordRanges) {
-    size_t thisWordBegin = offset + wordView.data() - reference.data();
-    sentence.push_back(
-        ByteRange{thisWordBegin, thisWordBegin + wordView.size()});
-  }
-  annotation.addSentence(sentence);
-}
-
-void AnnotatedText::addSentence(std::vector<string_view> &wordRanges) {
-  addSentence(std::begin(wordRanges), std::end(wordRanges));
-};
-
-void AnnotatedText::addSentence(std::vector<string_view>::iterator begin,
-                                std::vector<string_view>::iterator end) {
-  std::vector<ByteRange> sentence;
-  for (auto p = begin; p != end; p++) {
-    size_t begin_offset = p->data() - text.data();
-    sentence.push_back(ByteRange{begin_offset, begin_offset + p->size()});
-  }
-  annotation.addSentence(sentence);
-};
-
-ByteRange AnnotatedText::wordAsByteRange(size_t sentenceIdx,
-                                         size_t wordIdx) const {
-  return annotation.word(sentenceIdx, wordIdx);
-}
-
-ByteRange AnnotatedText::sentenceAsByteRange(size_t sentenceIdx) const {
-  return annotation.sentence(sentenceIdx);
-}
-
-string_view AnnotatedText::asStringView(const ByteRange &byteRange) const {
-  const char *data = &text[byteRange.begin];
-  size_t size = byteRange.size();
-  return string_view(data, size);
-}
-
-string_view AnnotatedText::gap(size_t sentenceIdx) const {
-  // Find start of filler-text before, there's a corner case when there's no
-  // sentence before.
-  const char *start = nullptr;
-  if (sentenceIdx == 0) {
-    // If first sentence, filler begins at start of whole-text.
-    start = text.data();
-  } else {
-    // Otherwise, filler begins at end of previous sentence.
-    string_view sentenceBefore = sentence(sentenceIdx - 1);
-    start = sentenceBefore.data() + sentenceBefore.size();
-  }
-
-  // Find end of filler-text, but there is a corner-case to handle.
-  const char *end = nullptr;
-  if (sentenceIdx == numSentences()) {
-    // If last sentence, manually find end of whole-text.
-    const char *begin = text.data();
-    end = begin + text.size();
-  } else {
-    // Otherwise, the filler ends at the start of next sentence.
-    string_view sentenceAfter = sentence(sentenceIdx);
-    end = sentenceAfter.data();
-  }
-
-  return string_view(start, end - start);
+  // Add back size token ending.
+  annotation.token_begin_.push_back(text.size());
 }
 
 } // namespace bergamot

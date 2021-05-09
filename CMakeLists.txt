@@ -4,6 +4,10 @@ if (POLICY CMP0074)
   cmake_policy(SET CMP0074 NEW) # CMake 3.12
 endif ()
 
+if (POLICY CMP0077)
+  cmake_policy(SET CMP0077 NEW)
+endif()
+
 project(bergamot_translator CXX C)
 
 set(CMAKE_CXX_STANDARD 17)

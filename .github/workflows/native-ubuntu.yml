@@ -110,7 +110,6 @@ jobs:
         mkdir -p build
         cd build
         CC=/usr/bin/gcc-${{ matrix.gcc }} CXX=/usr/bin/g++-${{ matrix.gcc }} CUDAHOSTCXX=/usr/bin/g++-${{ matrix.gcc }} \
-        # TODO(jerinphilip): Remove -L
         cmake -L .. \
           -DCMAKE_BUILD_TYPE=${{ matrix.cmake.CMAKE_BUILD_TYPE }}\
           -DCOMPILE_TESTS=${{ matrix.cmake.COMPILE_TESTS }}\

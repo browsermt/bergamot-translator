@@ -15,7 +15,7 @@ jobs:
           - name: "full-marian"
             os: ubuntu-latest
             gcc: 8
-            ccache_cmd: "%compiler% -march=native -E -v - </dev/null 2>&1 | grep cc1"
+            ccache_cmd: "bash scripts/ci/compiler-hash.sh %compiler%"
             cpu: 'ON'
             gpu: 'OFF'
             test_tags: ""
@@ -30,7 +30,7 @@ jobs:
           - name: "minimal-marian"
             os: ubuntu-latest
             gcc: 8
-            ccache_cmd: "%compiler% -march=native -E -v - </dev/null 2>&1 | grep cc1"
+            ccache_cmd: "bash scripts/ci/compiler-hash.sh %compiler%"
             cpu: 'ON'
             gpu: 'OFF'
             test_tags: "'#wasm'"

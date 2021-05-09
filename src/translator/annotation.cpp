@@ -1,16 +1,16 @@
 #include "annotation.h"
 #include <cassert>
-#include <iostream>
 
 namespace marian {
 namespace bergamot {
 
 AnnotatedText::AnnotatedText(std::string &&t) : text(std::move(t)) {
   // Treat the entire text as a gap that recordExistingSentence will break.
-  annotation.token_begin_.back() = t.size();
+  annotation.token_begin_.back() = text.size();
 }
 
 void AnnotatedText::appendSentence(string_view prefix, std::vector<string_view>::iterator begin, std::vector<string_view>::iterator end) {
+  assert(annotation.token_begin_.back() == text.size());
   // We'll be adding tokens from the sentence and another gap.
   annotation.token_begin_.reserve(annotation.token_begin_.size() + (end - begin) + 1);
 
@@ -19,12 +19,13 @@ void AnnotatedText::appendSentence(string_view prefix, std::vector<string_view>:
 
   // Appending sentence text.
   std::size_t offset = text.size();
-  if (begin != end) {
-    text.append(begin->data(), (end - 1)->data() + (end - 1)->size());
-  }
   for (std::vector<string_view>::iterator token = begin; token != end; ++token) {
     offset += token->size();
     annotation.token_begin_.push_back(offset);
+  }
+  if (begin != end) {
+    text.append(begin->data(), (end - 1)->data() + (end - 1)->size());
+    assert(offset == text.size()); // Catch people without consecutive tokens.
   }
 
   // Add the gap after the sentence.  This is empty for now, but will be
@@ -43,9 +44,20 @@ void AnnotatedText::recordExistingSentence(std::vector<string_view>::iterator be
   assert(sentence_begin <= text.data() + text.size());
   assert(begin == end || sentence_begin == begin->data());
   // Clip off size token ending.
+  assert(!annotation.token_begin_.empty());
   assert(annotation.token_begin_.back() == text.size());
   annotation.token_begin_.resize(annotation.token_begin_.size() - 1);
+#ifndef NDEBUG
+  // Check that provided tokens are contiguous.
+  if (begin != end) {
+    for (std::vector<string_view>::iterator i = begin; i != end - 1; ++i) {
+      assert(i->data() + i->size() == (i+1)->data());
+    }
+  }
+#endif
   for (std::vector<string_view>::iterator i = begin; i != end; ++i) {
+    assert(i->data() >= text.data());
+    assert(i->data() + i->size() <= text.data() + text.size());
     annotation.token_begin_.push_back(i->data() - text.data());
   }
   // Gap token after sentence.

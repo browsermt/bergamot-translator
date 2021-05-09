@@ -14,12 +14,12 @@ using namespace emscripten;
 // Binding code
 EMSCRIPTEN_BINDINGS(translation_request) {
   enum_<marian::bergamot::ConcatStrategy>("ConcatStrategy")
-      .value("FAITHFUL", FAITHFUL)
-      .value("SPACE", SPACE);
+      .value("FAITHFUL", marian::bergamot::ConcatStrategy::FAITHFUL)
+      .value("SPACE", marian::bergamot::ConcatStrategy::SPACE);
 
   enum_<marian::bergamot::QualityScoreType>("QualityScoreType")
-      .value("FREE", FREE)
-      .value("EXPENSIVE", EXPENSIVE);
+      .value("FREE", marian::bergamot::ConcatStrategy::FREE)
+      .value("EXPENSIVE", marian::bergamot::ConcatStrategy::EXPENSIVE);
 
   value_object<TranslationRequest>("TranslationRequest")
       .field("qualityScores", &TranslationRequest::qualityScores)

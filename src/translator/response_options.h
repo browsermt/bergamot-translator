@@ -5,7 +5,7 @@
 namespace marian {
 namespace bergamot {
 
-enum ConcatStrategy {
+enum class ConcatStrategy {
   /// Target text is constructed faithful to the source-text  structure.
   FAITHFUL,
 
@@ -13,7 +13,7 @@ enum ConcatStrategy {
   SPACE
 };
 
-enum QualityScoreType {
+enum class QualityScoreType {
   /// Provide a free quality-score that comes with the machine-translation model
   /// itself.
   FREE,

@@ -1,5 +1,7 @@
 #ifndef SRC_BERGAMOT_RESPONSE_OPTIONS_H_
 #define SRC_BERGAMOT_RESPONSE_OPTIONS_H_
+#include "3rd_party/yaml-cpp/yaml.h"
+#include "common/options.h"
 #include <string>
 
 namespace marian {
@@ -42,6 +44,35 @@ struct ResponseOptions {
 
   QualityScoreType qualityScoreType{QualityScoreType::FREE};
   ConcatStrategy concatStrategy{ConcatStrategy::FAITHFUL};
+
+  static ResponseOptions fromYAMLString(std::string yamlConfig) {
+    Ptr<marian::Options> options;
+    options->parse(yamlConfig);
+
+    ResponseOptions responseOptions;
+    responseOptions.qualityScores = options->get<bool>("quality-scores", false);
+    responseOptions.alignment = options->get<bool>("alignment", false);
+    responseOptions.sentenceMappings = options->get<bool>("sentence-mappings", false);
+    responseOptions.alignmentThreshold = options->get<float>("sentence-mappings", 0.2f);
+
+    std::string qualityScoreTypeKey = options->get<std::string>("quality-score-type", "free");
+
+    if (qualityScoreTypeKey == "expensive"){
+        responseOptions.qualityScoreType = QualityScoreType::EXPENSIVE;
+    } else {
+        responseOptions.qualityScoreType = QualityScoreType::FREE;
+    }
+
+    std::string concatStrategyKey = options->get<std::string>("concat-strategy", "faithful");
+    if (concatStrategyKey == "space"){
+        responseOptions.concatStrategy = ConcatStrategy::SPACE;
+    
+    } else {
+        responseOptions.concatStrategy = ConcatStrategy::FAITHFUL;
+    }
+
+    return responseOptions;
+  }
 };
 
 } // namespace bergamot

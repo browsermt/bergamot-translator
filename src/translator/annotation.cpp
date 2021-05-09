@@ -43,21 +43,14 @@ void AnnotatedText::recordExistingSentence(std::vector<string_view>::iterator be
   assert(sentence_begin >= text.data());
   assert(sentence_begin <= text.data() + text.size());
   assert(begin == end || sentence_begin == begin->data());
-  // Clip off size token ending.
   assert(!annotation.token_begin_.empty());
   assert(annotation.token_begin_.back() == text.size());
+  // Clip off size token ending.
   annotation.token_begin_.resize(annotation.token_begin_.size() - 1);
-#ifndef NDEBUG
-  // Check that provided tokens are contiguous.
-  if (begin != end) {
-    for (std::vector<string_view>::iterator i = begin; i != end - 1; ++i) {
-      assert(i->data() + i->size() == (i+1)->data());
-    }
-  }
-#endif
   for (std::vector<string_view>::iterator i = begin; i != end; ++i) {
-    assert(i->data() >= text.data());
-    assert(i->data() + i->size() <= text.data() + text.size());
+    assert(i->data() >= text.data()); // In range.
+    assert(i->data() + i->size() <= text.data() + text.size()); // In range
+    assert(i + 1 == end || i->data() + i->size() == (i+1)->data()); // Contiguous
     annotation.token_begin_.push_back(i->data() - text.data());
   }
   // Gap token after sentence.

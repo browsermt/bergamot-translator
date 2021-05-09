@@ -82,7 +82,7 @@ jobs:
     - name: Setup ccache environment variables
       run: | 
         # Hash compiler content, mtime + size is modded everytime, so.
-        echo "CCACHE_COMPILERCHECK=\"${{ matrix.ccache_cmd }}\"" >> $GITHUB_ENV 
+        echo "CCACHE_COMPILERCHECK=${{ matrix.ccache_cmd }}" >> $GITHUB_ENV 
         echo "CCACHE_BASE_DIR=${{ github.workspace }}" >> $GITHUB_ENV
         echo "CCACHE_DIR=${{ github.workspace }}/.ccache" >> $GITHUB_ENV
         echo "CCACHE_COMPRESS=true" >> $GITHUB_ENV

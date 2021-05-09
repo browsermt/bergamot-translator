@@ -76,8 +76,8 @@ jobs:
       id: ccache_vars
       shell: bash
       run: |
-          echo "::set-output hash=$(bash ${GITHUB_WORKSPACE}/scripts/ci/compiler-hash.sh)"
-          echo "::set-output timestamp=$(date '+%Y-%m-%dT%H.%M.%S')"
+          echo "::set-output name=hash::$(bash ${GITHUB_WORKSPACE}/scripts/ci/compiler-hash.sh)"
+          echo "::set-output name=timestamp::$(date '+%Y-%m-%dT%H.%M.%S')"
 
     - name: Setup ccache environment variables
       run: | 
@@ -92,7 +92,7 @@ jobs:
       uses: actions/cache@v2
       with:
         path: ${{ env.CCACHE_DIR }}
-        key: ccache-${{ matrix.name }}-${{ steps.ccache_vars.outputs.hash }}-${{ github.ref }}-${{ steps.ccache_vars.output.timestamp }}
+        key: ccache-${{ matrix.name }}-${{ steps.ccache_vars.outputs.hash }}-${{ github.ref }}-${{ steps.ccache_vars.outputs.timestamp }}
         restore-keys: |
            ccache-${{ matrix.name }}-${{ steps.ccache_vars.outputs.hash }}-${{ github.ref }}- 
            ccache-${{ matrix.name }}-${{ steps.ccache_vars.outputs.hash }}- 

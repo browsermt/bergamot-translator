@@ -35,7 +35,7 @@ include(CMakeDependentOption)
 
 # Project specific cmake options
 option(COMPILE_WASM "Compile for WASM" OFF)
-option(USE_WASM_COMPATIBLE_SOURCE "Use wasm compatible sources" ON)
+option(USE_WASM_COMPATIBLE_SOURCE "Use wasm compatible sources" OFF)
 option(COMPILE_TESTS "Compile bergamot-tests" OFF)
 
 SET(PACKAGE_DIR "" CACHE STRING "Directory including all the files to be packaged (pre-loaded) in wasm builds")

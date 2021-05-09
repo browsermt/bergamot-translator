@@ -67,13 +67,6 @@ TEST_CASE("Test Annotation API with random sentences") {
     size_t sentenceBegin{before}, sentenceEnd{before};
 
     for (size_t idw = 0; idw < numWords; idw++) {
-/*      if (idw != 0) {
-        text += " ";
-        if (debug) {
-          std::cout << " ";
-        }
-      }*/
-
       // Get new beginning, accounting for space above.
       before = text.size();
 

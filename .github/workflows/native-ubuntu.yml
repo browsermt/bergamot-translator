@@ -81,7 +81,7 @@ jobs:
 
     - name: Generate compiler unique hash
       id: ccache_compiler_hash
-      shell: /bin/bash
+      shell: bash
       run: |
           echo "::set-output COMPILER_HASH=$(bash ${GITHUB_WORKSPACE}/scripts/ci/compiler-hash.sh)"
 

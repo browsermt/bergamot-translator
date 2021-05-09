@@ -30,7 +30,7 @@ void AnnotatedText::appendSentence(string_view prefix, std::vector<string_view>:
 
   // Add the gap after the sentence.  This is empty for now, but will be
   // extended with appendEndingWhitespace or another appendSentence.
-  annotation.gap_.push_back(annotation.token_begin_.size());
+  annotation.gap_.push_back(annotation.token_begin_.size() - 1);
   annotation.token_begin_.push_back(offset);
 }
 

@@ -94,9 +94,9 @@ jobs:
         path: ${{ env.CCACHE_DIR }}
         key: ccache-${{ matrix.name }}-${{ steps.ccache_vars.outputs.hash }}-${{ github.ref }}-${{ steps.ccache_vars.output.timestamp }}
         restore-keys: |
-           ccache-${{ matrix.name }}-${{ steps.ccache_vars.outputs.hash }}-${{ github.ref }}- # Check older, but same compiler, same branch/PR
-           ccache-${{ matrix.name }}-${{ steps.ccache_vars.outputs.hash }}- # check older, same compiler, different branch/PR
-           ccache-${{ matrix.name }}- # check older in same matrix
+           ccache-${{ matrix.name }}-${{ steps.ccache_vars.outputs.hash }}-${{ github.ref }}- 
+           ccache-${{ matrix.name }}-${{ steps.ccache_vars.outputs.hash }}- 
+           ccache-${{ matrix.name }}- 
 
     # Boost is installed on GitHub-hosted runners in a non-standard location
     # https://github.com/actions/virtual-environments/issues/687#issuecomment-610471671

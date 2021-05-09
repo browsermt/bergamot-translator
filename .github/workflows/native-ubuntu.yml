@@ -72,18 +72,12 @@ jobs:
         sudo apt-get install -y --no-install-recommends intel-mkl-64bit-2020.0-088
       if: matrix.cmake.USE_WASM_COMPATIBLE_SOURCE == 'OFF'
 
-    - name: Prepare ccache timestamp
-      id: ccache_cache_timestamp
-      shell: cmake -P {0}
-      run: |
-        string(TIMESTAMP current_date "%Y-%m-%d-%H;%M;%S" UTC)
-        message("::set-output name=timestamp::${current_date}")
-
-    - name: Generate compiler unique hash
-      id: ccache_compiler_hash
+    - name: Generate ccache_vars
+      id: ccache_vars
       shell: bash
       run: |
-          echo "::set-output COMPILER_HASH=$(bash ${GITHUB_WORKSPACE}/scripts/ci/compiler-hash.sh)"
+          echo "::set-output hash=$(bash ${GITHUB_WORKSPACE}/scripts/ci/compiler-hash.sh)"
+          echo "::set-output timestamp=$(date '+%Y-%m-%dT%H.%M.%S')"
 
     - name: Setup ccache environment variables
       run: | 
@@ -98,11 +92,11 @@ jobs:
       uses: actions/cache@v2
       with:
         path: ${{ env.CCACHE_DIR }}
-        key: ${{ matrix.name }}-ccache-${{ github.ref }}-${{steps.ccache_compiler_hash.outputs.compiler_hash }}-${{ steps.ccache_cache_timestamp.outputs.timestamp }}
+        key: ccache-${{ matrix.name }}-${{ steps.ccache_vars.outputs.hash }}-${{ github.ref }}-${{ steps.ccache_vars.output.timestamp }}
         restore-keys: |
-           ${{ matrix.name }}-ccache-${{ github.ref }}-${{ steps.ccache_compiler_hash.outputs.compiler_hash }}
-           ${{ matrix.name }}-ccache-${{ github.ref }}-
-           ${{ matrix.name }}-ccache-
+           ccache-${{ matrix.name }}-${{ steps.ccache_vars.outputs.hash }}-${{ github.ref }}- # Check older, but same compiler, same branch/PR
+           ccache-${{ matrix.name }}-${{ steps.ccache_vars.outputs.hash }}- # check older, same compiler, different branch/PR
+           ccache-${{ matrix.name }}- # check older in same matrix
 
     # Boost is installed on GitHub-hosted runners in a non-standard location
     # https://github.com/actions/virtual-environments/issues/687#issuecomment-610471671

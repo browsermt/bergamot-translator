@@ -79,22 +79,28 @@ jobs:
         string(TIMESTAMP current_date "%Y-%m-%d-%H;%M;%S" UTC)
         message("::set-output name=timestamp::${current_date}")
 
+    - name: Generate compiler unique hash
+      id: ccache_compiler_hash
+      shell: /bin/bash
+      run: |
+          echo "::set-output COMPILER_HASH=$(bash ${GITHUB_WORKSPACE}/scripts/ci/compiler-hash.sh)"
+
     - name: Setup ccache environment variables
       run: | 
-        # Hash compiler content, mtime + size is modded everytime, so.
         echo "CCACHE_COMPILERCHECK=${{ matrix.ccache_cmd }}" >> $GITHUB_ENV 
         echo "CCACHE_BASE_DIR=${{ github.workspace }}" >> $GITHUB_ENV
         echo "CCACHE_DIR=${{ github.workspace }}/.ccache" >> $GITHUB_ENV
         echo "CCACHE_COMPRESS=true" >> $GITHUB_ENV
         echo "CCACHE_COMPRESSLEVEL=6" >> $GITHUB_ENV
-        echo "CCACHE_MAXSIZE=2G" >> $GITHUB_ENV
+        echo "CCACHE_MAXSIZE=5G" >> $GITHUB_ENV
 
     - name: Cache-op for build-cache through ccache 
       uses: actions/cache@v2
       with:
         path: ${{ env.CCACHE_DIR }}
-        key: ${{ matrix.name }}-ccache-${{ github.ref }}-${{ steps.ccache_cache_timestamp.outputs.timestamp }}
+        key: ${{ matrix.name }}-ccache-${{ github.ref }}-${{steps.ccache_compiler_hash.outputs.compiler_hash }}-${{ steps.ccache_cache_timestamp.outputs.timestamp }}
         restore-keys: |
+           ${{ matrix.name }}-ccache-${{ github.ref }}-${{ steps.ccache_compiler_hash.outputs.compiler_hash }}
            ${{ matrix.name }}-ccache-${{ github.ref }}-
            ${{ matrix.name }}-ccache-
 

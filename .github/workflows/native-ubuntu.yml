@@ -104,11 +104,6 @@ jobs:
            ${{ matrix.name }}-ccache-${{ github.ref }}-
            ${{ matrix.name }}-ccache-
 
-
-    - name: Cache stats
-      run: |
-          ccache -s
-
     # Boost is installed on GitHub-hosted runners in a non-standard location
     # https://github.com/actions/virtual-environments/issues/687#issuecomment-610471671
     - name: Configure CMake
@@ -127,6 +122,10 @@ jobs:
     - name: Compile bergamot-translator
       working-directory: build
       run: make -j2
+
+    - name: Cache stats
+      run: |
+          ccache -s
 
     - name: Run unit tests
       working-directory: build

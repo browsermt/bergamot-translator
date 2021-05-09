@@ -18,8 +18,8 @@ EMSCRIPTEN_BINDINGS(translation_request) {
       .value("SPACE", marian::bergamot::ConcatStrategy::SPACE);
 
   enum_<marian::bergamot::QualityScoreType>("QualityScoreType")
-      .value("FREE", marian::bergamot::ConcatStrategy::FREE)
-      .value("EXPENSIVE", marian::bergamot::ConcatStrategy::EXPENSIVE);
+      .value("FREE", marian::bergamot::QualityScoreType::FREE)
+      .value("EXPENSIVE", marian::bergamot::QualityScoreType::EXPENSIVE);
 
   value_object<TranslationRequest>("TranslationRequest")
       .field("qualityScores", &TranslationRequest::qualityScores)

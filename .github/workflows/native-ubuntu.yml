@@ -15,7 +15,7 @@ jobs:
           - name: "full-marian"
             os: ubuntu-latest
             gcc: 8
-            ccache_cmd: "bash scripts/ci/compiler-hash.sh %compiler%"
+            ccache_cmd: "/bin/bash ${BERGAMOT_WORKSPACE}/scripts/ci/compiler-hash.sh %compiler%"
             cpu: 'ON'
             gpu: 'OFF'
             test_tags: ""
@@ -30,7 +30,7 @@ jobs:
           - name: "minimal-marian"
             os: ubuntu-latest
             gcc: 8
-            ccache_cmd: "bash scripts/ci/compiler-hash.sh %compiler%"
+            ccache_cmd: "/bin/bash ${BERGAMOT_WORKSPACE}/scripts/ci/compiler-hash.sh %compiler%"
             cpu: 'ON'
             gpu: 'OFF'
             test_tags: "'#wasm'"

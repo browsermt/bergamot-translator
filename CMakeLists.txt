@@ -4,6 +4,10 @@ if (POLICY CMP0074)
   cmake_policy(SET CMP0074 NEW) # CMake 3.12
 endif ()
 
+if (POLICY CMP0077)
+  cmake_policy(SET CMP0077 NEW)
+endif()
+
 project(bergamot_translator CXX C)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -35,7 +39,7 @@ include(CMakeDependentOption)
 
 # Project specific cmake options
 option(COMPILE_WASM "Compile for WASM" OFF)
-option(USE_WASM_COMPATIBLE_SOURCE "Use wasm compatible sources" ON)
+cmake_dependent_option(USE_WASM_COMPATIBLE_SOURCE "Use wasm compatible sources" OFF "NOT COMPILE_WASM" ON)
 option(COMPILE_TESTS "Compile bergamot-tests" OFF)
 
 SET(PACKAGE_DIR "" CACHE STRING "Directory including all the files to be packaged (pre-loaded) in wasm builds")

@@ -25,7 +25,7 @@ void AnnotatedText::appendSentence(string_view prefix, std::vector<string_view>:
   }
   if (begin != end) {
     text.append(begin->data(), (end - 1)->data() + (end - 1)->size());
-    assert(offset == text.size()); // Catch people without consecutive tokens.
+    assert(offset == text.size()); // Tokens should be contiguous.
   }
 
   // Add the gap after the sentence.  This is empty for now, but will be

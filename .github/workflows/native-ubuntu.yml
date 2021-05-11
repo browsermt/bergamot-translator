@@ -15,7 +15,7 @@ jobs:
           - name: "full-marian"
             os: ubuntu-latest
             gcc: 8
-            force_recache: 'false'
+            force_recache: false
             ccache_cmd: "bash ${GITHUB_WORKSPACE}/scripts/ci/compiler-hash.sh %compiler%"
             cpu: 'ON'
             gpu: 'OFF'
@@ -31,7 +31,7 @@ jobs:
           - name: "minimal-marian"
             os: ubuntu-latest
             gcc: 8
-            force_recache: 'false'
+            force_recache: false
             ccache_cmd: "bash ${GITHUB_WORKSPACE}/scripts/ci/compiler-hash.sh %compiler%"
             cpu: 'ON'
             gpu: 'OFF'
@@ -47,7 +47,7 @@ jobs:
           - name: "full-marian-force-recache"
             os: ubuntu-latest
             gcc: 8
-            force_recache: 'true'
+            force_recache: true
             ccache_cmd: "bash ${GITHUB_WORKSPACE}/scripts/ci/compiler-hash.sh %compiler%"
             cpu: 'ON'
             gpu: 'OFF'
@@ -63,7 +63,7 @@ jobs:
           - name: "minimal-marian-force-recache"
             os: ubuntu-latest
             gcc: 8
-            force_recache: 'true'
+            force_recache: true
             ccache_cmd: "bash ${GITHUB_WORKSPACE}/scripts/ci/compiler-hash.sh %compiler%"
             cpu: 'ON'
             gpu: 'OFF'
@@ -121,8 +121,11 @@ jobs:
         echo "CCACHE_COMPRESS=true" >> $GITHUB_ENV
         echo "CCACHE_COMPRESSLEVEL=6" >> $GITHUB_ENV
         echo "CCACHE_MAXSIZE=5G" >> $GITHUB_ENV
-        echo "CCACHE_RECACHE=${{ matrix.force_recache }}" >> $GITHUB_ENV 
 
+    - name: Setup ccache recache on
+      run: |
+        echo "CCACHE_RECACHE=" >> $GITHUB_ENV 
+      if: matrix.force_recache == true
 
     - name: Cache-op for build-cache through ccache 
       uses: actions/cache@v2

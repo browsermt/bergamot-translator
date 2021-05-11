@@ -15,7 +15,7 @@ jobs:
           - name: "full-marian"
             os: ubuntu-latest
             gcc: 8
-            force_recache: false
+            force_recache: 'false'
             ccache_cmd: "bash ${GITHUB_WORKSPACE}/scripts/ci/compiler-hash.sh %compiler%"
             cpu: 'ON'
             gpu: 'OFF'
@@ -31,8 +31,8 @@ jobs:
           - name: "minimal-marian"
             os: ubuntu-latest
             gcc: 8
-            force_recache: false
-            ccache_cmd: "/bin/bash ${GITHUB_WORKSPACE}/scripts/ci/compiler-hash.sh %compiler%"
+            force_recache: 'false'
+            ccache_cmd: "bash ${GITHUB_WORKSPACE}/scripts/ci/compiler-hash.sh %compiler%"
             cpu: 'ON'
             gpu: 'OFF'
             test_tags: "'#wasm'"
@@ -47,7 +47,7 @@ jobs:
           - name: "full-marian-force-recache"
             os: ubuntu-latest
             gcc: 8
-            force_recache: true
+            force_recache: 'true'
             ccache_cmd: "bash ${GITHUB_WORKSPACE}/scripts/ci/compiler-hash.sh %compiler%"
             cpu: 'ON'
             gpu: 'OFF'
@@ -63,8 +63,8 @@ jobs:
           - name: "minimal-marian-force-recache"
             os: ubuntu-latest
             gcc: 8
-            force_recache: true
-            ccache_cmd: "/bin/bash ${GITHUB_WORKSPACE}/scripts/ci/compiler-hash.sh %compiler%"
+            force_recache: 'true'
+            ccache_cmd: "bash ${GITHUB_WORKSPACE}/scripts/ci/compiler-hash.sh %compiler%"
             cpu: 'ON'
             gpu: 'OFF'
             test_tags: "'#wasm'"

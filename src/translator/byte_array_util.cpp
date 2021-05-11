@@ -117,5 +117,11 @@ void getVocabsMemoryFromConfig(marian::Ptr<marian::Options> options,
   }
 }
 
+void getMemoryBundleFromConfig(marian::Ptr<marian::Options> options, MemoryBundle& memoryBundle){
+  memoryBundle.model = getModelMemoryFromConfig(options);
+  memoryBundle.shortlist = getShortlistMemoryFromConfig(options);
+  getVocabsMemoryFromConfig(options, memoryBundle.vocabs);
+}
+
 } // namespace bergamot
 } // namespace marian

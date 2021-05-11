@@ -15,6 +15,13 @@ typedef std::vector<Segment> Segments;
 /// Shortcut to AlignedVector<char> for byte arrays
 typedef AlignedVector<char> AlignedMemory;
 
+struct MemoryBundle {
+  AlignedMemory model;
+  AlignedMemory shortlist;
+  std::vector<std::shared_ptr<AlignedMemory>> vocabs;
+  AlignedMemory ssplitPrefixFile;
+};
+
 } // namespace bergamot
 } // namespace marian
 

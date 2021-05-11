@@ -98,6 +98,10 @@ jobs:
            ccache-${{ matrix.name }}-${{ steps.ccache_vars.outputs.hash }}- 
            ccache-${{ matrix.name }}- 
 
+    - name: Cache stats before build
+      run: |
+          ccache -s
+
     # Boost is installed on GitHub-hosted runners in a non-standard location
     # https://github.com/actions/virtual-environments/issues/687#issuecomment-610471671
     - name: Configure CMake
@@ -117,7 +121,7 @@ jobs:
       working-directory: build
       run: make -j2
 
-    - name: Cache stats
+    - name: Cache stats after build
       run: |
           ccache -s
 

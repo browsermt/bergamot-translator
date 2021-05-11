@@ -15,6 +15,7 @@ jobs:
           - name: "full-marian"
             os: ubuntu-latest
             gcc: 8
+            force_recache: false
             ccache_cmd: "bash ${GITHUB_WORKSPACE}/scripts/ci/compiler-hash.sh %compiler%"
             cpu: 'ON'
             gpu: 'OFF'
@@ -30,6 +31,39 @@ jobs:
           - name: "minimal-marian"
             os: ubuntu-latest
             gcc: 8
+            force_recache: false
+            ccache_cmd: "/bin/bash ${GITHUB_WORKSPACE}/scripts/ci/compiler-hash.sh %compiler%"
+            cpu: 'ON'
+            gpu: 'OFF'
+            test_tags: "'#wasm'"
+            cmake:
+              CMAKE_BUILD_TYPE: "Release"
+              COMPILE_TESTS: "OFF" # Minimal marian has no sqlite support and COMPILE_TEST=ON fails.
+              USE_WASM_COMPATIBLE_SOURCE: "ON"
+              COMPILE_SERVER: "OFF"
+              COMPILE_EXAMPLES: "OFF"
+              USE_CCACHE: "ON"
+
+          - name: "full-marian-force-recache"
+            os: ubuntu-latest
+            gcc: 8
+            force_recache: true
+            ccache_cmd: "bash ${GITHUB_WORKSPACE}/scripts/ci/compiler-hash.sh %compiler%"
+            cpu: 'ON'
+            gpu: 'OFF'
+            test_tags: ""
+            cmake: 
+              CMAKE_BUILD_TYPE: "Release"
+              COMPILE_TESTS: "ON"
+              USE_WASM_COMPATIBLE_SOURCE: "OFF"
+              COMPILE_SERVER: "OFF"
+              COMPILE_EXAMPLES: "OFF"
+              USE_CCACHE: "ON"
+
+          - name: "minimal-marian-force-recache"
+            os: ubuntu-latest
+            gcc: 8
+            force_recache: true
             ccache_cmd: "/bin/bash ${GITHUB_WORKSPACE}/scripts/ci/compiler-hash.sh %compiler%"
             cpu: 'ON'
             gpu: 'OFF'
@@ -87,6 +121,8 @@ jobs:
         echo "CCACHE_COMPRESS=true" >> $GITHUB_ENV
         echo "CCACHE_COMPRESSLEVEL=6" >> $GITHUB_ENV
         echo "CCACHE_MAXSIZE=5G" >> $GITHUB_ENV
+        echo "CCACHE_RECACHE=${{ matrix.force_recache }}" >> $GITHUB_ENV 
+
 
     - name: Cache-op for build-cache through ccache 
       uses: actions/cache@v2

@@ -111,7 +111,11 @@ public:
   /// ownership be moved through `std::move(..)`
   ///
   ///  @param [in] source: rvalue reference of string to be translated.
-  std::future<Response> translate(std::string &&source);
+  ///  @param [in] callback: Callback function to call with the successfully
+  ///  constructed response.
+  
+  void translate(std::string &&source, 
+                 std::function<void(Response &&)> &&callback);
 
   /// Translate an input, providing Options to construct Response. This is
   /// useful when one has to set/unset alignments or quality in the Response to
@@ -121,8 +125,9 @@ public:
   /// @param [in] responseOptions: Options indicating whether or not to include
   /// some member in the Response, also specify any additional configurable
   /// parameters.
-  std::future<Response> translate(std::string &&source,
-                                  ResponseOptions options);
+  void translate(std::string &&source, 
+                 std::function<void(Response &&)> &&callback, 
+                 ResponseOptions options);
 
   /// Translate multiple text-blobs in a single *blocking* API call, providing
   /// TranslationRequest which applies across all text-blobs dictating how to

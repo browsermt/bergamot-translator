@@ -128,9 +128,9 @@ void Service::async_translate() {
 }
 #endif // WASM_COMPATIBLE_SOURCE
 
-std::future<Response> Service::translate(std::string &&input) {
+void Service::translate(std::string &&input, std::function<void(Response &&)> &&callback) {
   ResponseOptions responseOptions; // Hardcode responseOptions for now
-  return translate(std::move(input), responseOptions);
+  return translate(std::move(input), std::move(callback), responseOptions);
 }
 
 std::vector<Response>
@@ -174,11 +174,10 @@ void Service::queueRequest(std::string &&input,
 }
 
 void Service::translate(std::string &&input,
-                        ResponseOptions responseOptions, 
-                        std::function<void(Response &&)> &&callback) {
+                        std::function<void(Response &&)> &&callback,
+                        ResponseOptions responseOptions) {
   queueRequest(std::move(input), responseOptions, std::move(callback));
   dispatchTranslate();
-  return future;
 }
 
 void Service::dispatchTranslate() {

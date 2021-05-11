@@ -13,31 +13,33 @@ using namespace emscripten;
 
 typedef marian::bergamot::Service TranslationModel;
 typedef marian::bergamot::Response TranslationResult;
+typedef marian::bergamot::AlignedMemory AlignedMemory;
 
-val getByteArrayView(marian::bergamot::AlignedMemory& alignedMemory) {
+val getByteArrayView(AlignedMemory& alignedMemory) {
   return val(typed_memory_view(alignedMemory.size(), alignedMemory.as<char>()));
 }
 
 EMSCRIPTEN_BINDINGS(aligned_memory) {
-  class_<marian::bergamot::AlignedMemory>("AlignedMemory")
+  class_<AlignedMemory>("AlignedMemory")
     .constructor<std::size_t, std::size_t>()
-    .function("size", &marian::bergamot::AlignedMemory::size)
+    .function("size", &AlignedMemory::size)
 	  .function("getByteArrayView", &getByteArrayView)
     ;
 
-    register_vector<marian::bergamot::AlignedMemory*>("AlignedMemoryList");
+    register_vector<AlignedMemory*>("AlignedMemoryList");
 }
 
-std::vector<std::shared_ptr<marian::bergamot::AlignedMemory>>
-prepareVocabsSmartMemories(std::vector<marian::bergamot::AlignedMemory*>& vocabsMemories) {
-  auto sourceVocabMemory = std::make_shared<marian::bergamot::AlignedMemory>(std::move(*(vocabsMemories[0])));
-  std::vector<std::shared_ptr<marian::bergamot::AlignedMemory>> vocabsSmartMemories;
+// When source and target vocab files are same, only one memory object is passed from JS to
+// avoid allocating memory twice for the same file. However, the constructor of the TranslationModel
+// class still expects 2 entries in this case, where each entry has the shared ownership of the
+// same AlignedMemory object. This function prepares these smart pointer based AlignedMemory objects
+// for unique AlignedMemory objects passed from JS.
+std::vector<std::shared_ptr<AlignedMemory>> prepareVocabsSmartMemories(std::vector<AlignedMemory*>& vocabsMemories) {
+  auto sourceVocabMemory = std::make_shared<AlignedMemory>(std::move(*(vocabsMemories[0])));
+  std::vector<std::shared_ptr<AlignedMemory>> vocabsSmartMemories;
   vocabsSmartMemories.push_back(sourceVocabMemory);
-  // When source and target vocab files are same, only one memory object is passed in vocabsMemories
-  // to avoid double memory allocation for the same file. However, the constructor of the TranslationModel
-  // class still expects 2 entries where each entry has the shared ownership of a single AlignedMemory object.
   if (vocabsMemories.size() == 2) {
-    auto targetVocabMemory = std::make_shared<marian::bergamot::AlignedMemory>(std::move(*(vocabsMemories[1])));
+    auto targetVocabMemory = std::make_shared<AlignedMemory>(std::move(*(vocabsMemories[1])));
     vocabsSmartMemories.push_back(std::move(targetVocabMemory));
   }
   else {
@@ -47,9 +49,9 @@ prepareVocabsSmartMemories(std::vector<marian::bergamot::AlignedMemory*>& vocabs
 }
 
 TranslationModel* TranslationModelFactory(const std::string &config,
-                                          marian::bergamot::AlignedMemory* modelMemory,
-                                          marian::bergamot::AlignedMemory* shortlistMemory,
-                                          std::vector<marian::bergamot::AlignedMemory*> uniqueVocabsMemories) {
+                                          AlignedMemory* modelMemory,
+                                          AlignedMemory* shortlistMemory,
+                                          std::vector<AlignedMemory*> uniqueVocabsMemories) {
   return new TranslationModel(config,
                               std::move(*modelMemory),
                               std::move(*shortlistMemory),

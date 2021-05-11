@@ -143,50 +143,40 @@ Service::translateMultiple(std::vector<std::string> &&inputs,
 
   // We queue the individual Requests so they get compiled at batches to be
   // efficiently translated.
-  std::vector<std::future<Response>> responseFutures;
-  for (auto &input : inputs) {
-    std::future<Response> inputResponse =
-        queueRequest(std::move(input), responseOptions);
-    responseFutures.push_back(std::move(inputResponse));
+  std::vector<Response> responses;
+  responses.resize(inputs.size());
+  for (size_t i = 0;  i < inputs.size(); i++) {
+    auto callback = [i, &responses](Response &&response){ responses[i] = std::move(response); };
+    queueRequest(std::move(inputs[i]), responseOptions, callback);
   }
 
   // Dispatch is called once per request so compilation of sentences from
-  // multiple Requests happen.
+  // multiple Requests happen. Dispatch will trigger the callbacks and set values.
   dispatchTranslate();
 
-  // Now wait for all Requests to complete, the future to fire and return the
-  // compiled Responses, we can probably return the future, but WASM quirks(?).
-  std::vector<Response> responses;
-  for (auto &future : responseFutures) {
-    future.wait();
-    responses.push_back(std::move(future.get()));
-  }
 
   return responses;
 }
 
 void Service::queueRequest(std::string &&input,
-                           ResponseOptions responseOptions) {
+                           ResponseOptions responseOptions, 
+                           std::function<void(Response &&)> &&callback) {
   Segments segments;
   AnnotatedText source(std::move(input));
   text_processor_.process(source, segments);
 
-  std::promise<Response> responsePromise;
-  auto future = responsePromise.get_future();
-
   ResponseBuilder responseBuilder(responseOptions, std::move(source), vocabs_,
-                                  std::move(responsePromise));
+                                  std::move(callback));
   Ptr<Request> request = New<Request>(requestId_++, std::move(segments),
                                       std::move(responseBuilder));
 
   batcher_.addWholeRequest(request);
-  return future;
 }
 
-std::future<Response> Service::translate(std::string &&input,
-                                         ResponseOptions responseOptions) {
-  std::future<Response> future =
-      queueRequest(std::move(input), responseOptions);
+void Service::translate(std::string &&input,
+                        ResponseOptions responseOptions, 
+                        std::function<void(Response &&)> &&callback) {
+  queueRequest(std::move(input), responseOptions, std::move(callback));
   dispatchTranslate();
   return future;
 }

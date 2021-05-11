@@ -140,6 +140,7 @@ jobs:
     - name: Cache stats before build
       run: |
           ccache -s
+          ccache -z
 
     # Boost is installed on GitHub-hosted runners in a non-standard location
     # https://github.com/actions/virtual-environments/issues/687#issuecomment-610471671

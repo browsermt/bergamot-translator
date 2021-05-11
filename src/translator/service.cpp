@@ -128,7 +128,8 @@ void Service::async_translate() {
 }
 #endif // WASM_COMPATIBLE_SOURCE
 
-void Service::translate(std::string &&input, std::function<void(Response &&)> &&callback) {
+void Service::translate(std::string &&input, 
+                        std::function<void(Response &&)> &&callback) {
   ResponseOptions responseOptions; // Hardcode responseOptions for now
   return translate(std::move(input), std::move(callback), responseOptions);
 }
@@ -147,7 +148,7 @@ Service::translateMultiple(std::vector<std::string> &&inputs,
   responses.resize(inputs.size());
   for (size_t i = 0;  i < inputs.size(); i++) {
     auto callback = [i, &responses](Response &&response){ responses[i] = std::move(response); };
-    queueRequest(std::move(inputs[i]), responseOptions, callback);
+    queueRequest(std::move(inputs[i]), std::move(callback), responseOptions);
   }
 
   // Dispatch is called once per request so compilation of sentences from
@@ -159,8 +160,8 @@ Service::translateMultiple(std::vector<std::string> &&inputs,
 }
 
 void Service::queueRequest(std::string &&input,
-                           ResponseOptions responseOptions, 
-                           std::function<void(Response &&)> &&callback) {
+                           std::function<void(Response &&)> &&callback, 
+                           ResponseOptions responseOptions){
   Segments segments;
   AnnotatedText source(std::move(input));
   text_processor_.process(source, segments);
@@ -176,7 +177,7 @@ void Service::queueRequest(std::string &&input,
 void Service::translate(std::string &&input,
                         std::function<void(Response &&)> &&callback,
                         ResponseOptions responseOptions) {
-  queueRequest(std::move(input), responseOptions, std::move(callback));
+  queueRequest(std::move(input), std::move(callback), responseOptions);
   dispatchTranslate();
 }
 

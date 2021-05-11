@@ -158,8 +158,8 @@ public:
 private:
   /// Queue an input for translation.
   void queueRequest(std::string &&input,
-                    ResponseOptions responseOptions, 
-                    std::function<void(Response&&)> &&callback);
+                    std::function<void(Response&&)> &&callback,
+                    ResponseOptions responseOptions);
 
   /// Dispatch call to translate after inserting in queue
   void dispatchTranslate();

@@ -34,10 +34,16 @@ int main(int argc, char *argv[]) {
   std::string input = std_input.str();
   using marian::bergamot::Response;
 
-  // Wait on future until Response is complete
-  std::future<Response> responseFuture = service.translate(std::move(input));
+  marian::bergamot::ResponseOptions responseOptions;
+  std::promise<Response> responsePromise;
+  std::future<Response> responseFuture = responsePromise.get_future();
+  auto callback = [&responsePromise](Response &&response) {
+    responsePromise.set_value(std::move(response));
+  };
+
+  service.translate(std::move(input), std::move(callback), responseOptions);
   responseFuture.wait();
-  const Response &response = responseFuture.get();
+  Response response = responseFuture.get();
 
   marian_decoder_minimal(response, options);
 

@@ -15,7 +15,7 @@ jobs:
           - name: "full-marian"
             os: ubuntu-latest
             gcc: 8
-            ccache_cmd: "/bin/bash ${GITHUB_WORKSPACE}/scripts/ci/compiler-hash.sh %compiler%"
+            ccache_cmd: "bash ${GITHUB_WORKSPACE}/scripts/ci/compiler-hash.sh %compiler%"
             cpu: 'ON'
             gpu: 'OFF'
             test_tags: ""
@@ -76,7 +76,7 @@ jobs:
       id: ccache_vars
       shell: bash
       run: |
-          echo "::set-output name=hash::$(bash ${GITHUB_WORKSPACE}/scripts/ci/compiler-hash.sh)"
+          echo "::set-output name=hash::$(${{ matrix.ccache_cmd }})"
           echo "::set-output name=timestamp::$(date '+%Y-%m-%dT%H.%M.%S')"
 
     - name: Setup ccache environment variables

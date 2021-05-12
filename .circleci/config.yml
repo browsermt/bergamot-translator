@@ -19,7 +19,7 @@ jobs:
           working_directory: build-wasm
           command: |
             ls -all bergamot*
-            if ls bergamot*.wasm &>/dev/null && ls bergamot*.js &>/dev/null && ls bergamot*.data &>/dev/null
+            if ls bergamot*.wasm &>/dev/null && ls bergamot*.js &>/dev/null
             then
               echo "Artifacts Successfully Generated"
             else

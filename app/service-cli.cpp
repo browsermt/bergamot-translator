@@ -21,7 +21,7 @@ int main(int argc, char *argv[]) {
 
   if (options->get<bool>("check-bytearray")) {
     // Load legit values into bytearrays.
-    marian::bergamot::getMemoryBundleFromConfig(options, memoryBundle);
+    memoryBundle = marian::bergamot::getMemoryBundleFromConfig(options);
   }
 
   marian::bergamot::Service service(options, std::move(memoryBundle));

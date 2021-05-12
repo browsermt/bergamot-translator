@@ -7,7 +7,7 @@ add_library(bergamot-translator STATIC
     batcher.cpp
     response_builder.cpp
     batch.cpp
-    sentence_ranges.cpp
+    annotation.cpp
     service.cpp
 )
 if (USE_WASM_COMPATIBLE_SOURCE)

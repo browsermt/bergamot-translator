@@ -1,12 +1,12 @@
 #include "byte_array_util.h"
 #include <stdlib.h>
 #include <iostream>
+#include <memory>
 
 namespace marian {
 namespace bergamot {
 
 namespace {
-
 // This is a basic validator that checks if the file has not been truncated
 // it basically loads up the header and checks
 
@@ -26,9 +26,10 @@ const T* get(const void*& current, uint64_t num = 1) {
   current = (const T*)current + num;
   return ptr;
 }
+} // Anonymous namespace
 
-bool validateBinaryModel(AlignedMemory& model, uint64_t fileSize) {
-  const void * current = &model[0];
+bool validateBinaryModel(const AlignedMemory& model, uint64_t fileSize) {
+  const void * current = model.begin();
   uint64_t memoryNeeded = sizeof(uint64_t)*2; // We keep track of how much memory we would need if we have a complete file
   uint64_t numHeaders;
   if (fileSize >= memoryNeeded) { // We have enough filesize to fetch the headers.
@@ -76,8 +77,6 @@ bool validateBinaryModel(AlignedMemory& model, uint64_t fileSize) {
   }
 }
 
-} // Anonymous namespace
-
 AlignedMemory loadFileToMemory(const std::string& path, size_t alignment){
   uint64_t fileSize = filesystem::fileSize(path);
   io::InputFileStream in(path);
@@ -89,19 +88,33 @@ AlignedMemory loadFileToMemory(const std::string& path, size_t alignment){
 }
 
 AlignedMemory getModelMemoryFromConfig(marian::Ptr<marian::Options> options){
-    auto models = options->get<std::vector<std::string>>("models");
-    ABORT_IF(models.size() != 1, "Loading multiple binary models is not supported for now as it is not necessary.");
-    marian::filesystem::Path modelPath(models[0]);
-    ABORT_IF(modelPath.extension() != marian::filesystem::Path(".bin"), "The file of binary model should end with .bin");
-    AlignedMemory alignedMemory = loadFileToMemory(models[0], 256);
-    ABORT_IF(!validateBinaryModel(alignedMemory, alignedMemory.size()), "The binary file is invalid. Incomplete or corrupted download?");
-    return alignedMemory;
+  auto models = options->get<std::vector<std::string>>("models");
+  ABORT_IF(models.size() != 1, "Loading multiple binary models is not supported for now as it is not necessary.");
+  marian::filesystem::Path modelPath(models[0]);
+  ABORT_IF(modelPath.extension() != marian::filesystem::Path(".bin"), "The file of binary model should end with .bin");
+  AlignedMemory alignedMemory = loadFileToMemory(models[0], 256);
+  return alignedMemory;
 }
 
 AlignedMemory getShortlistMemoryFromConfig(marian::Ptr<marian::Options> options){
   auto shortlist = options->get<std::vector<std::string>>("shortlist");
   ABORT_IF(shortlist.empty(), "No path to shortlist file is given.");
   return loadFileToMemory(shortlist[0], 64);
+}
+
+void getVocabsMemoryFromConfig(marian::Ptr<marian::Options> options,
+                               std::vector<std::shared_ptr<AlignedMemory>>& vocabMemories){
+  auto vfiles = options->get<std::vector<std::string>>("vocabs");
+  ABORT_IF(vfiles.size() < 2, "Insufficient number of vocabularies.");
+  vocabMemories.resize(vfiles.size());
+  std::unordered_map<std::string, std::shared_ptr<AlignedMemory>> vocabMap;
+  for (size_t i = 0; i < vfiles.size(); ++i) {
+    auto m = vocabMap.emplace(std::make_pair(vfiles[i], std::shared_ptr<AlignedMemory>()));
+    if (m.second) {
+      m.first->second = std::make_shared<AlignedMemory>(loadFileToMemory(vfiles[i], 64));
+    }
+    vocabMemories[i] = m.first->second;
+  }
 }
 
 } // namespace bergamot

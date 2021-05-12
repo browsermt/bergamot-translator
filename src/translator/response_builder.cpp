@@ -1,4 +1,5 @@
 #include "response_builder.h"
+#include "response_options.h"
 
 namespace marian {
 namespace bergamot {
@@ -56,11 +57,10 @@ void ResponseBuilder::buildTranslatedText(Histories &histories,
   // thing to do to avoid reallocations.
   response.target.text.reserve(response.source.text.size());
 
-  size_t offset{0};
-  bool first{true};
-
-  for (auto &history : histories) {
+  for (size_t sentenceIdx = 0; sentenceIdx < histories.size(); sentenceIdx++) {
     // TODO(jerin): Change hardcode of nBest = 1
+
+    auto &history = histories[sentenceIdx];
     NBestList onebest = history->nBest(1);
 
     Result result = onebest[0]; // Expecting only one result;
@@ -71,15 +71,33 @@ void ResponseBuilder::buildTranslatedText(Histories &histories,
     std::vector<string_view> targetSentenceMappings;
     targetVocab->decodeWithByteRanges(words, decoded, targetSentenceMappings);
 
-    // delimiter can be used to fill in the blanks from source as well.
-    std::string delimiter;
-    if (first) {
-      first = false;
-    } else {
-      delimiter = " ";
+    switch (responseOptions_.concatStrategy) {
+    case ConcatStrategy::FAITHFUL: {
+      // For each sentence, prepend the filler text between the corresponding
+      // source-sentence and the source-sentence before.
+      string_view pre = response.source.gap(sentenceIdx);
+      response.target.appendSentence(std::string(pre.data(), pre.size()),
+                                     decoded, targetSentenceMappings);
+
+      // If this is the last history to be decoded and translated-text
+      // constructed, append the text till the end, which could be spaces or
+      // empty.
+      if (sentenceIdx + 1 == histories.size()) {
+        string_view post = response.source.gap(sentenceIdx + 1);
+        response.target.text += std::string(post.data(), post.size());
+      }
+      break;
+    }
+    case ConcatStrategy::SPACE: {
+      std::string delimiter = (sentenceIdx == 0) ? "" : " ";
+      response.target.appendSentence(delimiter, decoded,
+                                     targetSentenceMappings);
+      break;
     }
 
-    response.target.appendSentence(delimiter, decoded, targetSentenceMappings);
+    default:
+      ABORT("Unknown concat-strategy");
+    }
   }
 }
 

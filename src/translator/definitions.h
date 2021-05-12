@@ -15,11 +15,33 @@ typedef std::vector<Segment> Segments;
 /// Shortcut to AlignedVector<char> for byte arrays
 typedef AlignedVector<char> AlignedMemory;
 
+/// Bundles all byte-array memories
 struct MemoryBundle {
-  AlignedMemory model;
-  AlignedMemory shortlist;
-  std::vector<std::shared_ptr<AlignedMemory>> vocabs;
-  AlignedMemory ssplitPrefixFile;
+  AlignedMemory                                model;
+  AlignedMemory                                shortlist;
+  std::vector<std::shared_ptr<AlignedMemory>>  vocabs;
+  AlignedMemory                                ssplitPrefixFile;
+
+  MemoryBundle() = default;
+
+  MemoryBundle(MemoryBundle &&from){
+    model = std::move(from.model);
+    shortlist = std::move(from.shortlist);
+    vocabs = std::move(vocabs);
+    ssplitPrefixFile = std::move(from.ssplitPrefixFile);
+  }
+
+  MemoryBundle &operator=(MemoryBundle &&from) {
+    model = std::move(from.model);
+    shortlist = std::move(from.shortlist);
+    vocabs = std::move(vocabs);
+    ssplitPrefixFile = std::move(from.ssplitPrefixFile);
+    return *this;
+  }
+
+  // Delete copy constructors
+  MemoryBundle(const MemoryBundle&) = delete;
+  MemoryBundle& operator=(const MemoryBundle&) = delete;
 };
 
 } // namespace bergamot

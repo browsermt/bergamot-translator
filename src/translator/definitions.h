@@ -15,12 +15,19 @@ typedef std::vector<Segment> Segments;
 /// Shortcut to AlignedVector<char> for byte arrays
 typedef AlignedVector<char> AlignedMemory;
 
-/// Bundles all byte-array memories
+/// Memory bundle for all byte-arrays.
+/// Can be a set/subset of model, shortlist, vocabs and ssplitPrefixFile bytes.
 struct MemoryBundle {
-  AlignedMemory                                model;
-  AlignedMemory                                shortlist;
-  std::vector<std::shared_ptr<AlignedMemory>>  vocabs;
-  AlignedMemory                                ssplitPrefixFile;
+  AlignedMemory model;  ///< Byte-array of model (aligned to 256)
+  AlignedMemory shortlist;  ///< Byte-array of shortlist (aligned to 64)
+
+  /// Vector of vocabulary memories (aligned to 64).
+  /// If two vocabularies are the same (based on the filenames), two entries (shared
+  /// pointers) will be generated which share the same AlignedMemory object.
+  std::vector<std::shared_ptr<AlignedMemory>> vocabs;
+
+  /// @todo Not implemented yet
+  AlignedMemory ssplitPrefixFile;
 
   MemoryBundle() = default;
 

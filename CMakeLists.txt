@@ -41,7 +41,6 @@ include(CMakeDependentOption)
 option(COMPILE_WASM "Compile for WASM" OFF)
 cmake_dependent_option(USE_WASM_COMPATIBLE_SOURCE "Use wasm compatible sources" OFF "NOT COMPILE_WASM" ON)
 option(COMPILE_TESTS "Compile bergamot-tests" OFF)
-option(USE_CCACHE "Compile with ccache" OFF)
 
 SET(PACKAGE_DIR "" CACHE STRING "Directory including all the files to be packaged (pre-loaded) in wasm builds")
 
@@ -56,23 +55,6 @@ if (USE_WASM_COMPATIBLE_SOURCE)
   # # Setting the ssplit-cpp submodule specific cmake options for wasm
   SET(SSPLIT_USE_INTERNAL_PCRE2 ON CACHE BOOL "Use internal PCRE2 instead of system PCRE2")
 endif()
-
-# use ccache (https://ccache.dev) for faster compilation if requested and available
-if(USE_CCACHE)
-  find_program(CCACHE_PROGRAM ccache)
-  if(CCACHE_PROGRAM)
-    message(STATUS "Will be using ccache for faster repeat compilation (use cmake -DUSE_CCACHE=off to disable).")
-
-    # Configurations so cache size doesn't exceed certain limits on GitHub runners.
-    if (DEFINED ENV{CCACHE_DIR})
-        message(STATUS "Setting ccache-dir to $ENV{CCACHE_DIR}")
-    endif()
-
-    set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "${CCACHE_PROGRAM}")
-  else(CCACHE_PROGRAM)
-    message(WARNING "Compilation with ccache requested but no ccache found.")
-  endif(CCACHE_PROGRAM)
-endif(USE_CCACHE)
 
 # Documentation: https://cliutils.gitlab.io/modern-cmake/chapters/projects/submodule.html
 # Ensures the submodules are set correctly during a build.

@@ -7,7 +7,7 @@ class Vocabs {
 public:
   Vocabs(Ptr<Options> options, std::vector<std::shared_ptr<AlignedMemory>>&& vocabMemories): options_(options){
     if (!vocabMemories.empty()){
-      // load from buffer
+      // load vocabs from buffer
       load(std::move(vocabMemories));
     }
     else{
@@ -59,12 +59,12 @@ public:
   }
 
   // get all source vocabularies (as a vector)
-  std::vector<Ptr<Vocab const>> source(){
+  std::vector<Ptr<Vocab const>>& source(){
     return srcVocabs_;
   }
 
   // get the target vocabulary
-  Ptr<Vocab const> target(){
+  Ptr<Vocab const>& target(){
     return trgVocab_;
   }
 

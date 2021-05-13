@@ -3,8 +3,11 @@
 namespace marian {
 namespace bergamot {
 
+/// Wrapper of Marian Vocab objects needed for translator.
+/// Holds multiple source vocabularies and one target vocabulary
 class Vocabs {
 public:
+  /// Construct vocabs object from either byte-arrays or files
   Vocabs(Ptr<Options> options, std::vector<std::shared_ptr<AlignedMemory>>&& vocabMemories): options_(options){
     if (!vocabMemories.empty()){
       // load vocabs from buffer
@@ -16,6 +19,21 @@ public:
       load(vocabPaths);
     }
   }
+
+  /// Get all source vocabularies (as a vector)
+  std::vector<Ptr<Vocab const>>& source(){
+    return srcVocabs_;
+  }
+
+  /// Get the target vocabulary
+  Ptr<Vocab const>& target(){
+    return trgVocab_;
+  }
+
+private:
+  std::vector<Ptr<Vocab const>> srcVocabs_;  // source vocabularies
+  Ptr<Vocab const> trgVocab_;                // target vocabulary
+  Ptr<Options> options_;
 
   // load from buffer
   void load(std::vector<std::shared_ptr<AlignedMemory>>&& vocabMemories) {
@@ -57,21 +75,6 @@ public:
     trgVocab_ = srcVocabs_.back();
     srcVocabs_.pop_back();
   }
-
-  // get all source vocabularies (as a vector)
-  std::vector<Ptr<Vocab const>>& source(){
-    return srcVocabs_;
-  }
-
-  // get the target vocabulary
-  Ptr<Vocab const>& target(){
-    return trgVocab_;
-  }
-
-private:
-  std::vector<Ptr<Vocab const>> srcVocabs_;  // source vocabularies
-  Ptr<Vocab const> trgVocab_;   // target vocabulary
-  Ptr<Options> options_;
 };
 
 } // namespace bergamot

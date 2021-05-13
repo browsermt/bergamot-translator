@@ -124,7 +124,7 @@ jobs:
         echo "CCACHE_DIR=${{ github.workspace }}/.ccache" >> $GITHUB_ENV
         echo "CCACHE_COMPRESS=true" >> $GITHUB_ENV
         echo "CCACHE_COMPRESSLEVEL=6" >> $GITHUB_ENV
-        echo "CCACHE_MAXSIZE=1G" >> $GITHUB_ENV
+        echo "CCACHE_MAXSIZE=2G" >> $GITHUB_ENV
 
     - name: Setup ccache recache on
       run: |

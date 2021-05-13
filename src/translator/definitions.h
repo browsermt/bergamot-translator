@@ -34,14 +34,14 @@ struct MemoryBundle {
   MemoryBundle(MemoryBundle &&from){
     model = std::move(from.model);
     shortlist = std::move(from.shortlist);
-    vocabs = std::move(vocabs);
+    vocabs = std::move(from.vocabs);
     ssplitPrefixFile = std::move(from.ssplitPrefixFile);
   }
 
   MemoryBundle &operator=(MemoryBundle &&from) {
     model = std::move(from.model);
     shortlist = std::move(from.shortlist);
-    vocabs = std::move(vocabs);
+    vocabs = std::move(from.vocabs);
     ssplitPrefixFile = std::move(from.ssplitPrefixFile);
     return *this;
   }

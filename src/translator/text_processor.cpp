@@ -12,11 +12,11 @@ namespace bergamot {
 
 Segment TextProcessor::tokenize(const string_view &segment,
                                 std::vector<string_view> &wordRanges) {
-  return vocabs_->front()->encodeWithByteRanges(
+  return vocabs_->source().front()->encodeWithByteRanges(
       segment, wordRanges, /*addEOS=*/false, /*inference=*/true);
 }
 
-TextProcessor::TextProcessor(std::vector<Ptr<Vocab const>> &vocabs,
+TextProcessor::TextProcessor(Vocabs &vocabs,
                              Ptr<Options> options)
     : vocabs_(&vocabs), sentence_splitter_(options) {
 

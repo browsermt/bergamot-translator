@@ -9,6 +9,7 @@
 #include "response_builder.h"
 #include "text_processor.h"
 #include "translator/parser.h"
+#include "vocabs.h"
 
 #ifndef WASM_COMPATIBLE_SOURCE
 #include "pcqueue.h"
@@ -196,7 +197,7 @@ private:
 
   size_t requestId_;
   /// Store vocabs representing source and target.
-  std::vector<Ptr<Vocab const>> vocabs_; // ORDER DEPENDENCY (text_processor_)
+  Vocabs vocabs_; // ORDER DEPENDENCY (text_processor_)
 
   /// TextProcesser takes a blob of text and converts into format consumable by
   /// the batch-translator and annotates sentences and words.

@@ -4,6 +4,7 @@
 #include "data/types.h"
 #include "response.h"
 #include "response_options.h"
+#include "vocabs.h"
 
 // For now we will work with this, to avoid complaints another structure is hard
 // to operate with.
@@ -24,7 +25,7 @@ public:
   /// @param [in] vocabs: marian vocab object (used in decoding)
   /// @param [in] promise: promise to set with the constructed Response.
   ResponseBuilder(ResponseOptions responseOptions, AnnotatedText &&source,
-                  std::vector<Ptr<Vocab const>> &vocabs,
+                  Vocabs &vocabs,
                   std::promise<Response> &&promise)
       : responseOptions_(responseOptions), source_(std::move(source)),
         vocabs_(&vocabs), promise_(std::move(promise)) {}
@@ -81,7 +82,7 @@ private:
   // Data members are context/curried args for the functor.
 
   ResponseOptions responseOptions_;
-  std::vector<Ptr<Vocab const>> *vocabs_; // vocabs are required for decoding
+  Vocabs *vocabs_; // vocabs are required for decoding
                                           // and any source validation checks.
   std::promise<Response> promise_; //  To be set when callback triggered and
                                    //  after Response constructed.

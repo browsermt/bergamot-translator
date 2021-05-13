@@ -7,6 +7,7 @@
 #include "annotation.h"
 
 #include "sentence_splitter.h"
+#include "vocabs.h"
 
 #include <vector>
 
@@ -21,7 +22,7 @@ class TextProcessor {
   // sentences (vector of words). In addition, the ByteRanges of the
   // source-tokens in unnormalized text are provided as string_views.
 public:
-  explicit TextProcessor(std::vector<Ptr<Vocab const>> &vocabs, Ptr<Options>);
+  explicit TextProcessor(Vocabs &vocabs, Ptr<Options>);
 
   void process(AnnotatedText &source, Segments &segments);
 
@@ -36,9 +37,9 @@ private:
                 Segments &segments, AnnotatedText &source);
 
   // shorthand, used only in truncate()
-  const Word sourceEosId() const { return vocabs_->front()->getEosId(); }
+  const Word sourceEosId() const { return vocabs_->source().front()->getEosId(); }
 
-  std::vector<Ptr<Vocab const>> *vocabs_;
+  Vocabs *vocabs_;
   SentenceSplitter sentence_splitter_;
   size_t max_length_break_;
 };

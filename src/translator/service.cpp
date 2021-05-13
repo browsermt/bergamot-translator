@@ -1,7 +1,6 @@
 #include "service.h"
 #include "batch.h"
 #include "definitions.h"
-#include "vocabs.h"
 
 #include <string>
 #include <utility>
@@ -12,7 +11,7 @@ namespace bergamot {
 Service::Service(Ptr<Options> options, AlignedMemory modelMemory, AlignedMemory shortlistMemory,
                  std::vector<std::shared_ptr<AlignedMemory>> vocabMemories)
     : requestId_(0), options_(options),
-      vocabs_(std::move(loadVocabs(options, std::move(vocabMemories)))),
+      vocabs_(Vocabs(options, std::move(vocabMemories))),
       text_processor_(vocabs_, options), batcher_(options),
       numWorkers_(options->get<int>("cpu-threads")),
       modelMemory_(std::move(modelMemory)),

@@ -41,14 +41,13 @@ loadVocabularies(marian::Ptr<marian::Options> options,
 namespace marian {
 namespace bergamot {
 
-Service::Service(Ptr<Options> options, AlignedMemory modelMemory, AlignedMemory shortlistMemory,
-                 std::vector<std::shared_ptr<AlignedMemory>> vocabMemories)
+Service::Service(Ptr<Options> options, MemoryBundle memoryBundle)
     : requestId_(0), options_(options),
-      vocabs_(std::move(loadVocabularies(options, std::move(vocabMemories)))),
+      vocabs_(std::move(loadVocabularies(options, std::move(memoryBundle.vocabs)))),
       text_processor_(vocabs_, options), batcher_(options),
       numWorkers_(options->get<int>("cpu-threads")),
-      modelMemory_(std::move(modelMemory)),
-      shortlistMemory_(std::move(shortlistMemory))
+      modelMemory_(std::move(memoryBundle.model)),
+      shortlistMemory_(std::move(memoryBundle.shortlist))
 #ifndef WASM_COMPATIBLE_SOURCE
       // 0 elements in PCQueue is illegal and can lead to failures. Adding a
       // guard to have at least one entry allocated. In the single-threaded

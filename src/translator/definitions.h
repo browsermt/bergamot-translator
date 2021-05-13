@@ -15,6 +15,42 @@ typedef std::vector<Segment> Segments;
 /// Shortcut to AlignedVector<char> for byte arrays
 typedef AlignedVector<char> AlignedMemory;
 
+/// Memory bundle for all byte-arrays.
+/// Can be a set/subset of model, shortlist, vocabs and ssplitPrefixFile bytes.
+struct MemoryBundle {
+  AlignedMemory model;  ///< Byte-array of model (aligned to 256)
+  AlignedMemory shortlist;  ///< Byte-array of shortlist (aligned to 64)
+
+  /// Vector of vocabulary memories (aligned to 64).
+  /// If two vocabularies are the same (based on the filenames), two entries (shared
+  /// pointers) will be generated which share the same AlignedMemory object.
+  std::vector<std::shared_ptr<AlignedMemory>> vocabs;
+
+  /// @todo Not implemented yet
+  AlignedMemory ssplitPrefixFile;
+
+  MemoryBundle() = default;
+
+  MemoryBundle(MemoryBundle &&from){
+    model = std::move(from.model);
+    shortlist = std::move(from.shortlist);
+    vocabs = std::move(vocabs);
+    ssplitPrefixFile = std::move(from.ssplitPrefixFile);
+  }
+
+  MemoryBundle &operator=(MemoryBundle &&from) {
+    model = std::move(from.model);
+    shortlist = std::move(from.shortlist);
+    vocabs = std::move(vocabs);
+    ssplitPrefixFile = std::move(from.ssplitPrefixFile);
+    return *this;
+  }
+
+  // Delete copy constructors
+  MemoryBundle(const MemoryBundle&) = delete;
+  MemoryBundle& operator=(const MemoryBundle&) = delete;
+};
+
 } // namespace bergamot
 } // namespace marian
 

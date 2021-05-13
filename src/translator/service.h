@@ -55,53 +55,29 @@ namespace bergamot {
 /// // Do things with response.
 /// ```
 ///
-/// Optionally Service can be initialized by also passing model memory for
-/// purposes of efficiency (which defaults to nullpointer and then reads from
+/// Optionally Service can be initialized by also passing bytearray memories
+/// for purposes of efficiency (which defaults to empty and then reads from
 /// file supplied through config).
 ///
 class Service {
 
 public:
+  /// Construct Service from Marian options. If memoryBundle is empty, Service is
+  /// initialized from file-based loading. Otherwise, Service is initialized from
+  /// the given bytearray memories.
   /// @param options Marian options object
-  /// @param modelMemory byte array (aligned to 256!!!) that contains the bytes
-  /// of a model.bin.
-  /// @param shortlistMemory byte array of shortlist (aligned to 64)
-  /// @param vocabMemories vector of vocabulary memories (aligned to 64)
-  explicit Service(Ptr<Options> options, AlignedMemory modelMemory,
-                   AlignedMemory shortlistMemory,
-                   std::vector<std::shared_ptr<AlignedMemory>> vocabMemories);
+  /// @param memoryBundle holds all byte-array memories. Can be a set/subset of
+  /// model, shortlist, vocabs and ssplitPrefixFile bytes. Optional.
+  explicit Service(Ptr<Options> options, MemoryBundle memoryBundle={});
 
-  /// Construct Service purely from Options. This expects options which
-  /// marian-decoder expects to be set for loading model shortlist and
-  /// vocabularies from files in addition to parameters that set unset desired
-  /// features (e.g: alignments, quality-scores).
-  ///
-  /// This is equivalent to a call to:
-  /// ```cpp
-  ///    Service(options, AlignedMemory(), AlignedMemory(), {})
-  /// ```
-  /// wherein empty memory is passed and internal flow defaults to file-based
-  /// model, shortlist loading. AlignedMemory() corresponds to empty memory
-  explicit Service(Ptr<Options> options)
-      : Service(options, AlignedMemory(), AlignedMemory(), {}) {}
-
-  /// Construct Service from a string configuration.
-  /// @param [in] config string parsable as YAML expected to adhere with marian
-  /// config
-  /// @param [in] modelMemory byte array (aligned to 256!!!) that contains the
-  /// bytes of a model.bin. Optional. AlignedMemory() corresponds to empty memory
-  /// @param [in] shortlistMemory byte array of shortlist (aligned to 64). Optional.
-  /// @param [in] vocabMemories vector of vocabulary memories (aligned to 64). Optional.
-  /// If two vocabularies are the same (based on the filenames), two entries (shared
-  /// pointers) will be generated which share the same AlignedMemory object.
-  explicit Service(const std::string &config,
-                   AlignedMemory modelMemory = AlignedMemory(),
-                   AlignedMemory shortlistMemory = AlignedMemory(),
-                   std::vector<std::shared_ptr<AlignedMemory>> vocabsMemories = {})
-      : Service(parseOptions(config, /*validate=*/false),
-                std::move(modelMemory),
-                std::move(shortlistMemory),
-                std::move(vocabsMemories)) {}
+  /// Construct Service from a string configuration. If memoryBundle is empty, Service is
+  /// initialized from file-based loading. Otherwise, Service is initialized from
+  /// the given bytearray memories.
+  /// @param [in] config string parsable as YAML expected to adhere with marian config
+  /// @param [in] memoryBundle holds all byte-array memories. Can be a set/subset of
+  /// model, shortlist, vocabs and ssplitPrefixFile bytes. Optional.
+  explicit Service(const std::string &config, MemoryBundle memoryBundle={})
+      : Service(parseOptions(config, /*validate=*/false), std::move(memoryBundle)) {}
 
   /// Explicit destructor to clean up after any threads initialized in
   /// asynchronous operation mode.

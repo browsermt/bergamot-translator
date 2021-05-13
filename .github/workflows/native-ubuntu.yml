@@ -26,7 +26,8 @@ jobs:
               USE_WASM_COMPATIBLE_SOURCE: "OFF"
               COMPILE_SERVER: "OFF"
               COMPILE_EXAMPLES: "OFF"
-              USE_CCACHE: "ON"
+              CMAKE_C_COMPILER_LAUNCHER: "ccache"
+              CMAKE_CXX_COMPILER_LAUNCHER: "ccache"
 
           - name: "minimal-marian"
             os: ubuntu-latest
@@ -42,7 +43,8 @@ jobs:
               USE_WASM_COMPATIBLE_SOURCE: "ON"
               COMPILE_SERVER: "OFF"
               COMPILE_EXAMPLES: "OFF"
-              USE_CCACHE: "ON"
+              CMAKE_C_COMPILER_LAUNCHER: "ccache"
+              CMAKE_CXX_COMPILER_LAUNCHER: "ccache"
 
           - name: "full-marian-force-recache"
             os: ubuntu-latest
@@ -58,7 +60,8 @@ jobs:
               USE_WASM_COMPATIBLE_SOURCE: "OFF"
               COMPILE_SERVER: "OFF"
               COMPILE_EXAMPLES: "OFF"
-              USE_CCACHE: "ON"
+              CMAKE_C_COMPILER_LAUNCHER: "ccache"
+              CMAKE_CXX_COMPILER_LAUNCHER: "ccache"
 
           - name: "minimal-marian-force-recache"
             os: ubuntu-latest
@@ -74,7 +77,8 @@ jobs:
               USE_WASM_COMPATIBLE_SOURCE: "ON"
               COMPILE_SERVER: "OFF"
               COMPILE_EXAMPLES: "OFF"
-              USE_CCACHE: "ON"
+              CMAKE_C_COMPILER_LAUNCHER: "ccache"
+              CMAKE_CXX_COMPILER_LAUNCHER: "ccache"
 
 
     runs-on: ${{ matrix.os }}
@@ -155,7 +159,9 @@ jobs:
           -DCOMPILE_EXAMPLES=${{ matrix.cmake.COMPILE_EXAMPLES }} \
           -DCOMPILE_SERVER=${{ matrix.cmake.COMPILE_SERVER }} \
           -DUSE_WASM_COMPATIBLE_SOURCE=${{ matrix.cmake.USE_WASM_COMPATIBLE_SOURCE }} \
-          -DUSE_CCACHE=${{ matrix.cmake.USE_CCACHE }}
+          -DCMAKE_C_COMPILER_LAUNCHER=${{ matrix.cmake.CMAKE_C_COMPILER_LAUNCHER}} \
+          -DCMAKE_CXX_COMPILER_LAUNCHER=${{ matrix.cmake.CMAKE_CXX_COMPILER_LAUNCHER}} 
+
 
     - name: Compile bergamot-translator
       working-directory: build

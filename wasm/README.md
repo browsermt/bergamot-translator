@@ -7,8 +7,8 @@ Please note that [Using JS APIs](#Using-JS-APIs) and [Demo](#Demo) section below
 
 ```bash
 cd test_page
-mkdir models
 git clone --depth 1 --branch main --single-branch https://github.com/mozilla-applied-ml/bergamot-models
+mkdir models
 cp -rf bergamot-models/prod/* models
 gunzip models/*/*
 ```
@@ -18,10 +18,7 @@ gunzip models/*/*
 ```js
 // The model configuration as YAML formatted string. For available configuration options, please check: https://marian-nmt.github.io/docs/cmd/marian-decoder/
 // This example captures some of the most relevant options
-const modelConfig = `vocabs:
-  - /esen/vocab.esen.spm
-  - /esen/vocab.esen.spm
-beam-size: 1
+const modelConfig = `beam-size: 1
 normalize: 1.0
 word-penalty: 0
 max-length-break: 128
@@ -35,19 +32,31 @@ quiet-translation: true
 gemm-precision: int8shift
 `;
 
-// Download model and shortlist files and read them into buffers
+// Download model, shortlist and vocabulary files and read them into buffers
 const modelFile = `models/esen/model.esen.intgemm.alphas.bin`;
 const shortlistFile = `models/esen/lex.50.50.esen.s2t.bin`;
-const downloadedBuffers = await Promise.all([downloadAsArrayBuffer(modelFile), downloadAsArrayBuffer(shortlistFile)]); // Please refer to bergamot.html in test_page folder for this function
+const vocabFiles = [`models/${languagePair}/vocab.${vocabLanguagePair}.spm`,
+                    `models/${languagePair}/vocab.${vocabLanguagePair}.spm`];
+const uniqueVocabFiles = new Set(vocabFiles);
+
+// Please refer to bergamot.html in test_page folder for downloadAsArrayBuffer function
+const downloadedBuffers = await Promise.all([downloadAsArrayBuffer(modelFile), downloadAsArrayBuffer(shortlistFile)]);
+const downloadedVocabBuffers = [];
+for (let item of uniqueVocabFiles.values()) {
+  downloadedVocabBuffers.push(await downloadAsArrayBuffer(item));
+}
+
 const modelBuffer = downloadedBuffers[0];
 const shortListBuffer = downloadedBuffers[1];
 
 // Construct AlignedMemory instances from the buffers
 var alignedModelMemory = constructAlignedMemoryFromBuffer(modelBuffer, 256); // Please refer to bergamot.html in test_page folder for this function
 var alignedShortlistMemory = constructAlignedMemoryFromBuffer(shortListBuffer, 64); // Please refer to bergamot.html in test_page folder for this function
+var alignedVocabsMemoryList = new Module.AlignedMemoryList;
+downloadedVocabBuffers.forEach(item => alignedVocabsMemoryList.push_back(constructAlignedMemoryFromBuffer(item, 64)));
 
 // Instantiate the TranslationModel
-const model = new Module.TranslationModel(modelConfig, alignedModelMemory, alignedShortlistMemory);
+const model = new Module.TranslationModel(modelConfig, alignedModelMemory, alignedShortlistMemory, alignedVocabsMemoryList);
 
 // Instantiate the arguments of translate() API i.e. TranslationRequest and input (vector<string>)
 const request = new Module.TranslationRequest();

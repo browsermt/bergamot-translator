@@ -22,16 +22,16 @@ void BatchTranslator::initialize() {
   bool check = options_->get<bool>("check-bytearray",false); // Flag holds whether validate the bytearray (model and shortlist)
   if (options_->hasAndNotEmpty("shortlist")) {
     int srcIdx = 0, trgIdx = 1;
-    bool shared_vcb = vocabs_->source().front() == vocabs_->target();
+    bool shared_vcb = vocabs_->sources().front() == vocabs_->target(); // vocabs_->sources().front() is invoked as we currently only support one source vocab
     if (shortlistMemory_->size() > 0 && shortlistMemory_->begin() != nullptr) {
       slgen_ = New<data::BinaryShortlistGenerator>(shortlistMemory_->begin(), shortlistMemory_->size(),
-                                                   vocabs_->source().front(), vocabs_->target(),
-                                                     srcIdx, trgIdx, shared_vcb, check);
+                                                   vocabs_->sources().front(), vocabs_->target(),
+                                                   srcIdx, trgIdx, shared_vcb, check);
     }
     else {
       // Changed to BinaryShortlistGenerator to enable loading binary shortlist file
       // This class also supports text shortlist file
-      slgen_ = New<data::BinaryShortlistGenerator>(options_, vocabs_->source().front(),
+      slgen_ = New<data::BinaryShortlistGenerator>(options_, vocabs_->sources().front(),
                                                     vocabs_->target(), srcIdx,
                                                     trgIdx, shared_vcb);
     }
@@ -97,7 +97,7 @@ void BatchTranslator::translate(Batch &batch) {
   std::vector<Ptr<SubBatch>> subBatches;
   for (size_t j = 0; j < maxDims.size(); ++j) {
     subBatches.emplace_back(
-        New<SubBatch>(batchSize, maxDims[j], vocabs_->source().at(j)));
+        New<SubBatch>(batchSize, maxDims[j], vocabs_->sources().at(j)));
   }
 
   std::vector<size_t> words(maxDims.size(), 0);

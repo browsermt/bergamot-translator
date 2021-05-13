@@ -37,7 +37,8 @@ private:
                 Segments &segments, AnnotatedText &source);
 
   // shorthand, used only in truncate()
-  const Word sourceEosId() const { return vocabs_->source().front()->getEosId(); }
+  // vocabs_->sources().front() is invoked as we currently only support one source vocab
+  const Word sourceEosId() const { return vocabs_->sources().front()->getEosId(); }
 
   Vocabs *vocabs_;
   SentenceSplitter sentence_splitter_;

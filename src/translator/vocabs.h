@@ -21,12 +21,12 @@ public:
   }
 
   /// Get all source vocabularies (as a vector)
-  std::vector<Ptr<Vocab const>>& source(){
+  const std::vector<Ptr<Vocab const>>& sources(){
     return srcVocabs_;
   }
 
   /// Get the target vocabulary
-  Ptr<Vocab const>& target(){
+  const Ptr<Vocab const>& target(){
     return trgVocab_;
   }
 

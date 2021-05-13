@@ -12,7 +12,8 @@ namespace bergamot {
 
 Segment TextProcessor::tokenize(const string_view &segment,
                                 std::vector<string_view> &wordRanges) {
-  return vocabs_->source().front()->encodeWithByteRanges(
+  // vocabs_->sources().front() is invoked as we currently only support one source vocab
+  return vocabs_->sources().front()->encodeWithByteRanges(
       segment, wordRanges, /*addEOS=*/false, /*inference=*/true);
 }
 

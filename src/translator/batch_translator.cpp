@@ -116,9 +116,8 @@ void BatchTranslator::translate(Batch &batch) {
 
   auto corpus_batch = Ptr<CorpusBatch>(new CorpusBatch(subBatches));
   corpus_batch->setSentenceIds(sentenceIds);
-
-  auto trgVocab = vocabs_->target();
-  auto search = New<BeamSearch>(options_, scorers_, trgVocab);
+  
+  auto search = New<BeamSearch>(options_, scorers_, vocabs_->target());
 
   auto histories = std::move(search->search(graph_, corpus_batch));
   batch.completeBatch(histories);

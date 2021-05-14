@@ -68,7 +68,7 @@ void ResponseBuilder::buildTranslatedText(Histories &histories,
 
     std::string decoded;
     std::vector<string_view> targetSentenceMappings;
-    vocabs_->target()->decodeWithByteRanges(words, decoded, targetSentenceMappings);
+    vocabs_.target()->decodeWithByteRanges(words, decoded, targetSentenceMappings);
 
     switch (responseOptions_.concatStrategy) {
     case ConcatStrategy::FAITHFUL: {

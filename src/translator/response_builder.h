@@ -28,7 +28,7 @@ public:
                   Vocabs &vocabs,
                   std::promise<Response> &&promise)
       : responseOptions_(responseOptions), source_(std::move(source)),
-        vocabs_(&vocabs), promise_(std::move(promise)) {}
+        vocabs_(vocabs), promise_(std::move(promise)) {}
 
   /// Constructs and sets the promise of a Response object from obtained
   /// histories after translating.
@@ -82,7 +82,7 @@ private:
   // Data members are context/curried args for the functor.
 
   ResponseOptions responseOptions_;
-  Vocabs *vocabs_; // vocabs are required for decoding
+  const Vocabs& vocabs_; // vocabs are required for decoding
                                           // and any source validation checks.
   std::promise<Response> promise_; //  To be set when callback triggered and
                                    //  after Response constructed.

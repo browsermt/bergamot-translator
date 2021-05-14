@@ -14,7 +14,7 @@ BatchTranslator::BatchTranslator(DeviceId const device,
                                  Ptr<Options> options,
                                  const AlignedMemory* modelMemory,
                                  const AlignedMemory* shortlistMemory)
-    : device_(device), options_(options), vocabs_(&vocabs),
+    : device_(device), options_(options), vocabs_(vocabs),
     modelMemory_(modelMemory), shortlistMemory_(shortlistMemory) {}
 
 void BatchTranslator::initialize() {
@@ -22,17 +22,17 @@ void BatchTranslator::initialize() {
   bool check = options_->get<bool>("check-bytearray",false); // Flag holds whether validate the bytearray (model and shortlist)
   if (options_->hasAndNotEmpty("shortlist")) {
     int srcIdx = 0, trgIdx = 1;
-    bool shared_vcb = vocabs_->sources().front() == vocabs_->target(); // vocabs_->sources().front() is invoked as we currently only support one source vocab
+    bool shared_vcb = vocabs_.sources().front() == vocabs_.target(); // vocabs_->sources().front() is invoked as we currently only support one source vocab
     if (shortlistMemory_->size() > 0 && shortlistMemory_->begin() != nullptr) {
       slgen_ = New<data::BinaryShortlistGenerator>(shortlistMemory_->begin(), shortlistMemory_->size(),
-                                                   vocabs_->sources().front(), vocabs_->target(),
+                                                   vocabs_.sources().front(), vocabs_.target(),
                                                    srcIdx, trgIdx, shared_vcb, check);
     }
     else {
       // Changed to BinaryShortlistGenerator to enable loading binary shortlist file
       // This class also supports text shortlist file
-      slgen_ = New<data::BinaryShortlistGenerator>(options_, vocabs_->sources().front(),
-                                                    vocabs_->target(), srcIdx,
+      slgen_ = New<data::BinaryShortlistGenerator>(options_, vocabs_.sources().front(),
+                                                    vocabs_.target(), srcIdx,
                                                     trgIdx, shared_vcb);
     }
   }
@@ -97,7 +97,7 @@ void BatchTranslator::translate(Batch &batch) {
   std::vector<Ptr<SubBatch>> subBatches;
   for (size_t j = 0; j < maxDims.size(); ++j) {
     subBatches.emplace_back(
-        New<SubBatch>(batchSize, maxDims[j], vocabs_->sources().at(j)));
+        New<SubBatch>(batchSize, maxDims[j], vocabs_.sources().at(j)));
   }
 
   std::vector<size_t> words(maxDims.size(), 0);
@@ -117,7 +117,7 @@ void BatchTranslator::translate(Batch &batch) {
   auto corpus_batch = Ptr<CorpusBatch>(new CorpusBatch(subBatches));
   corpus_batch->setSentenceIds(sentenceIds);
   
-  auto search = New<BeamSearch>(options_, scorers_, vocabs_->target());
+  auto search = New<BeamSearch>(options_, scorers_, vocabs_.target());
 
   auto histories = std::move(search->search(graph_, corpus_batch));
   batch.completeBatch(histories);

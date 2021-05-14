@@ -46,7 +46,7 @@ public:
 private:
   Ptr<Options> options_;
   DeviceId device_;
-  Vocabs *vocabs_;
+  const Vocabs&  vocabs_;
   Ptr<ExpressionGraph> graph_;
   std::vector<Ptr<Scorer>> scorers_;
   Ptr<data::ShortlistGenerator const> slgen_;

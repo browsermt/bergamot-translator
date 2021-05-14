@@ -4,7 +4,6 @@
 #include "annotation.h"
 
 #include "common/options.h"
-#include "data/vocab.h"
 #include <vector>
 
 namespace marian {
@@ -13,13 +12,13 @@ namespace bergamot {
 Segment TextProcessor::tokenize(const string_view &segment,
                                 std::vector<string_view> &wordRanges) {
   // vocabs_->sources().front() is invoked as we currently only support one source vocab
-  return vocabs_->sources().front()->encodeWithByteRanges(
+  return vocabs_.sources().front()->encodeWithByteRanges(
       segment, wordRanges, /*addEOS=*/false, /*inference=*/true);
 }
 
 TextProcessor::TextProcessor(Vocabs &vocabs,
                              Ptr<Options> options)
-    : vocabs_(&vocabs), sentence_splitter_(options) {
+    : vocabs_(vocabs), sentence_splitter_(options) {
 
   max_length_break_ = options->get<int>("max-length-break");
   max_length_break_ = max_length_break_ - 1;

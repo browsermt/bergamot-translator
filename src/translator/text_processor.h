@@ -38,9 +38,9 @@ private:
 
   // shorthand, used only in truncate()
   // vocabs_->sources().front() is invoked as we currently only support one source vocab
-  const Word sourceEosId() const { return vocabs_->sources().front()->getEosId(); }
+  const Word sourceEosId() const { return vocabs_.sources().front()->getEosId(); }
 
-  Vocabs *vocabs_;
+  const Vocabs& vocabs_;
   SentenceSplitter sentence_splitter_;
   size_t max_length_break_;
 };

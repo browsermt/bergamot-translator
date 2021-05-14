@@ -48,14 +48,22 @@ std::vector<std::shared_ptr<AlignedMemory>> prepareVocabsSmartMemories(std::vect
   return vocabsSmartMemories;
 }
 
+marian::bergamot::MemoryBundle prepareMemoryBundle(AlignedMemory* modelMemory,
+                                                   AlignedMemory* shortlistMemory,
+                                                   std::vector<AlignedMemory*> uniqueVocabsMemories){
+  marian::bergamot::MemoryBundle memoryBundle;
+  memoryBundle.model = std::move(*modelMemory);
+  memoryBundle.shortlist = std::move(*shortlistMemory);
+  memoryBundle.vocabs = std::move(prepareVocabsSmartMemories(uniqueVocabsMemories));
+
+  return memoryBundle;
+}
+
 TranslationModel* TranslationModelFactory(const std::string &config,
                                           AlignedMemory* modelMemory,
                                           AlignedMemory* shortlistMemory,
                                           std::vector<AlignedMemory*> uniqueVocabsMemories) {
-  return new TranslationModel(config,
-                              std::move(*modelMemory),
-                              std::move(*shortlistMemory),
-                              std::move(prepareVocabsSmartMemories(uniqueVocabsMemories)));
+  return new TranslationModel(config, std::move(prepareMemoryBundle(modelMemory, shortlistMemory, uniqueVocabsMemories)));
 }
 
 EMSCRIPTEN_BINDINGS(translation_model) {

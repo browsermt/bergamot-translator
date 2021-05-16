@@ -52,7 +52,7 @@ ARGS=(
         $MODEL_DIR/vocab.deen.spm # target-vocabulary
 
     # The following increases speed through one-best-decoding, shortlist and quantization.
-    --beam-size 1 --skip-cost --shortlist $MODEL_DIR/lex.s2t.gz 50 50 --int8shiftAlphaAll 
+    --beam-size 1 --skip-cost --shortlist $MODEL_DIR/lex.s2t.bin false --int8shiftAlphaAll 
 
     # Number of CPU threads (workers to launch). Parallelizes over cores and improves speed.
     # A value of 0 allows a path with no worker thread-launches and a single-thread.

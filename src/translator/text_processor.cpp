@@ -4,7 +4,6 @@
 #include "annotation.h"
 
 #include "common/options.h"
-#include "data/vocab.h"
 #include <vector>
 
 namespace marian {
@@ -12,13 +11,14 @@ namespace bergamot {
 
 Segment TextProcessor::tokenize(const string_view &segment,
                                 std::vector<string_view> &wordRanges) {
-  return vocabs_->front()->encodeWithByteRanges(
+  // vocabs_->sources().front() is invoked as we currently only support one source vocab
+  return vocabs_.sources().front()->encodeWithByteRanges(
       segment, wordRanges, /*addEOS=*/false, /*inference=*/true);
 }
 
-TextProcessor::TextProcessor(std::vector<Ptr<Vocab const>> &vocabs,
+TextProcessor::TextProcessor(Vocabs &vocabs,
                              Ptr<Options> options)
-    : vocabs_(&vocabs), sentence_splitter_(options) {
+    : vocabs_(vocabs), sentence_splitter_(options) {
 
   max_length_break_ = options->get<int>("max-length-break");
   max_length_break_ = max_length_break_ - 1;
@@ -41,15 +41,16 @@ void TextProcessor::process(AnnotatedText &source, Segments &segments) {
     // There are some cases where SentencePiece or vocab returns no words
     // after normalization. 0 prevents any empty entries from being added.
     if (segment.size() > 0) {
-      // Truncate segment into max_input_size segments.
-      truncate(segment, wordRanges, segments, source);
+      // Wrap segment into sentences of at most max_length_break_ tokens and
+      // tell source about them.
+      wrap(segment, wordRanges, segments, source);
     }
   }
 }
 
-void TextProcessor::truncate(Segment &segment,
-                             std::vector<string_view> &wordRanges,
-                             Segments &segments, AnnotatedText &source) {
+void TextProcessor::wrap(Segment &segment,
+                         std::vector<string_view> &wordRanges,
+                         Segments &segments, AnnotatedText &source) {
   for (size_t offset = 0; offset < segment.size();
        offset += max_length_break_) {
     auto start = segment.begin() + offset;
@@ -61,7 +62,8 @@ void TextProcessor::truncate(Segment &segment,
     segments.back().push_back(sourceEosId());
 
     auto astart = wordRanges.begin() + offset;
-    source.addSentence(astart, astart + diff);
+    // diff > 0
+    source.recordExistingSentence(astart, astart + diff, astart->data());
   }
 }
 

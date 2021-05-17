@@ -41,15 +41,16 @@ void TextProcessor::process(AnnotatedText &source, Segments &segments) {
     // There are some cases where SentencePiece or vocab returns no words
     // after normalization. 0 prevents any empty entries from being added.
     if (segment.size() > 0) {
-      // Truncate segment into max_input_size segments.
-      truncate(segment, wordRanges, segments, source);
+      // Wrap segment into sentences of at most max_length_break_ tokens and
+      // tell source about them.
+      wrap(segment, wordRanges, segments, source);
     }
   }
 }
 
-void TextProcessor::truncate(Segment &segment,
-                             std::vector<string_view> &wordRanges,
-                             Segments &segments, AnnotatedText &source) {
+void TextProcessor::wrap(Segment &segment,
+                         std::vector<string_view> &wordRanges,
+                         Segments &segments, AnnotatedText &source) {
   for (size_t offset = 0; offset < segment.size();
        offset += max_length_break_) {
     auto start = segment.begin() + offset;
@@ -61,7 +62,8 @@ void TextProcessor::truncate(Segment &segment,
     segments.back().push_back(sourceEosId());
 
     auto astart = wordRanges.begin() + offset;
-    source.addSentence(astart, astart + diff);
+    // diff > 0
+    source.recordExistingSentence(astart, astart + diff, astart->data());
   }
 }
 

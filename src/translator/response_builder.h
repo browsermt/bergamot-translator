@@ -27,7 +27,7 @@ public:
   ResponseBuilder(ResponseOptions responseOptions, AnnotatedText &&source,
                   Vocabs &vocabs, std::function<void(Response &&)> callback)
       : responseOptions_(responseOptions), source_(std::move(source)),
-        vocabs_(&vocabs), callback_(std::move(callback)) {}
+        vocabs_(vocabs), callback_(std::move(callback)) {}
 
   /// Constructs and sets the promise of a Response object from obtained
   /// histories after translating.

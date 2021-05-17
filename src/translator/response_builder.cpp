@@ -65,11 +65,10 @@ void ResponseBuilder::buildTranslatedText(Histories &histories,
 
     Result result = onebest[0]; // Expecting only one result;
     Words words = std::get<0>(result);
-    auto targetVocab = vocabs_->back();
 
     std::string decoded;
     std::vector<string_view> targetSentenceMappings;
-    targetVocab->decodeWithByteRanges(words, decoded, targetSentenceMappings);
+    vocabs_.target()->decodeWithByteRanges(words, decoded, targetSentenceMappings);
 
     switch (responseOptions_.concatStrategy) {
     case ConcatStrategy::FAITHFUL: {

@@ -4,6 +4,7 @@
 #include "data/types.h"
 #include "response.h"
 #include "response_options.h"
+#include "vocabs.h"
 
 // For now we will work with this, to avoid complaints another structure is hard
 // to operate with.
@@ -24,8 +25,7 @@ public:
   /// @param [in] vocabs: marian vocab object (used in decoding)
   /// @param [in] callback: callback with operates on the constructed Response.
   ResponseBuilder(ResponseOptions responseOptions, AnnotatedText &&source,
-                  std::vector<Ptr<Vocab const>> &vocabs,
-                  std::function<void(Response &&)> callback)
+                  Vocabs &vocabs, std::function<void(Response &&)> callback)
       : responseOptions_(responseOptions), source_(std::move(source)),
         vocabs_(&vocabs), callback_(std::move(callback)) {}
 
@@ -80,8 +80,8 @@ private:
   // Data members are context/curried args for the functor.
 
   ResponseOptions responseOptions_;
-  std::vector<Ptr<Vocab const>> *vocabs_; // vocabs are required for decoding
-                                          // and any source validation checks.
+  const Vocabs &vocabs_; // vocabs are required for decoding
+                         // and any source validation checks.
   std::function<void(Response &&)>
       callback_; //  To be set when callback triggered and
                  //  after Response constructed.

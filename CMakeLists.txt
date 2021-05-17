@@ -42,8 +42,6 @@ option(COMPILE_WASM "Compile for WASM" OFF)
 cmake_dependent_option(USE_WASM_COMPATIBLE_SOURCE "Use wasm compatible sources" OFF "NOT COMPILE_WASM" ON)
 option(COMPILE_TESTS "Compile bergamot-tests" OFF)
 
-SET(PACKAGE_DIR "" CACHE STRING "Directory including all the files to be packaged (pre-loaded) in wasm builds")
-
 # Set 3rd party submodule specific cmake options for this project
 SET(COMPILE_CUDA OFF CACHE BOOL "Compile GPU version")
 SET(USE_SENTENCEPIECE ON CACHE BOOL "Download and compile SentencePiece")

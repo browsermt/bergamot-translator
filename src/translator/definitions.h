@@ -28,27 +28,6 @@ struct MemoryBundle {
 
   /// @todo Not implemented yet
   AlignedMemory ssplitPrefixFile;
-
-  MemoryBundle() = default;
-
-  MemoryBundle(MemoryBundle &&from){
-    model = std::move(from.model);
-    shortlist = std::move(from.shortlist);
-    vocabs = std::move(vocabs);
-    ssplitPrefixFile = std::move(from.ssplitPrefixFile);
-  }
-
-  MemoryBundle &operator=(MemoryBundle &&from) {
-    model = std::move(from.model);
-    shortlist = std::move(from.shortlist);
-    vocabs = std::move(vocabs);
-    ssplitPrefixFile = std::move(from.ssplitPrefixFile);
-    return *this;
-  }
-
-  // Delete copy constructors
-  MemoryBundle(const MemoryBundle&) = delete;
-  MemoryBundle& operator=(const MemoryBundle&) = delete;
 };
 
 } // namespace bergamot

@@ -66,10 +66,10 @@ jobs:
         uses: actions/cache@v2
         with:
           path: ${{ env.CCACHE_DIR }}
-          key: ccache-${{ matrix.name }}-${{ github.ref }}-${{ steps.ccache_vars.outputs.timestamp }}
+          key: ccache-${{ matrix.os }}-${{ github.ref }}-${{ steps.ccache_vars.outputs.timestamp }}
           restore-keys: |
-             ccache-${{ matrix.name }}-${{ github.ref }}- 
-             ccache-${{ matrix.name }}-
+             ccache-${{ matrix.os }}-${{ github.ref }}- 
+             ccache-${{ matrix.os }}-
 
       - name: Cache stats before build
         run: |

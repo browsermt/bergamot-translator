@@ -20,8 +20,6 @@ void Batcher::addSentenceWithPriority(RequestSentence &sentence) {
   bucket_[bucket_id].insert(sentence);
 }
 
-bool Batcher::operator>>(Batch &batch) { return cleaveBatch(batch); }
-
 bool Batcher::cleaveBatch(Batch &batch) {
   // For now simply iterates on buckets and converts batches greedily.  This
   // has to be enhanced with optimizing over priority. The baseline

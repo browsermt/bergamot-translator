@@ -55,11 +55,21 @@ Service::translateMultiple(std::vector<std::string> &&inputs,
 
   // We queue the individual Requests so they get compiled at batches to be
   // efficiently translated.
-  std::vector<Response> responses;
-  responses.resize(inputs.size());
+  std::vector<std::future<Response>> responseFutures;
   for (size_t i = 0;  i < inputs.size(); i++) {
-    auto callback = [i, &responses](Response &&response){ responses[i] = std::move(response); };
+    // https://stackoverflow.com/a/33437008/4565794
+    // @jerinphilip is not proud of this.
+    Ptr<std::promise<Response>> responsePromise = New<std::promise<Response>>();
+    responseFutures.push_back(std::move(responsePromise->get_future()));
+    auto callback = [responsePromise](Response &&response){  responsePromise->set_value(std::move(response)); };
     queueRequest(std::move(inputs[i]), std::move(callback), responseOptions);
+  }
+
+  std::vector<Response> responses;
+  responses.reserve(responseFutures.size());
+  for(auto &responseFuture: responseFutures){
+    responseFuture.wait();
+    responses.push_back(std::move(responseFuture.get()));
   }
 
   // Dispatch is called once per request so compilation of sentences from

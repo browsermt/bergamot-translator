@@ -26,6 +26,13 @@ jobs:
         run: |
           sudo apt-get update 
           sudo apt-get install -y ccache
+        if: matrix.os == 'ubuntu-latest'
+
+      - name: Install dependencies
+        run: |
+            brew update
+            brew install ccache
+        if: matrix.os == 'macos-10.15'
 
       - name: Verify Emscripten setup
         run: emcc -v

@@ -3,4 +3,3 @@ BasedOnStyle: Google
 # Maximum line length 80 is too low even for 1080p monitor.  @XapaJIaMnu
 # personally would like 120.
 ColumnLimit: 120
-

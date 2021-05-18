@@ -1,4 +1,5 @@
 #include "annotation.h"
+
 #include <cassert>
 
 namespace marian {
@@ -9,7 +10,8 @@ AnnotatedText::AnnotatedText(std::string &&t) : text(std::move(t)) {
   annotation.token_begin_.back() = text.size();
 }
 
-void AnnotatedText::appendSentence(string_view prefix, std::vector<string_view>::iterator begin, std::vector<string_view>::iterator end) {
+void AnnotatedText::appendSentence(string_view prefix, std::vector<string_view>::iterator begin,
+                                   std::vector<string_view>::iterator end) {
   assert(annotation.token_begin_.back() == text.size());
   // We'll be adding tokens from the sentence and another gap.
   annotation.token_begin_.reserve(annotation.token_begin_.size() + (end - begin) + 1);
@@ -25,7 +27,7 @@ void AnnotatedText::appendSentence(string_view prefix, std::vector<string_view>:
   }
   if (begin != end) {
     text.append(begin->data(), (end - 1)->data() + (end - 1)->size());
-    assert(offset == text.size()); // Tokens should be contiguous.
+    assert(offset == text.size());  // Tokens should be contiguous.
   }
 
   // Add the gap after the sentence.  This is empty for now, but will be
@@ -39,7 +41,8 @@ void AnnotatedText::appendEndingWhitespace(string_view whitespace) {
   annotation.token_begin_.back() = text.size();
 }
 
-void AnnotatedText::recordExistingSentence(std::vector<string_view>::iterator begin, std::vector<string_view>::iterator end, const char *sentence_begin) {
+void AnnotatedText::recordExistingSentence(std::vector<string_view>::iterator begin,
+                                           std::vector<string_view>::iterator end, const char *sentence_begin) {
   assert(sentence_begin >= text.data());
   assert(sentence_begin <= text.data() + text.size());
   assert(begin == end || sentence_begin == begin->data());
@@ -48,9 +51,9 @@ void AnnotatedText::recordExistingSentence(std::vector<string_view>::iterator be
   // Clip off size token ending.
   annotation.token_begin_.resize(annotation.token_begin_.size() - 1);
   for (std::vector<string_view>::iterator i = begin; i != end; ++i) {
-    assert(i->data() >= text.data()); // In range.
-    assert(i->data() + i->size() <= text.data() + text.size()); // In range
-    assert(i + 1 == end || i->data() + i->size() == (i+1)->data()); // Contiguous
+    assert(i->data() >= text.data());                                  // In range.
+    assert(i->data() + i->size() <= text.data() + text.size());        // In range
+    assert(i + 1 == end || i->data() + i->size() == (i + 1)->data());  // Contiguous
     annotation.token_begin_.push_back(i->data() - text.data());
   }
   // Gap token after sentence.
@@ -65,5 +68,5 @@ void AnnotatedText::recordExistingSentence(std::vector<string_view>::iterator be
   annotation.token_begin_.push_back(text.size());
 }
 
-} // namespace bergamot
-} // namespace marian
+}  // namespace bergamot
+}  // namespace marian

@@ -9,13 +9,13 @@ on:
 
 jobs:
   build:
+  if: github.repository == 'mozilla/bergamot-translator'
     runs-on: ubuntu-latest
-name: Mirror
+    name: Push browsermt/main branch to mozilla/bergamot-translator
     steps:
       - uses: actions/checkout@v2
 
       - name: Push browsermt/main branch to mozilla/bergamot-translator
-        if: github.repository == 'mozilla/bergamot-translator'
         run: |
           git clone -b main https://github.com/browsermt/bergamot-translator.git
           cd bergamot-translator

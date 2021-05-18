@@ -1,0 +1,23 @@
+name: Push browsermt/main branch to mozilla/bergamot-translator
+
+on:
+  schedule:
+  # Run every hour
+  - cron: "0 * * * *"
+
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Push browsermt/main branch to mozilla/bergamot-translator
+        if: github.repository == 'mozilla/bergamot-translator'
+        run: |
+          git clone -b main https://github.com/browsermt/bergamot-translator.git
+          cd bergamot-translator
+          git remote add mozilla https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/mozilla/bergamot-translator.git
+          git push mozilla main

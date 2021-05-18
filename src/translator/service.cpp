@@ -100,11 +100,7 @@ std::future<Response> Service::translate(std::string &&input) {
 
 std::vector<Response>
 Service::translateMultiple(std::vector<std::string> &&inputs,
-                           TranslationRequest translationRequest) {
-  ResponseOptions responseOptions;
-
-  // TODO(jerinphilip) Set options based on TranslationRequest, if and when it
-  // becomes non-dummy.
+                           ResponseOptions responseOptions) {
 
   // We queue the individual Requests so they get compiled at batches to be
   // efficiently translated.

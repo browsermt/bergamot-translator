@@ -4,6 +4,10 @@ add_executable(bergamot-translator-worker
     bindings/TranslationResultBindings.cpp
 )
 
+# Generate version file that can be included in the wasm artifacts
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/project_version.js.in
+               ${CMAKE_CURRENT_SOURCE_DIR}/project_version.js @ONLY)
+
 # This header inclusion needs to go away later as path to public headers of bergamot
 # translator should be directly available from "bergamot-translator" target
 target_include_directories(bergamot-translator-worker
@@ -14,17 +18,13 @@ target_include_directories(bergamot-translator-worker
 target_compile_definitions(bergamot-translator-worker PRIVATE WASM_BINDINGS)
 target_compile_options(bergamot-translator-worker PRIVATE ${WASM_COMPILE_FLAGS})
 
-set(LINKER_FLAGS "-g2 --bind -s ASSERTIONS=0 -s DISABLE_EXCEPTION_CATCHING=1 -s FORCE_FILESYSTEM=1 -s ALLOW_MEMORY_GROWTH=1 -s NO_DYNAMIC_EXECUTION=1 -s EXPORTED_RUNTIME_METHODS=[addOnPreMain]")
-if (NOT PACKAGE_DIR STREQUAL "")
-  get_filename_component(REALPATH_PACKAGE_DIR ${PACKAGE_DIR} REALPATH BASE_DIR ${CMAKE_BINARY_DIR})
-  set(LINKER_FLAGS "${LINKER_FLAGS} --preload-file ${REALPATH_PACKAGE_DIR}@/")
-endif()
-
-# Enable worker file system
-set(LINKER_FLAGS "${LINKER_FLAGS} -lworkerfs.js")
+set(LINKER_FLAGS "-g2 --bind -s ASSERTIONS=0 -s DISABLE_EXCEPTION_CATCHING=1 -s ALLOW_MEMORY_GROWTH=1 -s NO_DYNAMIC_EXECUTION=1 -s EXPORTED_RUNTIME_METHODS=[addOnPreMain]")
 
 # Avoid node.js-code in emscripten glue-code
 set(LINKER_FLAGS "${LINKER_FLAGS} -s ENVIRONMENT=web,worker")
+
+# Append version information in the Javascript artifact
+set(LINKER_FLAGS "${LINKER_FLAGS} --extern-pre-js ${CMAKE_CURRENT_SOURCE_DIR}/project_version.js")
 
 set_target_properties(bergamot-translator-worker PROPERTIES
                         SUFFIX ".js"

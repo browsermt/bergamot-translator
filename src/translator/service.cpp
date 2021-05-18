@@ -48,11 +48,6 @@ void Service::blockIfWASM() {
 #endif
 }
 
-void Service::translate(std::string &&input, 
-                        std::function<void(Response &&)> &&callback) {
-  ResponseOptions responseOptions; // Hardcode responseOptions for now
-  return translate(std::move(input), std::move(callback), responseOptions);
-}
 
 std::vector<Response>
 Service::translateMultiple(std::vector<std::string> &&inputs,
@@ -90,12 +85,10 @@ void Service::queueRequest(std::string &&input,
   batcher_.addWholeRequest(request);
 }
 
-std::future<Response> Service::translate(std::string &&input,
+void Service::translate(std::string &&input, std::function<void(Response &&)> &&callback,
                                          ResponseOptions responseOptions) {
-  std::future<Response> future =
-      queueRequest(std::move(input), responseOptions);
+  queueRequest(std::move(input), std::move(callback), responseOptions);
   blockIfWASM();
-  return future;
 }
 
 Service::~Service() {

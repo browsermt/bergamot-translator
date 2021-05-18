@@ -5,7 +5,9 @@
 
 #include <emscripten/bind.h>
 
-#include "TranslationRequest.h"
+#include "response_options.h"
+
+typedef marian::bergamot::ResponseOptions TranslationRequest;
 
 using namespace emscripten;
 

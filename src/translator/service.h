@@ -1,7 +1,6 @@
 #ifndef SRC_BERGAMOT_SERVICE_H_
 #define SRC_BERGAMOT_SERVICE_H_
 
-#include "TranslationRequest.h"
 #include "batch_translator.h"
 #include "batcher.h"
 #include "data/types.h"
@@ -9,6 +8,7 @@
 #include "response_builder.h"
 #include "text_processor.h"
 #include "translator/parser.h"
+#include "vocabs.h"
 
 #ifndef WASM_COMPATIBLE_SOURCE
 #include "pcqueue.h"
@@ -101,8 +101,8 @@ public:
                                   ResponseOptions options);
 
   /// Translate multiple text-blobs in a single *blocking* API call, providing
-  /// TranslationRequest which applies across all text-blobs dictating how to
-  /// construct Response. TranslationRequest can be used to enable/disable
+  /// ResponseOptions which applies across all text-blobs dictating how to
+  /// construct Response. ResponseOptions can be used to enable/disable
   /// additional information like quality-scores, alignments etc.
   ///
   /// All texts are combined to efficiently construct batches together providing
@@ -113,13 +113,13 @@ public:
   /// recommended to work with futures and translate() API.
   ///
   /// @param [in] source: rvalue reference of the string to be translated
-  /// @param [in] translationRequest: TranslationRequest (Unified API)
-  /// indicating whether or not to include some member in the Response, also
-  /// specify any additional configurable parameters.
+  /// @param [in] translationRequest: ResponseOptions indicating whether or not
+  /// to include some member in the Response, also specify any additional
+  /// configurable parameters.
 
   std::vector<Response>
   translateMultiple(std::vector<std::string> &&source,
-                    TranslationRequest translationRequest);
+                    ResponseOptions responseOptions);
 
   /// Returns if model is alignment capable or not.
   bool isAlignmentSupported() const {
@@ -172,7 +172,7 @@ private:
 
   size_t requestId_;
   /// Store vocabs representing source and target.
-  std::vector<Ptr<Vocab const>> vocabs_; // ORDER DEPENDENCY (text_processor_)
+  Vocabs vocabs_; // ORDER DEPENDENCY (text_processor_)
 
   /// TextProcesser takes a blob of text and converts into format consumable by
   /// the batch-translator and annotates sentences and words.

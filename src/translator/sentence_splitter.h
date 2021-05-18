@@ -1,11 +1,12 @@
 #ifndef SRC_BERGAMOT_SENTENCE_SPLITTER_H_
 #define SRC_BERGAMOT_SENTENCE_SPLITTER_H_
 
+#include <string>
+
 #include "common/options.h"
 #include "data/types.h"
-#include "ssplit.h"
 #include "definitions.h"
-#include <string>
+#include "ssplit.h"
 
 namespace marian {
 namespace bergamot {
@@ -15,18 +16,18 @@ class SentenceSplitter {
   // mts. Constructed based on options. Used in TextProcessor below to create
   // sentence-streams, which provide access to one sentence from blob of text at
   // a time.
-public:
+ public:
   explicit SentenceSplitter(Ptr<Options> options);
   ug::ssplit::SentenceStream createSentenceStream(string_view const &input);
 
-private:
+ private:
   ug::ssplit::SentenceSplitter ssplit_;
   Ptr<Options> options_;
   ug::ssplit::SentenceStream::splitmode mode_;
   ug::ssplit::SentenceStream::splitmode string2splitmode(const std::string &m);
 };
 
-} // namespace bergamot
-} // namespace marian
+}  // namespace bergamot
+}  // namespace marian
 
-#endif //  SRC_BERGAMOT_SENTENCE_SPLITTER_H_
+#endif  //  SRC_BERGAMOT_SENTENCE_SPLITTER_H_

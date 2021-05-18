@@ -4,7 +4,6 @@
  */
 
 #include <emscripten/bind.h>
-
 #include <vector>
 
 #include "response.h"

@@ -1,8 +1,7 @@
-#include <random>
-#include <vector>
-
 #include "catch.hpp"
 #include "translator/annotation.h"
+#include <random>
+#include <vector>
 
 using namespace marian::bergamot;
 
@@ -53,7 +52,8 @@ TEST_CASE("Test Annotation API with random sentences") {
   }
   std::string text;
   for (size_t idx = 0; idx < sentences; idx++) {
-    if (idx != 0) text += "\n";
+    if (idx != 0)
+      text += "\n";
 
     // Words can be zero, we need to support empty word sentences as well.
     size_t numWords = randomIntGen_() % maxWords;
@@ -96,8 +96,8 @@ TEST_CASE("Test Annotation API with random sentences") {
     groundTruthSentences.push_back((ByteRange){sentenceBegin, sentenceEnd});
   }
 
-  AnnotatedText testAnnotation(std::move(text));  // This the container we add through API and
-                                                  // check if the access is correct.
+  AnnotatedText testAnnotation(std::move(text)); // This the container we add through API and
+                                                 // check if the access is correct.
 
   // We prepare string_views now with the known ByteRanges and use the
   // string_view based AnnotatedText.addSentence(...) API to add sentences to
@@ -105,7 +105,8 @@ TEST_CASE("Test Annotation API with random sentences") {
   // the math underneath.
 
   if (debug) {
-    std::cout << "Inserting words onto container and save ground-truth-table:" << std::endl;
+    std::cout << "Inserting words onto container and save ground-truth-table:"
+              << std::endl;
   }
 
   std::vector<std::vector<marian::string_view>> wordStringViews;
@@ -114,7 +115,8 @@ TEST_CASE("Test Annotation API with random sentences") {
     std::vector<marian::string_view> wordByteRanges;
     bool first{true};
     for (auto &word : sentence) {
-      marian::string_view wordView(&testAnnotation.text[word.begin], word.size());
+      marian::string_view wordView(&testAnnotation.text[word.begin],
+                                   word.size());
       wordByteRanges.push_back(wordView);
       if (debug) {
         if (first) {
@@ -125,8 +127,7 @@ TEST_CASE("Test Annotation API with random sentences") {
         std::cout << std::string(wordView);
       }
     }
-    testAnnotation.recordExistingSentence(wordByteRanges.begin(), wordByteRanges.end(),
-                                          testAnnotation.text.data() + sentence_iter->begin);
+    testAnnotation.recordExistingSentence(wordByteRanges.begin(), wordByteRanges.end(), testAnnotation.text.data() + sentence_iter->begin);
     ++sentence_iter;
     wordStringViews.push_back(wordByteRanges);
     if (debug) {
@@ -135,7 +136,9 @@ TEST_CASE("Test Annotation API with random sentences") {
   }
 
   if (debug) {
-    std::cout << "Inserting sentences onto container and save ground-truth-table" << std::endl;
+    std::cout
+        << "Inserting sentences onto container and save ground-truth-table"
+        << std::endl;
   }
   std::vector<marian::string_view> sentenceStringViews;
   for (auto &sentenceByteRange : groundTruthSentences) {
@@ -200,8 +203,7 @@ TEST_CASE("Test Annotation API with random sentences") {
   // Sentence if the random test above does not cover it for some reason.
   int emptySentenceIdx = sentences;
   std::vector<marian::string_view> emptySentence;
-  testAnnotation.recordExistingSentence(emptySentence.begin(), emptySentence.end(),
-                                        testAnnotation.text.data() + testAnnotation.text.size());
+  testAnnotation.recordExistingSentence(emptySentence.begin(), emptySentence.end(), testAnnotation.text.data() + testAnnotation.text.size());
 
   // There are no words.
   CHECK(testAnnotation.numWords(emptySentenceIdx) == 0);

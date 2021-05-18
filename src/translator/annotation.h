@@ -1,11 +1,10 @@
 #ifndef BERGAMOT_SENTENCE_RANGES_H_
 #define BERGAMOT_SENTENCE_RANGES_H_
 
+#include "data/types.h"
 #include <cassert>
 #include <utility>
 #include <vector>
-
-#include "data/types.h"
 
 namespace marian {
 namespace bergamot {
@@ -19,8 +18,8 @@ struct ByteRange {
 };
 
 /// Annotation expresses sentence and token boundary information as ranges of
-/// bytes in a string, but does not itself own the string.
-///
+/// bytes in a string, but does not itself own the string.  
+/// 
 /// See also AnnotatedText, which owns Annotation and the string. AnnotatedText
 /// wraps these ByteRange functions to provide a string_view interface.
 ///
@@ -43,7 +42,7 @@ struct ByteRange {
 /// produced empty output).  That's fine, these are just empty ranges as you
 /// would expect.
 class Annotation {
- public:
+public:
   /// Initially an empty string.  Populated by AnnotatedText.
   Annotation() {
     token_begin_.push_back(0);
@@ -63,25 +62,25 @@ class Annotation {
   /// `.numWords()` for `sentenceIdx` for defined behaviour.
   ByteRange word(size_t sentenceIdx, size_t wordIdx) const {
     size_t tokenIdx = gap_[sentenceIdx] + 1 + wordIdx;
-    return ByteRange{token_begin_[tokenIdx], token_begin_[tokenIdx + 1]};
+    return ByteRange {token_begin_[tokenIdx], token_begin_[tokenIdx + 1]};
   }
 
   /// Returns a ByteRange representing sentence corresponding to `sentenceIdx`.
   /// `sentenceIdx` follows 0-based indexing, and behaviour is defined only when
   /// less than `.numSentences()`.
   ByteRange sentence(size_t sentenceIdx) const {
-    return ByteRange{
-        token_begin_[gap_[sentenceIdx] + 1], /*end of whitespace before */
-        token_begin_[gap_[sentenceIdx + 1]]  /*beginning of whitespace after */
+    return ByteRange {
+      token_begin_[gap_[sentenceIdx] + 1], /*end of whitespace before */
+      token_begin_[gap_[sentenceIdx + 1]] /*beginning of whitespace after */
     };
   }
 
   ByteRange gap(size_t gapIdx) const {
     size_t tokenIdx = gap_[gapIdx];
-    return ByteRange{token_begin_[tokenIdx], token_begin_[tokenIdx + 1]};
+    return ByteRange {token_begin_[tokenIdx], token_begin_[tokenIdx + 1]};
   }
 
- private:
+private:
   friend class AnnotatedText;
   /// Map from token index to byte offset at which it begins.  Token i is:
   ///   [token_begin_[i], token_begin_[i+1])
@@ -125,9 +124,9 @@ class Annotation {
 /// 3. Bind the text and annotations together, to move around as a meaningful
 /// unit.
 struct AnnotatedText {
- public:
-  std::string text;       ///< Blob of string elements in annotation refers to.
-  Annotation annotation;  ///< sentence and (sub-) word annotations.
+public:
+  std::string text;      ///< Blob of string elements in annotation refers to.
+  Annotation annotation; ///< sentence and (sub-) word annotations.
 
   /// Construct an empty AnnotatedText. This is useful when the target string or
   /// ByteRanges are not known yet, but the public members can be used to
@@ -144,8 +143,10 @@ struct AnnotatedText {
   /// string_views.  Since this tracks only prefix, remember
   /// appendEndingWhitespace.
   /// The string_views must not already be in text.
-  void appendSentence(string_view prefix, std::vector<string_view>::iterator tokens_begin,
-                      std::vector<string_view>::iterator tokens_end);
+  void appendSentence(
+      string_view prefix,
+      std::vector<string_view>::iterator tokens_begin,
+      std::vector<string_view>::iterator tokens_end);
 
   /// Append the whitespace at the end of input. string_view must not be in
   /// text.
@@ -157,14 +158,18 @@ struct AnnotatedText {
   /// Normally the beginning of the sentence can be inferred from
   /// tokens_begin->data() but the tokens could be empty, so sentence_begin is
   /// required to know where the sentence is.
-  void recordExistingSentence(std::vector<string_view>::iterator tokens_begin,
-                              std::vector<string_view>::iterator tokens_end, const char *sentence_begin);
+  void recordExistingSentence(
+      std::vector<string_view>::iterator tokens_begin,
+      std::vector<string_view>::iterator tokens_end,
+      const char *sentence_begin);
 
   /// Returns the number of sentences in the annotation structure.
   const size_t numSentences() const { return annotation.numSentences(); }
 
   /// Returns number of words in the sentece identified by sentenceIdx.
-  const size_t numWords(size_t sentenceIdx) const { return annotation.numWords(sentenceIdx); }
+  const size_t numWords(size_t sentenceIdx) const {
+    return annotation.numWords(sentenceIdx);
+  }
 
   /// Returns a string_view representing wordIdx in sentenceIdx
   string_view word(size_t sentenceIdx, size_t wordIdx) const {
@@ -172,7 +177,9 @@ struct AnnotatedText {
   }
 
   /// Returns a string_view representing sentence corresponding to sentenceIdx.
-  string_view sentence(size_t sentenceIdx) const { return asStringView(annotation.sentence(sentenceIdx)); }
+  string_view sentence(size_t sentenceIdx) const {
+    return asStringView(annotation.sentence(sentenceIdx));
+  }
 
   /// Returns the string_view of the gap between two sentences in the container.
   ///
@@ -184,21 +191,27 @@ struct AnnotatedText {
   /// * For `i = N`, the gap between the last (N-1th) sentence and end of
   ///   text.
   /// @param sentenceIdx: Can be between `[0, numSentences()]`.
-  string_view gap(size_t sentenceIdx) const { return asStringView(annotation.gap(sentenceIdx)); }
+  string_view gap(size_t sentenceIdx) const {
+    return asStringView(annotation.gap(sentenceIdx));
+  }
 
   /// Returns a ByteRange representing wordIdx in sentenceIdx
-  ByteRange wordAsByteRange(size_t sentenceIdx, size_t wordIdx) const { return annotation.word(sentenceIdx, wordIdx); }
+  ByteRange wordAsByteRange(size_t sentenceIdx, size_t wordIdx) const {
+    return annotation.word(sentenceIdx, wordIdx);
+  }
 
   /// Returns a ByteRange representing sentence corresponding to sentenceIdx.
-  ByteRange sentenceAsByteRange(size_t sentenceIdx) const { return annotation.sentence(sentenceIdx); }
+  ByteRange sentenceAsByteRange(size_t sentenceIdx) const {
+    return annotation.sentence(sentenceIdx);
+  }
 
- private:
+private:
   string_view asStringView(const ByteRange &byteRange) const {
     return string_view(text.data() + byteRange.begin, byteRange.size());
   }
 };
 
-}  // namespace bergamot
-}  // namespace marian
+} // namespace bergamot
+} // namespace marian
 
-#endif  //  BERGAMOT_SENTENCE_RANGES_H_
+#endif //  BERGAMOT_SENTENCE_RANGES_H_

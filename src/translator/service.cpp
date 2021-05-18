@@ -1,20 +1,17 @@
 #include "service.h"
+#include "batch.h"
+#include "definitions.h"
 
 #include <string>
 #include <utility>
-
-#include "batch.h"
-#include "definitions.h"
 
 namespace marian {
 namespace bergamot {
 
 Service::Service(Ptr<Options> options, MemoryBundle memoryBundle)
-    : requestId_(0),
-      options_(options),
+    : requestId_(0), options_(options),
       vocabs_(options, std::move(memoryBundle.vocabs)),
-      text_processor_(vocabs_, options),
-      batcher_(options),
+      text_processor_(vocabs_, options), batcher_(options),
       numWorkers_(options->get<int>("cpu-threads")),
       modelMemory_(std::move(memoryBundle.model)),
       shortlistMemory_(std::move(memoryBundle.shortlist))
@@ -44,7 +41,9 @@ void Service::build_translators(Ptr<Options> options, size_t numTranslators) {
   }
 }
 
-void Service::initialize_blocking_translator() { translators_.back().initialize(); }
+void Service::initialize_blocking_translator() {
+  translators_.back().initialize();
+}
 
 void Service::blocking_translate() {
   Batch batch;
@@ -84,23 +83,31 @@ void Service::async_translate() {
     pcqueue_.ProduceSwap(batch);
   }
 }
-#else   // WASM_COMPATIBLE_SOURCE
-void Service::initialize_async_translators() { ABORT("Cannot run in async mode without multithreading."); }
+#else  // WASM_COMPATIBLE_SOURCE
+void Service::initialize_async_translators() {
+  ABORT("Cannot run in async mode without multithreading.");
+}
 
-void Service::async_translate() { ABORT("Cannot run in async mode without multithreading."); }
-#endif  // WASM_COMPATIBLE_SOURCE
+void Service::async_translate() {
+  ABORT("Cannot run in async mode without multithreading.");
+}
+#endif // WASM_COMPATIBLE_SOURCE
 
 std::future<Response> Service::translate(std::string &&input) {
   ResponseOptions responseOptions;  // Hardcode responseOptions for now
   return translate(std::move(input), responseOptions);
 }
 
-std::vector<Response> Service::translateMultiple(std::vector<std::string> &&inputs, ResponseOptions responseOptions) {
+std::vector<Response>
+Service::translateMultiple(std::vector<std::string> &&inputs,
+                           ResponseOptions responseOptions) {
+
   // We queue the individual Requests so they get compiled at batches to be
   // efficiently translated.
   std::vector<std::future<Response>> responseFutures;
   for (auto &input : inputs) {
-    std::future<Response> inputResponse = queueRequest(std::move(input), responseOptions);
+    std::future<Response> inputResponse =
+        queueRequest(std::move(input), responseOptions);
     responseFutures.push_back(std::move(inputResponse));
   }
 
@@ -119,7 +126,8 @@ std::vector<Response> Service::translateMultiple(std::vector<std::string> &&inpu
   return responses;
 }
 
-std::future<Response> Service::queueRequest(std::string &&input, ResponseOptions responseOptions) {
+std::future<Response> Service::queueRequest(std::string &&input,
+                                            ResponseOptions responseOptions) {
   Segments segments;
   AnnotatedText source(std::move(input));
   text_processor_.process(source, segments);
@@ -127,15 +135,19 @@ std::future<Response> Service::queueRequest(std::string &&input, ResponseOptions
   std::promise<Response> responsePromise;
   auto future = responsePromise.get_future();
 
-  ResponseBuilder responseBuilder(responseOptions, std::move(source), vocabs_, std::move(responsePromise));
-  Ptr<Request> request = New<Request>(requestId_++, std::move(segments), std::move(responseBuilder));
+  ResponseBuilder responseBuilder(responseOptions, std::move(source), vocabs_,
+                                  std::move(responsePromise));
+  Ptr<Request> request = New<Request>(requestId_++, std::move(segments),
+                                      std::move(responseBuilder));
 
   batcher_.addWholeRequest(request);
   return future;
 }
 
-std::future<Response> Service::translate(std::string &&input, ResponseOptions responseOptions) {
-  std::future<Response> future = queueRequest(std::move(input), responseOptions);
+std::future<Response> Service::translate(std::string &&input,
+                                         ResponseOptions responseOptions) {
+  std::future<Response> future =
+      queueRequest(std::move(input), responseOptions);
   dispatchTranslate();
   return future;
 }
@@ -151,6 +163,7 @@ void Service::dispatchTranslate() {
 Service::~Service() {
 #ifndef WASM_COMPATIBLE_SOURCE
   for (size_t workerId = 0; workerId < numWorkers_; workerId++) {
+
     Batch poison = Batch::poison();
     pcqueue_.ProduceSwap(poison);
   }
@@ -163,5 +176,5 @@ Service::~Service() {
 #endif
 }
 
-}  // namespace bergamot
-}  // namespace marian
+} // namespace bergamot
+} // namespace marian

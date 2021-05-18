@@ -1,33 +1,39 @@
 #include "text_processor.h"
-
-#include <vector>
-
-#include "annotation.h"
-#include "common/options.h"
 #include "data/types.h"
 #include "definitions.h"
+#include "annotation.h"
+
+#include "common/options.h"
+#include <vector>
 
 namespace marian {
 namespace bergamot {
 
-Segment TextProcessor::tokenize(const string_view &segment, std::vector<string_view> &wordRanges) {
+Segment TextProcessor::tokenize(const string_view &segment,
+                                std::vector<string_view> &wordRanges) {
   // vocabs_->sources().front() is invoked as we currently only support one source vocab
-  return vocabs_.sources().front()->encodeWithByteRanges(segment, wordRanges, /*addEOS=*/false, /*inference=*/true);
+  return vocabs_.sources().front()->encodeWithByteRanges(
+      segment, wordRanges, /*addEOS=*/false, /*inference=*/true);
 }
 
-TextProcessor::TextProcessor(Vocabs &vocabs, Ptr<Options> options) : vocabs_(vocabs), sentence_splitter_(options) {
+TextProcessor::TextProcessor(Vocabs &vocabs,
+                             Ptr<Options> options)
+    : vocabs_(vocabs), sentence_splitter_(options) {
+
   max_length_break_ = options->get<int>("max-length-break");
   max_length_break_ = max_length_break_ - 1;
   ABORT_IF(max_length_break_ < 0, "max-length-break cannot be < 0");
 }
 
 void TextProcessor::process(AnnotatedText &source, Segments &segments) {
+
   string_view query = string_view(source.text);
   auto sentenceStream = sentence_splitter_.createSentenceStream(query);
   std::string_view sentenceStringPiece;
 
   while (sentenceStream >> sentenceStringPiece) {
-    marian::string_view sentence(sentenceStringPiece.data(), sentenceStringPiece.size());
+    marian::string_view sentence(sentenceStringPiece.data(),
+                                 sentenceStringPiece.size());
 
     std::vector<string_view> wordRanges;
     Segment segment = tokenize(sentence, wordRanges);
@@ -42,9 +48,11 @@ void TextProcessor::process(AnnotatedText &source, Segments &segments) {
   }
 }
 
-void TextProcessor::wrap(Segment &segment, std::vector<string_view> &wordRanges, Segments &segments,
-                         AnnotatedText &source) {
-  for (size_t offset = 0; offset < segment.size(); offset += max_length_break_) {
+void TextProcessor::wrap(Segment &segment,
+                         std::vector<string_view> &wordRanges,
+                         Segments &segments, AnnotatedText &source) {
+  for (size_t offset = 0; offset < segment.size();
+       offset += max_length_break_) {
     auto start = segment.begin() + offset;
 
     size_t left = segment.size() - offset;
@@ -59,5 +67,5 @@ void TextProcessor::wrap(Segment &segment, std::vector<string_view> &wordRanges,
   }
 }
 
-}  // namespace bergamot
-}  // namespace marian
+} // namespace bergamot
+} // namespace marian

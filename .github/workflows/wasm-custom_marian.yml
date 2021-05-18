@@ -12,6 +12,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-10.15]
+        force_recache : [true, false]
 
     name: "${{ matrix.os }}"
     runs-on: ${{ matrix.os }}
@@ -19,6 +20,12 @@ jobs:
     steps:
       - name: Setup Emscripten toolchain
         uses: mymindstorm/setup-emsdk@v8
+
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update 
+          sudo apt-get install -y ccache
 
       - name: Verify Emscripten setup
         run: emcc -v
@@ -28,15 +35,56 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Generate ccache_vars
+        id: ccache_vars
+        shell: bash
+        run: |
+            echo "::set-output name=timestamp::$(date '+%Y-%m-%dT%H.%M.%S')"
+
+      - name: Setup ccache environment variables
+        run: | 
+          echo "CCACHE_COMPILERCHECK=content" >> $GITHUB_ENV 
+          echo "CCACHE_BASE_DIR=${{ github.workspace }}" >> $GITHUB_ENV
+          echo "CCACHE_DIR=${{ github.workspace }}/.ccache" >> $GITHUB_ENV
+          echo "CCACHE_COMPRESS=true" >> $GITHUB_ENV
+          echo "CCACHE_COMPRESSLEVEL=6" >> $GITHUB_ENV
+          echo "CCACHE_MAXSIZE=2G" >> $GITHUB_ENV
+
+      - name: Setup ccache recache on
+        run: |
+          echo "CCACHE_RECACHE=" >> $GITHUB_ENV 
+        if: matrix.force_recache == true
+
+      - name: Cache-op for build-cache through ccache 
+        uses: actions/cache@v2
+        with:
+          path: ${{ env.CCACHE_DIR }}
+          key: ccache-${{ matrix.name }}-${{ github.ref }}-${{ steps.ccache_vars.outputs.timestamp }}
+          restore-keys: |
+             ccache-${{ matrix.name }}-${{ github.ref }}- 
+             ccache-${{ matrix.name }}-
+
+      - name: Cache stats before build
+        run: |
+            ccache -s
+            ccache -z
+
       - name: Configure builds
         run: |
           mkdir -p build-wasm
           cd build-wasm
-          emcmake cmake -DCOMPILE_WASM=on ..
+          emcmake cmake -DCOMPILE_WASM=on \
+              -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+              ..
+
 
       - name: Compile
         working-directory: build-wasm
         run: emmake make -j2
+
+     - name: Cache stats after build
+       run: |
+           ccache -s
 
       - name: Instantiate simd wormhole
         working-directory: build-wasm

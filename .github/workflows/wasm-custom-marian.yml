@@ -1,0 +1,55 @@
+name: WASM (Custom Marian) Ubuntu
+
+on:
+  push:
+    branches: [ main, ci-sandbox ]
+  pull_request:
+    branches: [ main, ci-sandbox ]
+
+jobs:
+  build-wasm:
+    strategy: 
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-10.15]
+
+        name: "WASM (Custom Marian) ${{ matrix.os }}"
+        runs-on: ${{ matrix.os }}
+
+        steps:
+          - name: Setup Emscripten toolchain
+            uses: mymindstorm/setup-emsdk@v8
+
+          - name: Verify Emscripten setup
+            run: emcc -v
+
+          - name: Checkout
+            uses: actions/checkout@v2
+            with:
+              submodules: recursive
+
+          - name: Configure builds
+            run: |
+              mkdir -p build-wasm
+              cd build-wasm
+              emcmake cmake -DCOMPILE_WASM=on ..
+
+          - name: Compile
+            working-directory: build-wasm
+            run: emmake make -j2
+
+          - name: Instantiate simd wormhole
+            working-directory: build-wasm
+            run: bash ../wasm/patch-artifacts-enable-wormhole.sh
+
+          - name: Check artifacts
+            working-directory: build-wasm
+            run: |
+              ls -all bergamot*
+              if ls bergamot*.wasm &>/dev/null && ls bergamot*.js &>/dev/null
+              then
+                echo "Artifacts Successfully Generated"
+              else
+                echo "Failure: Artifacts Not Present"
+                exit 1
+              fi

@@ -24,9 +24,3 @@ jobs:
         - name: Run clang-format
           run:
               python3 run-clang-format.py --style file -r src wasm
-
-
-
-
-
-

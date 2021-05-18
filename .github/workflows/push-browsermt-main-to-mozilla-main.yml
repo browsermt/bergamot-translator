@@ -9,7 +9,7 @@ on:
 
 jobs:
   build:
-  if: github.repository == 'mozilla/bergamot-translator'
+    if: github.repository == 'mozilla/bergamot-translator'
     runs-on: ubuntu-latest
     name: Push browsermt/main branch to mozilla/bergamot-translator
     steps:

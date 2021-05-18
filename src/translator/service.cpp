@@ -65,17 +65,17 @@ Service::translateMultiple(std::vector<std::string> &&inputs,
     queueRequest(std::move(inputs[i]), std::move(callback), responseOptions);
   }
 
+
+  // Dispatch is called once per request so compilation of sentences from
+  // multiple Requests happen.
+  blockIfWASM();
+
   std::vector<Response> responses;
   responses.reserve(responseFutures.size());
   for(auto &responseFuture: responseFutures){
     responseFuture.wait();
     responses.push_back(std::move(responseFuture.get()));
   }
-
-  // Dispatch is called once per request so compilation of sentences from
-  // multiple Requests happen.
-  blockIfWASM();
-
 
   return responses;
 }

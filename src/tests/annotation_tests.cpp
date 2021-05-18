@@ -23,9 +23,6 @@ TEST_CASE("Test Annotation API with random sentences") {
   std::mt19937 randomIntGen_;
   randomIntGen_.seed(42);
 
-  AnnotatedText testAnnotation; // This the container we add through API and
-                                // check if the access is correct.
-
   // External book-keeping so we have ground truths. Each element represents a
   // sentence.
 
@@ -45,7 +42,7 @@ TEST_CASE("Test Annotation API with random sentences") {
   //
   //     4-0 4-1 4-2 4-3
   //
-  // Words are separated by space units.
+  // Tokens are contiguous because that's how SentencePiece works.
   //
   // Below, we accumulate the text with intended structure as above, and
   // ground-truth tables populated to be aware of the ByteRanges where they are
@@ -53,9 +50,10 @@ TEST_CASE("Test Annotation API with random sentences") {
   if (debug) {
     std::cout << "Preparing text and ground truth-tables" << std::endl;
   }
+  std::string text;
   for (size_t idx = 0; idx < sentences; idx++) {
     if (idx != 0)
-      testAnnotation.text += "\n";
+      text += "\n";
 
     // Words can be zero, we need to support empty word sentences as well.
     size_t numWords = randomIntGen_() % maxWords;
@@ -65,23 +63,16 @@ TEST_CASE("Test Annotation API with random sentences") {
 
     // For empty sentence, we expect it to be empty and marked in position where
     // the existing string is if needed to be pointed out.
-    size_t before = testAnnotation.text.size() - 1;
+    size_t before = text.size() - 1;
     size_t sentenceBegin{before}, sentenceEnd{before};
 
     for (size_t idw = 0; idw < numWords; idw++) {
-      if (idw != 0) {
-        testAnnotation.text += " ";
-        if (debug) {
-          std::cout << " ";
-        }
-      }
-
       // Get new beginning, accounting for space above.
-      before = testAnnotation.text.size();
+      before = text.size();
 
       // Add the word
       std::string word = std::to_string(idx) + "-" + std::to_string(idw);
-      testAnnotation.text += word;
+      text += word;
 
       // Do math, before, before + new-word's size.
       wordByteRanges.push_back((ByteRange){before, before + word.size()});
@@ -105,6 +96,9 @@ TEST_CASE("Test Annotation API with random sentences") {
     groundTruthSentences.push_back((ByteRange){sentenceBegin, sentenceEnd});
   }
 
+  AnnotatedText testAnnotation(std::move(text)); // This the container we add through API and
+                                                 // check if the access is correct.
+
   // We prepare string_views now with the known ByteRanges and use the
   // string_view based AnnotatedText.addSentence(...) API to add sentences to
   // transparently convert from string_views to ByteRanges, rebasing/working out
@@ -116,6 +110,7 @@ TEST_CASE("Test Annotation API with random sentences") {
   }
 
   std::vector<std::vector<marian::string_view>> wordStringViews;
+  std::vector<ByteRange>::const_iterator sentence_iter = groundTruthSentences.begin();
   for (auto &sentence : groundTruthWords) {
     std::vector<marian::string_view> wordByteRanges;
     bool first{true};
@@ -132,7 +127,8 @@ TEST_CASE("Test Annotation API with random sentences") {
         std::cout << std::string(wordView);
       }
     }
-    testAnnotation.addSentence(wordByteRanges);
+    testAnnotation.recordExistingSentence(wordByteRanges.begin(), wordByteRanges.end(), testAnnotation.text.data() + sentence_iter->begin);
+    ++sentence_iter;
     wordStringViews.push_back(wordByteRanges);
     if (debug) {
       std::cout << std::endl;
@@ -207,7 +203,7 @@ TEST_CASE("Test Annotation API with random sentences") {
   // Sentence if the random test above does not cover it for some reason.
   int emptySentenceIdx = sentences;
   std::vector<marian::string_view> emptySentence;
-  testAnnotation.addSentence(emptySentence);
+  testAnnotation.recordExistingSentence(emptySentence.begin(), emptySentence.end(), testAnnotation.text.data() + testAnnotation.text.size());
 
   // There are no words.
   CHECK(testAnnotation.numWords(emptySentenceIdx) == 0);

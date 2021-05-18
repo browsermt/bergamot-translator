@@ -32,9 +32,9 @@ private:
   Segment tokenize(const string_view &input,
                    std::vector<string_view> &tokenRanges);
 
-  // Truncate sentence into max_input_size segments.
-  void truncate(Segment &sentence, std::vector<string_view> &tokenRanges,
-                Segments &segments, AnnotatedText &source);
+  // Wrap into sentences of at most max_length_break_ tokens and add to source.
+  void wrap(Segment &sentence, std::vector<string_view> &tokenRanges,
+            Segments &segments, AnnotatedText &source);
 
   // shorthand, used only in truncate()
   // vocabs_->sources().front() is invoked as we currently only support one source vocab

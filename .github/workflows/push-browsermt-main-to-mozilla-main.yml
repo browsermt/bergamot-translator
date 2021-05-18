@@ -10,7 +10,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-
+name: Mirror
     steps:
       - uses: actions/checkout@v2
 

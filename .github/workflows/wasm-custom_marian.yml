@@ -82,9 +82,9 @@ jobs:
         working-directory: build-wasm
         run: emmake make -j2
 
-     - name: Cache stats after build
-       run: |
-           ccache -s
+      - name: Cache stats after build
+        run: |
+            ccache -s
 
       - name: Instantiate simd wormhole
         working-directory: build-wasm

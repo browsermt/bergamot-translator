@@ -13,10 +13,6 @@
 #include "translator/scorers.h"
 #include "vocabs.h"
 
-#ifndef WASM_COMPATIBLE_SOURCE
-#include "pcqueue.h"
-#endif
-
 namespace marian {
 namespace bergamot {
 

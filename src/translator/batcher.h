@@ -7,10 +7,6 @@
 #include "definitions.h"
 #include "request.h"
 
-#ifndef WASM_COMPATIBLE_SOURCE
-#include "pcqueue.h"
-#endif
-
 #include <set>
 #include <vector>
 
@@ -26,7 +22,10 @@ public:
   void addSentenceWithPriority(RequestSentence &sentence);
   void addWholeRequest(Ptr<Request> request);
 
-  bool operator>>(Batch &batch); // alias for cleaveBatch
+  // indicate no more sentences will be added.  Does nothing here, for parity to threadsafe version.
+  void shutdown() {}
+
+  bool operator>>(Batch &batch) { return cleaveBatch(batch); }
 
 private:
   // Loads sentences with sentences compiled from (tentatively) multiple

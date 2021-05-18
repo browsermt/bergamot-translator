@@ -12,91 +12,42 @@ Service::Service(Ptr<Options> options, MemoryBundle memoryBundle)
     : requestId_(0), options_(options),
       vocabs_(options, std::move(memoryBundle.vocabs)),
       text_processor_(vocabs_, options), batcher_(options),
-      numWorkers_(options->get<int>("cpu-threads")),
+      numWorkers_(std::max<int>(1, options->get<int>("cpu-threads"))),
       modelMemory_(std::move(memoryBundle.model)),
-      shortlistMemory_(std::move(memoryBundle.shortlist))
-#ifndef WASM_COMPATIBLE_SOURCE
-      // 0 elements in PCQueue is illegal and can lead to failures. Adding a
-      // guard to have at least one entry allocated. In the single-threaded
-      // case, while initialized pcqueue_ remains unused.
-      ,
-      pcqueue_(std::max<size_t>(1, numWorkers_))
+      shortlistMemory_(std::move(memoryBundle.shortlist)) 
+#ifdef WASM_COMPATIBLE_SOURCE
+      , blocking_translator_(DeviceId(0, DeviceType::cpu), vocabs_, options_, &modelMemory_, &shortlistMemory_)
 #endif
-{
-
-  if (numWorkers_ == 0) {
-    build_translators(options, /*numTranslators=*/1);
-    initialize_blocking_translator();
-  } else {
-    build_translators(options, numWorkers_);
-    initialize_async_translators();
-  }
-}
-
-void Service::build_translators(Ptr<Options> options, size_t numTranslators) {
-  translators_.reserve(numTranslators);
-  for (size_t cpuId = 0; cpuId < numTranslators; cpuId++) {
-    marian::DeviceId deviceId(cpuId, DeviceType::cpu);
-    translators_.emplace_back(deviceId, vocabs_, options, &modelMemory_, &shortlistMemory_);
-  }
-}
-
-void Service::initialize_blocking_translator() {
-  translators_.back().initialize();
-}
-
-void Service::blocking_translate() {
-  Batch batch;
-  while (batcher_ >> batch) {
-    auto &translator = translators_.back();
-    translator.translate(batch);
-  }
-}
-
-#ifndef WASM_COMPATIBLE_SOURCE
-void Service::initialize_async_translators() {
+  {
+#ifdef WASM_COMPATIBLE_SOURCE
+    blocking_translator_.initialize();
+#else
   workers_.reserve(numWorkers_);
-
   for (size_t cpuId = 0; cpuId < numWorkers_; cpuId++) {
-    auto &translator = translators_[cpuId];
-    workers_.emplace_back([&translator, this] {
+    workers_.emplace_back([cpuId, this] {
+      marian::DeviceId deviceId(cpuId, DeviceType::cpu);
+      BatchTranslator translator(deviceId, vocabs_, options_, &modelMemory_, &shortlistMemory_);
       translator.initialize();
-
-      // Run thread mainloop
       Batch batch;
-      Histories histories;
-      while (true) {
-        pcqueue_.ConsumeSwap(batch);
-        if (batch.isPoison()) {
-          return;
-        } else {
-          translator.translate(batch);
-        }
+      // Run thread mainloop
+      while (batcher_ >> batch) {
+        translator.translate(batch);
       }
     });
   }
+#endif
 }
 
-void Service::async_translate() {
+void Service::blockIfWASM() {
+#ifdef WASM_COMPATIBLE_SOURCE
   Batch batch;
+  // There's no need to do shutdown here because it's single threaded.
   while (batcher_ >> batch) {
-    pcqueue_.ProduceSwap(batch);
+    blocking_translator_.translate(batch);
   }
-}
-#else  // WASM_COMPATIBLE_SOURCE
-void Service::initialize_async_translators() {
-  ABORT("Cannot run in async mode without multithreading.");
+#endif
 }
 
-void Service::async_translate() {
-  ABORT("Cannot run in async mode without multithreading.");
-}
-#endif // WASM_COMPATIBLE_SOURCE
-
-std::future<Response> Service::translate(std::string &&input) {
-  ResponseOptions responseOptions;  // Hardcode responseOptions for now
-  return translate(std::move(input), responseOptions);
-}
 
 std::vector<Response>
 Service::translateMultiple(std::vector<std::string> &&inputs,
@@ -113,7 +64,7 @@ Service::translateMultiple(std::vector<std::string> &&inputs,
 
   // Dispatch is called once per request so compilation of sentences from
   // multiple Requests happen.
-  dispatchTranslate();
+  blockIfWASM();
 
   // Now wait for all Requests to complete, the future to fire and return the
   // compiled Responses, we can probably return the future, but WASM quirks(?).
@@ -148,30 +99,16 @@ std::future<Response> Service::translate(std::string &&input,
                                          ResponseOptions responseOptions) {
   std::future<Response> future =
       queueRequest(std::move(input), responseOptions);
-  dispatchTranslate();
+  blockIfWASM();
   return future;
 }
 
-void Service::dispatchTranslate() {
-  if (numWorkers_ == 0) {
-    blocking_translate();
-  } else {
-    async_translate();
-  }
-}
-
 Service::~Service() {
+  batcher_.shutdown();
 #ifndef WASM_COMPATIBLE_SOURCE
-  for (size_t workerId = 0; workerId < numWorkers_; workerId++) {
-
-    Batch poison = Batch::poison();
-    pcqueue_.ProduceSwap(poison);
-  }
-
-  for (size_t workerId = 0; workerId < numWorkers_; workerId++) {
-    if (workers_[workerId].joinable()) {
-      workers_[workerId].join();
-    }
+  for (std::thread &worker : workers_) {
+    assert(worker.joinable());
+    worker.join();
   }
 #endif
 }

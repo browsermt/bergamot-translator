@@ -2,9 +2,7 @@ name: Documentation
 
 on:
   push:
-    branches: [ master, ci-sandbox ]
-  pull_request:
-    branches: [ master, ci-sandbox ]
+    branches: [ master ]
 
 jobs:
   api-documentation:

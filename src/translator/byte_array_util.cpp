@@ -1,4 +1,5 @@
 #include "byte_array_util.h"
+#include "data/shortlist.h"
 #include <stdlib.h>
 #include <iostream>
 #include <memory>
@@ -99,6 +100,8 @@ AlignedMemory getModelMemoryFromConfig(marian::Ptr<marian::Options> options){
 AlignedMemory getShortlistMemoryFromConfig(marian::Ptr<marian::Options> options){
   auto shortlist = options->get<std::vector<std::string>>("shortlist");
   ABORT_IF(shortlist.empty(), "No path to shortlist file is given.");
+  ABORT_IF(!marian::data::isBinaryShortlist(shortlist[0]),
+           "Loading non-binary shortlist file into memory is not supported");
   return loadFileToMemory(shortlist[0], 64);
 }
 
@@ -109,6 +112,8 @@ void getVocabsMemoryFromConfig(marian::Ptr<marian::Options> options,
   vocabMemories.resize(vfiles.size());
   std::unordered_map<std::string, std::shared_ptr<AlignedMemory>> vocabMap;
   for (size_t i = 0; i < vfiles.size(); ++i) {
+    ABORT_IF(marian::filesystem::Path(vfiles[i]).extension() != marian::filesystem::Path(".spm"),
+             "Loading non-SentencePiece vocab files into memory is not supported");
     auto m = vocabMap.emplace(std::make_pair(vfiles[i], std::shared_ptr<AlignedMemory>()));
     if (m.second) {
       m.first->second = std::make_shared<AlignedMemory>(loadFileToMemory(vfiles[i], 64));

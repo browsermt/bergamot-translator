@@ -1,9 +1,19 @@
 # Building marian code for bergamot
 
 This document summarizes the minimal build instructions develop for the
-marian-code powering bergamot-translator.
+marian machine translation toolkit powering bergamot-translator.
 
 ## Build Instructions
+
+Marian CPU version requires Intel MKL or OpenBLAS. Both are free, but MKL is not open-sourced. Intel MKL is strongly recommended as it is faster. On Ubuntu 16.04 and newer it can be installed from the APT repositories.
+
+```bash
+wget -qO- 'https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS-2019.PUB' | sudo apt-key add -
+sudo sh -c 'echo deb https://apt.repos.intel.com/mkl all main > /etc/apt/sources.list.d/intel-mkl.list'
+sudo apt-get update
+sudo apt-get install intel-mkl-64bit-2020.0-088
+```
+On MacOS, apple accelerate framework will be used instead of MKL/OpenBLAS.
 
 ```
 $ git clone https://github.com/browsermt/bergamot-translator
@@ -52,7 +62,7 @@ ARGS=(
         $MODEL_DIR/vocab.deen.spm # target-vocabulary
 
     # The following increases speed through one-best-decoding, shortlist and quantization.
-    --beam-size 1 --skip-cost --shortlist $MODEL_DIR/lex.s2t.gz 50 50 --int8shiftAlphaAll 
+    --beam-size 1 --skip-cost --shortlist $MODEL_DIR/lex.s2t.bin false --int8shiftAlphaAll 
 
     # Number of CPU threads (workers to launch). Parallelizes over cores and improves speed.
     # A value of 0 allows a path with no worker thread-launches and a single-thread.

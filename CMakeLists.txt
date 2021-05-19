@@ -24,6 +24,9 @@ endif()
 if(MSVC)
   add_definitions(-DUSE_SSE2=1) # Supposed to fix something in the sse_mathfun.h but not sure it does
   set(INTRINSICS "/arch:AVX2") # ARCH we're targetting on win32. @TODO variable
+
+  # Borrowed from marian
+  list(APPEND ALL_WARNINGS /WX; /W4;)
   
   set(CMAKE_CXX_FLAGS           "/EHsc /DWIN32 /D_WINDOWS /DUNICODE /D_UNICODE /D_CRT_NONSTDC_NO_WARNINGS /D_CRT_SECURE_NO_WARNINGS /bigobj")
   set(CMAKE_CXX_FLAGS_RELEASE   "${CMAKE_CXX_FLAGS} /MT /O2 ${INTRINSICS} /Zi /MP /GL /DNDEBUG")
@@ -34,6 +37,18 @@ if(MSVC)
   set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS} /NODEFAULTLIB:MSVCRT")
   set(CMAKE_EXE_LINKER_FLAGS_DEBUG   "${CMAKE_EXE_LINKER_FLAGS} /NODEFAULTLIB:MSVCRTD")
   set(CMAKE_STATIC_LINKER_FLAGS      "${CMAKE_STATIC_LINKER_FLAGS} /LTCG:incremental")
+else(MSVC)
+
+  # Borrowed from marian.
+  list(APPEND ALL_WARNINGS -Wall; -Werror; -Wextra; -Wno-unused-result; -Wno-deprecated;
+    -Wno-pragmas; -Wno-unused-parameter; -Wno-unused-function;
+    -Wno-unused-value; -Wno-unknown-pragmas; -Wno-sign-compare;
+    -Wno-missing-field-initializers;)
+  # This warning does not exist prior to gcc 5.0
+  if(CMAKE_COMPILER_IS_GNUCC AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 5.0)
+    list(APPEND ALL_WARNINGS -Wsuggest-override -Wno-int-in-bool-context)
+  endif()
+
 endif(MSVC)
 
 include(CMakeDependentOption)

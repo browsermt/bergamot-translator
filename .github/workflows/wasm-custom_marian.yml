@@ -12,7 +12,9 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-10.15]
-        force_recache : [true, false]
+        cmake_additional_args:
+            - '-DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache'
+            - ''
 
     name: ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
@@ -30,8 +32,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-            brew update
-            brew install ccache
+            brew update && brew install ccache
         if: matrix.os == 'macos-10.15'
 
       - name: Verify Emscripten setup
@@ -80,10 +81,7 @@ jobs:
         run: |
           mkdir -p build-wasm
           cd build-wasm
-          emcmake cmake -DCOMPILE_WASM=on \
-              -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
-              ..
-
+          emcmake cmake .. -DCOMPILE_WASM=on ${{ matrix.cmake_additional_args }}
 
       - name: Compile
         working-directory: build-wasm

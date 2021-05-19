@@ -12,9 +12,8 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-10.15]
-        cmake_additional_args:
-            - '-DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache'
-            - ''
+        ccache: [false, true]
+
 
     name: ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
@@ -44,13 +43,16 @@ jobs:
           submodules: recursive
 
       - name: Generate ccache_vars
+        if: ${{ matrix.ccache == true }}
         id: ccache_vars
         shell: bash
         run: |
             echo "::set-output name=timestamp::$(date '+%Y-%m-%dT%H.%M.%S')"
 
       - name: Setup ccache environment variables
+        if: ${{ matrix.ccache == true }}
         run: | 
+          echo "EM_COMPILER_WRAPPER=ccache" >> $GITHUB_ENV
           echo "CCACHE_COMPILERCHECK=content" >> $GITHUB_ENV 
           echo "CCACHE_BASE_DIR=${{ github.workspace }}" >> $GITHUB_ENV
           echo "CCACHE_DIR=${{ github.workspace }}/.ccache" >> $GITHUB_ENV
@@ -58,12 +60,9 @@ jobs:
           echo "CCACHE_COMPRESSLEVEL=6" >> $GITHUB_ENV
           echo "CCACHE_MAXSIZE=2G" >> $GITHUB_ENV
 
-      - name: Setup ccache recache on
-        run: |
-          echo "CCACHE_RECACHE=" >> $GITHUB_ENV 
-        if: matrix.force_recache == true
 
       - name: Cache-op for build-cache through ccache 
+        if: ${{ matrix.ccache == true }}
         uses: actions/cache@v2
         with:
           path: ${{ env.CCACHE_DIR }}
@@ -73,6 +72,7 @@ jobs:
              ccache-${{ matrix.os }}-
 
       - name: Cache stats before build
+        if: ${{ matrix.ccache == true }}
         run: |
             ccache -s
             ccache -z
@@ -88,6 +88,7 @@ jobs:
         run: emmake make -j2
 
       - name: Cache stats after build
+        if: ${{ matrix.ccache == true }}
         run: |
             ccache -s
 

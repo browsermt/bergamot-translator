@@ -2,15 +2,16 @@
 #define SRC_BERGAMOT_SERVICE_H_
 
 #include "batch_translator.h"
-#include "batcher.h"
 #include "data/types.h"
 #include "response.h"
 #include "response_builder.h"
 #include "text_processor.h"
+#include "threadsafe_batcher.h"
 #include "translator/parser.h"
+#include "vocabs.h"
 
 #ifndef WASM_COMPATIBLE_SOURCE
-#include "pcqueue.h"
+#include <thread>
 #endif
 
 #include <queue>
@@ -54,63 +55,33 @@ namespace bergamot {
 /// // Do things with response.
 /// ```
 ///
-/// Optionally Service can be initialized by also passing model memory for
-/// purposes of efficiency (which defaults to nullpointer and then reads from
+/// Optionally Service can be initialized by also passing bytearray memories
+/// for purposes of efficiency (which defaults to empty and then reads from
 /// file supplied through config).
 ///
 class Service {
 
 public:
+  /// Construct Service from Marian options. If memoryBundle is empty, Service is
+  /// initialized from file-based loading. Otherwise, Service is initialized from
+  /// the given bytearray memories.
   /// @param options Marian options object
-  /// @param modelMemory byte array (aligned to 256!!!) that contains the bytes
-  /// of a model.bin.
-  /// @param shortlistMemory byte array of shortlist (aligned to 64)
-  /// @param vocabMemories vector of vocabulary memories (aligned to 64)
-  explicit Service(Ptr<Options> options, AlignedMemory modelMemory,
-                   AlignedMemory shortlistMemory,
-                   std::vector<std::shared_ptr<AlignedMemory>> vocabMemories);
+  /// @param memoryBundle holds all byte-array memories. Can be a set/subset of
+  /// model, shortlist, vocabs and ssplitPrefixFile bytes. Optional.
+  explicit Service(Ptr<Options> options, MemoryBundle memoryBundle={});
 
-  /// Construct Service purely from Options. This expects options which
-  /// marian-decoder expects to be set for loading model shortlist and
-  /// vocabularies from files in addition to parameters that set unset desired
-  /// features (e.g: alignments, quality-scores).
-  ///
-  /// This is equivalent to a call to:
-  /// ```cpp
-  ///    Service(options, AlignedMemory(), AlignedMemory(), {})
-  /// ```
-  /// wherein empty memory is passed and internal flow defaults to file-based
-  /// model, shortlist loading. AlignedMemory() corresponds to empty memory
-  explicit Service(Ptr<Options> options)
-      : Service(options, AlignedMemory(), AlignedMemory(), {}) {}
-
-  /// Construct Service from a string configuration.
-  /// @param [in] config string parsable as YAML expected to adhere with marian
-  /// config
-  /// @param [in] modelMemory byte array (aligned to 256!!!) that contains the
-  /// bytes of a model.bin. Optional. AlignedMemory() corresponds to empty memory
-  /// @param [in] shortlistMemory byte array of shortlist (aligned to 64). Optional.
-  /// @param [in] vocabMemories vector of vocabulary memories (aligned to 64). Optional.
-  /// If two vocabularies are the same (based on the filenames), two entries (shared
-  /// pointers) will be generated which share the same AlignedMemory object.
-  explicit Service(const std::string &config,
-                   AlignedMemory modelMemory = AlignedMemory(),
-                   AlignedMemory shortlistMemory = AlignedMemory(),
-                   std::vector<std::shared_ptr<AlignedMemory>> vocabsMemories = {})
-      : Service(parseOptions(config, /*validate=*/false),
-                std::move(modelMemory),
-                std::move(shortlistMemory),
-                std::move(vocabsMemories)) {}
+  /// Construct Service from a string configuration. If memoryBundle is empty, Service is
+  /// initialized from file-based loading. Otherwise, Service is initialized from
+  /// the given bytearray memories.
+  /// @param [in] config string parsable as YAML expected to adhere with marian config
+  /// @param [in] memoryBundle holds all byte-array memories. Can be a set/subset of
+  /// model, shortlist, vocabs and ssplitPrefixFile bytes. Optional.
+  explicit Service(const std::string &config, MemoryBundle memoryBundle={})
+      : Service(parseOptions(config, /*validate=*/false), std::move(memoryBundle)) {}
 
   /// Explicit destructor to clean up after any threads initialized in
   /// asynchronous operation mode.
   ~Service();
-
-  /// To stay efficient and to refer to the string for alignments, expects
-  /// ownership be moved through `std::move(..)`
-  ///
-  ///  @param [in] source: rvalue reference of string to be translated.
-  std::future<Response> translate(std::string &&source);
 
   /// Translate an input, providing Options to construct Response. This is
   /// useful when one has to set/unset alignments or quality in the Response to
@@ -121,7 +92,7 @@ public:
   /// some member in the Response, also specify any additional configurable
   /// parameters.
   std::future<Response> translate(std::string &&source,
-                                  ResponseOptions options);
+                                  ResponseOptions options = ResponseOptions());
 
   /// Translate multiple text-blobs in a single *blocking* API call, providing
   /// ResponseOptions which applies across all text-blobs dictating how to
@@ -139,7 +110,6 @@ public:
   /// @param [in] translationRequest: ResponseOptions indicating whether or not
   /// to include some member in the Response, also specify any additional
   /// configurable parameters.
-
   std::vector<Response>
   translateMultiple(std::vector<std::string> &&source,
                     ResponseOptions responseOptions);
@@ -157,24 +127,11 @@ private:
   /// Dispatch call to translate after inserting in queue
   void dispatchTranslate();
 
-  /// Build numTranslators number of translators with options from options
-  void build_translators(Ptr<Options> options, size_t numTranslators);
-  /// Initializes a blocking translator without using std::thread
-  void initialize_blocking_translator();
   /// Translates through direct interaction between batcher_ and translators_
-  void blocking_translate();
-
-  /// Launches multiple workers of translators using std::thread
-  /// Reduces to ABORT if called when not compiled WITH_PTHREAD
-  void initialize_async_translators();
-  /// Async translate produces to a producer-consumer queue as batches are
-  /// generated by Batcher. In another thread, the translators consume from
-  /// producer-consumer queue.
-  /// Reduces to ABORT if called when not compiled WITH_PTHREAD
-  void async_translate();
+  void blockIfWASM();
 
   /// Number of workers to launch.
-  size_t numWorkers_; // ORDER DEPENDENCY (pcqueue_)
+  size_t numWorkers_;
 
   /// Options object holding the options Service was instantiated with.
   Ptr<Options> options_;
@@ -184,18 +141,12 @@ private:
   /// Shortlist memory passed as bytes.
   AlignedMemory shortlistMemory_; // ORDER DEPENDENCY (translators_)
 
-  /// Holds instances of batch translators, just one in case
-  /// of single-threaded application, numWorkers_ in case of multithreaded
-  /// setting.
-  std::vector<BatchTranslator>
-      translators_; // ORDER DEPENDENCY (modelMemory_, shortlistMemory_)
-
   /// Stores requestId of active request. Used to establish
   /// ordering among requests and logging/book-keeping.
 
   size_t requestId_;
   /// Store vocabs representing source and target.
-  std::vector<Ptr<Vocab const>> vocabs_; // ORDER DEPENDENCY (text_processor_)
+  Vocabs vocabs_; // ORDER DEPENDENCY (text_processor_)
 
   /// TextProcesser takes a blob of text and converts into format consumable by
   /// the batch-translator and annotates sentences and words.
@@ -203,12 +154,13 @@ private:
 
   /// Batcher handles generation of batches from a request, subject to
   /// packing-efficiency and priority optimization heuristics.
-  Batcher batcher_;
+  ThreadsafeBatcher batcher_;
 
   // The following constructs are available providing full capabilities on a non
   // WASM platform, where one does not have to hide threads.
-#ifndef WASM_COMPATIBLE_SOURCE
-  PCQueue<Batch> pcqueue_; // ORDER DEPENDENCY (numWorkers_)
+#ifdef WASM_COMPATIBLE_SOURCE
+  BatchTranslator blocking_translator_; // ORDER DEPENDENCY (modelMemory_, shortlistMemory_)
+#else
   std::vector<std::thread> workers_;
 #endif // WASM_COMPATIBLE_SOURCE
 };

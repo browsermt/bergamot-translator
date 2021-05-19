@@ -88,12 +88,14 @@ public:
   /// save compute spent in constructing these objects.
   ///
   /// @param [in] source: rvalue reference of the string to be translated
+  /// @param [in] callback: A callback function provided by the client which
+  /// accepts an rvalue of a Response. Called on successful construction of a
+  /// Response following completion of translation of source by worker threads.
   /// @param [in] responseOptions: Options indicating whether or not to include
-  /// some member in the Response, also specify any additional configurable
+  /// some member in the Response, also specify any additional configurable 
   /// parameters.
-  void translate(std::string &&source, 
-                 std::function<void(Response &&)> &&callback, 
-                 ResponseOptions options = ResponseOptions());
+  void translate(std::string &&source, std::function<void(Response &&)>
+          &&callback, ResponseOptions options = ResponseOptions());
 
   /// Translate multiple text-blobs in a single *blocking* API call, providing
   /// ResponseOptions which applies across all text-blobs dictating how to

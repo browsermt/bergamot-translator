@@ -2,6 +2,10 @@
 *.swp
 *.swo
 
+# Config files from CMake
+src/translator/project_version.h
+wasm/project_version.js
+
 # CMake
 CMakeLists.txt.user
 CMakeCache.txt

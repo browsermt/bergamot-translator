@@ -24,10 +24,12 @@ class ResponseBuilder {
   /// or not in the response and any additional configurable parameters.
   /// @param [in] vocabs: marian vocab object (used in decoding)
   /// @param [in] callback: callback with operates on the constructed Response.
-  ResponseBuilder(ResponseOptions responseOptions, AnnotatedText &&source,
-                  Vocabs &vocabs, std::function<void(Response &&)> callback)
-      : responseOptions_(responseOptions), source_(std::move(source)),
-        vocabs_(vocabs), callback_(std::move(callback)) {}
+  ResponseBuilder(ResponseOptions responseOptions, AnnotatedText &&source, Vocabs &vocabs,
+                  std::function<void(Response &&)> callback)
+      : responseOptions_(responseOptions),
+        source_(std::move(source)),
+        vocabs_(vocabs),
+        callback_(std::move(callback)) {}
 
   /// Constructs and sets the promise of a Response object from obtained
   /// histories after translating.
@@ -79,11 +81,10 @@ class ResponseBuilder {
   // Data members are context/curried args for the functor.
 
   ResponseOptions responseOptions_;
-  const Vocabs &vocabs_; // vocabs are required for decoding
-                         // and any source validation checks.
-  std::function<void(Response &&)>
-      callback_; //  To be set when callback triggered and
-                 //  after Response constructed.
+  const Vocabs &vocabs_;                       // vocabs are required for decoding
+                                               // and any source validation checks.
+  std::function<void(Response &&)> callback_;  //  To be set when callback triggered and
+                                               //  after Response constructed.
   AnnotatedText source_;
 };
 }  // namespace bergamot

@@ -56,15 +56,14 @@ std::vector<Response> Service::translateMultiple(std::vector<std::string> &&inpu
   // We queue the individual Requests so they get compiled at batches to be
   // efficiently translated.
   std::vector<std::future<Response>> responseFutures;
-  for (size_t i = 0;  i < inputs.size(); i++) {
+  for (size_t i = 0; i < inputs.size(); i++) {
     // https://stackoverflow.com/a/33437008/4565794
     // @jerinphilip is not proud of this.
     Ptr<std::promise<Response>> responsePromise = New<std::promise<Response>>();
     responseFutures.push_back(std::move(responsePromise->get_future()));
-    auto callback = [responsePromise](Response &&response){  responsePromise->set_value(std::move(response)); };
+    auto callback = [responsePromise](Response &&response) { responsePromise->set_value(std::move(response)); };
     queueRequest(std::move(inputs[i]), std::move(callback), responseOptions);
   }
-
 
   // Dispatch is called once per request so compilation of sentences from
   // multiple Requests happen.
@@ -72,7 +71,7 @@ std::vector<Response> Service::translateMultiple(std::vector<std::string> &&inpu
 
   std::vector<Response> responses;
   responses.reserve(responseFutures.size());
-  for(auto &responseFuture: responseFutures){
+  for (auto &responseFuture : responseFutures) {
     responseFuture.wait();
     responses.push_back(std::move(responseFuture.get()));
   }
@@ -80,23 +79,20 @@ std::vector<Response> Service::translateMultiple(std::vector<std::string> &&inpu
   return responses;
 }
 
-void Service::queueRequest(std::string &&input,
-                           std::function<void(Response &&)> &&callback, 
-                           ResponseOptions responseOptions){
+void Service::queueRequest(std::string &&input, std::function<void(Response &&)> &&callback,
+                           ResponseOptions responseOptions) {
   Segments segments;
   AnnotatedText source(std::move(input));
   text_processor_.process(source, segments);
 
-  ResponseBuilder responseBuilder(responseOptions, std::move(source), vocabs_,
-                                  std::move(callback));
-  Ptr<Request> request = New<Request>(requestId_++, std::move(segments),
-                                      std::move(responseBuilder));
+  ResponseBuilder responseBuilder(responseOptions, std::move(source), vocabs_, std::move(callback));
+  Ptr<Request> request = New<Request>(requestId_++, std::move(segments), std::move(responseBuilder));
 
   batcher_.addWholeRequest(request);
 }
 
 void Service::translate(std::string &&input, std::function<void(Response &&)> &&callback,
-                                         ResponseOptions responseOptions) {
+                        ResponseOptions responseOptions) {
   queueRequest(std::move(input), std::move(callback), responseOptions);
   blockIfWASM();
 }

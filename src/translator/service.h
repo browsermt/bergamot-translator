@@ -91,10 +91,10 @@ class Service {
   /// accepts an rvalue of a Response. Called on successful construction of a
   /// Response following completion of translation of source by worker threads.
   /// @param [in] responseOptions: Options indicating whether or not to include
-  /// some member in the Response, also specify any additional configurable 
+  /// some member in the Response, also specify any additional configurable
   /// parameters.
-  void translate(std::string &&source, std::function<void(Response &&)>
-          &&callback, ResponseOptions options = ResponseOptions());
+  void translate(std::string &&source, std::function<void(Response &&)> &&callback,
+                 ResponseOptions options = ResponseOptions());
 
   /// Translate multiple text-blobs in a single *blocking* API call, providing
   /// ResponseOptions which applies across all text-blobs dictating how to
@@ -119,9 +119,7 @@ class Service {
 
  private:
   /// Queue an input for translation.
-  void queueRequest(std::string &&input,
-                    std::function<void(Response&&)> &&callback,
-                    ResponseOptions responseOptions);
+  void queueRequest(std::string &&input, std::function<void(Response &&)> &&callback, ResponseOptions responseOptions);
 
   /// Dispatch call to translate after inserting in queue
   void dispatchTranslate();

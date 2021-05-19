@@ -37,7 +37,7 @@ jobs:
 
       - name: Build documentation
         working-directory: ./doc
-        run: make html
+        run: sphinx-quickstart && make html
 
       # This artifact contains the HTML output of Sphinx only.
       # With index.html at the root of the produced zip file.

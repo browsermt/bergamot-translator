@@ -11,10 +11,7 @@
 #include "request.h"
 #include "translator/history.h"
 #include "translator/scorers.h"
-
-#ifndef WASM_COMPATIBLE_SOURCE
-#include "pcqueue.h"
-#endif
+#include "vocabs.h"
 
 namespace marian {
 namespace bergamot {
@@ -34,7 +31,7 @@ public:
    * @param modelMemory byte array (aligned to 256!!!) that contains the bytes of a model.bin. Provide a nullptr if not used.
    * @param shortlistMemory byte array of shortlist (aligned to 64)
    */
-  explicit BatchTranslator(DeviceId const device, std::vector<Ptr<Vocab const>> &vocabs,
+  explicit BatchTranslator(DeviceId const device, Vocabs &vocabs,
                   Ptr<Options> options, const AlignedMemory* modelMemory, const AlignedMemory* shortlistMemory);
 
   // convenience function for logging. TODO(jerin)
@@ -45,7 +42,7 @@ public:
 private:
   Ptr<Options> options_;
   DeviceId device_;
-  std::vector<Ptr<Vocab const>> *vocabs_;
+  const Vocabs&  vocabs_;
   Ptr<ExpressionGraph> graph_;
   std::vector<Ptr<Scorer>> scorers_;
   Ptr<data::ShortlistGenerator const> slgen_;

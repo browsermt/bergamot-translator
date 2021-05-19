@@ -45,7 +45,7 @@ else(MSVC)
       -Wno-pragmas; -Wno-unknown-pragmas; -Wno-sign-compare; -Wno-missing-field-initializers;)
   # This warning does not exist prior to gcc 5.0
   if(CMAKE_COMPILER_IS_GNUCC AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 5.0)
-    list(APPEND BERGAMOT_WARNINGS -Wno-suggest-override -Wno-int-in-bool-context)
+    list(APPEND BERGAMOT_WARNINGS -Wsuggest-override -Wno-int-in-bool-context)
   endif()
 
   # To prevent overzealous std::move(...) usage

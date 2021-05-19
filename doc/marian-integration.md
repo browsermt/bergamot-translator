@@ -97,8 +97,9 @@ ARGS=(
 
 This repository contains C++ and JS source-files, of which C++ should adhere to
 the clang-format based style guidelines. You may configure your development
-environment to use the `.clang-format` and `.clang-format-ignore` files with
-your preferred choice of editor/tooling.
+environment to use the `.clang-format` and `.clang-format-ignore` files
+provided in the root folder of this repository with your preferred choice of
+editor/tooling.
 
 One simple and recommended method to get your code to adhere to this style is
 to issue the following command in the source-root of this repository, which is

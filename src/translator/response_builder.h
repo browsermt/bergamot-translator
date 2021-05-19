@@ -19,7 +19,7 @@ namespace bergamot {
 /// paragraph).
 
 class ResponseBuilder {
-public:
+ public:
   /// @param [in] responseOptions: ResponseOptions, indicating what to include
   /// or not in the response and any additional configurable parameters.
   /// @param [in] vocabs: marian vocab object (used in decoding)
@@ -37,8 +37,7 @@ public:
     // TODO(jerinphilip) load ResponseOptions into options and turn build
     // functions on or off.
     // responseOptions_ is unused, but we can try something here.
-    ABORT_IF(source_.numSentences() != histories.size(),
-             "Mismatch in source and translated sentences");
+    ABORT_IF(source_.numSentences() != histories.size(), "Mismatch in source and translated sentences");
     Response response;
 
     // Move source_ into response.
@@ -59,7 +58,7 @@ public:
     callback_(std::move(response));
   }
 
-private:
+ private:
   /// Builds qualityScores from histories and writes to response. expects
   /// buildTranslatedText to be run before to be able to obtain target text and
   /// subword information.
@@ -87,7 +86,7 @@ private:
                  //  after Response constructed.
   AnnotatedText source_;
 };
-} // namespace bergamot
-} // namespace marian
+}  // namespace bergamot
+}  // namespace marian
 
-#endif //  SRC_BERGAMOT_RESPONSE_BUILDER_H_
+#endif  //  SRC_BERGAMOT_RESPONSE_BUILDER_H_

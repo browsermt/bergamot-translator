@@ -20,39 +20,39 @@ typedef Batcher ThreadsafeBatcher;
 #else
 
 class ThreadsafeBatcher {
-  public:
-    explicit ThreadsafeBatcher(Ptr<Options> options);
+ public:
+  explicit ThreadsafeBatcher(Ptr<Options> options);
 
-    ~ThreadsafeBatcher();
+  ~ThreadsafeBatcher();
 
-    // Add sentences to be translated by calling these (see Batcher).  When
-    // done, call shutdown.
-    void addSentenceWithPriority(RequestSentence &sentence);
-    void addWholeRequest(Ptr<Request> request);
-    void shutdown();
+  // Add sentences to be translated by calling these (see Batcher).  When
+  // done, call shutdown.
+  void addSentenceWithPriority(RequestSentence &sentence);
+  void addWholeRequest(Ptr<Request> request);
+  void shutdown();
 
-    // Get a batch out of the batcher.  Return false to shutdown worker.
-    bool operator>>(Batch &batch);
+  // Get a batch out of the batcher.  Return false to shutdown worker.
+  bool operator>>(Batch &batch);
 
-  private:
-    Batcher backend_;
+ private:
+  Batcher backend_;
 
-    // Number of sentences in backend_;
-    size_t enqueued_;
+  // Number of sentences in backend_;
+  size_t enqueued_;
 
-    // Are we shutting down?
-    bool shutdown_;
+  // Are we shutting down?
+  bool shutdown_;
 
-    // Lock on this object.
-    std::mutex mutex_;
+  // Lock on this object.
+  std::mutex mutex_;
 
-    // Signaled when there are sentences to translate.
-    std::condition_variable work_;
+  // Signaled when there are sentences to translate.
+  std::condition_variable work_;
 };
 
 #endif
 
-} // namespace bergamot
-} // namespace marian
+}  // namespace bergamot
+}  // namespace marian
 
-#endif // SRC_BERGAMOT_THREADSAFE_BATCHER_H_
+#endif  // SRC_BERGAMOT_THREADSAFE_BATCHER_H_

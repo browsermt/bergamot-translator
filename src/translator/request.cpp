@@ -1,23 +1,22 @@
 #include "request.h"
-#include "definitions.h"
-#include "response.h"
-#include "annotation.h"
-
-#include "common/logging.h"
 
 #include <string>
+
+#include "annotation.h"
+#include "common/logging.h"
+#include "definitions.h"
+#include "response.h"
 
 namespace marian {
 namespace bergamot {
 
 // -----------------------------------------------------------------
-Request::Request(size_t Id, Segments &&segments,
-                 ResponseBuilder &&responseBuilder)
-    : Id_(Id), segments_(std::move(segments)),
+Request::Request(size_t Id, Segments &&segments, ResponseBuilder &&responseBuilder)
+    : Id_(Id),
+      segments_(std::move(segments)),
       responseBuilder_(std::move(responseBuilder))
 
 {
-
   counter_ = segments_.size();
   histories_.resize(segments_.size(), nullptr);
 
@@ -31,9 +30,7 @@ Request::Request(size_t Id, Segments &&segments,
 
 size_t Request::numSegments() const { return segments_.size(); }
 
-size_t Request::segmentTokens(size_t index) const {
-  return (segments_[index].size());
-}
+size_t Request::segmentTokens(size_t index) const { return (segments_[index].size()); }
 
 Segment Request::getSegment(size_t index) const { return segments_[index]; }
 
@@ -56,12 +53,9 @@ bool Request::operator<(const Request &b) const {
 
 // ------------------------------------------------------------------
 
-RequestSentence::RequestSentence(size_t index, Ptr<Request> request)
-    : index_(index), request_(request) {}
+RequestSentence::RequestSentence(size_t index, Ptr<Request> request) : index_(index), request_(request) {}
 
-size_t RequestSentence::numTokens() const {
-  return (request_->segmentTokens(index_));
-}
+size_t RequestSentence::numTokens() const { return (request_->segmentTokens(index_)); }
 
 void RequestSentence::completeSentence(Ptr<History> history) {
   // Relays completeSentence into request's processHistory, using index
@@ -69,9 +63,7 @@ void RequestSentence::completeSentence(Ptr<History> history) {
   request_->processHistory(index_, history);
 }
 
-Segment RequestSentence::getUnderlyingSegment() const {
-  return request_->getSegment(index_);
-}
+Segment RequestSentence::getUnderlyingSegment() const { return request_->getSegment(index_); }
 
 bool operator<(const RequestSentence &a, const RequestSentence &b) {
   // Operator overload for usage in priority-queue / set.
@@ -83,5 +75,5 @@ bool operator<(const RequestSentence &a, const RequestSentence &b) {
 
 // ----------------------------------------------------------------------
 
-} // namespace bergamot
-} // namespace marian
+}  // namespace bergamot
+}  // namespace marian

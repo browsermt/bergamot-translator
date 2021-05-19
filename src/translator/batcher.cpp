@@ -1,7 +1,9 @@
 #include "batcher.h"
+
+#include <cassert>
+
 #include "batch.h"
 #include "common/logging.h"
-#include <cassert>
 
 namespace marian {
 namespace bergamot {
@@ -55,5 +57,5 @@ void Batcher::addWholeRequest(Ptr<Request> request) {
   }
 }
 
-} // namespace bergamot
-} // namespace marian
+}  // namespace bergamot
+}  // namespace marian

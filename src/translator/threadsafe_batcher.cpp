@@ -6,12 +6,9 @@
 namespace marian {
 namespace bergamot {
 
-ThreadsafeBatcher::ThreadsafeBatcher(Ptr<Options> options)
-  : backend_(options), enqueued_(0), shutdown_(false) {}
+ThreadsafeBatcher::ThreadsafeBatcher(Ptr<Options> options) : backend_(options), enqueued_(0), shutdown_(false) {}
 
-ThreadsafeBatcher::~ThreadsafeBatcher() {
-  shutdown();
-}
+ThreadsafeBatcher::~ThreadsafeBatcher() { shutdown(); }
 
 void ThreadsafeBatcher::addSentenceWithPriority(RequestSentence &sentence) {
   std::unique_lock<std::mutex> lock(mutex_);
@@ -37,13 +34,13 @@ void ThreadsafeBatcher::shutdown() {
 
 bool ThreadsafeBatcher::operator>>(Batch &batch) {
   std::unique_lock<std::mutex> lock(mutex_);
-  work_.wait(lock, [this](){ return enqueued_ || shutdown_; });
+  work_.wait(lock, [this]() { return enqueued_ || shutdown_; });
   bool ret = backend_ >> batch;
   assert(ret || shutdown_);
   enqueued_ -= batch.size();
   return ret;
 }
 
-} // namespace bergamot
-} // namespace marian
-#endif // WASM_COMPATIBLE_SOURCE
+}  // namespace bergamot
+}  // namespace marian
+#endif  // WASM_COMPATIBLE_SOURCE

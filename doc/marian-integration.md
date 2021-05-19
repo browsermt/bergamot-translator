@@ -83,3 +83,18 @@ ARGS=(
 </summary>
 </details>
 
+## Coding Style
+
+This repository contains C++ and JS source-files, of which C++ should adhere to
+the clang-format based style guidelines. You may configure your development
+environment to use the `.clang-format` and `.clang-format-ignore` files with
+your preferred choice of editor/tooling.
+
+One simple and recommended method to get your code to adhere to this style is
+to issue the following command in the source-root of this repository, which is
+used to also check for the coding style in the CI.
+
+```bash
+python3 run-clang-format.py -i --style file -r src wasm
+```
+

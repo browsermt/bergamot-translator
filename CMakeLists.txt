@@ -26,7 +26,7 @@ if(MSVC)
   set(INTRINSICS "/arch:AVX2") # ARCH we're targetting on win32. @TODO variable
 
   # Borrowed from marian
-  list(APPEND ALL_WARNINGS /WX; /W4;)
+  list(APPEND BERGAMOT_WARNINGS /WX; /W4;)
   
   set(CMAKE_CXX_FLAGS           "/EHsc /DWIN32 /D_WINDOWS /DUNICODE /D_UNICODE /D_CRT_NONSTDC_NO_WARNINGS /D_CRT_SECURE_NO_WARNINGS /bigobj")
   set(CMAKE_CXX_FLAGS_RELEASE   "${CMAKE_CXX_FLAGS} /MT /O2 ${INTRINSICS} /Zi /MP /GL /DNDEBUG")
@@ -40,15 +40,22 @@ if(MSVC)
 else(MSVC)
 
   # Borrowed from marian.
-  list(APPEND ALL_WARNINGS -Wall; -Werror; -Wextra; -Wno-unused-result; -Wno-deprecated;
-    -Wno-pragmas; -Wno-unused-parameter; -Wno-unused-function;
-    -Wno-unused-value; -Wno-unknown-pragmas; -Wno-sign-compare;
-    -Wno-missing-field-initializers;)
+  list(APPEND BERGAMOT_WARNINGS -Wall; -Wextra; -Werror
+      -Wunused-result; -Wdeprecated;
+      -Wno-pragmas; -Wno-unknown-pragmas; -Wno-sign-compare; -Wno-missing-field-initializers;)
   # This warning does not exist prior to gcc 5.0
   if(CMAKE_COMPILER_IS_GNUCC AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 5.0)
-    list(APPEND ALL_WARNINGS -Wsuggest-override -Wno-int-in-bool-context)
+    list(APPEND BERGAMOT_WARNINGS -Wno-suggest-override -Wno-int-in-bool-context)
   endif()
 
+  # To prevent overzealous std::move(...) usage
+  # This warning does not exist prior to gcc 9.0
+  if(CMAKE_COMPILER_IS_GNUCC AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 9.0)
+    list(APPEND BERGAMOT_WARNINGS -Wno-pessimizing-move; -Wno-redundant-move;)
+  endif()
+
+  # Make these warnings (or corresponding no-* warnings) not errors
+  list(APPEND BERGAMOT_WARNINGS -Wno-error=unused-parameter; -Wno-error=unused-function; -Wno-error=unused-value;)
 endif(MSVC)
 
 include(CMakeDependentOption)

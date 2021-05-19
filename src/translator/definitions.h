@@ -1,10 +1,11 @@
 #ifndef SRC_BERGAMOT_DEFINITIONS_H_
 #define SRC_BERGAMOT_DEFINITIONS_H_
 
+#include <vector>
+
+#include "aligned.h"
 #include "data/types.h"
 #include "data/vocab_base.h"
-#include "aligned.h"
-#include <vector>
 
 namespace marian {
 namespace bergamot {
@@ -18,7 +19,7 @@ typedef AlignedVector<char> AlignedMemory;
 /// Memory bundle for all byte-arrays.
 /// Can be a set/subset of model, shortlist, vocabs and ssplitPrefixFile bytes.
 struct MemoryBundle {
-  AlignedMemory model{};  ///< Byte-array of model (aligned to 256)
+  AlignedMemory model{};      ///< Byte-array of model (aligned to 256)
   AlignedMemory shortlist{};  ///< Byte-array of shortlist (aligned to 64)
 
   /// Vector of vocabulary memories (aligned to 64).
@@ -30,8 +31,8 @@ struct MemoryBundle {
   AlignedMemory ssplitPrefixFile{};
 };
 
-} // namespace bergamot
-} // namespace marian
+}  // namespace bergamot
+}  // namespace marian
 
 // @TODO at the moment the usage of string_view in this repository is a hot mess and a disaster waiting to happen.
 // ssplit uses std::string_view if the compiler supports c++17, else falls back to c++11 and absl::string_view
@@ -44,10 +45,10 @@ struct MemoryBundle {
 #if defined(__GNUC__) && __GNUC__ < 6 && !defined(__clang__)
 #include <experimental/string_view>
 namespace std {
-  using string_view = std::experimental::string_view;
-} // namespace std
+using string_view = std::experimental::string_view;
+}  // namespace std
 #else
 #include <string_view>
 #endif
 
-#endif // SRC_BERGAMOT_DEFINITIONS_H_
+#endif  // SRC_BERGAMOT_DEFINITIONS_H_

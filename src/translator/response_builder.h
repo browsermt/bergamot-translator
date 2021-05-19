@@ -19,16 +19,14 @@ namespace bergamot {
 /// paragraph).
 
 class ResponseBuilder {
-public:
+ public:
   /// @param [in] responseOptions: ResponseOptions, indicating what to include
   /// or not in the response and any additional configurable parameters.
   /// @param [in] vocabs: marian vocab object (used in decoding)
   /// @param [in] promise: promise to set with the constructed Response.
-  ResponseBuilder(ResponseOptions responseOptions, AnnotatedText &&source,
-                  Vocabs &vocabs,
+  ResponseBuilder(ResponseOptions responseOptions, AnnotatedText &&source, Vocabs &vocabs,
                   std::promise<Response> &&promise)
-      : responseOptions_(responseOptions), source_(std::move(source)),
-        vocabs_(vocabs), promise_(std::move(promise)) {}
+      : responseOptions_(responseOptions), source_(std::move(source)), vocabs_(vocabs), promise_(std::move(promise)) {}
 
   /// Constructs and sets the promise of a Response object from obtained
   /// histories after translating.
@@ -38,8 +36,7 @@ public:
     // TODO(jerinphilip) load ResponseOptions into options and turn build
     // functions on or off.
     // responseOptions_ is unused, but we can try something here.
-    ABORT_IF(source_.numSentences() != histories.size(),
-             "Mismatch in source and translated sentences");
+    ABORT_IF(source_.numSentences() != histories.size(), "Mismatch in source and translated sentences");
     Response response;
 
     // Move source_ into response.
@@ -61,7 +58,7 @@ public:
     promise_.set_value(std::move(response));
   }
 
-private:
+ private:
   /// Builds qualityScores from histories and writes to response. expects
   /// buildTranslatedText to be run before to be able to obtain target text and
   /// subword information.
@@ -82,13 +79,13 @@ private:
   // Data members are context/curried args for the functor.
 
   ResponseOptions responseOptions_;
-  const Vocabs& vocabs_; // vocabs are required for decoding
-                                          // and any source validation checks.
-  std::promise<Response> promise_; //  To be set when callback triggered and
-                                   //  after Response constructed.
+  const Vocabs &vocabs_;            // vocabs are required for decoding
+                                    // and any source validation checks.
+  std::promise<Response> promise_;  //  To be set when callback triggered and
+                                    //  after Response constructed.
   AnnotatedText source_;
 };
-} // namespace bergamot
-} // namespace marian
+}  // namespace bergamot
+}  // namespace marian
 
-#endif //  SRC_BERGAMOT_RESPONSE_BUILDER_H_
+#endif  //  SRC_BERGAMOT_RESPONSE_BUILDER_H_

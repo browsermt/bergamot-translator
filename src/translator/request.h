@@ -1,19 +1,17 @@
 #ifndef SRC_BERGAMOT_REQUEST_H_
 #define SRC_BERGAMOT_REQUEST_H_
 
+#include <cassert>
+#include <future>
+#include <vector>
+
+#include "annotation.h"
+#include "common/logging.h"
+#include "data/types.h"
 #include "definitions.h"
 #include "response.h"
 #include "response_builder.h"
-#include "annotation.h"
-
-#include "common/logging.h"
-#include "data/types.h"
 #include "translator/beam_search.h"
-
-#include <cassert>
-
-#include <future>
-#include <vector>
 
 namespace marian {
 namespace bergamot {
@@ -37,7 +35,7 @@ namespace bergamot {
 /// corresponding to the Request and set value of the promise which triggers the
 /// future at client.
 class Request {
-public:
+ public:
   /// Constructs an internal representation of the Request identified by Id,
   /// processed Segments and accepts a callback (ResponseBuilder) which builds
   /// the Response upon completion of the Request.
@@ -69,7 +67,7 @@ public:
   /// compiled from requests.
   void processHistory(size_t index, Ptr<History> history);
 
-private:
+ private:
   size_t Id_;
 
   /// Multiple translation-workers can concurrently access the same Request. The
@@ -95,8 +93,7 @@ private:
 /// within Request, while batching mechanism (Batcher) compiles Batch from
 /// RequestSentence-s coming from different Requests.
 class RequestSentence {
-
-public:
+ public:
   RequestSentence(size_t, Ptr<Request>);
 
   /// Number of tokens in the segment this RequestSentence represents. Used to
@@ -112,14 +109,14 @@ public:
 
   friend bool operator<(const RequestSentence &a, const RequestSentence &b);
 
-private:
+ private:
   size_t index_;
   Ptr<Request> request_;
 };
 
 typedef std::vector<RequestSentence> RequestSentences;
 
-} // namespace bergamot
-} // namespace marian
+}  // namespace bergamot
+}  // namespace marian
 
-#endif // SRC_BERGAMOT_REQUEST_H_
+#endif  // SRC_BERGAMOT_REQUEST_H_

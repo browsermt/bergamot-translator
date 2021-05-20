@@ -17,9 +17,13 @@ jobs:
       - name: Set up Doxygen
         run: sudo apt-get install -y doxygen
 
-      - name: Get the version
-        id: get_version
-        run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\//}
+      - name: Extract tag name
+        id: tag
+        uses: actions/github-script@0.2.0
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            return context.payload.ref.replace(/\/refs\/tags\//, '');
 
       - name: Set up Python
         uses: actions/setup-python@v2
@@ -47,7 +51,7 @@ jobs:
         with:
           branch: gh-pages # The branch the action should deploy to.
           folder: './doc/build/' # The folder the action should deploy.
-          target-folder: '${{ steps.get_version.outputs.VERSION }}' 
+          target-folder: '${{ steps.tag.outputs.result }}' 
 
       # This artifact contains the HTML output of Sphinx only.
       # With index.html at the root of the produced zip file.

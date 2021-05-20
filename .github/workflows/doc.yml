@@ -19,16 +19,6 @@ jobs:
       - name: Set up Doxygen
         run: sudo apt-get install -y doxygen
 
-      # Be careful if you have a tag named main, bad idea
-      - name: Extract tag name
-        id: tag
-        uses: actions/github-script@0.2.0
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const args = context.payload.ref.split("/");
-            [refs, category, ...rest] = args;
-            return rest.join("/");
 
       - name: Set up Python
         uses: actions/setup-python@v2
@@ -50,6 +40,18 @@ jobs:
       - name: Build documentation
         working-directory: ./doc
         run: sphinx-build -b html ./ build/
+
+      # Be careful if you have a tag named main, bad idea
+      - name: Extract tag name
+        id: tag
+        uses: actions/github-script@0.2.0
+        if: ${{ github.event_name == 'push' }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const args = context.payload.ref.split("/");
+            [refs, category, ...rest] = args;
+            return rest.join("/");
 
       - name: Deploy 🚀
         uses: JamesIves/github-pages-deploy-action@4.1.3

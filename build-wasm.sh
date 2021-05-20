@@ -30,8 +30,8 @@ if [ "$EMSDK" == "" ]; then
   fi
   if [ "$EMSDK_UPDATE_REQUIRED" == "1" ]; then
     cd emsdk
-    ./emsdk install latest
-    ./emsdk activate latest
+    ./emsdk install 2.0.9
+    ./emsdk activate 2.0.9
     cd -
   fi
   source ./emsdk/emsdk_env.sh

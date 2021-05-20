@@ -26,7 +26,6 @@ inline marian::ConfigParser createConfigParser() {
   cp.addOption<bool>("--check-bytearray", "Bergamot Options",
                      "Flag holds whether to check the content of the bytearrays (true by default)", true);
 
-
   return cp;
 }
 

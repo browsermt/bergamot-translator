@@ -3,6 +3,7 @@ name: Documentation
 on:
   push:
     branches: [ $default-branch, ci-sandbox ]
+    tags: ['v[0-9]+.[0-9]+.[0-9]+']
 
 jobs:
   api-documentation:
@@ -15,6 +16,10 @@ jobs:
 
       - name: Set up Doxygen
         run: sudo apt-get install -y doxygen
+
+      - name: Get the version
+        id: get_version
+        run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\//}
 
       - name: Set up Python
         uses: actions/setup-python@v2
@@ -41,7 +46,7 @@ jobs:
         uses: JamesIves/github-pages-deploy-action@4.1.3
         with:
           branch: gh-pages # The branch the action should deploy to.
-          folder: ./doc/build/ # The folder the action should deploy.
+          folder: './doc/build/${{ steps.get_version.outputs.VERSION }}' # The folder the action should deploy.
 
       # This artifact contains the HTML output of Sphinx only.
       # With index.html at the root of the produced zip file.

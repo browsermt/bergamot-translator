@@ -24,14 +24,14 @@ int main(int argc, char **argv) {
   // Route the config string to construct marian model through TranslationModel
   marian::bergamot::Service model(config);
 
-  TranslationRequest translationRequest;
+  marian::bergamot::ResponseOptions responseOptions;
   std::vector<std::string> texts;
 
   for (std::string line; std::getline(std::cin, line);) {
     texts.emplace_back(line);
   }
 
-  auto results = model.translateMultiple(std::move(texts), translationRequest);
+  auto results = model.translateMultiple(std::move(texts), responseOptions);
 
   for (auto &result : results) {
     std::cout << result.getTranslatedText() << std::endl;

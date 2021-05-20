@@ -1,18 +1,17 @@
 #ifndef SRC_BERGAMOT_SERVICE_H_
 #define SRC_BERGAMOT_SERVICE_H_
 
-#include "TranslationRequest.h"
 #include "batch_translator.h"
-#include "batcher.h"
 #include "data/types.h"
 #include "response.h"
 #include "response_builder.h"
 #include "text_processor.h"
+#include "threadsafe_batcher.h"
 #include "translator/parser.h"
 #include "vocabs.h"
 
 #ifndef WASM_COMPATIBLE_SOURCE
-#include "pcqueue.h"
+#include <thread>
 #endif
 
 #include <queue>
@@ -61,15 +60,14 @@ namespace bergamot {
 /// file supplied through config).
 ///
 class Service {
-
-public:
+ public:
   /// Construct Service from Marian options. If memoryBundle is empty, Service is
   /// initialized from file-based loading. Otherwise, Service is initialized from
   /// the given bytearray memories.
   /// @param options Marian options object
   /// @param memoryBundle holds all byte-array memories. Can be a set/subset of
   /// model, shortlist, vocabs and ssplitPrefixFile bytes. Optional.
-  explicit Service(Ptr<Options> options, MemoryBundle memoryBundle={});
+  explicit Service(Ptr<Options> options, MemoryBundle memoryBundle = {});
 
   /// Construct Service from a string configuration. If memoryBundle is empty, Service is
   /// initialized from file-based loading. Otherwise, Service is initialized from
@@ -77,18 +75,12 @@ public:
   /// @param [in] config string parsable as YAML expected to adhere with marian config
   /// @param [in] memoryBundle holds all byte-array memories. Can be a set/subset of
   /// model, shortlist, vocabs and ssplitPrefixFile bytes. Optional.
-  explicit Service(const std::string &config, MemoryBundle memoryBundle={})
+  explicit Service(const std::string &config, MemoryBundle memoryBundle = {})
       : Service(parseOptions(config, /*validate=*/false), std::move(memoryBundle)) {}
 
   /// Explicit destructor to clean up after any threads initialized in
   /// asynchronous operation mode.
   ~Service();
-
-  /// To stay efficient and to refer to the string for alignments, expects
-  /// ownership be moved through `std::move(..)`
-  ///
-  ///  @param [in] source: rvalue reference of string to be translated.
-  std::future<Response> translate(std::string &&source);
 
   /// Translate an input, providing Options to construct Response. This is
   /// useful when one has to set/unset alignments or quality in the Response to
@@ -98,12 +90,11 @@ public:
   /// @param [in] responseOptions: Options indicating whether or not to include
   /// some member in the Response, also specify any additional configurable
   /// parameters.
-  std::future<Response> translate(std::string &&source,
-                                  ResponseOptions options);
+  std::future<Response> translate(std::string &&source, ResponseOptions options = ResponseOptions());
 
   /// Translate multiple text-blobs in a single *blocking* API call, providing
-  /// TranslationRequest which applies across all text-blobs dictating how to
-  /// construct Response. TranslationRequest can be used to enable/disable
+  /// ResponseOptions which applies across all text-blobs dictating how to
+  /// construct Response. ResponseOptions can be used to enable/disable
   /// additional information like quality-scores, alignments etc.
   ///
   /// All texts are combined to efficiently construct batches together providing
@@ -114,84 +105,60 @@ public:
   /// recommended to work with futures and translate() API.
   ///
   /// @param [in] source: rvalue reference of the string to be translated
-  /// @param [in] translationRequest: TranslationRequest (Unified API)
-  /// indicating whether or not to include some member in the Response, also
-  /// specify any additional configurable parameters.
-
-  std::vector<Response>
-  translateMultiple(std::vector<std::string> &&source,
-                    TranslationRequest translationRequest);
+  /// @param [in] translationRequest: ResponseOptions indicating whether or not
+  /// to include some member in the Response, also specify any additional
+  /// configurable parameters.
+  std::vector<Response> translateMultiple(std::vector<std::string> &&source, ResponseOptions responseOptions);
 
   /// Returns if model is alignment capable or not.
-  bool isAlignmentSupported() const {
-    return options_->hasAndNotEmpty("alignment");
-  }
+  bool isAlignmentSupported() const { return options_->hasAndNotEmpty("alignment"); }
 
-private:
+ private:
   /// Queue an input for translation.
-  std::future<Response> queueRequest(std::string &&input,
-                                     ResponseOptions responseOptions);
+  std::future<Response> queueRequest(std::string &&input, ResponseOptions responseOptions);
 
   /// Dispatch call to translate after inserting in queue
   void dispatchTranslate();
 
-  /// Build numTranslators number of translators with options from options
-  void build_translators(Ptr<Options> options, size_t numTranslators);
-  /// Initializes a blocking translator without using std::thread
-  void initialize_blocking_translator();
   /// Translates through direct interaction between batcher_ and translators_
-  void blocking_translate();
-
-  /// Launches multiple workers of translators using std::thread
-  /// Reduces to ABORT if called when not compiled WITH_PTHREAD
-  void initialize_async_translators();
-  /// Async translate produces to a producer-consumer queue as batches are
-  /// generated by Batcher. In another thread, the translators consume from
-  /// producer-consumer queue.
-  /// Reduces to ABORT if called when not compiled WITH_PTHREAD
-  void async_translate();
+  void blockIfWASM();
 
   /// Number of workers to launch.
-  size_t numWorkers_; // ORDER DEPENDENCY (pcqueue_)
+  size_t numWorkers_;
 
   /// Options object holding the options Service was instantiated with.
   Ptr<Options> options_;
 
   /// Model memory to load model passed as bytes.
-  AlignedMemory modelMemory_; // ORDER DEPENDENCY (translators_)
+  AlignedMemory modelMemory_;  // ORDER DEPENDENCY (translators_)
   /// Shortlist memory passed as bytes.
-  AlignedMemory shortlistMemory_; // ORDER DEPENDENCY (translators_)
-
-  /// Holds instances of batch translators, just one in case
-  /// of single-threaded application, numWorkers_ in case of multithreaded
-  /// setting.
-  std::vector<BatchTranslator>
-      translators_; // ORDER DEPENDENCY (modelMemory_, shortlistMemory_)
+  AlignedMemory shortlistMemory_;  // ORDER DEPENDENCY (translators_)
 
   /// Stores requestId of active request. Used to establish
   /// ordering among requests and logging/book-keeping.
 
   size_t requestId_;
   /// Store vocabs representing source and target.
-  Vocabs vocabs_; // ORDER DEPENDENCY (text_processor_)
+  Vocabs vocabs_;  // ORDER DEPENDENCY (text_processor_)
 
   /// TextProcesser takes a blob of text and converts into format consumable by
   /// the batch-translator and annotates sentences and words.
-  TextProcessor text_processor_; // ORDER DEPENDENCY (vocabs_)
+  TextProcessor text_processor_;  // ORDER DEPENDENCY (vocabs_)
 
   /// Batcher handles generation of batches from a request, subject to
   /// packing-efficiency and priority optimization heuristics.
-  Batcher batcher_;
+  ThreadsafeBatcher batcher_;
 
   // The following constructs are available providing full capabilities on a non
   // WASM platform, where one does not have to hide threads.
-#ifndef WASM_COMPATIBLE_SOURCE
-  PCQueue<Batch> pcqueue_; // ORDER DEPENDENCY (numWorkers_)
+#ifdef WASM_COMPATIBLE_SOURCE
+  BatchTranslator blocking_translator_;  // ORDER DEPENDENCY (modelMemory_, shortlistMemory_)
+#else
   std::vector<std::thread> workers_;
-#endif // WASM_COMPATIBLE_SOURCE
+#endif  // WASM_COMPATIBLE_SOURCE
 };
 
-} // namespace bergamot
-} // namespace marian
+}  // namespace bergamot
+}  // namespace marian
 
-#endif // SRC_BERGAMOT_SERVICE_H_
+#endif  // SRC_BERGAMOT_SERVICE_H_

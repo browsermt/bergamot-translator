@@ -1,15 +1,15 @@
 #ifndef SRC_BERGAMOT_RESPONSE_H_
 #define SRC_BERGAMOT_RESPONSE_H_
 
-#include "data/alignment.h"
-#include "data/types.h"
-#include "definitions.h"
-#include "annotation.h"
-#include "translator/beam_search.h"
-
 #include <cassert>
 #include <string>
 #include <vector>
+
+#include "annotation.h"
+#include "data/alignment.h"
+#include "data/types.h"
+#include "definitions.h"
+#include "translator/beam_search.h"
 
 namespace marian {
 namespace bergamot {
@@ -18,9 +18,9 @@ namespace bergamot {
 /// internals but is brought here to maintain translator
 /// agnosticism/independence.
 struct Point {
-  size_t src; ///< Index pointing to source ByteRange
-  size_t tgt; ///< Index pointing to target ByteRange
-  float prob; ///< Score between [0, 1] on indicating degree of alignment.
+  size_t src;  ///< Index pointing to source ByteRange
+  size_t tgt;  ///< Index pointing to target ByteRange
+  float prob;  ///< Score between [0, 1] on indicating degree of alignment.
 };
 
 /// Alignment is a sparse matrix, where Points represent entries with values.
@@ -69,7 +69,7 @@ struct Response {
 
   const std::string &getTranslatedText() const { return target.text; }
 };
-} // namespace bergamot
-} // namespace marian
+}  // namespace bergamot
+}  // namespace marian
 
-#endif // SRC_BERGAMOT_RESPONSE_H_
+#endif  // SRC_BERGAMOT_RESPONSE_H_

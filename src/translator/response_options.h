@@ -26,8 +26,8 @@ enum QualityScoreType {
 /// ResponseOptions dictate how to construct a Response for an input string of
 /// text to be translated.
 struct ResponseOptions {
-  bool qualityScores{false}; ///< Include quality-scores or not.
-  bool alignment{false};     ///< Include alignments or not.
+  bool qualityScores{false};  ///< Include quality-scores or not.
+  bool alignment{false};      ///< Include alignments or not.
 
   /// Whether to include sentenceMappings or not. Alignments require
   /// sentenceMappings and are available irrespective of this option if
@@ -44,7 +44,7 @@ struct ResponseOptions {
   ConcatStrategy concatStrategy{ConcatStrategy::FAITHFUL};
 };
 
-} // namespace bergamot
-} // namespace marian
+}  // namespace bergamot
+}  // namespace marian
 
-#endif //  SRC_BERGAMOT_RESPONSE_OPTIONS_H_
+#endif  //  SRC_BERGAMOT_RESPONSE_OPTIONS_H_

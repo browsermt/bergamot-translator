@@ -12,26 +12,21 @@ namespace bergamot {
 
 inline marian::ConfigParser createConfigParser() {
   marian::ConfigParser cp(marian::cli::mode::translation);
-  cp.addOption<std::string>(
-      "--ssplit-prefix-file", "Bergamot Options",
-      "File with nonbreaking prefixes for sentence splitting.");
+  cp.addOption<std::string>("--ssplit-prefix-file", "Bergamot Options",
+                            "File with nonbreaking prefixes for sentence splitting.");
 
-  cp.addOption<std::string>("--ssplit-mode", "Server Options",
-                            "[paragraph, sentence, wrapped_text]", "paragraph");
+  cp.addOption<std::string>("--ssplit-mode", "Server Options", "[paragraph, sentence, wrapped_text]", "paragraph");
 
-  cp.addOption<int>(
-      "--max-length-break", "Bergamot Options",
-      "Maximum input tokens to be processed in a single sentence.", 128);
+  cp.addOption<int>("--max-length-break", "Bergamot Options",
+                    "Maximum input tokens to be processed in a single sentence.", 128);
 
-  cp.addOption<bool>(
-      "--check-bytearray", "Bergamot Options",
-      "Flag holds whether to check the content of the bytearray (true by default)", true);
+  cp.addOption<bool>("--check-bytearray", "Bergamot Options",
+                     "Flag holds whether to check the content of the bytearray (true by default)", true);
 
-    return cp;
+  return cp;
 }
 
-inline std::shared_ptr<marian::Options>
-parseOptions(const std::string &config, bool validate = true) {
+inline std::shared_ptr<marian::Options> parseOptions(const std::string &config, bool validate = true) {
   marian::Options options;
 
   // @TODO(jerinphilip) There's something off here, @XapaJIaMnu suggests
@@ -67,7 +62,7 @@ parseOptions(const std::string &config, bool validate = true) {
   return std::make_shared<marian::Options>(options);
 }
 
-} //  namespace bergamot
-} //  namespace marian
+}  //  namespace bergamot
+}  //  namespace marian
 
-#endif //  SRC_BERGAMOT_PARSER_H
+#endif  //  SRC_BERGAMOT_PARSER_H

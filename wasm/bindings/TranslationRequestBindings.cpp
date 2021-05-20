@@ -5,13 +5,11 @@
 
 #include <emscripten/bind.h>
 
-#include "TranslationRequest.h"
+#include "response_options.h"
+
+typedef marian::bergamot::ResponseOptions TranslationRequest;
 
 using namespace emscripten;
 
 // Binding code
-EMSCRIPTEN_BINDINGS(translation_request) {
-  class_<TranslationRequest>("TranslationRequest")
-    .constructor<>()
-    ;
-}
+EMSCRIPTEN_BINDINGS(translation_request) { class_<TranslationRequest>("TranslationRequest").constructor<>(); }

@@ -2,7 +2,7 @@ name: Documentation
 
 on:
   push:
-    branches: [ main ]
+    branches: [ $default-branch ]
 
 jobs:
   api-documentation:

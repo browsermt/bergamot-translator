@@ -13,10 +13,6 @@
 #include "translator/scorers.h"
 #include "vocabs.h"
 
-#ifndef WASM_COMPATIBLE_SOURCE
-#include "pcqueue.h"
-#endif
-
 namespace marian {
 namespace bergamot {
 
@@ -26,27 +22,28 @@ class BatchTranslator {
   // mainloop runs until until it receives poison from the PCQueue. Threads are
   // shut down in Service which calls join() on the threads.
 
-public:
+ public:
   /**
    * Initialise the marian translator.
    * @param device DeviceId that performs translation. Could be CPU or GPU
    * @param vocabs Vector that contains ptrs to two vocabs
    * @param options Marian options object
-   * @param modelMemory byte array (aligned to 256!!!) that contains the bytes of a model.bin. Provide a nullptr if not used.
+   * @param modelMemory byte array (aligned to 256!!!) that contains the bytes of a model.bin. Provide a nullptr if not
+   * used.
    * @param shortlistMemory byte array of shortlist (aligned to 64)
    */
-  explicit BatchTranslator(DeviceId const device, Vocabs &vocabs,
-                  Ptr<Options> options, const AlignedMemory* modelMemory, const AlignedMemory* shortlistMemory);
+  explicit BatchTranslator(DeviceId const device, Vocabs& vocabs, Ptr<Options> options,
+                           const AlignedMemory* modelMemory, const AlignedMemory* shortlistMemory);
 
   // convenience function for logging. TODO(jerin)
   std::string _identifier() { return "worker" + std::to_string(device_.no); }
-  void translate(Batch &batch);
+  void translate(Batch& batch);
   void initialize();
 
-private:
+ private:
   Ptr<Options> options_;
   DeviceId device_;
-  const Vocabs&  vocabs_;
+  const Vocabs& vocabs_;
   Ptr<ExpressionGraph> graph_;
   std::vector<Ptr<Scorer>> scorers_;
   Ptr<data::ShortlistGenerator const> slgen_;
@@ -54,7 +51,7 @@ private:
   const AlignedMemory* shortlistMemory_{nullptr};
 };
 
-} // namespace bergamot
-} // namespace marian
+}  // namespace bergamot
+}  // namespace marian
 
-#endif //  SRC_BERGAMOT_BATCH_TRANSLATOR_H_
+#endif  //  SRC_BERGAMOT_BATCH_TRANSLATOR_H_

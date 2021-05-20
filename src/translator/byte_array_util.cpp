@@ -1,6 +1,8 @@
 #include "byte_array_util.h"
 #include "data/shortlist.h"
+
 #include <stdlib.h>
+
 #include <iostream>
 #include <memory>
 
@@ -27,29 +29,30 @@ const T* get(const void*& current, uint64_t num = 1) {
   current = (const T*)current + num;
   return ptr;
 }
-} // Anonymous namespace
+}  // Anonymous namespace
 
 bool validateBinaryModel(const AlignedMemory& model, uint64_t fileSize) {
-  const void * current = model.begin();
-  uint64_t memoryNeeded = sizeof(uint64_t)*2; // We keep track of how much memory we would need if we have a complete file
+  const void* current = model.begin();
+  uint64_t memoryNeeded =
+      sizeof(uint64_t) * 2;  // We keep track of how much memory we would need if we have a complete file
   uint64_t numHeaders;
-  if (fileSize >= memoryNeeded) { // We have enough filesize to fetch the headers.
+  if (fileSize >= memoryNeeded) {  // We have enough filesize to fetch the headers.
     uint64_t binaryFileVersion = *get<uint64_t>(current);
-    numHeaders = *get<uint64_t>(current); // number of item headers that follow
+    numHeaders = *get<uint64_t>(current);  // number of item headers that follow
   } else {
     return false;
   }
-  memoryNeeded += numHeaders*sizeof(Header);
+  memoryNeeded += numHeaders * sizeof(Header);
   const Header* headers;
   if (fileSize >= memoryNeeded) {
-    headers = get<Header>(current, numHeaders); // read that many headers
+    headers = get<Header>(current, numHeaders);  // read that many headers
   } else {
     return false;
   }
 
   // Calculate how many bytes we are going to for reading just the names and the shape
   for (uint64_t i = 0; i < numHeaders; i++) {
-    memoryNeeded += headers[i].nameLength + headers[i].shapeLength*sizeof(int);
+    memoryNeeded += headers[i].nameLength + headers[i].shapeLength * sizeof(int);
     // Advance the pointers.
     get<char>(current, headers[i].nameLength);
     get<int>(current, headers[i].shapeLength);
@@ -59,7 +62,7 @@ bool validateBinaryModel(const AlignedMemory& model, uint64_t fileSize) {
   // Read that in, before calculating the actual tensor memory requirements.
   uint64_t aligned_offset;
   if (fileSize >= memoryNeeded) {
-    aligned_offset = *get<uint64_t>(current); // Offset to align memory to 256 size
+    aligned_offset = *get<uint64_t>(current);  // Offset to align memory to 256 size
     memoryNeeded += aligned_offset + sizeof(uint64_t);
   } else {
     return false;
@@ -78,17 +81,17 @@ bool validateBinaryModel(const AlignedMemory& model, uint64_t fileSize) {
   }
 }
 
-AlignedMemory loadFileToMemory(const std::string& path, size_t alignment){
+AlignedMemory loadFileToMemory(const std::string& path, size_t alignment) {
   uint64_t fileSize = filesystem::fileSize(path);
   io::InputFileStream in(path);
   ABORT_IF(in.bad(), "Failed opening file stream: {}", path);
   AlignedMemory alignedMemory(fileSize, alignment);
-  in.read(reinterpret_cast<char *>(alignedMemory.begin()), fileSize);
+  in.read(reinterpret_cast<char*>(alignedMemory.begin()), fileSize);
   ABORT_IF(alignedMemory.size() != fileSize, "Error reading file {}", path);
   return alignedMemory;
 }
 
-AlignedMemory getModelMemoryFromConfig(marian::Ptr<marian::Options> options){
+AlignedMemory getModelMemoryFromConfig(marian::Ptr<marian::Options> options) {
   auto models = options->get<std::vector<std::string>>("models");
   ABORT_IF(models.size() != 1, "Loading multiple binary models is not supported for now as it is not necessary.");
   marian::filesystem::Path modelPath(models[0]);
@@ -97,7 +100,7 @@ AlignedMemory getModelMemoryFromConfig(marian::Ptr<marian::Options> options){
   return alignedMemory;
 }
 
-AlignedMemory getShortlistMemoryFromConfig(marian::Ptr<marian::Options> options){
+AlignedMemory getShortlistMemoryFromConfig(marian::Ptr<marian::Options> options) {
   auto shortlist = options->get<std::vector<std::string>>("shortlist");
   ABORT_IF(shortlist.empty(), "No path to shortlist file is given.");
   ABORT_IF(!marian::data::isBinaryShortlist(shortlist[0]),
@@ -106,7 +109,7 @@ AlignedMemory getShortlistMemoryFromConfig(marian::Ptr<marian::Options> options)
 }
 
 void getVocabsMemoryFromConfig(marian::Ptr<marian::Options> options,
-                               std::vector<std::shared_ptr<AlignedMemory>>& vocabMemories){
+                               std::vector<std::shared_ptr<AlignedMemory>>& vocabMemories) {
   auto vfiles = options->get<std::vector<std::string>>("vocabs");
   ABORT_IF(vfiles.size() < 2, "Insufficient number of vocabularies.");
   vocabMemories.resize(vfiles.size());
@@ -122,7 +125,7 @@ void getVocabsMemoryFromConfig(marian::Ptr<marian::Options> options,
   }
 }
 
-MemoryBundle getMemoryBundleFromConfig(marian::Ptr<marian::Options> options){
+MemoryBundle getMemoryBundleFromConfig(marian::Ptr<marian::Options> options) {
   MemoryBundle memoryBundle;
   memoryBundle.model = getModelMemoryFromConfig(options);
   memoryBundle.shortlist = getShortlistMemoryFromConfig(options);
@@ -130,5 +133,5 @@ MemoryBundle getMemoryBundleFromConfig(marian::Ptr<marian::Options> options){
   return memoryBundle;
 }
 
-} // namespace bergamot
-} // namespace marian
+}  // namespace bergamot
+}  // namespace marian

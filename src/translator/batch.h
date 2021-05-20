@@ -7,19 +7,11 @@
 namespace marian {
 namespace bergamot {
 
+// An empty batch is poison.
 class Batch {
-public:
+ public:
   Batch() {}
   void clear() { sentences_.clear(); }
-
-  //  Methods to construct and determine poison.
-  static Batch poison() {
-    Batch batch;
-    batch.poison_ = true;
-    return batch;
-  }
-
-  bool isPoison() const { return poison_; }
 
   size_t size() const { return sentences_.size(); }
 
@@ -41,12 +33,11 @@ public:
   // Convenience function to log batch-statistics. numTokens, max-length.
   void log();
 
-private:
-  bool poison_{false};
+ private:
   RequestSentences sentences_;
 };
 
-} // namespace bergamot
-} // namespace marian
+}  // namespace bergamot
+}  // namespace marian
 
-#endif // SRC_BERGAMOT_BATCH_H_
+#endif  // SRC_BERGAMOT_BATCH_H_

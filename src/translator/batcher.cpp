@@ -1,7 +1,9 @@
 #include "batcher.h"
+
+#include <cassert>
+
 #include "batch.h"
 #include "common/logging.h"
-#include <cassert>
 
 namespace marian {
 namespace bergamot {
@@ -19,8 +21,6 @@ void Batcher::addSentenceWithPriority(RequestSentence &sentence) {
   assert(bucket_id < bucket_.size());
   bucket_[bucket_id].insert(sentence);
 }
-
-bool Batcher::operator>>(Batch &batch) { return cleaveBatch(batch); }
 
 bool Batcher::cleaveBatch(Batch &batch) {
   // For now simply iterates on buckets and converts batches greedily.  This
@@ -57,5 +57,5 @@ void Batcher::addWholeRequest(Ptr<Request> request) {
   }
 }
 
-} // namespace bergamot
-} // namespace marian
+}  // namespace bergamot
+}  // namespace marian

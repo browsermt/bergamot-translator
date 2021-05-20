@@ -1,0 +1,26 @@
+name: "Coding Style"
+
+on: 
+  push:
+    branches: [ main, ci-sandbox ]
+  pull_request:
+    branches: [ main, ci-sandbox ]
+
+jobs:
+  clang-format:
+      name: "clang-format"
+      runs-on: ubuntu-latest
+      steps:
+        - name: Checkout
+          uses: actions/checkout@v2
+          with:
+            submodules: recursive
+
+        - name: Install dependencies
+          run: |
+            sudo apt-get update 
+            sudo apt-get install -y clang-format
+
+        - name: Run clang-format
+          run:
+              python3 run-clang-format.py --style file -r src wasm

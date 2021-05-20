@@ -1,23 +1,19 @@
 #ifndef SRC_BERGAMOT_BATCHER_H_
 #define SRC_BERGAMOT_BATCHER_H_
 
+#include <set>
+#include <vector>
+
 #include "batch.h"
 #include "common/options.h"
 #include "data/corpus_base.h"
 #include "definitions.h"
 #include "request.h"
 
-#ifndef WASM_COMPATIBLE_SOURCE
-#include "pcqueue.h"
-#endif
-
-#include <set>
-#include <vector>
-
 namespace marian {
 namespace bergamot {
 class Batcher {
-public:
+ public:
   explicit Batcher(Ptr<Options> options);
 
   // RequestSentence incorporates (tentative) notions of priority with each
@@ -26,9 +22,12 @@ public:
   void addSentenceWithPriority(RequestSentence &sentence);
   void addWholeRequest(Ptr<Request> request);
 
-  bool operator>>(Batch &batch); // alias for cleaveBatch
+  // indicate no more sentences will be added.  Does nothing here, for parity to threadsafe version.
+  void shutdown() {}
 
-private:
+  bool operator>>(Batch &batch) { return cleaveBatch(batch); }
+
+ private:
   // Loads sentences with sentences compiled from (tentatively) multiple
   // requests optimizing for both padding and priority.
   bool cleaveBatch(Batch &batch);
@@ -37,7 +36,7 @@ private:
   size_t batchNumber_{0};
 };
 
-} // namespace bergamot
-} // namespace marian
+}  // namespace bergamot
+}  // namespace marian
 
-#endif // SRC_BERGAMOT_BATCHER_H_
+#endif  // SRC_BERGAMOT_BATCHER_H_

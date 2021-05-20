@@ -42,3 +42,13 @@ jobs:
         with:
           branch: gh-pages # The branch the action should deploy to.
           folder: ./doc/build/ # The folder the action should deploy.
+
+      # This artifact contains the HTML output of Sphinx only.
+      # With index.html at the root of the produced zip file.
+      - name: Upload documentation
+        uses: actions/upload-artifact@v2
+        with:
+          name: api-docs
+          path: ./doc/build/
+          if-no-files-found: error
+

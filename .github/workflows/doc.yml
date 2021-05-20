@@ -24,7 +24,7 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const args = s.split("/");
+            const args = context.payload.ref.split("/");
             [refs, category, ...rest] = args;
             return rest.join("/");
 

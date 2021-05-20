@@ -9,7 +9,7 @@ namespace bergamot {
 
 // An empty batch is poison.
 class Batch {
-public:
+ public:
   Batch() {}
   void clear() { sentences_.clear(); }
 
@@ -33,11 +33,11 @@ public:
   // Convenience function to log batch-statistics. numTokens, max-length.
   void log();
 
-private:
+ private:
   RequestSentences sentences_;
 };
 
-} // namespace bergamot
-} // namespace marian
+}  // namespace bergamot
+}  // namespace marian
 
-#endif // SRC_BERGAMOT_BATCH_H_
+#endif  // SRC_BERGAMOT_BATCH_H_

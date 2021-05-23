@@ -67,7 +67,7 @@ TextProcessor::TextProcessor(Ptr<Options> options, const Vocabs &vocabs, const A
 
 void TextProcessor::parseCommonOptions(Ptr<Options> options) {
   maxLengthBreak_ = options->get<int>("max-length-break");
-  maxLengthBreak_ = maxLengthBreak_ - 1;
+  maxLengthBreak_ = maxLengthBreak_ - 1;  // Accounting for EOS
   ABORT_IF(maxLengthBreak_ < 0, "max-length-break cannot be < 0");
   ssplitMode_ = string2splitmode(options->get<std::string>("ssplit-mode", ""));
 }

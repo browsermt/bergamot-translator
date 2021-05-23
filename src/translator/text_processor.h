@@ -22,14 +22,29 @@ class TextProcessor {
   /// sentences (vector of words). In addition, the ByteRanges of the
   /// source-tokens in unnormalized text are provided as string_views.
  public:
-  explicit TextProcessor(Ptr<Options>, const Vocabs &vocabs, const std::string &ssplit_prefix_file);
-  explicit TextProcessor(Ptr<Options>, const Vocabs &vocabs, const AlignedMemory &memory);
+  // There are two ways to construct text-processor, different in a file-system
+  // based prefix file load and a memory based prefix file store.@jerinphilip
+  // is not doing magic inference inside to determine file-based or memory
+  // based.
+
+  /// Construct TextProcessor from options, vocabs and prefix-file.
+  /// @param [in] options: expected to contain `max-length-break`, `ssplit-mode`.
+  /// @param [in] vocabs: Vocabularies used to process text into sentences to marian::Words and corresponding ByteRange
+  /// information in AnnotatedText.
+  /// @param [in] ssplit_prefix_file: Path to ssplit-prefix file compatible with moses-tokenizer.
+  TextProcessor(Ptr<Options>, const Vocabs &vocabs, const std::string &ssplit_prefix_file);
+
+  /// Construct TextProcessor from options, vocabs and prefix-file supplied as a bytearray. For other parameters, see
+  /// the path based constructor.
+  /// @param [in] memory: ssplit-prefix-file contents in memory, passed as a bytearray.
+  TextProcessor(Ptr<Options>, const Vocabs &vocabs, const AlignedMemory &memory);
 
   /// Wrap into sentences of at most maxLengthBreak_ tokens and add to source.
   /// @param [in] blob: Input blob, will be bound to source and annotations on it stored.
   /// @param [out] source: AnnotatedText instance holding input and annotations of sentences and pieces
   /// @param [out] segments: marian::Word equivalents of the sentences processed and stored in AnnotatedText for
   /// consumption of marian translation pipeline.
+
   void process(std::string &&blob, AnnotatedText &source, Segments &segments);
 
  private:
@@ -48,7 +63,7 @@ class TextProcessor {
   /// SentenceSplitter compatible with moses sentence-splitter
   ug::ssplit::SentenceSplitter ssplit_;
 
-  /// Mode of splitting, can be line ('\n') based, sentence or paragraph based.
+  /// Mode of splitting, can be line ('\n') based, paragraph based, also supports a wrapped mode.
   ug::ssplit::SentenceStream::splitmode ssplitMode_;
 };
 

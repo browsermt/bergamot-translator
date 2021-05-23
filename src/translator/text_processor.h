@@ -36,10 +36,6 @@ class TextProcessor {
   // Wrap into sentences of at most maxLengthBreak_ tokens and add to source.
   void wrap(Segment &sentence, std::vector<string_view> &tokenRanges, Segments &segments, AnnotatedText &source);
 
-  // shorthand, used only in truncate()
-  // vocabs_->sources().front() is invoked as we currently only support one source vocab
-  const Word sourceEosId() const { return vocabs_.sources().front()->getEosId(); }
-
   const Vocabs &vocabs_;
   size_t maxLengthBreak_;
 

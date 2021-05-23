@@ -24,6 +24,7 @@ ug::ssplit::SentenceStream::splitmode string2splitmode(const std::string &m) {
 }
 
 ug::ssplit::SentenceSplitter loadSplitter(const std::string &ssplit_prefix_file) {
+  // Temporarily supports empty, will be removed when mozilla passes ssplit_prefix_file
   ug::ssplit::SentenceSplitter splitter;
   if (ssplit_prefix_file.size()) {
     std::string interp_ssplit_prefix_file = marian::cli::interpolateEnvVars(ssplit_prefix_file);
@@ -38,9 +39,12 @@ ug::ssplit::SentenceSplitter loadSplitter(const std::string &ssplit_prefix_file)
 }
 
 ug::ssplit::SentenceSplitter loadSplitter(const AlignedMemory &memory) {
+  // Temporarily supports empty, will be removed when mozilla passes memory
   ug::ssplit::SentenceSplitter splitter;
-  std::string_view serialized(memory.begin(), memory.size());
-  splitter.loadFromSerialized(serialized);
+  if (memory.size()) {
+    std::string_view serialized(memory.begin(), memory.size());
+    splitter.loadFromSerialized(serialized);
+  }
   return splitter;
 }
 
@@ -95,6 +99,7 @@ void TextProcessor::process(AnnotatedText &source, Segments &segments) {
 
 void TextProcessor::wrap(Segment &segment, std::vector<string_view> &wordRanges, Segments &segments,
                          AnnotatedText &source) {
+  Word sourceEosId = vocabs_.sources().front()->getEosId();
   for (size_t offset = 0; offset < segment.size(); offset += maxLengthBreak_) {
     auto start = segment.begin() + offset;
 
@@ -102,7 +107,7 @@ void TextProcessor::wrap(Segment &segment, std::vector<string_view> &wordRanges,
     size_t diff = std::min(maxLengthBreak_, left);
 
     segments.emplace_back(start, start + diff);
-    segments.back().push_back(sourceEosId());
+    segments.back().push_back(sourceEosId);
 
     auto astart = wordRanges.begin() + offset;
     // diff > 0

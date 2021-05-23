@@ -72,11 +72,9 @@ void TextProcessor::parseCommonOptions(Ptr<Options> options) {
   ssplitMode_ = string2splitmode(options->get<std::string>("ssplit-mode", ""));
 }
 
-void TextProcessor::process(AnnotatedText &source, Segments &segments) {
-  string_view query = string_view(source.text);
-
-  // Create sentencestream
-  std::string_view input_converted(query.data(), query.size());
+void TextProcessor::process(std::string &&input, AnnotatedText &source, Segments &segments) {
+  source = std::move(AnnotatedText(std::move(input)));
+  std::string_view input_converted(source.text.data(), source.text.size());
   auto sentenceStream = ug::ssplit::SentenceStream(input_converted, ssplit_, ssplitMode_);
 
   std::string_view sentenceStringPiece;

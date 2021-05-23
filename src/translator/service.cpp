@@ -78,8 +78,9 @@ std::vector<Response> Service::translateMultiple(std::vector<std::string> &&inpu
 
 std::future<Response> Service::queueRequest(std::string &&input, ResponseOptions responseOptions) {
   Segments segments;
-  AnnotatedText source(std::move(input));
-  text_processor_.process(source, segments);
+  AnnotatedText source;
+
+  text_processor_.process(std::move(input), source, segments);
 
   std::promise<Response> responsePromise;
   auto future = responsePromise.get_future();

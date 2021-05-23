@@ -3,6 +3,7 @@
 
 #include <string>
 
+#include "aligned.h"
 #include "common/options.h"
 #include "data/types.h"
 #include "definitions.h"
@@ -17,10 +18,13 @@ class SentenceSplitter {
   // sentence-streams, which provide access to one sentence from blob of text at
   // a time.
  public:
-  explicit SentenceSplitter(Ptr<Options> options);
+  explicit SentenceSplitter(Ptr<Options> options, const std::string &ssplit_prefix_file);
+  explicit SentenceSplitter(Ptr<Options> options, const AlignedMemory &memory);
   ug::ssplit::SentenceStream createSentenceStream(string_view const &input);
 
  private:
+  void loadFromMemory(const AlignedMemory &memory);
+  void loadFromFile(const std::string &filename);
   ug::ssplit::SentenceSplitter ssplit_;
   Ptr<Options> options_;
   ug::ssplit::SentenceStream::splitmode mode_;

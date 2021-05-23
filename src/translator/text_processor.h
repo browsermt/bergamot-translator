@@ -3,11 +3,12 @@
 
 #include <vector>
 
+#include "aligned.h"
 #include "annotation.h"
 #include "data/types.h"
 #include "data/vocab.h"
 #include "definitions.h"
-#include "sentence_splitter.h"
+#include "ssplit.h"
 #include "vocabs.h"
 
 namespace marian {
@@ -21,16 +22,18 @@ class TextProcessor {
   // sentences (vector of words). In addition, the ByteRanges of the
   // source-tokens in unnormalized text are provided as string_views.
  public:
-  explicit TextProcessor(Vocabs &vocabs, Ptr<Options>);
+  explicit TextProcessor(Ptr<Options>, const Vocabs &vocabs, const std::string &ssplit_prefix_file);
+  explicit TextProcessor(Ptr<Options>, const Vocabs &vocabs, const AlignedMemory &memory);
 
   void process(AnnotatedText &source, Segments &segments);
 
  private:
+  void parseCommonOptions(Ptr<Options> options);
   // Tokenizes an input string, returns Words corresponding. Loads the
   // corresponding byte-ranges into tokenRanges.
   Segment tokenize(const string_view &input, std::vector<string_view> &tokenRanges);
 
-  // Wrap into sentences of at most max_length_break_ tokens and add to source.
+  // Wrap into sentences of at most maxLengthBreak_ tokens and add to source.
   void wrap(Segment &sentence, std::vector<string_view> &tokenRanges, Segments &segments, AnnotatedText &source);
 
   // shorthand, used only in truncate()
@@ -38,8 +41,11 @@ class TextProcessor {
   const Word sourceEosId() const { return vocabs_.sources().front()->getEosId(); }
 
   const Vocabs &vocabs_;
-  SentenceSplitter sentence_splitter_;
-  size_t max_length_break_;
+  size_t maxLengthBreak_;
+
+  // Sentence-splitting
+  ug::ssplit::SentenceSplitter ssplit_;
+  ug::ssplit::SentenceStream::splitmode ssplitMode_;
 };
 
 }  // namespace bergamot

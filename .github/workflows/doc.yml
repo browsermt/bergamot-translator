@@ -57,9 +57,11 @@ jobs:
         uses: JamesIves/github-pages-deploy-action@4.1.3
         if: ${{ github.event_name == 'push' }}
         with:
+          repository-name: 'browsermt/docs' 
           branch: gh-pages # The branch the action should deploy to.
           folder: './doc/build/' # The folder the action should deploy.
           target-folder: '${{ steps.tag.outputs.result }}' 
+          ssh-key: ${{ secrets.BERGAMOT_SSH_PRIVATE_KEY }}
 
       # This artifact contains the HTML output of Sphinx only.
       # With index.html at the root of the produced zip file.

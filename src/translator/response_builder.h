@@ -66,7 +66,7 @@ private:
   /// subword information.
   /// @param histories [in]
   /// @param response [out]
-  void buildQualityScores(Histories &histories, Response &response);
+  void buildQualityScores(Histories &histories, Response &response, int beanSize=1);
 
   /// Builds alignments from histories and writes onto response.
   /// @param histories [in]

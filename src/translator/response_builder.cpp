@@ -5,11 +5,11 @@ namespace marian {
 namespace bergamot {
 
 void ResponseBuilder::buildQualityScores(Histories &histories,
-                                         Response &response) {
+                                         Response &response, int beamSize) {
   std::vector<Quality> qualityScores;
   for (auto &history : histories) {
-    // TODO(jerin): Change hardcode of nBest = 1
-    NBestList onebest = history->nBest(1);
+    //Due to inference performance, this should always be 1
+    NBestList onebest = history->nBest(beamSize);
 
     Result result = onebest[0]; // Expecting only one result;
     Words words = std::get<0>(result);
@@ -19,7 +19,7 @@ void ResponseBuilder::buildQualityScores(Histories &histories,
     // logprobs.
     auto normalizedPathScore = std::get<2>(result);
     auto wordQualities = hyp->tracebackWordScores();
-    wordQualities.pop_back();
+    wordQualities.pop_back(); //remove EOS token
     response.qualityScores.push_back(
         Quality{normalizedPathScore, wordQualities});
   }

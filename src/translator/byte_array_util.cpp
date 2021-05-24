@@ -1,10 +1,9 @@
 #include "byte_array_util.h"
-#include "data/shortlist.h"
 
 #include <stdlib.h>
-
-#include <iostream>
 #include <memory>
+
+#include "data/shortlist.h"
 
 namespace marian {
 namespace bergamot {

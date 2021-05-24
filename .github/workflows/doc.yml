@@ -16,7 +16,12 @@ jobs:
         with:
           submodules: recursive
 
-      # Be careful if you have a tag named main, bad idea
+      # Runs javascript to extract push events from both tags and branch (only main, due to workflow trigger)
+      # converts refs/<>/<name> -> <name>
+      # eg:
+      #     refs/head/main   -> main
+      #     refs/tags/v0.1.0 -> v0.1.0
+      #
       - name: Extract tag name
         id: tag
         uses: actions/github-script@0.2.0
@@ -28,13 +33,15 @@ jobs:
             [refs, category, ...rest] = args;
             return rest.join("/");
 
-      - name: Deploy-time patch version
-        run: |
-            echo ${{ steps.tag.outputs.result }} > BERGAMOT_VERSION
+      # Patches the BERGAMOT_VERSION file used by sphinx-docs at run time to
+      # obtain names like 'main' or 'ci-sandbox' to not confuse with version
+      # based documentation built separately.
+      - name: Deploy-time patch version 
+        run: | 
+            echo ${{steps.tag.outputs.result }} > BERGAMOT_VERSION
 
       - name: Set up Doxygen
         run: sudo apt-get install -y doxygen
-
 
       - name: Set up Python
         uses: actions/setup-python@v2
@@ -70,6 +77,8 @@ jobs:
 
       # This artifact contains the HTML output of Sphinx only.
       # With index.html at the root of the produced zip file.
+      # For use for maintainers to download the zip and check render of
+      # documentation while generated at pull-request. 
       - name: Upload documentation
         uses: actions/upload-artifact@v2
         if: ${{ github.event_name == 'pull_request'}}

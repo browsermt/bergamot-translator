@@ -76,6 +76,7 @@ class Service {
   void translate(std::string &&source, std::function<void(Response &&)> &&callback,
                  ResponseOptions options = ResponseOptions());
 
+#ifdef WASM_COMPATIBLE_SOURCE
   /// Translate multiple text-blobs in a single *blocking* API call, providing
   /// ResponseOptions which applies across all text-blobs dictating how to
   /// construct Response. ResponseOptions can be used to enable/disable
@@ -93,6 +94,7 @@ class Service {
   /// to include some member in the Response, also specify any additional
   /// configurable parameters.
   std::vector<Response> translateMultiple(std::vector<std::string> &&source, ResponseOptions responseOptions);
+#endif
 
   /// Returns if model is alignment capable or not.
   bool isAlignmentSupported() const { return options_->hasAndNotEmpty("alignment"); }
@@ -101,11 +103,8 @@ class Service {
   /// Queue an input for translation.
   void queueRequest(std::string &&input, std::function<void(Response &&)> &&callback, ResponseOptions responseOptions);
 
-  /// Dispatch call to translate after inserting in queue
-  void dispatchTranslate();
-
   /// Translates through direct interaction between batcher_ and translators_
-  void blockIfWASM();
+  // void blockIfWASM();
 
   /// Number of workers to launch.
   size_t numWorkers_;

@@ -42,42 +42,28 @@ Service::Service(Ptr<Options> options, MemoryBundle memoryBundle)
 #endif
 }
 
-void Service::blockIfWASM() {
 #ifdef WASM_COMPATIBLE_SOURCE
-  Batch batch;
-  // There's no need to do shutdown here because it's single threaded.
-  while (batcher_ >> batch) {
-    blocking_translator_.translate(batch);
-  }
-#endif
-}
-
 std::vector<Response> Service::translateMultiple(std::vector<std::string> &&inputs, ResponseOptions responseOptions) {
   // We queue the individual Requests so they get compiled at batches to be
   // efficiently translated.
-  std::vector<std::future<Response>> responseFutures;
+  std::vector<Response> responses;
+  responses.reserve(inputs.size());
   for (size_t i = 0; i < inputs.size(); i++) {
-    // https://stackoverflow.com/a/33437008/4565794
-    // @jerinphilip is not proud of this.
-    Ptr<std::promise<Response>> responsePromise = New<std::promise<Response>>();
-    responseFutures.push_back(std::move(responsePromise->get_future()));
-    auto callback = [responsePromise](Response &&response) { responsePromise->set_value(std::move(response)); };
+    auto callback = [&responses](Response &&response) { responses[i] = std::move(response); };  //
     queueRequest(std::move(inputs[i]), std::move(callback), responseOptions);
   }
 
   // Dispatch is called once per request so compilation of sentences from
   // multiple Requests happen.
-  blockIfWASM();
-
-  std::vector<Response> responses;
-  responses.reserve(responseFutures.size());
-  for (auto &responseFuture : responseFutures) {
-    responseFuture.wait();
-    responses.push_back(std::move(responseFuture.get()));
+  Batch batch;
+  // There's no need to do shutdown here because it's single threaded.
+  while (batcher_ >> batch) {
+    blocking_translator_.translate(batch);
   }
 
   return responses;
 }
+#endif
 
 void Service::queueRequest(std::string &&input, std::function<void(Response &&)> &&callback,
                            ResponseOptions responseOptions) {
@@ -94,7 +80,6 @@ void Service::queueRequest(std::string &&input, std::function<void(Response &&)>
 void Service::translate(std::string &&input, std::function<void(Response &&)> &&callback,
                         ResponseOptions responseOptions) {
   queueRequest(std::move(input), std::move(callback), responseOptions);
-  blockIfWASM();
 }
 
 Service::~Service() {

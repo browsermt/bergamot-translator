@@ -30,7 +30,7 @@ jobs:
 
       - name: Deploy-time patch version
         run: |
-            echo '${{ steps.tag.outputs.result }}' > BERGAMOT_VERSION
+            echo ${{ steps.tag.outputs.result }} > BERGAMOT_VERSION
 
       - name: Set up Doxygen
         run: sudo apt-get install -y doxygen

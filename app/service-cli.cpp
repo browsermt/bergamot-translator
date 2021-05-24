@@ -11,6 +11,7 @@
 #include "translator/response.h"
 #include "translator/response_options.h"
 #include "translator/service.h"
+#include "translator/quality_estimator.h"
 
 int main(int argc, char *argv[]) {
   auto cp = marian::bergamot::createConfigParser();
@@ -71,6 +72,10 @@ int main(int argc, char *argv[]) {
       }
       std::cout << '\n';
     }
+
+    marian::bergamot::QualityEstimator quality_model(response, "/home/andrebarbosa/bergamot-translator/tmp.onnx");
+    response = quality_model.updateQualityScores();
+
 
     // Handle quality.
     auto &quality = response.qualityScores[sentenceIdx];

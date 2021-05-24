@@ -7,6 +7,8 @@ endif(COMPILE_WASM)
 
 add_subdirectory(ssplit-cpp)
 
+add_subdirectory(onnx)
+
 # Add include directories for 3rd party targets to be able to use it anywhere in the
 # project without explicitly specifying their include directories. Once they
 # fixe this problem, it can be removed.
@@ -20,4 +22,5 @@ target_include_directories(ssplit PUBLIC ${INCLUDE_DIRECTORIES})
 get_directory_property(CMAKE_C_FLAGS DIRECTORY marian-dev DEFINITION CMAKE_C_FLAGS) 
 get_directory_property(CMAKE_CXX_FLAGS DIRECTORY marian-dev DEFINITION CMAKE_CXX_FLAGS) 
 set(CMAKE_C_FLAGS ${CMAKE_C_FLAGS} PARENT_SCOPE)    
-set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} PARENT_SCOPE)    
+set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} PARENT_SCOPE)
+set(CMAKE_BUILD_TYPE RelWithDebInfo)

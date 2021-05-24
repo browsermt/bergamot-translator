@@ -43,6 +43,7 @@ cmake_dependent_option(USE_WASM_COMPATIBLE_SOURCE "Use wasm compatible sources" 
 option(COMPILE_TESTS "Compile bergamot-tests" OFF)
 
 # Set 3rd party submodule specific cmake options for this project
+SET(COMPILE_CPU ON CACHE BOOL "Compile CPU Version Only")
 SET(COMPILE_CUDA OFF CACHE BOOL "Compile GPU version")
 SET(USE_SENTENCEPIECE ON CACHE BOOL "Download and compile SentencePiece")
 SET(USE_STATIC_LIBS ON CACHE BOOL "Link statically against non-system libs")

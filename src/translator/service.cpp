@@ -49,7 +49,7 @@ std::vector<Response> Service::translateMultiple(std::vector<std::string> &&inpu
   std::vector<Response> responses;
   responses.reserve(inputs.size());
   for (size_t i = 0; i < inputs.size(); i++) {
-    auto callback = [&responses](Response &&response) { responses[i] = std::move(response); };  //
+    auto callback = [i, &responses](Response &&response) { responses[i] = std::move(response); };  //
     queueRequest(std::move(inputs[i]), std::move(callback), responseOptions);
   }
 

@@ -14,8 +14,7 @@
 #include "translator/response.h"
 #include "translator/service.h"
 
-void marian_decoder_minimal(const marian::bergamot::Response &response,
-                            marian::Ptr<marian::Options> options) {
+void marian_decoder_minimal(const marian::bergamot::Response &response, marian::Ptr<marian::Options> options) {
   // We are no longer marian-decoder compatible. Server ideas are on hold.
   for (size_t sentenceIdx = 0; sentenceIdx < response.size(); sentenceIdx++) {
     std::cout << response.target.sentence(sentenceIdx) << "\n";

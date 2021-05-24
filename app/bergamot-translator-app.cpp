@@ -14,7 +14,6 @@
 #include "translator/service.h"
 
 int main(int argc, char **argv) {
-
   // Create a configParser and load command line parameters into a YAML config
   // string.
   auto configParser = marian::bergamot::createConfigParser();

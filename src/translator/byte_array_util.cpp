@@ -1,6 +1,6 @@
 #include "byte_array_util.h"
 
-#include <stdlib.h>
+#include <cstdlib>
 #include <memory>
 
 #include "data/shortlist.h"

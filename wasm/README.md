@@ -81,7 +81,7 @@ request.delete();
 input.delete();
 ```
 
-## Demo (see everything in action)
+## Demo 
 
 * Make sure that you followed [Pre-requisites](#pre-requisites) instructions before moving forward.
 

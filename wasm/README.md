@@ -1,5 +1,11 @@
 # Using Bergamot Translator in JavaScript
-The example file `bergamot.html` in the folder `test_page` demonstrates how to use the bergamot translator in JavaScript via a `<script>` tag.
+
+Instructions in this document assume current-directory to be
+[wasm](https://github.com/browsermt/bergamot-translator/tree/main/wasm) within
+bergamot-translator source.
+
+The example file `bergamot.html` in the folder `test_page` demonstrates how to
+use the bergamot translator in JavaScript via a `<script>` tag.
 
 ## Pre-requisites
 

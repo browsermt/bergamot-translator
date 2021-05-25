@@ -17,10 +17,18 @@
 namespace marian {
 namespace bergamot {
 
+// marian::bergamot:: makes life easier, won't need to prefix it everywhere and these classes plenty use constructs.
+
+/// Interface for command-line applications. All applications are expected to use the Options based parsing until
+/// someone builds a suitable non-marian based yet complete replacement.
+
 class CLIAppInterface {
  public:
   virtual void execute(Ptr<Options> options);
 };
+
+/// Previously bergamot-translator-app. Expected to be maintained consistent with how the browser (mozilla, WASM)
+/// demands its API and tests be intact.
 
 class WASMApp : public CLIAppInterface {
  public:
@@ -45,6 +53,13 @@ class WASMApp : public CLIAppInterface {
   }
 };
 
+/// Application used to benchmark with marian-decoder from time-to time. The implementation in this repository follows a
+/// different route (request -> response based instead of a file with EOS based) and routinely needs to be checked that
+/// the speeds while operating similar to marian-decoder are not affected during the course of development. Expected to
+/// be compatible with Translator[1] and marian-decoder[2].
+/// [1] https://github.com/marian-nmt/marian-dev/blob/master/src/translator/translator.h
+/// [2] https://github.com/marian-nmt/marian/blob/master/src/command/marian_decoder.cpp
+
 class MarianDecoder : public CLIAppInterface {
  public:
   void execute(Ptr<Options> options) {
@@ -67,6 +82,9 @@ class MarianDecoder : public CLIAppInterface {
   }
 };
 
+/// The translation-service here provides more features than conventional marian-decoder. A primary one being able to
+/// track tokens in (unnormalized) source-text and translated text using ByteRanges. In addition, alignments and
+/// quality-scores are exported in the Response for consumption downstream.
 class ServiceCLI : public CLIAppInterface {
  public:
   void execute(Ptr<Options> options) {
@@ -141,6 +159,7 @@ class ServiceCLI : public CLIAppInterface {
   }
 };
 
+/// Template based duplication to call the respective classes based on mode string at run-time.
 template <class CLIAppType>
 void executeApp(Ptr<Options> options) {
   CLIAppType app;
@@ -155,7 +174,7 @@ void execute(const std::string &mode, Ptr<Options> options) {
   } else if (mode == "decoder") {
     executeApp<MarianDecoder>(options);
   } else {
-    std::abort();
+    ABORT("Unknown --mode {}. Use one of {wasm,service-cli,decoder}", mode);
   }
 }
 

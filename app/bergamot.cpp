@@ -1,4 +1,4 @@
-#include "cli-framework.h"
+#include "cli.h"
 
 int main(int argc, char *argv[]) {
   auto cp = marian::bergamot::createConfigParser();

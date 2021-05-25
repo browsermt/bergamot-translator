@@ -20,8 +20,11 @@ inline marian::ConfigParser createConfigParser() {
   cp.addOption<int>("--max-length-break", "Bergamot Options",
                     "Maximum input tokens to be processed in a single sentence.", 128);
 
+  cp.addOption<bool>("--bytearray", "Bergamot Options",
+                     "Flag holds whether to construct service from bytearrays, only for testing purpose", false);
+
   cp.addOption<bool>("--check-bytearray", "Bergamot Options",
-                     "Flag holds whether to check the content of the bytearray (true by default)", true);
+                     "Flag holds whether to check the content of the bytearrays (true by default)", true);
 
   cp.addOption<std::string>("--bergamot-mode", "Bergamot Options",
                             "Operating mode for bergamot: [wasm, service-cli, decoder]", "service-cli");

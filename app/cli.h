@@ -73,7 +73,7 @@ class ServiceCLI : public CLIAppInterface {
     // Prepare memories for bytearrays (including model, shortlist and vocabs)
     MemoryBundle memoryBundle;
 
-    if (options->get<bool>("check-bytearray")) {
+    if (options->get<bool>("bytearray")) {
       // Load legit values into bytearrays.
       memoryBundle = getMemoryBundleFromConfig(options);
     }

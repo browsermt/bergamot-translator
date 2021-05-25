@@ -1,4 +1,5 @@
-#pragma once
+#ifndef BERGAMOT_APP_CLI_H
+#define BERGAMOT_APP_CLI_H
 #include <cstdlib>
 #include <future>
 #include <iostream>
@@ -19,6 +20,8 @@ namespace bergamot {
 
 // marian::bergamot:: makes life easier, won't need to prefix it everywhere and these classes plenty use constructs.
 
+namespace app {
+
 /// Interface for command-line applications. All applications are expected to use the Options based parsing until
 /// someone builds a suitable non-marian based yet complete replacement.
 
@@ -27,10 +30,13 @@ class CLIAppInterface {
   virtual void execute(Ptr<Options> options) = 0;  // Make pure virtual, attempt to compile at MSVC
 };
 
-/// Previously bergamot-translator-app. Expected to be maintained consistent with how the browser (mozilla, WASM)
-/// demands its API and tests be intact.
-
-class WASMApp : public CLIAppInterface {
+/// Previously bergamot-translator-app. Provides a command-line app on native which executes the code-path used by Web
+/// Assembly. Expected to be maintained consistent with how the browser (Mozilla through WebAssembly) dictates its API
+/// and tests be intact. Also used in [bergamot-evaluation](https://github.com/mozilla/bergamot-evaluation).
+/// @param [cmdline]: Options to translate passed down to marian through Options.
+/// @param [stdin] sentences as lines of text.
+/// @param [stdout] translations for the sentences supplied in corresponding lines
+class WASM : public CLIAppInterface {
  public:
   void execute(Ptr<Options> options) {
     std::string config = options->asYamlString();
@@ -53,14 +59,25 @@ class WASMApp : public CLIAppInterface {
   }
 };
 
-/// Application used to benchmark with marian-decoder from time-to time. The implementation in this repository follows a
-/// different route (request -> response based instead of a file with EOS based) and routinely needs to be checked that
-/// the speeds while operating similar to marian-decoder are not affected during the course of development. Expected to
-/// be compatible with Translator[1] and marian-decoder[2].
-/// [1] https://github.com/marian-nmt/marian-dev/blob/master/src/translator/translator.h
-/// [2] https://github.com/marian-nmt/marian/blob/master/src/command/marian_decoder.cpp
+/// Application used to benchmark with marian-decoder from time-to-time. The implementation in this repository follows a
+/// different route than marian-decoder  and routinely needs to be checked that the speeds while operating similar to
+/// marian-decoder are not affected during the course of development.
+///
+/// Example usage:
+/// [brt/speed-tests/test_wngt20_perf.sh](https://github.com/browsermt/bergamot-translator-tests/blob/main/speed-tests/test_wngt20_perf.sh).
+///
+/// Expected to be compatible with Translator[1] and marian-decoder[2].
+///
+/// - [1]
+/// [marian-dev/../src/translator/translator.h](https://github.com/marian-nmt/marian-dev/blob/master/src/translator/translator.h)
+/// - [2]
+/// [marian-dev/../src/command/marian_decoder.cpp](https://github.com/marian-nmt/marian/blob/master/src/command/marian_decoder.cpp)
+///
+/// @param [cmdline] options constructed from command-line supplied arguments
+/// @param [stdin] lines containing sentences, same as marian-decoder.
+/// @param [stdout] translations of the sentences supplied via stdin in corresponding lines
 
-class MarianDecoder : public CLIAppInterface {
+class Decoder : public CLIAppInterface {
  public:
   void execute(Ptr<Options> options) {
     marian::timer::Timer decoderTimer;
@@ -82,10 +99,13 @@ class MarianDecoder : public CLIAppInterface {
   }
 };
 
-/// The translation-service here provides more features than conventional marian-decoder. A primary one being able to
-/// track tokens in (unnormalized) source-text and translated text using ByteRanges. In addition, alignments and
-/// quality-scores are exported in the Response for consumption downstream.
-class ServiceCLI : public CLIAppInterface {
+/// Command line interface to the test the features being developed as part of bergamot C++ library on native platform.
+///
+/// @param [cmdline]: options to build translator
+/// @param [stdin]: Blob of text, read as a whole ; sentence-splitting etc handled internally.
+/// @param [stdout]: Translation of the source text and additional information like sentences, alignments between source
+/// and target tokens and quality scores.
+class Native : public CLIAppInterface {
  public:
   void execute(Ptr<Options> options) {
     // Prepare memories for bytearrays (including model, shortlist and vocabs)
@@ -159,20 +179,22 @@ class ServiceCLI : public CLIAppInterface {
   }
 };
 
+}  // namespace app
+
 /// Template based duplication to call the respective classes based on mode string at run-time.
 template <class CLIAppType>
-void executeApp(Ptr<Options> options) {
+void _execute(Ptr<Options> options) {
   CLIAppType app;
   app.execute(options);
 }
 
 void execute(const std::string &mode, Ptr<Options> options) {
   if (mode == "wasm") {
-    executeApp<WASMApp>(options);
-  } else if (mode == "service-cli") {
-    executeApp<ServiceCLI>(options);
+    _execute<app::WASM>(options);
+  } else if (mode == "native") {
+    _execute<app::Native>(options);
   } else if (mode == "decoder") {
-    executeApp<MarianDecoder>(options);
+    _execute<app::Decoder>(options);
   } else {
     ABORT("Unknown --mode {}. Use one of {wasm,service-cli,decoder}", mode);
   }
@@ -180,3 +202,5 @@ void execute(const std::string &mode, Ptr<Options> options) {
 
 }  // namespace bergamot
 }  // namespace marian
+
+#endif  // BERGAMOT_APP_CLI_H

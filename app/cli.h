@@ -24,7 +24,7 @@ namespace bergamot {
 
 class CLIAppInterface {
  public:
-  virtual void execute(Ptr<Options> options);
+  virtual void execute(Ptr<Options> options) = 0;  // Make pure virtual, attempt to compile at MSVC
 };
 
 /// Previously bergamot-translator-app. Expected to be maintained consistent with how the browser (mozilla, WASM)

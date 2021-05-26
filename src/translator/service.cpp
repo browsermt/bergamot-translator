@@ -47,14 +47,13 @@ std::vector<Response> Service::translateMultiple(std::vector<std::string> &&inpu
   // We queue the individual Requests so they get compiled at batches to be
   // efficiently translated.
   std::vector<Response> responses;
-  responses.reserve(inputs.size());
+  responses.resize(inputs.size());
+
   for (size_t i = 0; i < inputs.size(); i++) {
     auto callback = [i, &responses](Response &&response) { responses[i] = std::move(response); };  //
     queueRequest(std::move(inputs[i]), std::move(callback), responseOptions);
   }
 
-  // Dispatch is called once per request so compilation of sentences from
-  // multiple Requests happen.
   Batch batch;
   // There's no need to do shutdown here because it's single threaded.
   while (batcher_ >> batch) {

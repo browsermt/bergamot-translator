@@ -27,7 +27,10 @@ namespace app {
 
 class CLIAppInterface {
  public:
-  virtual void execute(Ptr<Options> options) = 0;  // Make pure virtual, attempt to compile at MSVC
+  CLIAppInterface(Ptr<Options> options) : options_(options) {}
+  virtual void run() = 0;  // Make pure virtual, attempt to compile at MSVC
+ protected:
+  Ptr<Options> options_;
 };
 
 /// Previously bergamot-translator-app. Provides a command-line app on native which executes the code-path used by Web
@@ -38,8 +41,9 @@ class CLIAppInterface {
 /// @param [stdout] translations for the sentences supplied in corresponding lines
 class WASM : public CLIAppInterface {
  public:
-  void execute(Ptr<Options> options) {
-    std::string config = options->asYamlString();
+  WASM(Ptr<Options> options) : CLIAppInterface(options) {}
+  void run() {
+    std::string config = options_->asYamlString();
 
     // Route the config string to construct marian model through TranslationModel
     Service model(config);
@@ -79,9 +83,10 @@ class WASM : public CLIAppInterface {
 
 class Decoder : public CLIAppInterface {
  public:
-  void execute(Ptr<Options> options) {
+  Decoder(Ptr<Options> options) : CLIAppInterface(options) {}
+  void run() {
     marian::timer::Timer decoderTimer;
-    Service service(options);
+    Service service(options_);
     // Read a large input text blob from stdin
     std::ostringstream std_input;
     std_input << std::cin.rdbuf();
@@ -107,16 +112,17 @@ class Decoder : public CLIAppInterface {
 /// and target tokens and quality scores.
 class Native : public CLIAppInterface {
  public:
-  void execute(Ptr<Options> options) {
+  Native(Ptr<Options> options) : CLIAppInterface(options) {}
+  void run() {
     // Prepare memories for bytearrays (including model, shortlist and vocabs)
     MemoryBundle memoryBundle;
 
-    if (options->get<bool>("bytearray")) {
+    if (options_->get<bool>("bytearray")) {
       // Load legit values into bytearrays.
-      memoryBundle = getMemoryBundleFromConfig(options);
+      memoryBundle = getMemoryBundleFromConfig(options_);
     }
 
-    Service service(options, std::move(memoryBundle));
+    Service service(options_, std::move(memoryBundle));
 
     // Read a large input text blob from stdin
     std::ostringstream std_input;
@@ -181,22 +187,15 @@ class Native : public CLIAppInterface {
 
 }  // namespace app
 
-/// Template based duplication to call the respective classes based on mode string at run-time.
-template <class CLIAppType>
-void _execute(Ptr<Options> options) {
-  CLIAppType app;
-  app.execute(options);
-}
-
 void execute(const std::string &mode, Ptr<Options> options) {
   if (mode == "wasm") {
-    _execute<app::WASM>(options);
+    app::WASM(options).run();
   } else if (mode == "native") {
-    _execute<app::Native>(options);
+    app::Native(options).run();
   } else if (mode == "decoder") {
-    _execute<app::Decoder>(options);
+    app::Decoder(options).run();
   } else {
-    ABORT("Unknown --mode {}. Use one of {wasm,service-cli,decoder}", mode);
+    ABORT("Unknown --mode {}. Use one of: wasm,native,decoder", mode);
   }
 }
 

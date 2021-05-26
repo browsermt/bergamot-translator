@@ -4,6 +4,7 @@
 #include <future>
 #include <iostream>
 #include <sstream>
+#include <unordered_map>
 
 #include "common/definitions.h"
 #include "common/timer.h"
@@ -29,7 +30,7 @@ namespace app {
 /// @param [stdin] sentences as lines of text.
 /// @param [stdout] translations for the sentences supplied in corresponding lines
 struct wasm {
-  void operator()(Ptr<Options> options) {
+  void operator()(Ptr<Options> options) const {
     // Here, we take the command-line interface which is uniform across all apps. This is parsed into Ptr<Options> by
     // marian. However, mozilla does not allow a Ptr<Options> constructor and demands an std::string constructor since
     // std::string isn't marian internal unlike Ptr<Options>. Since this std::string path needs to be tested for mozilla
@@ -76,7 +77,7 @@ struct wasm {
 /// @param [stdout] translations of the sentences supplied via stdin in corresponding lines
 
 struct decoder {
-  void operator()(Ptr<Options> options) {
+  void operator()(Ptr<Options> options) const {
     marian::timer::Timer decoderTimer;
     Service service(options);
     // Read a large input text blob from stdin
@@ -103,7 +104,7 @@ struct decoder {
 /// @param [stdout]: Translation of the source text and additional information like sentences, alignments between source
 /// and target tokens and quality scores.
 struct native {
-  void operator()(Ptr<Options> options) {
+  void operator()(Ptr<Options> options) const {
     // Prepare memories for bytearrays (including model, shortlist and vocabs)
     MemoryBundle memoryBundle;
 
@@ -177,25 +178,26 @@ struct native {
 
 }  // namespace app
 
-/*
 typedef std::function<void(Ptr<Options>)> CLI;
-const unordered_map<std::string, CLI> ftable {
-  // This should be replacable with macro
-    {"wasm", app::wasm},
-    {"native", app::native},
-    {"decoder", app::decoder}
-}
-*/
+static const std::unordered_map<std::string, CLI> ftable{
+    {"wasm", app::wasm()}, {"native", app::native()}, {"decoder", app::decoder()}};
 
 void execute(const std::string &mode, Ptr<Options> options) {
-  if (mode == "wasm") {
-    app::wasm()(options);
-  } else if (mode == "native") {
-    app::native()(options);
-  } else if (mode == "decoder") {
-    app::decoder()(options);
+  auto namedFnPtr = ftable.find(mode);
+  if (namedFnPtr != ftable.end()) {
+    namedFnPtr->second(options);
   } else {
-    ABORT("Unknown --mode {}. Use one of: wasm,native,decoder", mode);
+    std::string availModes = "";
+    bool first{false};
+    for (auto &p : ftable) {
+      if (first) {
+        first = false;
+      } else {
+        availModes += ",";
+      }
+      availModes += p.first;
+    }
+    ABORT("Unknown --mode {}. Use one of: \{{}\}", mode, availModes);
   }
 }
 

@@ -61,11 +61,11 @@ provided in `app/cli.h`. These are packed into a single executable named
 
 The following modes are available:
 
-* `--bergamot-mode native` ([Native](./api/classmarian_1_1bergamot_1_1app_1_1Decoder.html#exhale-class-classmarian-1-1bergamot-1-1app-1-1decoder))
-* `--bergamot-mode wasm`    ([WASM](./api/classmarian_1_1bergamot_1_1app_1_1WASM.html#exhale-class-classmarian-1-1bergamot-1-1app-1-1wasm))
-* `--bergamot-mode decoder` ([Decoder](./api/classmarian_1_1bergamot_1_1app_1_1Decoder.html#exhale-class-classmarian-1-1bergamot-1-1app-1-1decoder))
+* `--bergamot-mode native` 
+* `--bergamot-mode wasm`    
+* `--bergamot-mode decoder` 
 
-Note: The links above only work with the sphinx rendered documentation, and points to documentation for the respective CLI.
+Find documentation on these modes with the API documentation for apps [here](./api/namespace_marian__bergamot__app.html#functions).
 
 ## Example command line run
 

@@ -43,9 +43,16 @@ class WASM : public CLIAppInterface {
  public:
   WASM(Ptr<Options> options) : CLIAppInterface(options) {}
   void run() {
-    std::string config = options_->asYamlString();
+    // Here, we take the command-line interface which is uniform across all apps. This is parsed into Ptr<Options> by
+    // marian. However, mozilla does not allow a Ptr<Options> constructor and demands an std::string constructor since
+    // std::string isn't marian internal unlike Ptr<Options>. Since this std::string path needs to be tested for mozilla
+    // and since this class/CLI is intended at testing mozilla's path, we go from:
+    //
+    // cmdline -> Ptr<Options> -> std::string -> Service(std::string)
+    //
+    // Overkill, yes.
 
-    // Route the config string to construct marian model through TranslationModel
+    std::string config = options_->asYamlString();
     Service model(config);
 
     ResponseOptions responseOptions;

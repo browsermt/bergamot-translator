@@ -12,7 +12,7 @@ int main(int argc, char *argv[]) {
   } else if (mode == "decoder") {
     app::decoder(options);
   } else {
-    ABORT("Unknown --mode {}. Use one of: \{wasm,native,decoder\}", mode);
+    ABORT("Unknown --mode {}. Use one of: {wasm,native,decoder}", mode);
   }
   return 0;
 }

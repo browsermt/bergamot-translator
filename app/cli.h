@@ -22,23 +22,14 @@ namespace bergamot {
 
 namespace app {
 
-/// Interface for command-line applications. All applications are expected to use the Options based parsing until
-/// someone builds a suitable non-marian based yet complete replacement.
-
-class CLIAppInterface {
- public:
-  virtual void run(Ptr<Options> options) = 0;  // Make pure virtual, attempt to compile at MSVC
-};
-
 /// Previously bergamot-translator-app. Provides a command-line app on native which executes the code-path used by Web
 /// Assembly. Expected to be maintained consistent with how the browser (Mozilla through WebAssembly) dictates its API
 /// and tests be intact. Also used in [bergamot-evaluation](https://github.com/mozilla/bergamot-evaluation).
 /// @param [cmdline]: Options to translate passed down to marian through Options.
 /// @param [stdin] sentences as lines of text.
 /// @param [stdout] translations for the sentences supplied in corresponding lines
-class WASM : public CLIAppInterface {
- public:
-  void run(Ptr<Options> options) {
+struct wasm {
+  void operator()(Ptr<Options> options) {
     // Here, we take the command-line interface which is uniform across all apps. This is parsed into Ptr<Options> by
     // marian. However, mozilla does not allow a Ptr<Options> constructor and demands an std::string constructor since
     // std::string isn't marian internal unlike Ptr<Options>. Since this std::string path needs to be tested for mozilla
@@ -84,9 +75,8 @@ class WASM : public CLIAppInterface {
 /// @param [stdin] lines containing sentences, same as marian-decoder.
 /// @param [stdout] translations of the sentences supplied via stdin in corresponding lines
 
-class Decoder : public CLIAppInterface {
- public:
-  void run(Ptr<Options> options) {
+struct decoder {
+  void operator()(Ptr<Options> options) {
     marian::timer::Timer decoderTimer;
     Service service(options);
     // Read a large input text blob from stdin
@@ -112,9 +102,8 @@ class Decoder : public CLIAppInterface {
 /// @param [stdin]: Blob of text, read as a whole ; sentence-splitting etc handled internally.
 /// @param [stdout]: Translation of the source text and additional information like sentences, alignments between source
 /// and target tokens and quality scores.
-class Native : public CLIAppInterface {
- public:
-  void run(Ptr<Options> options) {
+struct native {
+  void operator()(Ptr<Options> options) {
     // Prepare memories for bytearrays (including model, shortlist and vocabs)
     MemoryBundle memoryBundle;
 
@@ -188,13 +177,23 @@ class Native : public CLIAppInterface {
 
 }  // namespace app
 
+/*
+typedef std::function<void(Ptr<Options>)> CLI;
+const unordered_map<std::string, CLI> ftable {
+  // This should be replacable with macro
+    {"wasm", app::wasm},
+    {"native", app::native},
+    {"decoder", app::decoder}
+}
+*/
+
 void execute(const std::string &mode, Ptr<Options> options) {
   if (mode == "wasm") {
-    app::WASM().run(options);
+    app::wasm()(options);
   } else if (mode == "native") {
-    app::Native().run(options);
+    app::native()(options);
   } else if (mode == "decoder") {
-    app::Decoder().run(options);
+    app::decoder()(options);
   } else {
     ABORT("Unknown --mode {}. Use one of: wasm,native,decoder", mode);
   }

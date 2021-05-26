@@ -104,7 +104,6 @@ class Service {
   void queueRequest(std::string &&input, std::function<void(Response &&)> &&callback, ResponseOptions responseOptions);
 
   /// Translates through direct interaction between batcher_ and translators_
-  // void blockIfWASM();
 
   /// Number of workers to launch.
   size_t numWorkers_;

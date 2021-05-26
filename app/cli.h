@@ -26,6 +26,10 @@ namespace app {
 /// Previously bergamot-translator-app. Provides a command-line app on native which executes the code-path used by Web
 /// Assembly. Expected to be maintained consistent with how the browser (Mozilla through WebAssembly) dictates its API
 /// and tests be intact. Also used in [bergamot-evaluation](https://github.com/mozilla/bergamot-evaluation).
+///
+/// Usage example:
+/// [brt../tests/basic/test_bergamot_translator_app_intgemm_8bit.cpu-threads.0.sh](https://github.com/browsermt/bergamot-translator-tests/blob/main/tests/basic/test_bergamot_translator_app_intgemm_8bit.cpu-threads.0.sh)
+///
 /// @param [cmdline]: Options to translate passed down to marian through Options.
 /// @param [stdin] sentences as lines of text.
 /// @param [stdout] translations for the sentences supplied in corresponding lines
@@ -94,6 +98,9 @@ void decoder(Ptr<Options> options) {
 }
 
 /// Command line interface to the test the features being developed as part of bergamot C++ library on native platform.
+///
+/// Usage example:
+/// [brt/..tests/basic/test_service-cli_intgemm_8bit.cpu-threads.4.sh](https://github.com/browsermt/bergamot-translator-tests/blob/main/tests/basic/test_service-cli_intgemm_8bit.cpu-threads.4.sh)
 ///
 /// @param [cmdline]: options to build translator
 /// @param [stdin]: Blob of text, read as a whole ; sentence-splitting etc handled internally.

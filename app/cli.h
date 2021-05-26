@@ -27,10 +27,7 @@ namespace app {
 
 class CLIAppInterface {
  public:
-  CLIAppInterface(Ptr<Options> options) : options_(options) {}
-  virtual void run() = 0;  // Make pure virtual, attempt to compile at MSVC
- protected:
-  Ptr<Options> options_;
+  virtual void run(Ptr<Options> options) = 0;  // Make pure virtual, attempt to compile at MSVC
 };
 
 /// Previously bergamot-translator-app. Provides a command-line app on native which executes the code-path used by Web
@@ -41,8 +38,7 @@ class CLIAppInterface {
 /// @param [stdout] translations for the sentences supplied in corresponding lines
 class WASM : public CLIAppInterface {
  public:
-  WASM(Ptr<Options> options) : CLIAppInterface(options) {}
-  void run() {
+  void run(Ptr<Options> options) {
     // Here, we take the command-line interface which is uniform across all apps. This is parsed into Ptr<Options> by
     // marian. However, mozilla does not allow a Ptr<Options> constructor and demands an std::string constructor since
     // std::string isn't marian internal unlike Ptr<Options>. Since this std::string path needs to be tested for mozilla
@@ -52,7 +48,7 @@ class WASM : public CLIAppInterface {
     //
     // Overkill, yes.
 
-    std::string config = options_->asYamlString();
+    std::string config = options->asYamlString();
     Service model(config);
 
     ResponseOptions responseOptions;
@@ -90,10 +86,9 @@ class WASM : public CLIAppInterface {
 
 class Decoder : public CLIAppInterface {
  public:
-  Decoder(Ptr<Options> options) : CLIAppInterface(options) {}
-  void run() {
+  void run(Ptr<Options> options) {
     marian::timer::Timer decoderTimer;
-    Service service(options_);
+    Service service(options);
     // Read a large input text blob from stdin
     std::ostringstream std_input;
     std_input << std::cin.rdbuf();
@@ -119,17 +114,16 @@ class Decoder : public CLIAppInterface {
 /// and target tokens and quality scores.
 class Native : public CLIAppInterface {
  public:
-  Native(Ptr<Options> options) : CLIAppInterface(options) {}
-  void run() {
+  void run(Ptr<Options> options) {
     // Prepare memories for bytearrays (including model, shortlist and vocabs)
     MemoryBundle memoryBundle;
 
-    if (options_->get<bool>("bytearray")) {
+    if (options->get<bool>("bytearray")) {
       // Load legit values into bytearrays.
-      memoryBundle = getMemoryBundleFromConfig(options_);
+      memoryBundle = getMemoryBundleFromConfig(options);
     }
 
-    Service service(options_, std::move(memoryBundle));
+    Service service(options, std::move(memoryBundle));
 
     // Read a large input text blob from stdin
     std::ostringstream std_input;
@@ -196,11 +190,11 @@ class Native : public CLIAppInterface {
 
 void execute(const std::string &mode, Ptr<Options> options) {
   if (mode == "wasm") {
-    app::WASM(options).run();
+    app::WASM().run(options);
   } else if (mode == "native") {
-    app::Native(options).run();
+    app::Native().run(options);
   } else if (mode == "decoder") {
-    app::Decoder(options).run();
+    app::Decoder().run(options);
   } else {
     ABORT("Unknown --mode {}. Use one of: wasm,native,decoder", mode);
   }

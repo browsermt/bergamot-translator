@@ -78,7 +78,7 @@ at:
 
 ```bash
 MODEL_DIR=... # path to where the model-files are.
-BERGAMOT_MODE='service-cli'
+BERGAMOT_MODE='native'
 ARGS=(
     --bergamot-mode $BERGAMOT_MODE
     -m $MODEL_DIR/model.intgemm.alphas.bin # Path to model file.

@@ -14,6 +14,7 @@
 #include "translator/service.h"
 
 int main(int argc, char **argv) {
+#ifdef WASM_COMPATIBLE_SOURCE
 
   // Create a configParser and load command line parameters into a YAML config
   // string.
@@ -36,6 +37,7 @@ int main(int argc, char **argv) {
   for (auto &result : results) {
     std::cout << result.getTranslatedText() << std::endl;
   }
+#endif
 
   return 0;
 }

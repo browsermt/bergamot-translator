@@ -1,0 +1,89 @@
+name: Documentation
+
+on:
+  push:
+    branches: [ main, ci-sandbox ]
+    tags: ['v[0-9]+.[0-9]+.[0-9]+']
+  pull_request: 
+    branches: [ main ]
+
+jobs:
+  api-documentation:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          submodules: recursive
+
+      # Runs javascript to extract push events from both tags and branch (only main, due to workflow trigger)
+      # converts refs/<>/<name> -> <name>
+      # eg:
+      #     refs/head/main   -> main
+      #     refs/tags/v0.1.0 -> v0.1.0
+      #
+      - name: Extract tag name
+        id: tag
+        uses: actions/github-script@0.2.0
+        if: ${{ github.event_name == 'push' }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const args = context.payload.ref.split("/");
+            [refs, category, ...rest] = args;
+            return rest.join("/");
+
+      # Patches the BERGAMOT_VERSION file used by sphinx-docs at run time to
+      # obtain names like 'main' or 'ci-sandbox' to not confuse with version
+      # based documentation built separately.
+      - name: Deploy-time patch version 
+        run: | 
+            echo ${{steps.tag.outputs.result }} > BERGAMOT_VERSION
+
+      - name: Set up Doxygen
+        run: sudo apt-get install -y doxygen
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.7
+
+      - name: Set up dependency cache
+        uses: actions/cache@v2
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('doc/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        working-directory: ./doc
+        run: python3 -m pip install -r requirements.txt
+
+      - name: Build documentation
+        working-directory: ./doc
+        run: sphinx-build -b html ./ build/
+
+
+      - name: Deploy 🚀
+        uses: JamesIves/github-pages-deploy-action@4.1.3
+        if: ${{ github.event_name == 'push' }}
+        with:
+          repository-name: 'browsermt/docs' 
+          branch: gh-pages # The branch the action should deploy to.
+          folder: './doc/build/' # The folder the action should deploy.
+          target-folder: '${{ steps.tag.outputs.result }}' 
+          ssh-key: ${{ secrets.BERGAMOT_SSH_PRIVATE_KEY }}
+
+      # This artifact contains the HTML output of Sphinx only.
+      # With index.html at the root of the produced zip file.
+      # For use for maintainers to download the zip and check render of
+      # documentation while generated at pull-request. 
+      - name: Upload documentation
+        uses: actions/upload-artifact@v2
+        if: ${{ github.event_name == 'pull_request'}}
+        with:
+          name: api-docs
+          path: ./doc/build/
+          if-no-files-found: error
+

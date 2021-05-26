@@ -176,20 +176,23 @@ struct native {
   }
 };
 
-}  // namespace app
-
 typedef std::function<void(Ptr<Options>)> CLI;
 static const std::unordered_map<std::string, CLI> ftable{
     {"wasm", app::wasm()}, {"native", app::native()}, {"decoder", app::decoder()}};
 
+}  // namespace app
+
 void execute(const std::string &mode, Ptr<Options> options) {
-  auto namedFnPtr = ftable.find(mode);
-  if (namedFnPtr != ftable.end()) {
-    namedFnPtr->second(options);
+  auto namedFnPtr = app::ftable.find(mode);
+  if (namedFnPtr != app::ftable.end()) {
+    const std::string &fname = namedFnPtr->first;
+    const app::CLI &fn = namedFnPtr->second;
+    fn(options);
   } else {
+    // Collect available functions to show error message.
     std::string availModes = "";
     bool first{false};
-    for (auto &p : ftable) {
+    for (auto &p : app::ftable) {
       if (first) {
         first = false;
       } else {

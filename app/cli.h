@@ -4,7 +4,6 @@
 #include <future>
 #include <iostream>
 #include <sstream>
-#include <unordered_map>
 
 #include "common/definitions.h"
 #include "common/timer.h"
@@ -28,11 +27,12 @@ namespace app {
 /// and tests be intact. Also used in [bergamot-evaluation](https://github.com/mozilla/bergamot-evaluation).
 ///
 /// Usage example:
-/// [brt../tests/basic/test_bergamot_translator_app_intgemm_8bit.cpu-threads.0.sh](https://github.com/browsermt/bergamot-translator-tests/blob/main/tests/basic/test_bergamot_translator_app_intgemm_8bit.cpu-threads.0.sh)
+/// [brt/tests/basic/test_bergamot_translator_app_intgemm_8bit.cpu-threads.0.sh](https://github.com/browsermt/bergamot-translator-tests/blob/main/tests/basic/test_bergamot_translator_app_intgemm_8bit.cpu-threads.0.sh)
 ///
-/// @param [cmdline]: Options to translate passed down to marian through Options.
-/// @param [stdin] sentences as lines of text.
-/// @param [stdout] translations for the sentences supplied in corresponding lines
+/// * Input : read from stdin as sentences as lines of text.
+/// * Output: written to stdout as translations for the sentences supplied in corresponding lines
+///
+/// @param [options]: Options to translate passed down to marian through Options.
 void wasm(Ptr<Options> options) {
   // Here, we take the command-line interface which is uniform across all apps. This is parsed into Ptr<Options> by
   // marian. However, mozilla does not allow a Ptr<Options> constructor and demands an std::string constructor since
@@ -74,10 +74,10 @@ void wasm(Ptr<Options> options) {
 /// - [2]
 /// [marian-dev/../src/command/marian_decoder.cpp](https://github.com/marian-nmt/marian/blob/master/src/command/marian_decoder.cpp)
 ///
-/// @param [cmdline] options constructed from command-line supplied arguments
-/// @param [stdin] lines containing sentences, same as marian-decoder.
-/// @param [stdout] translations of the sentences supplied via stdin in corresponding lines
-
+/// * Input: stdin, lines containing sentences, same as marian-decoder.
+/// * Output: to stdout, translations of the sentences supplied via stdin in corresponding lines
+///
+/// @param [in] options: constructed from command-line supplied arguments
 void decoder(Ptr<Options> options) {
   marian::timer::Timer decoderTimer;
   Service service(options);
@@ -100,12 +100,13 @@ void decoder(Ptr<Options> options) {
 /// Command line interface to the test the features being developed as part of bergamot C++ library on native platform.
 ///
 /// Usage example:
-/// [brt/..tests/basic/test_service-cli_intgemm_8bit.cpu-threads.4.sh](https://github.com/browsermt/bergamot-translator-tests/blob/main/tests/basic/test_service-cli_intgemm_8bit.cpu-threads.4.sh)
+/// [brt/tests/basic/test_service-cli_intgemm_8bit.cpu-threads.4.sh](https://github.com/browsermt/bergamot-translator-tests/blob/main/tests/basic/test_service-cli_intgemm_8bit.cpu-threads.4.sh)
 ///
-/// @param [cmdline]: options to build translator
-/// @param [stdin]: Blob of text, read as a whole ; sentence-splitting etc handled internally.
-/// @param [stdout]: Translation of the source text and additional information like sentences, alignments between source
-/// and target tokens and quality scores.
+/// * Input: reads from stdin, blob of text, read as a whole ; sentence-splitting etc handled internally.
+/// * Output: to stdout, translation of the source text and additional information like sentences, alignments between
+/// source and target tokens and quality scores.
+///
+/// @param [in] options: options to build translator
 void native(Ptr<Options> options) {
   // Prepare memories for bytearrays (including model, shortlist and vocabs)
   MemoryBundle memoryBundle;

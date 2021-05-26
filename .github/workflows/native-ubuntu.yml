@@ -19,7 +19,7 @@ jobs:
             ccache_cmd: "bash ${GITHUB_WORKSPACE}/scripts/ci/compiler-hash.sh %compiler%"
             cpu: 'ON'
             gpu: 'OFF'
-            test_tags: ""
+            test_tags: "#native"
             cmake: 
               CMAKE_BUILD_TYPE: "Release"
               COMPILE_TESTS: "ON"
@@ -53,7 +53,7 @@ jobs:
             ccache_cmd: "bash ${GITHUB_WORKSPACE}/scripts/ci/compiler-hash.sh %compiler%"
             cpu: 'ON'
             gpu: 'OFF'
-            test_tags: ""
+            test_tags: "#native"
             cmake: 
               CMAKE_BUILD_TYPE: "Release"
               COMPILE_TESTS: "ON"

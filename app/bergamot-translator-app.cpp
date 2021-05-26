@@ -14,8 +14,6 @@
 #include "translator/service.h"
 
 int main(int argc, char **argv) {
-#ifdef WASM_COMPATIBLE_SOURCE
-
   // Create a configParser and load command line parameters into a YAML config
   // string.
   auto configParser = marian::bergamot::createConfigParser();
@@ -28,6 +26,8 @@ int main(int argc, char **argv) {
   marian::bergamot::ResponseOptions responseOptions;
   std::vector<std::string> texts;
 
+#ifdef WASM_COMPATIBLE_SOURCE
+  // Hide the translateMultiple operation
   for (std::string line; std::getline(std::cin, line);) {
     texts.emplace_back(line);
   }

@@ -42,7 +42,7 @@ $ cd bergamot-translator
 $ mkdir build
 $ cd build
 $ cmake .. -DUSE_WASM_COMPATIBLE_SOURCE=off -DCMAKE_BUILD_TYPE=Release
-$ make -j4
+$ make -j2 
 ```
 
 The build will generate the library that can be linked to any project. All the

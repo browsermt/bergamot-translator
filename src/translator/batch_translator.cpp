@@ -20,8 +20,6 @@ BatchTranslator::BatchTranslator(DeviceId const device, Vocabs &vocabs, Ptr<Opti
 
 void BatchTranslator::initialize() {
   // Initializes the graph.
-  bool check =
-      options_->get<bool>("check-bytearray", false);  // Flag holds whether validate the bytearray (model and shortlist)
   if (options_->hasAndNotEmpty("shortlist")) {
     int srcIdx = 0, trgIdx = 1;
     bool shared_vcb =
@@ -30,7 +28,7 @@ void BatchTranslator::initialize() {
     if (shortlistMemory_->size() > 0 && shortlistMemory_->begin() != nullptr) {
       slgen_ = New<data::BinaryShortlistGenerator>(shortlistMemory_->begin(), shortlistMemory_->size(),
                                                    vocabs_.sources().front(), vocabs_.target(), srcIdx, trgIdx,
-                                                   shared_vcb, check);
+                                                   shared_vcb, options_->get<bool>("check-bytearray"));
     } else {
       // Changed to BinaryShortlistGenerator to enable loading binary shortlist file
       // This class also supports text shortlist file
@@ -51,7 +49,7 @@ void BatchTranslator::initialize() {
                       // from there, as opposed to from reading in the config file
     ABORT_IF((uintptr_t)modelMemory_->begin() % 256 != 0,
              "The provided memory is not aligned to 256 bytes and will crash when vector instructions are used on it.");
-    if (check) {
+    if (options_->get<bool>("check-bytearray")) {
       ABORT_IF(!validateBinaryModel(*modelMemory_, modelMemory_->size()),
                "The binary file is invalid. Incomplete or corrupted download?");
     }

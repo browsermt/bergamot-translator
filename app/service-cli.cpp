@@ -19,7 +19,7 @@ int main(int argc, char *argv[]) {
   // Prepare memories for bytearrays (including model, shortlist and vocabs)
   marian::bergamot::MemoryBundle memoryBundle;
 
-  if (options->get<bool>("check-bytearray")) {
+  if (options->get<bool>("bytearray")) {
     // Load legit values into bytearrays.
     memoryBundle = marian::bergamot::getMemoryBundleFromConfig(options);
   }

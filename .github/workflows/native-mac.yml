@@ -91,7 +91,7 @@ jobs:
     - name: Print versions
       working-directory: build
       run: |
-        ./app/bergamot-translator-app --version
+        ./app/bergamot --version
 
     - name: Install regression-test framework (BRT)
       working-directory: bergamot-translator-tests

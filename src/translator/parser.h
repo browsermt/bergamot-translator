@@ -26,6 +26,9 @@ inline marian::ConfigParser createConfigParser() {
   cp.addOption<bool>("--check-bytearray", "Bergamot Options",
                      "Flag holds whether to check the content of the bytearrays (true by default)", true);
 
+  cp.addOption<std::string>("--bergamot-mode", "Bergamot Options",
+                            "Operating mode for bergamot: [wasm, native, decoder]", "native");
+
   return cp;
 }
 

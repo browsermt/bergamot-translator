@@ -82,7 +82,7 @@ breathe_projects = { 'bergamot-translator': './doxygen/xml' }
 breathe_default_project = 'bergamot-translator'
 
 doxygen_config = """
-INPUT                = ../src
+INPUT                = ../src ../app
 EXCLUDE             += ../3rd_party
 EXCLUDE             += ../src/tests
 EXCLUDE_PATTERNS     = *.md *.txt

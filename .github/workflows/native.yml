@@ -100,7 +100,7 @@ jobs:
       run: 'ccache -s # Print current cache stats'
     - name: Print Versions
       working-directory: build
-      run: ./app/bergamot-translator-app --version
+      run: ./app/bergamot --version
     - name: Run unit tests
       working-directory: build
       run: make test
@@ -195,7 +195,7 @@ jobs:
       run: 'ccache -s # Print current cache stats'
     - name: Print Versions
       working-directory: build
-      run: ./app/bergamot-translator-app --version
+      run: ./app/bergamot --version
     - name: Run unit tests
       working-directory: build
       run: make test

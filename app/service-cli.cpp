@@ -28,9 +28,9 @@ int main(int argc, char *argv[]) {
 
   // Read a large input text blob from stdin
   std::ostringstream std_input;
-  //std_input << std::cin.rdbuf();
-  //std::string input = std_input.str();
-  std::string input = "A Republican strategy to counter the re-election of Obama";
+  std_input << std::cin.rdbuf();
+  std::string input = std_input.str();
+  //std::string input = "A Republican strategy to counter the re-election of Obama";
   using marian::bergamot::Response;
 
   marian::bergamot::ResponseOptions responseOptions;

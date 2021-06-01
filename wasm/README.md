@@ -1,9 +1,17 @@
-## Using Bergamot Translator in JavaScript
-The example file `bergamot.html` in the folder `test_page` demonstrates how to use the bergamot translator in JavaScript via a `<script>` tag.
+# Using Bergamot Translator in JavaScript
 
-### <a name="Pre-requisite"></a> Pre-requisite: Download files required for translation
+Instructions in this document assume current-directory to be
+[wasm](https://github.com/browsermt/bergamot-translator/tree/main/wasm) within
+bergamot-translator source.
 
-Please note that [Using JS APIs](#Using-JS-APIs) and [Demo](#Demo) section below assumes that the [bergamot project specific model files](https://github.com/mozilla-applied-ml/bergamot-models) are already downloaded and present in the `test_page` folder. If this is not done then use following instructions to do so:
+The example file `bergamot.html` in the folder `test_page` demonstrates how to
+use the bergamot translator in JavaScript via a `<script>` tag.
+
+## Pre-requisites
+
+**Download files required for translation**
+
+Please note that [Using JS APIs](#using-js-apis) and [Demo](#demo) section below assumes that the [bergamot project specific model files](https://github.com/mozilla-applied-ml/bergamot-models) are already downloaded and present in the `test_page` folder. If this is not done then use following instructions to do so:
 
 ```bash
 cd test_page
@@ -13,7 +21,7 @@ cp -rf bergamot-models/prod/* models
 gunzip models/*/*
 ```
 
-### <a name="Using-JS-APIs"></a> Using JS APIs
+## Using JS APIs
 
 ```js
 // The model configuration as YAML formatted string. For available configuration options, please check: https://marian-nmt.github.io/docs/cmd/marian-decoder/
@@ -79,9 +87,9 @@ request.delete();
 input.delete();
 ```
 
-### <a name="Demo"></a> Demo (see everything in action)
+## Demo 
 
-* Make sure that you followed [Pre-requisite](#Pre-requisite) instructions before moving forward.
+* Make sure that you followed [Pre-requisites](#pre-requisites) instructions before moving forward.
 
 * Start the test webserver (ensure you have the latest nodejs installed)
     ```bash

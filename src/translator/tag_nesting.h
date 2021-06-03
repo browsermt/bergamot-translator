@@ -19,6 +19,7 @@ typedef struct Interval
 
 typedef struct TagNode{
   size_t parent;
+  Interval bound;
   Interval label;
   Interval child;
 } TagNode;
@@ -70,17 +71,23 @@ Interval maxProduct(double *vec, Interval q){
   return maxi;
 }
 
-void traverseAndQuery(size_t idx, unsigned depth){
-  // static size_t depthmark[CHILDBUFSZ];
+Interval traverseAndQuery(size_t idx, Interval self_outer){
+  Interval child_outer = self_outer;
+  Interval self_inner;
 
-  // if (idx==0)
-  // {
-  //     memset(depthmark, 0, sizeof(depthmark[0]) * tagtreesize);
-  // }
+  self_inner.left = self_outer.right;
+  self_inner.right = self_outer.left;
 
-  for (size_t childidx = tagtree[idx].child.left; childidx < tagtree[idx].child.right; childidx++){
-    traverseAndQuery(childidx, depth + 1);
+  for (size_t child_idx = tagtree[idx].child.left; child_idx < tagtree[idx].child.right; child_idx++)
+  {
+    Interval child_range = traverseAndQuery(child_idx, child_outer);
+    child_outer.left = child_range.right;
+
+    self_inner.left = (self_inner.left > child_range.left) ? child_range.left : self_inner.left;
+    self_inner.right = (self_inner.right < child_range.right) ? child_range.right : self_inner.left;
   }
+  double *vec = inside[tagtree[idx].bound.left][tagtree[idx].bound.right];
+  return maxProduct(vec, self_inner);
 }
 
 #endif //BERGAMOT_TRANSLATOR_TAG_NESTING_H_

@@ -1,4 +1,4 @@
-name: default
+name: native
 'on':
   push:
     branches:
@@ -7,11 +7,12 @@ name: default
     branches:
     - main
 env:
-  ccache_base_dir: ${{ github.workspace }}
+  ccache_basedir: ${{ github.workspace }}
   ccache_dir: "${{ github.workspace }}/.ccache"
   ccache_compilercheck: content
-  cache_compress: 'true'
-  ccache_maxsize: 50M
+  ccache_compress: 'true'
+  ccache_compresslevel: 9
+  ccache_maxsize: 200M
   ccache_cmake: -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_C_COMPILER_LAUNCHER=ccache
 jobs:
   ubuntu:
@@ -80,8 +81,9 @@ jobs:
     - name: ccache environment setup
       run: |-
         echo "CCACHE_COMPILER_CHECK=${{ env.ccache_compilercheck }}" >> $GITHUB_ENV
-        echo "CCACHE_BASE_DIR=${{ env.ccache_base_dir }}" >> $GITHUB_ENV
+        echo "CCACHE_BASEDIR=${{ env.ccache_basedir }}" >> $GITHUB_ENV
         echo "CCACHE_COMPRESS=${{ env.ccache_compress }}" >> $GITHUB_ENV
+        echo "CCACHE_COMPRESSLEVEL=${{ env.ccache_compresslevel }}" >> $GITHUB_ENV
         echo "CCACHE_DIR=${{ env.ccache_dir }}" >> $GITHUB_ENV
         echo "CCACHE_MAXSIZE=${{ env.ccache_maxsize }}" >> $GITHUB_ENV
     - name: ccache prolog
@@ -114,7 +116,7 @@ jobs:
       run: MARIAN=../build ./run_brt.sh ${{ matrix.brt_tags }}
     - name: Print logs of unsuccessful BRTs
       working-directory: bergamot-translator-tests
-      run: grep "tests.*.sh" previous.log  | sed 's/^\s*-\s*//' | xargs -I% tail -n100 -v %.log
+      run: grep "tests.*.sh" previous.log  | sed 's/^\s*-\s*//' | xargs -I% bash -c 'echo %; tail -n20 %.log
       if: ${{ always() && steps.brt_run.outcome == 'failure' }}
     - name: Upload regression-tests artifacts
       uses: actions/upload-artifact@v2
@@ -152,7 +154,12 @@ jobs:
     - name: Install Dependencies
       run: |-
         brew update
-        brew install openblas protobuf coreutils ccache
+        brew install openblas protobuf ccache
+        brew install coreutils findutils
+    - name: Setup path with gnu
+      run: |-
+        echo "/usr/local/opt/coreutils/libexec/gnubin" >> $GITHUB_PATH
+        echo "/usr/local/opt/findutils/libexec/gnubin" >> $GITHUB_PATH
     - name: Setup BLAS
       run: |-
         echo "LDFLAGS=-L/usr/local/opt/openblas/lib" >> $GITHUB_ENV
@@ -175,8 +182,9 @@ jobs:
     - name: ccache environment setup
       run: |-
         echo "CCACHE_COMPILER_CHECK=${{ env.ccache_compilercheck }}" >> $GITHUB_ENV
-        echo "CCACHE_BASE_DIR=${{ env.ccache_base_dir }}" >> $GITHUB_ENV
+        echo "CCACHE_BASEDIR=${{ env.ccache_basedir }}" >> $GITHUB_ENV
         echo "CCACHE_COMPRESS=${{ env.ccache_compress }}" >> $GITHUB_ENV
+        echo "CCACHE_COMPRESSLEVEL=${{ env.ccache_compresslevel }}" >> $GITHUB_ENV
         echo "CCACHE_DIR=${{ env.ccache_dir }}" >> $GITHUB_ENV
         echo "CCACHE_MAXSIZE=${{ env.ccache_maxsize }}" >> $GITHUB_ENV
     - name: ccache prolog
@@ -209,7 +217,7 @@ jobs:
       run: MARIAN=../build ./run_brt.sh ${{ matrix.brt_tags }}
     - name: Print logs of unsuccessful BRTs
       working-directory: bergamot-translator-tests
-      run: grep "tests.*.sh" previous.log  | sed 's/^\s*-\s*//' | xargs -I% tail -n100 -v %.log
+      run: grep "tests.*.sh" previous.log  | sed 's/^\s*-\s*//' | xargs -I% bash -c 'echo %; tail -n20 %.log
       if: ${{ always() && steps.brt_run.outcome == 'failure' }}
     - name: Upload regression-tests artifacts
       uses: actions/upload-artifact@v2

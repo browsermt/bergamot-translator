@@ -10,14 +10,6 @@ ThreadsafeBatcher::ThreadsafeBatcher(Ptr<Options> options) : backend_(options), 
 
 ThreadsafeBatcher::~ThreadsafeBatcher() { shutdown(); }
 
-void ThreadsafeBatcher::addSentenceWithPriority(RequestSentence &sentence) {
-  std::unique_lock<std::mutex> lock(mutex_);
-  assert(!shutdown_);
-  backend_.addSentenceWithPriority(sentence);
-  ++enqueued_;
-  work_.notify_one();
-}
-
 void ThreadsafeBatcher::addWholeRequest(Ptr<Request> request) {
   std::unique_lock<std::mutex> lock(mutex_);
   assert(!shutdown_);

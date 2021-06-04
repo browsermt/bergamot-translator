@@ -15,6 +15,7 @@ This is developer documentation.
    :caption: Contents:
 
    marian-integration
+   wasm-example
    api/library_index
 
 

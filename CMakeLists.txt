@@ -43,8 +43,7 @@ option(COMPILE_WASM "Compile for WASM" OFF)
 cmake_dependent_option(USE_WASM_COMPATIBLE_SOURCE "Use wasm compatible sources" OFF "NOT COMPILE_WASM" ON)
 
 # WASM disables a million libraries, which also includes the unit test-library.
-cmake_dependent_option(COMPILE_UNIT_TESTS "Compile unit tests" OFF "WASM_COMPATIBLE_SOURCE" ON)
-
+cmake_dependent_option(COMPILE_UNIT_TESTS "Compile unit tests" OFF "USE_WASM_COMPATIBLE_SOURCE" ON)
 option(COMPILE_TESTS "Compile bergamot-tests" OFF)
 
 # Set 3rd party submodule specific cmake options for this project

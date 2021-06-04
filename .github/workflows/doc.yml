@@ -67,7 +67,7 @@ jobs:
 
       - name: Deploy 🚀
         uses: JamesIves/github-pages-deploy-action@4.1.3
-        if: ${{ github.event_name == 'push' }}
+        if: ${{ github.event_name == 'push' && github.repository == 'browsermt/bergamot-translator' }}
         with:
           repository-name: 'browsermt/docs' 
           branch: gh-pages # The branch the action should deploy to.

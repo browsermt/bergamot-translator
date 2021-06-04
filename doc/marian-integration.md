@@ -1,11 +1,23 @@
-# Building marian code for bergamot
+# Bergamot C++ Library
 
-This document summarizes the minimal build instructions develop for the
-marian machine translation toolkit powering bergamot-translator.
+This document contains instructions to develop for modifications on top of the
+marian machine translation toolkit powering bergamot-translator. The library is
+optimized towards fast and efficient translation of a given input.
 
 ## Build Instructions
 
-Marian CPU version requires Intel MKL or OpenBLAS. Both are free, but MKL is not open-sourced. Intel MKL is strongly recommended as it is faster. On Ubuntu 16.04 and newer it can be installed from the APT repositories.
+Note: You are strongly advised to refer to the continuous integration on this
+repository, which builds bergamot-translator and associated applications from
+scratch. Examples to run these command line-applications are available in the
+[bergamot-translator-tests](https://github.com/browsermt/bergamot-translator-tests)
+repository. Builds take about 30 mins on a consumer grade machine, so using a
+tool like ccache is highly recommended.
+
+### Dependencies 
+
+Marian CPU version requires Intel MKL or OpenBLAS. Both are free, but MKL is
+not open-sourced. Intel MKL is strongly recommended as it is faster. On Ubuntu
+16.04 and newer it can be installed from the APT repositories.
 
 ```bash
 wget -qO- 'https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS-2019.PUB' | sudo apt-key add -
@@ -15,32 +27,47 @@ sudo apt-get install intel-mkl-64bit-2020.0-088
 ```
 On MacOS, apple accelerate framework will be used instead of MKL/OpenBLAS.
 
+
+### Building bergamot-translator
+
+Web Assembly (WASM) reduces building to only using a subset of functionalities
+of marian, the translation library powering bergamot-translator. When
+developing bergamot-translator it is important that the sources added be
+compatible with marian.  Therefore, it is required to set
+`-DUSE_WASM_COMPATIBLE_SOURCE=on`.
+
 ```
 $ git clone https://github.com/browsermt/bergamot-translator
 $ cd bergamot-translator
 $ mkdir build
 $ cd build
 $ cmake .. -DUSE_WASM_COMPATIBLE_SOURCE=off -DCMAKE_BUILD_TYPE=Release
-$ make -j
+$ make -j2 
 ```
-
 
 The build will generate the library that can be linked to any project. All the
 public header files are specified in `src` folder.
 
 ## Command line apps
 
-The following executables are created by the build:
+Bergamot-translator is intended to be used as a library. However, we provide a
+command-line application which is capable of translating text provided on
+standard-input. During development this application is used to perform
+regression-tests.
 
-1. `app/service-cli`: Extends marian to capability to work with string_views.
-   `service-cli` exists to check if the underlying code, without the
-   integration works or not.
-2. `app/bergamot-translator-app`: App which integreates service-cli's
-   functionality into the translator agnostic API specified as part of the
-   project. Integration failures are detected if same arguments work with
-   `service-cli` and does not with `bergamot-translator-app`.
-3. `app/marian-decoder-new`: Helper executable to conveniently benchmark new
-   implementation with the optimized upstream marian-decoder.
+There are effectively multiple CLIs subclassed from a unified interface all
+provided in `app/cli.h`. These are packed into a single executable named
+`bergamot` by means of a `--bergamot-mode BERGAMOT_MODE` switch. 
+
+The following modes are available:
+
+* `--bergamot-mode native` 
+* `--bergamot-mode wasm`    
+* `--bergamot-mode decoder` 
+
+Find documentation on these modes with the API documentation for apps [here](./api/namespace_marian__bergamot__app.html#functions).
+
+## Example command line run
 
 The models required to run the command-line are available at
 [data.statmt.org/bergamot/models/](http://data.statmt.org/bergamot/models/).
@@ -49,13 +76,11 @@ at:
 
 * [data.statmt.org/bergamot/models/deen/ende.student.tiny11.tar.gz](http://data.statmt.org/bergamot/models/deen/ende.student.tiny11.tar.gz)
 
-<details>
-<summary> Example run of commandline: Click to expand </summary>
-<p>
-
 ```bash
 MODEL_DIR=... # path to where the model-files are.
+BERGAMOT_MODE='native'
 ARGS=(
+    --bergamot-mode $BERGAMOT_MODE
     -m $MODEL_DIR/model.intgemm.alphas.bin # Path to model file.
     --vocabs 
         $MODEL_DIR/vocab.deen.spm # source-vocabulary
@@ -84,14 +109,10 @@ ARGS=(
     --ssplit-mode paragraph 
 )
 
-./app/service-cli "${ARGS[@]}" < path-to-input-file
-./app/bergamot-translator-app "${ARGS[@]}" < path-to-input-file
+./app/bergamot "${ARGS[@]}" < path-to-input-file
 
 ```
-</p>
 
-</summary>
-</details>
 
 ## Coding Style
 
@@ -108,4 +129,3 @@ used to also check for the coding style in the CI.
 ```bash
 python3 run-clang-format.py -i --style file -r src wasm
 ```
-

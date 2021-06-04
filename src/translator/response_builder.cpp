@@ -19,7 +19,6 @@ void ResponseBuilder::buildQualityScores(Histories &histories, Response &respons
     // logprobs.
     auto normalizedPathScore = std::get<2>(result);
     auto wordQualities = hyp->tracebackWordScores();
-    wordQualities.pop_back();
     response.qualityScores.push_back(Quality{normalizedPathScore, wordQualities});
   }
 }

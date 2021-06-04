@@ -1,3 +1,7 @@
+# This project does not require marian-devs test-apps or unit-tests, they're tested elsewhere.
+# TODO(jerinphilip): Come back and clean this mess.
+
+set(COMPILE_TESTS OFF CACHE BOOL "Turns off tests within marian-dev submodule" FORCE)
 add_subdirectory(marian-dev)
 
 if(COMPILE_WASM)

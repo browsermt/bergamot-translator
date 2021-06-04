@@ -5,7 +5,7 @@ namespace bergamot {
 namespace testapp {
 
 // Utility function, common for all testapps.
-Response translate_from_stdin(Ptr<Options> options, ResponseOptions responseOptions) {
+Response translateFromStdin(Ptr<Options> options, ResponseOptions responseOptions) {
   // Prepare memories for bytearrays (including model, shortlist and vocabs)
   MemoryBundle memoryBundle;
 
@@ -17,9 +17,9 @@ Response translate_from_stdin(Ptr<Options> options, ResponseOptions responseOpti
   Service service(options, std::move(memoryBundle));
 
   // Read a large input text blob from stdin
-  std::ostringstream std_input;
-  std_input << std::cin.rdbuf();
-  std::string input = std_input.str();
+  std::ostringstream inputStream;
+  inputStream << std::cin.rdbuf();
+  std::string input = inputStream.str();
 
   // Wait on future until Response is complete
   std::future<Response> responseFuture = service.translate(std::move(input), responseOptions);
@@ -28,11 +28,11 @@ Response translate_from_stdin(Ptr<Options> options, ResponseOptions responseOpti
   return response;
 }
 
-void quality_scores(Ptr<Options> options) {
+void qualityScores(Ptr<Options> options) {
   ResponseOptions responseOptions;
   responseOptions.qualityScores = true;
 
-  Response response = translate_from_stdin(options, responseOptions);
+  Response response = translateFromStdin(options, responseOptions);
   for (int sentenceIdx = 0; sentenceIdx < response.size(); sentenceIdx++) {
     auto &quality = response.qualityScores[sentenceIdx];
     std::cout << ((sentenceIdx == 0) ? "" : "\n") << quality.sequence << '\n';
@@ -44,11 +44,11 @@ void quality_scores(Ptr<Options> options) {
   }
 }
 
-void alignment_aggregated_to_source(Ptr<Options> options, bool numeric) {
+void alignmentAggregatedToSource(Ptr<Options> options, bool numeric) {
   ResponseOptions responseOptions;
   responseOptions.alignment = true;
   responseOptions.alignmentThreshold = 0.2f;
-  Response response = translate_from_stdin(options, responseOptions);
+  Response response = translateFromStdin(options, responseOptions);
 
   for (size_t sentenceIdx = 0; sentenceIdx < response.size(); sentenceIdx++) {
     std::cout << (sentenceIdx == 0 ? "" : "\n");
@@ -89,9 +89,9 @@ void alignment_aggregated_to_source(Ptr<Options> options, bool numeric) {
   }
 }
 
-void annotated_text_words(Ptr<Options> options, bool source) {
+void annotatedTextWords(Ptr<Options> options, bool source) {
   ResponseOptions responseOptions;
-  Response response = translate_from_stdin(options, responseOptions);
+  Response response = translateFromStdin(options, responseOptions);
   AnnotatedText &annotatedText = source ? response.source : response.target;
   for (size_t s = 0; s < annotatedText.numSentences(); s++) {
     for (size_t w = 0; w < annotatedText.numWords(s); w++) {
@@ -102,66 +102,13 @@ void annotated_text_words(Ptr<Options> options, bool source) {
   }
 }
 
-void annotated_text_sentences(Ptr<Options> options, bool source) {
+void annotatedTextSentences(Ptr<Options> options, bool source) {
   ResponseOptions responseOptions;
-  Response response = translate_from_stdin(options, responseOptions);
+  Response response = translateFromStdin(options, responseOptions);
   AnnotatedText &annotatedText = source ? response.source : response.target;
   for (size_t s = 0; s < annotatedText.numSentences(); s++) {
     std::cout << annotatedText.sentence(s) << "\n";
   }
-}
-
-void legacy_service_cli(Ptr<Options> options) {
-  ResponseOptions responseOptions;
-  responseOptions.qualityScores = true;
-  responseOptions.alignment = true;
-  responseOptions.alignmentThreshold = 0.2f;
-  Response response = translate_from_stdin(options, responseOptions);
-
-  std::cout << "[original]: " << response.source.text << '\n';
-  std::cout << "[translated]: " << response.target.text << '\n';
-  for (int sentenceIdx = 0; sentenceIdx < response.size(); sentenceIdx++) {
-    std::cout << " [src Sentence]: " << response.source.sentence(sentenceIdx) << '\n';
-    std::cout << " [tgt Sentence]: " << response.target.sentence(sentenceIdx) << '\n';
-    std::cout << "Alignments" << '\n';
-    typedef std::pair<size_t, float> Point;
-
-    // Initialize a point vector.
-    std::vector<std::vector<Point>> aggregate(response.source.numWords(sentenceIdx));
-
-    // Handle alignments
-    auto &alignments = response.alignments[sentenceIdx];
-    for (auto &p : alignments) {
-      aggregate[p.src].emplace_back(p.tgt, p.prob);
-    }
-
-    for (size_t src = 0; src < aggregate.size(); src++) {
-      std::cout << response.source.word(sentenceIdx, src) << ": ";
-      for (auto &p : aggregate[src]) {
-        std::cout << response.target.word(sentenceIdx, p.first) << "(" << p.second << ") ";
-      }
-      std::cout << '\n';
-    }
-
-    // Handle quality.
-
-    auto &quality = response.qualityScores[sentenceIdx];
-    std::cout << "Quality: whole(" << quality.sequence << "), tokens below:" << '\n';
-    size_t wordIdx = 0;
-    bool first = true;
-    for (auto &p : quality.word) {
-      if (first) {
-        first = false;
-      } else {
-        std::cout << " ";
-      }
-      std::cout << response.target.word(sentenceIdx, wordIdx) << "(" << p << ")";
-      wordIdx++;
-    }
-    std::cout << '\n';
-  }
-  std::cout << "--------------------------\n";
-  std::cout << '\n';
 }
 
 }  // namespace testapp

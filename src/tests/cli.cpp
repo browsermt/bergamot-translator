@@ -7,21 +7,19 @@ int main(int argc, char *argv[]) {
   const std::string mode = options->get<std::string>("bergamot-mode");
   using namespace marian::bergamot;
   if (mode == "test-quality-scores") {
-    testapp::quality_scores(options);
+    testapp::qualityScores(options);
   } else if (mode == "test-alignment-scores") {
-    testapp::alignment_aggregated_to_source(options, /*numeric=*/true);
+    testapp::alignmentAggregatedToSource(options, /*numeric=*/true);
   } else if (mode == "test-alignment-words") {
-    testapp::alignment_aggregated_to_source(options, /*numeric=*/false);
+    testapp::alignmentAggregatedToSource(options, /*numeric=*/false);
   } else if (mode == "test-response-source-sentences") {
-    testapp::annotated_text_sentences(options, /*source=*/true);
+    testapp::annotatedTextSentences(options, /*source=*/true);
   } else if (mode == "test-response-target-sentences") {
-    testapp::annotated_text_sentences(options, /*source=*/false);
+    testapp::annotatedTextSentences(options, /*source=*/false);
   } else if (mode == "test-response-source-words") {
-    testapp::annotated_text_words(options, /*source=*/true);
+    testapp::annotatedTextWords(options, /*source=*/true);
   } else if (mode == "test-response-target-words") {
-    testapp::annotated_text_words(options, /*source=*/false);
-  } else if (mode == "legacy-service-cli") {
-    testapp::legacy_service_cli(options);
+    testapp::annotatedTextWords(options, /*source=*/false);
   } else {
     ABORT("Unknown --mode {}. Please run a valid test", mode);
   }

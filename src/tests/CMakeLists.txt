@@ -1,4 +1,10 @@
 # Unit tests
+
+# Include Catch explicitly from marian.
+set(CATCH_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/3rd_party/marian-dev/3rd-party)
+add_library(Catch INTERFACE)
+target_include_directories(Catch INTERFACE ${CATCH_INCLUDE_DIR})
+
 if (COMPILE_UNIT_TESTS)
     add_subdirectory(units)
 endif (COMPILE_UNIT_TESTS)

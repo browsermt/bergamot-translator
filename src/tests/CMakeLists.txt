@@ -1,22 +1,19 @@
 # Unit tests
-set(UNIT_TESTS
-    annotation_tests
-)
+if (COMPILE_UNIT_TESTS)
+    add_subdirectory(units)
+endif (COMPILE_UNIT_TESTS)
 
-foreach(test ${UNIT_TESTS})
-  add_executable("run_${test}" run_tests.cpp "${test}.cpp")
-  target_include_directories("run_${test}" PRIVATE ${CATCH_INCLUDE_DIR} "${CMAKE_SOURCE_DIR}/src")
-
+if(NOT MSVC)
+  # Testing apps
+  set(APP_TESTS)
+  add_executable("bergamot-test" "cli.cpp" "apps.cpp")
+  
   if(CUDA_FOUND)
-    target_link_libraries("run_${test}" ${EXT_LIBS} marian ${EXT_LIBS} marian_cuda ${EXT_LIBS} Catch bergamot-translator)
+    target_link_libraries("bergamot-test" ${EXT_LIBS} marian ${EXT_LIBS} marian_cuda ${EXT_LIBS} bergamot-translator)
   else(CUDA_FOUND)
-    target_link_libraries("run_${test}" marian ${EXT_LIBS} Catch bergamot-translator)
+    target_link_libraries("bergamot-test" marian ${EXT_LIBS} bergamot-translator)
   endif(CUDA_FOUND)
+  
+  set_target_properties("bergamot-test" PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
+endif(NOT MSVC)
 
-  if(msvc)
-    # disable c4305: truncation from 'double' to '_ty'
-    target_compile_options("run_${test}" public /wd4305)
-  endif(msvc)
-
-  add_test(NAME ${test} COMMAND "run_${test}")
-endforeach(test)

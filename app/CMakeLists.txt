@@ -1,2 +1,2 @@
-add_executable(bergamot bergamot.cpp testapps.cpp)
+add_executable(bergamot bergamot.cpp)
 target_link_libraries(bergamot PRIVATE bergamot-translator)

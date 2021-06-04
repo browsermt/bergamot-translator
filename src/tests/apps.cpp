@@ -1,4 +1,4 @@
-#include "testapps.h"
+#include "apps.h"
 
 namespace marian {
 namespace bergamot {

@@ -6,7 +6,7 @@ name: native
     - ci-sandbox
   pull_request:
     branches:
-    - '*'
+    - '**'
 env:
   ccache_basedir: ${{ github.workspace }}
   ccache_dir: "${{ github.workspace }}/.ccache"

@@ -1,5 +1,5 @@
-#ifndef BERGAMOT_APP_TESTAPP_H
-#define BERGAMOT_APP_TESTAPP_H
+#ifndef BERGAMOT_SRC_TESTS_TESTAPP_H
+#define BERGAMOT_SRC_TESTS_TESTAPP_H
 #include <algorithm>
 #include <cstdlib>
 #include <future>
@@ -46,4 +46,4 @@ void annotatedTextSentences(Ptr<Options> options, bool source = true);
 }  // namespace bergamot
 }  // namespace marian
 
-#endif  // BERGAMOT_APP_TESTAPP_H
+#endif  // BERGAMOT_SRC_TESTS_TESTAPP_H

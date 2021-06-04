@@ -34,16 +34,13 @@ void qualityScores(Ptr<Options> options);
 // instead of the tokens.
 void alignmentAggregatedToSource(Ptr<Options> options, bool numeric = false);
 
-// Reads from stdin and translates.  Prints the tokens separated by space for each sentence.
+// Reads from stdin and translates.  Prints the tokens separated by space for each sentence. Prints words from source
+// side text annotation if source=true, target annotation otherwise.
 void annotatedTextWords(Ptr<Options> options, bool source = true);
 
-// Reads from stdin and translates the read content. Prints the sentences in source or target in constructed response in
-// each line, depending on source = true or false.
+// Reads from stdin and translates the read content. Prints the sentences in source or target in constructed response
+// in each line, depending on source = true or false respectively.
 void annotatedTextSentences(Ptr<Options> options, bool source = true);
-
-// The output of old service-cli, all alignments, quality-scores, sentences in one app. This can be helpful for
-// debugging purposes. The functions above are separated from what was previously legacyServiceCli.
-void legacyServiceCli(Ptr<Options> options);
 
 }  // namespace testapp
 }  // namespace bergamot

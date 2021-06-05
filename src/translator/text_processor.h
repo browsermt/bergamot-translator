@@ -23,9 +23,9 @@ class TextProcessor {
   /// source-tokens in unnormalized text are provided as string_views.
  public:
   // There are two ways to construct text-processor, different in a file-system
-  // based prefix file load and a memory based prefix file store.@jerinphilip
+  // based prefix file load and a memory based prefix file store. @jerinphilip
   // is not doing magic inference inside to determine file-based or memory
-  // based.
+  // based on one being empty or not.
 
   /// Construct TextProcessor from options, vocabs and prefix-file.
   /// @param [in] options: expected to contain `max-length-break`, `ssplit-mode`.
@@ -36,6 +36,8 @@ class TextProcessor {
 
   /// Construct TextProcessor from options, vocabs and prefix-file supplied as a bytearray. For other parameters, see
   /// the path based constructor.
+  /// Note: This falls back to string based loads if memory is null, this behaviour will be deprecated in the future.
+  ///
   /// @param [in] memory: ssplit-prefix-file contents in memory, passed as a bytearray.
   TextProcessor(Ptr<Options>, const Vocabs &vocabs, const AlignedMemory &memory);
 

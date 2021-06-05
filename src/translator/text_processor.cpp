@@ -14,24 +14,29 @@ namespace bergamot {
 namespace {
 ug::ssplit::SentenceStream::splitmode string2splitmode(const std::string &m) {
   typedef ug::ssplit::SentenceStream::splitmode splitmode;
-  // @TODO: throw Exception on error
-  if (m == "sentence" || m == "Sentence") return splitmode::one_sentence_per_line;
-  if (m == "paragraph" || m == "Paragraph") return splitmode::one_paragraph_per_line;
-  if (m != "wrapped_text" && m != "WrappedText" && m != "wrappedText") {
-    LOG(warn, "Ignoring unknown text input format specification: {}.", m);
+  if (m == "sentence") {
+    return splitmode::one_sentence_per_line;
+  } else if (m == "paragraph") {
+    return splitmode::one_paragraph_per_line;
+  } else if (m == "wrapped_text") {
+    return splitmode::wrapped_text;
+  } else {
+    ABORT("Unknown ssplitmode {}, Please choose one of {sentence,paragraph,wrapped_text}");
   }
-  return splitmode::wrapped_text;
 }
 
-ug::ssplit::SentenceSplitter loadSplitter(const std::string &ssplit_prefix_file) {
-  // Temporarily supports empty, will be removed when mozilla passes ssplit_prefix_file
+ug::ssplit::SentenceSplitter loadSplitter(const std::string &ssplitPrefixFile) {
+  // Temporarily supports empty, will be removed when mozilla passes ssplitPrefixFile
   ug::ssplit::SentenceSplitter splitter;
-  if (ssplit_prefix_file.size()) {
-    std::string interp_ssplit_prefix_file = marian::cli::interpolateEnvVars(ssplit_prefix_file);
-    LOG(info, "Loading protected prefixes for sentence splitting from {}", interp_ssplit_prefix_file);
-    splitter.load(interp_ssplit_prefix_file);
+  if (ssplitPrefixFile.size()) {
+    std::string interpSsplitPrefixFile = marian::cli::interpolateEnvVars(ssplitPrefixFile);
+    LOG(info, "Loading protected prefixes for sentence splitting from {}", interpSsplitPrefixFile);
+    splitter.load(interpSsplitPrefixFile);
   } else {
     LOG(warn,
+        "Missing list of protected prefixes for sentence splitting. "
+        "Set with --ssplit-prefix-file.");
+    ABORT(
         "Missing list of protected prefixes for sentence splitting. "
         "Set with --ssplit-prefix-file.");
   }
@@ -61,15 +66,18 @@ TextProcessor::TextProcessor(Ptr<Options> options, const Vocabs &vocabs, const s
 }
 
 TextProcessor::TextProcessor(Ptr<Options> options, const Vocabs &vocabs, const AlignedMemory &memory)
-    : vocabs_(vocabs), ssplit_(loadSplitter(memory)) {
+    : vocabs_(vocabs) {
+  if (memory.size()) {
+    ssplit_ = loadSplitter(memory);
+  } else {
+    ssplit_ = loadSplitter(options->get<std::string>("ssplit-prefix-file"));
+  }
   parseCommonOptions(options);
 }
 
 void TextProcessor::parseCommonOptions(Ptr<Options> options) {
-  maxLengthBreak_ = options->get<int>("max-length-break");
-  maxLengthBreak_ = maxLengthBreak_ - 1;  // Accounting for EOS
-  ABORT_IF(maxLengthBreak_ < 0, "max-length-break cannot be < 0");
-  ssplitMode_ = string2splitmode(options->get<std::string>("ssplit-mode", ""));
+  maxLengthBreak_ = options->get<size_t>("max-length-break");
+  ssplitMode_ = string2splitmode(options->get<std::string>("ssplit-mode", "paragraph"));
 }
 
 void TextProcessor::process(std::string &&input, AnnotatedText &source, Segments &segments) {
@@ -97,10 +105,16 @@ void TextProcessor::process(std::string &&input, AnnotatedText &source, Segments
 
 void TextProcessor::wrap(Segment &segment, std::vector<string_view> &wordRanges, Segments &segments,
                          AnnotatedText &source) {
+  // There's an EOS token added to the words, manually. SentencePiece/marian-vocab is set to not append EOS. Marian
+  // requires EOS to be at the end as a marker to start translating. So while we're supplied maxLengthBreak_ from
+  // outside, we need to ensure there's space for EOS in each wrapped segment.
   Word sourceEosId = vocabs_.sources().front()->getEosId();
-  for (size_t offset = 0; offset < segment.size(); offset += maxLengthBreak_) {
+  size_t wrapStep = maxLengthBreak_ - 1;
+
+  for (size_t offset = 0; offset < segment.size(); offset += wrapStep) {
     auto start = segment.begin() + offset;
 
+    // Restrict the range within bounds.
     size_t left = segment.size() - offset;
     size_t diff = std::min(maxLengthBreak_, left);
 

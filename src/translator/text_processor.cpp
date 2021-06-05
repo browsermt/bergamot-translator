@@ -14,13 +14,15 @@ namespace bergamot {
 namespace {
 ug::ssplit::SentenceStream::splitmode string2splitmode(const std::string &m) {
   typedef ug::ssplit::SentenceStream::splitmode splitmode;
-  // @TODO: throw Exception on error
-  if (m == "sentence" || m == "Sentence") return splitmode::one_sentence_per_line;
-  if (m == "paragraph" || m == "Paragraph") return splitmode::one_paragraph_per_line;
-  if (m != "wrapped_text" && m != "WrappedText" && m != "wrappedText") {
-    LOG(warn, "Ignoring unknown text input format specification: {}.", m);
+  if (m == "sentence") {
+    return splitmode::one_sentence_per_line;
+  } else if (m == "paragraph") {
+    return splitmode::one_paragraph_per_line;
+  } else if (m == "wrapped_text") {
+    return splitmode::wrapped_text;
+  } else {
+    ABORT("Unknown ssplitmode {}, Please choose one of {sentence,paragraph,wrapped_text}");
   }
-  return splitmode::wrapped_text;
 }
 
 ug::ssplit::SentenceSplitter loadSplitter(const std::string &ssplit_prefix_file) {

@@ -68,10 +68,8 @@ TextProcessor::TextProcessor(Ptr<Options> options, const Vocabs &vocabs, const A
 }
 
 void TextProcessor::parseCommonOptions(Ptr<Options> options) {
-  maxLengthBreak_ = options->get<int>("max-length-break");
-  maxLengthBreak_ = maxLengthBreak_ - 1;  // Accounting for EOS
-  ABORT_IF(maxLengthBreak_ < 0, "max-length-break cannot be < 0");
-  ssplitMode_ = string2splitmode(options->get<std::string>("ssplit-mode", ""));
+  maxLengthBreak_ = options->get<size_t>("max-length-break");
+  ssplitMode_ = string2splitmode(options->get<std::string>("ssplit-mode", "paragraph"));
 }
 
 void TextProcessor::process(std::string &&input, AnnotatedText &source, Segments &segments) {
@@ -99,10 +97,16 @@ void TextProcessor::process(std::string &&input, AnnotatedText &source, Segments
 
 void TextProcessor::wrap(Segment &segment, std::vector<string_view> &wordRanges, Segments &segments,
                          AnnotatedText &source) {
+  // There's an EOS token added to the words, manually. SentencePiece/marian-vocab is set to not append EOS. Marian
+  // requires EOS to be at the end as a marker to start translating. So while we're supplied maxLengthBreak_ from
+  // outside, we need to ensure there's space for EOS in each wrapped segment.
   Word sourceEosId = vocabs_.sources().front()->getEosId();
-  for (size_t offset = 0; offset < segment.size(); offset += maxLengthBreak_) {
+  size_t wrapStep = maxLengthBreak_ - 1;
+
+  for (size_t offset = 0; offset < segment.size(); offset += wrapStep) {
     auto start = segment.begin() + offset;
 
+    // Restrict the range within bounds.
     size_t left = segment.size() - offset;
     size_t diff = std::min(maxLengthBreak_, left);
 

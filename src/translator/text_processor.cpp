@@ -25,15 +25,18 @@ ug::ssplit::SentenceStream::splitmode string2splitmode(const std::string &m) {
   }
 }
 
-ug::ssplit::SentenceSplitter loadSplitter(const std::string &ssplit_prefix_file) {
-  // Temporarily supports empty, will be removed when mozilla passes ssplit_prefix_file
+ug::ssplit::SentenceSplitter loadSplitter(const std::string &ssplitPrefixFile) {
+  // Temporarily supports empty, will be removed when mozilla passes ssplitPrefixFile
   ug::ssplit::SentenceSplitter splitter;
-  if (ssplit_prefix_file.size()) {
-    std::string interp_ssplit_prefix_file = marian::cli::interpolateEnvVars(ssplit_prefix_file);
-    LOG(info, "Loading protected prefixes for sentence splitting from {}", interp_ssplit_prefix_file);
-    splitter.load(interp_ssplit_prefix_file);
+  if (ssplitPrefixFile.size()) {
+    std::string interpSsplitPrefixFile = marian::cli::interpolateEnvVars(ssplitPrefixFile);
+    LOG(info, "Loading protected prefixes for sentence splitting from {}", interpSsplitPrefixFile);
+    splitter.load(interpSsplitPrefixFile);
   } else {
     LOG(warn,
+        "Missing list of protected prefixes for sentence splitting. "
+        "Set with --ssplit-prefix-file.");
+    ABORT(
         "Missing list of protected prefixes for sentence splitting. "
         "Set with --ssplit-prefix-file.");
   }

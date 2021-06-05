@@ -66,7 +66,12 @@ TextProcessor::TextProcessor(Ptr<Options> options, const Vocabs &vocabs, const s
 }
 
 TextProcessor::TextProcessor(Ptr<Options> options, const Vocabs &vocabs, const AlignedMemory &memory)
-    : vocabs_(vocabs), ssplit_(loadSplitter(memory)) {
+    : vocabs_(vocabs) {
+  if (memory.size()) {
+    ssplit_ = loadSplitter(memory);
+  } else {
+    ssplit_ = loadSplitter(options->get<std::string>("ssplit-prefix-file"));
+  }
   parseCommonOptions(options);
 }
 

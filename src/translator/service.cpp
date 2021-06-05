@@ -13,7 +13,7 @@ Service::Service(Ptr<Options> options, MemoryBundle memoryBundle)
     : requestId_(0),
       options_(options),
       vocabs_(options, std::move(memoryBundle.vocabs)),
-      text_processor_(options, vocabs_, options->get<std::string>("ssplit-prefix-file")),
+      text_processor_(options, vocabs_, std::move(memoryBundle.ssplitPrefixFile)),
       batcher_(options),
       numWorkers_(std::max<int>(1, options->get<int>("cpu-threads"))),
       modelMemory_(std::move(memoryBundle.model)),

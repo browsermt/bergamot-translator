@@ -36,6 +36,8 @@ class TextProcessor {
 
   /// Construct TextProcessor from options, vocabs and prefix-file supplied as a bytearray. For other parameters, see
   /// the path based constructor.
+  /// Note: This falls back to string based loads if memory is null, this behaviour will be deprecated in the future.
+  ///
   /// @param [in] memory: ssplit-prefix-file contents in memory, passed as a bytearray.
   TextProcessor(Ptr<Options>, const Vocabs &vocabs, const AlignedMemory &memory);
 

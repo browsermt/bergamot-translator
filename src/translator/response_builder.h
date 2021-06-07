@@ -24,9 +24,13 @@ class ResponseBuilder {
   /// or not in the response and any additional configurable parameters.
   /// @param [in] vocabs: marian vocab object (used in decoding)
   /// @param [in] promise: promise to set with the constructed Response.
-  ResponseBuilder(ResponseOptions responseOptions, AnnotatedText &&source, Vocabs &vocabs,
-                  std::promise<Response> &&promise)
-      : responseOptions_(responseOptions), source_(std::move(source)), vocabs_(vocabs), promise_(std::move(promise)) {}
+  /// @param [in] qualityEstimator: promise to set with the constructed Response.
+  ResponseBuilder(ResponseOptions responseOptions, AnnotatedText &&source,
+                  std::vector<Ptr<Vocab const>> &vocabs,
+                  std::promise<Response> &&promise, 
+                  AlignedMemory &qualityEstimator)
+      : responseOptions_(responseOptions), source_(std::move(source)),
+        vocabs_(&vocabs), promise_(std::move(promise)), qualityEstimator_(&qualityEstimator) {}
 
   /// Constructs and sets the promise of a Response object from obtained
   /// histories after translating.
@@ -47,6 +51,9 @@ class ResponseBuilder {
 
     // Should always be after buildTranslatedText
     if (responseOptions_.qualityScores) {
+      //TODO:
+      //Creates QualityEstimator model given qualityEstimator
+      //Pass it here
       buildQualityScores(histories, response);
     }
 
@@ -84,6 +91,8 @@ class ResponseBuilder {
   std::promise<Response> promise_;  //  To be set when callback triggered and
                                     //  after Response constructed.
   AnnotatedText source_;
+
+  AlignedMemory *qualityEstimator_;
 };
 }  // namespace bergamot
 }  // namespace marian

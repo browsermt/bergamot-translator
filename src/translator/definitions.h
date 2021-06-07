@@ -29,6 +29,31 @@ struct MemoryBundle {
 
   /// @todo Not implemented yet
   AlignedMemory ssplitPrefixFile{};
+
+  AlignedMemory qualityEstimator; ///< Byte-array of shortlist (aligned to 64)
+
+  MemoryBundle() = default;
+
+  MemoryBundle(MemoryBundle &&from){
+    model = std::move(from.model);
+    shortlist = std::move(from.shortlist);
+    vocabs = std::move(vocabs);
+    ssplitPrefixFile = std::move(from.ssplitPrefixFile);
+    qualityEstimator = std::move(from.qualityEstimator);
+  }
+
+  MemoryBundle &operator=(MemoryBundle &&from) {
+    model = std::move(from.model);
+    shortlist = std::move(from.shortlist);
+    vocabs = std::move(vocabs);
+    ssplitPrefixFile = std::move(from.ssplitPrefixFile);
+    qualityEstimator = std::move(from.qualityEstimator);
+    return *this;
+  }
+
+  // Delete copy constructors
+  MemoryBundle(const MemoryBundle&) = delete;
+  MemoryBundle& operator=(const MemoryBundle&) = delete;
 };
 
 /// ByteRange stores indices for half-interval [begin, end) in a string. Can be

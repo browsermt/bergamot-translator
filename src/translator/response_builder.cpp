@@ -1,17 +1,18 @@
 #include "response_builder.h"
 
 #include "response_options.h"
+#include "quality_estimator.h"
 
 namespace marian {
 namespace bergamot {
 
-void ResponseBuilder::buildQualityScores(Histories &histories, Response &response) {
-  std::vector<Quality> qualityScores;
-  for (auto &history : histories) {
-    // TODO(jerin): Change hardcode of nBest = 1
-    NBestList onebest = history->nBest(1);
 
-    Result result = onebest[0];  // Expecting only one result;
+void ResponseBuilder::buildQualityScores(Histories &histories,
+                                         Response &response) {
+  QualityEstimator model(qualityEstimator_->begin());
+  AnnotatedText source = response.source;
+  for (auto &history : histories) {
+    Result result = history->top(); // Expecting only one result;
     Words words = std::get<0>(result);
     auto hyp = std::get<1>(result);
     // Quality scores: Sequence level is obtained as normalized path scores.
@@ -21,6 +22,7 @@ void ResponseBuilder::buildQualityScores(Histories &histories, Response &respons
     auto wordQualities = hyp->tracebackWordScores();
     response.qualityScores.push_back(Quality{normalizedPathScore, wordQualities});
   }
+  model.compute_quality_scores(source);
 }
 
 void ResponseBuilder::buildAlignments(Histories &histories, Response &response) {

@@ -9,6 +9,8 @@ if (COMPILE_UNIT_TESTS)
     add_subdirectory(units)
 endif (COMPILE_UNIT_TESTS)
 
+
+
 if(NOT MSVC)
   # Testing apps
   set(APP_TESTS)
@@ -21,5 +23,9 @@ if(NOT MSVC)
   endif(CUDA_FOUND)
   
   set_target_properties("bergamot-test" PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
+
+  # Adding an intgemm_resolve cmdline
+  add_executable(intgemm_resolve intgemm_resolve.cpp)
+  target_link_libraries(intgemm_resolve PRIVATE bergamot-translator)
 endif(NOT MSVC)
 

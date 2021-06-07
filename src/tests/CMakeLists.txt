@@ -25,7 +25,8 @@ if(NOT MSVC)
   set_target_properties("bergamot-test" PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
 
   # Adding an intgemm_resolve cmdline
-  add_executable(intgemm_resolve intgemm_resolve.cpp)
-  target_link_libraries(intgemm_resolve PRIVATE bergamot-translator)
+  add_executable(intgemm-resolve intgemm_resolve.cpp)
+  target_link_libraries(intgemm-resolve PRIVATE bergamot-translator)
+  set_target_properties(intgemm-resolve PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
 endif(NOT MSVC)
 

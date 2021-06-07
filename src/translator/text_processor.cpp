@@ -36,9 +36,6 @@ ug::ssplit::SentenceSplitter loadSplitter(const std::string &ssplitPrefixFile) {
     LOG(warn,
         "Missing list of protected prefixes for sentence splitting. "
         "Set with --ssplit-prefix-file.");
-    ABORT(
-        "Missing list of protected prefixes for sentence splitting. "
-        "Set with --ssplit-prefix-file.");
   }
   return splitter;
 }

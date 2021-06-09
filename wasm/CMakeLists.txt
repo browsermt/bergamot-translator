@@ -6,7 +6,7 @@ add_executable(bergamot-translator-worker
 
 # Generate version file that can be included in the wasm artifacts
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/project_version.js.in
-               ${CMAKE_CURRENT_SOURCE_DIR}/project_version.js @ONLY)
+               ${CMAKE_CURRENT_BINARY_DIR}/project_version.js @ONLY)
 
 # This header inclusion needs to go away later as path to public headers of bergamot
 # translator should be directly available from "bergamot-translator" target
@@ -24,7 +24,7 @@ set(LINKER_FLAGS "-g2 --bind -s ASSERTIONS=0 -s DISABLE_EXCEPTION_CATCHING=1 -s 
 set(LINKER_FLAGS "${LINKER_FLAGS} -s ENVIRONMENT=web,worker")
 
 # Append version information in the Javascript artifact
-set(LINKER_FLAGS "${LINKER_FLAGS} --extern-pre-js ${CMAKE_CURRENT_SOURCE_DIR}/project_version.js")
+set(LINKER_FLAGS "${LINKER_FLAGS} --extern-pre-js ${CMAKE_CURRENT_BINARY_DIR}/project_version.js")
 
 set_target_properties(bergamot-translator-worker PROPERTIES
                         SUFFIX ".js"

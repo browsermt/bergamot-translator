@@ -1,7 +1,7 @@
 /*
- * TranslationModelBindings.cpp
+ * ServiceBindings.cpp
  *
- * Bindings for TranslationModel class
+ * Bindings for Service class
  */
 
 #include <emscripten/bind.h>
@@ -11,7 +11,7 @@
 
 using namespace emscripten;
 
-typedef marian::bergamot::Service TranslationModel;
+typedef marian::bergamot::Service Service;
 typedef marian::bergamot::Response TranslationResult;
 typedef marian::bergamot::AlignedMemory AlignedMemory;
 
@@ -29,7 +29,7 @@ EMSCRIPTEN_BINDINGS(aligned_memory) {
 }
 
 // When source and target vocab files are same, only one memory object is passed from JS to
-// avoid allocating memory twice for the same file. However, the constructor of the TranslationModel
+// avoid allocating memory twice for the same file. However, the constructor of the Service
 // class still expects 2 entries in this case, where each entry has the shared ownership of the
 // same AlignedMemory object. This function prepares these smart pointer based AlignedMemory objects
 // for unique AlignedMemory objects passed from JS.
@@ -56,18 +56,18 @@ marian::bergamot::MemoryBundle prepareMemoryBundle(AlignedMemory* modelMemory, A
   return memoryBundle;
 }
 
-TranslationModel* TranslationModelFactory(const std::string& config, AlignedMemory* modelMemory,
+Service* ServiceFactory(const std::string& config, AlignedMemory* modelMemory,
                                           AlignedMemory* shortlistMemory,
                                           std::vector<AlignedMemory*> uniqueVocabsMemories) {
-  return new TranslationModel(config,
+  return new Service(config,
                               std::move(prepareMemoryBundle(modelMemory, shortlistMemory, uniqueVocabsMemories)));
 }
 
-EMSCRIPTEN_BINDINGS(translation_model) {
-  class_<TranslationModel>("TranslationModel")
-      .constructor(&TranslationModelFactory, allow_raw_pointers())
-      .function("translate", &TranslationModel::translateMultiple)
-      .function("isAlignmentSupported", &TranslationModel::isAlignmentSupported);
+EMSCRIPTEN_BINDINGS(translation_service) {
+  class_<Service>("Service")
+      .constructor(&ServiceFactory, allow_raw_pointers())
+      .function("translate", &Service::translateMultiple)
+      .function("isAlignmentSupported", &Service::isAlignmentSupported);
   // ^ We redirect Service::translateMultiple to WASMBound::translate instead. Sane API is
   // translate. If and when async comes, we can be done with this inconsistency.
 

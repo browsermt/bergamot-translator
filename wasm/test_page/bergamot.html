@@ -80,8 +80,8 @@ En consecuencia, durante el año 2011 se introdujeron 180 proyectos de ley que r
     return alignedMemory;
   }
 
-  var translationModel, request, input = undefined;
-  const constructTranslationModel = async (from, to) => {
+  var translationService, request, input = undefined;
+  const constructTranslationService = async (from, to) => {
 
     const languagePair = `${from}${to}`;
 
@@ -162,10 +162,10 @@ gemm-precision: int8shift
       var alignedVocabsMemoryList = new Module.AlignedMemoryList;
       downloadedVocabBuffers.forEach(item => alignedVocabsMemoryList.push_back(constructAlignedMemoryFromBuffer(item, 64)));
 
-      // Instantiate the TranslationModel
-      if (translationModel) translationModel.delete();
-      console.debug("Creating TranslationModel with config:", modelConfig);
-      translationModel = new Module.TranslationModel(modelConfig, alignedModelMemory, alignedShortlistMemory, alignedVocabsMemoryList);
+      // Instantiate the Translation Service
+      if (translationService) translationService.delete();
+      console.debug("Creating Translation Service with config:", modelConfig);
+      translationService = new Module.Service(modelConfig, alignedModelMemory, alignedShortlistMemory, alignedVocabsMemoryList);
     } catch (error) {
       log(error);
     }
@@ -189,7 +189,7 @@ gemm-precision: int8shift
     console.log('Input size=', input.size());
 
     // Translate the input; the result is a vector<TranslationResult>
-    let result = translationModel.translate(input, request);
+    let result = translationService.translate(input, request);
     const translatedParagraphs = [];
     for (let i = 0; i < result.size(); i++) {
       translatedParagraphs.push(result.get(i).getTranslatedText());
@@ -206,10 +206,10 @@ gemm-precision: int8shift
     const from = lang.substring(0, 2);
     const to = lang.substring(2, 4);
     let start = Date.now();
-    await constructTranslationModel(from, to);
-    log(`translation model ${from}${to} construction took ${(Date.now() - start) / 1000} secs`);
+    await constructTranslationService(from, to);
+    log(`translation service ${from}${to} construction took ${(Date.now() - start) / 1000} secs`);
     document.querySelector("#load").disabled = false;
-    //log('Model Alignment:', translationModel.isAlignmentSupported());
+    //log('Model Alignment:', translationService.isAlignmentSupported());
   });
 
   const translateCall = () => {

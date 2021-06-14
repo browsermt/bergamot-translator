@@ -1,7 +1,6 @@
 #include "response_builder.h"
 
 #include "response_options.h"
-#include "tag_nesting.h"
 
 namespace marian {
 namespace bergamot {
@@ -38,7 +37,6 @@ void ResponseBuilder::buildAlignments(Histories &histories, Response &response) 
     // mean WASM bindings for a structure deep within marian source.
     auto hyp = std::get<1>(result);
     auto softAlignment = hyp->tracebackAlignment();
-    fillInsideNaive(softAlignment, softAlignment[0].size(), softAlignment.size());
     for(size_t t = 0; t < softAlignment.size(); ++t) {
       for(size_t s = 0; s < softAlignment[t].size(); ++s) {
         std::cout << t << " " << s << " "<< softAlignment[t][s] << std::endl;

@@ -188,7 +188,7 @@ gemm-precision: int8shift
     // Access input (just for debugging)
     console.log('Input size=', input.size());
 
-    // Translate the input; the result is a vector<TranslationResult>
+    // Translate the input; the result is a vector<Response>
     let result = translationService.translate(input, responseOptions);
     const translatedParagraphs = [];
     for (let i = 0; i < result.size(); i++) {

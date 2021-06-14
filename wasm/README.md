@@ -73,10 +73,10 @@ const input = new Module.VectorString;
 // Initialize the input
 input.push_back("Hola"); input.push_back("Mundo");
 
-// translate the input; the result is a vector<TranslationResult>
+// translate the input; the result is a vector<Response>
 const result = translationService.translate(input, responseOptions);
 
-// Print original and translated text from each entry of vector<TranslationResult>
+// Print original and translated text from each entry of vector<Response>
 for (let i = 0; i < result.size(); i++) {
     console.log(' original=' + result.get(i).getOriginalText() + ', translation=' + result.get(i).getTranslatedText());
 }

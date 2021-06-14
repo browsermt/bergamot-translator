@@ -1,7 +1,7 @@
 add_executable(bergamot-translator-worker
     bindings/service_bindings.cpp
     bindings/response_options_bindings.cpp
-    bindings/TranslationResultBindings.cpp
+    bindings/response_bindings.cpp
 )
 
 # Generate version file that can be included in the wasm artifacts

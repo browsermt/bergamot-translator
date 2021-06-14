@@ -30,7 +30,7 @@ jobs:
         - name: Ubuntu 18.04 minimal
           os: ubuntu-18.04
           identifier: ubuntu_1804_minimal
-          cmake: -DCOMPILE_TESTS=off -DUSE_WASM_COMPATIBLE_SOURCE=on
+          cmake: -DCOMPILE_TESTS=on -DUSE_WASM_COMPATIBLE_SOURCE=on
           brt_tags: "'#wasm'"
           unittests: 'false'
         - name: Ubuntu 20.04 full
@@ -42,7 +42,7 @@ jobs:
         - name: Ubuntu 20.04 minimal
           os: ubuntu-20.04
           identifier: ubuntu_2004_minimal
-          cmake: -DCOMPILE_TESTS=off -DUSE_WASM_COMPATIBLE_SOURCE=on
+          cmake: -DCOMPILE_TESTS=on -DUSE_WASM_COMPATIBLE_SOURCE=on
           brt_tags: "'#wasm'"
           unittests: 'false'
     name: ${{ matrix.name }}
@@ -140,12 +140,12 @@ jobs:
           os: macos-10.15
           identifier: mac_1015_full
           cmake: -DCOMPILE_TESTS=on -DUSE_APPLE_ACCELERATE=off -DUSE_FBGEMM=off -DUSE_STATIC_LIBS=off
-          brt_tags: "'#mac'"
+          brt_tags: ""
           unittests: 'true'
         - name: MacOS 10.15 minimal
           os: macos-10.15
           identifier: mac_1015_minimal
-          cmake: -DCOMPILE_TESTS=off -DUSE_APPLE_ACCELERATE=off -DUSE_FBGEMM=off -DUSE_STATIC_LIBS=on -DUSE_WASM_COMPATIBLE_SOURCE=on
+          cmake: -DCOMPILE_TESTS=on -DUSE_APPLE_ACCELERATE=off -DUSE_FBGEMM=off -DUSE_STATIC_LIBS=on -DUSE_WASM_COMPATIBLE_SOURCE=on
           brt_tags: "'#wasm'"
           unittests: 'false'
     name: ${{ matrix.name }}

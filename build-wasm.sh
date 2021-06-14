@@ -9,10 +9,8 @@ set -x
 cd "$(dirname $0)"
 
 # This file replicates the instructions found in ./README.md under "Build WASM"
-# with slight adjustments to be able to run the build script multiple times without having to clone all dependencies
-# as per "As long as you don't update any submodule, just follow steps in `4.ii` to recompile."
 
-# 1. Download and Install Emscripten using following instructions (unless the EMSDK env var is already set)
+# Prerequisite: Download and Install Emscripten using following instructions (unless the EMSDK env var is already set)
 if [ "$EMSDK" == "" ]; then
   EMSDK_UPDATE_REQUIRED=0
   if [ ! -d "emsdk" ]; then
@@ -37,18 +35,16 @@ if [ "$EMSDK" == "" ]; then
   source ./emsdk/emsdk_env.sh
 fi
 
-# 4. Compile
-#     1. Create a folder where you want to build all the artifacts (`build-wasm` in this case)
+# Compile
+#    1. Create a folder where you want to build all the artifacts (`build-wasm` in this case) and compile
 if [ ! -d "build-wasm" ]; then
   mkdir build-wasm
 fi
 cd build-wasm
-
-#     2. Compile the artifacts
 emcmake cmake -DCOMPILE_WASM=on ../
-emmake make -j3
+emmake make -j2
 
-#     3. Enable SIMD Wormhole via Wasm instantiation API in generated artifacts
+#     2. Enable SIMD Wormhole via Wasm instantiation API in generated artifacts
 bash ../wasm/patch-artifacts-enable-wormhole.sh
 
 # The artifacts (.js and .wasm files) will be available in the build directory ("build-wasm" in this case).

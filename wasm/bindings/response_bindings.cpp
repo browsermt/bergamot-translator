@@ -19,4 +19,6 @@ EMSCRIPTEN_BINDINGS(response) {
       .constructor<>()
       .function("getOriginalText", &Response::getOriginalText)
       .function("getTranslatedText", &Response::getTranslatedText);
+
+  register_vector<Response>("VectorResponse");
 }

@@ -4,13 +4,11 @@
 
 #include <emscripten/bind.h>
 
-#include "response.h"
 #include "service.h"
 
 using namespace emscripten;
 
 typedef marian::bergamot::Service Service;
-typedef marian::bergamot::Response Response;
 typedef marian::bergamot::AlignedMemory AlignedMemory;
 
 val getByteArrayView(AlignedMemory& alignedMemory) {
@@ -70,5 +68,4 @@ EMSCRIPTEN_BINDINGS(translation_service) {
   // translate. If and when async comes, we can be done with this inconsistency.
 
   register_vector<std::string>("VectorString");
-  register_vector<Response>("VectorResponse");
 }

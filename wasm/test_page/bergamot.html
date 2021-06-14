@@ -80,7 +80,7 @@ En consecuencia, durante el año 2011 se introdujeron 180 proyectos de ley que r
     return alignedMemory;
   }
 
-  var translationService, request, input = undefined;
+  var translationService, responseOptions, input = undefined;
   const constructTranslationService = async (from, to) => {
 
     const languagePair = `${from}${to}`;
@@ -173,8 +173,8 @@ gemm-precision: int8shift
 
   const translate = (paragraphs) => {
 
-    // Instantiate the arguments of translate() API i.e. TranslationRequest and input (vector<string>)
-    var request = new Module.TranslationRequest();
+    // Instantiate the arguments of translate() API i.e. ResponseOptions and input (vector<string>)
+    var responseOptions = new Module.ResponseOptions();
     let input = new Module.VectorString;
 
     // Initialize the input
@@ -189,13 +189,13 @@ gemm-precision: int8shift
     console.log('Input size=', input.size());
 
     // Translate the input; the result is a vector<TranslationResult>
-    let result = translationService.translate(input, request);
+    let result = translationService.translate(input, responseOptions);
     const translatedParagraphs = [];
     for (let i = 0; i < result.size(); i++) {
       translatedParagraphs.push(result.get(i).getTranslatedText());
     }
     console.log({ translatedParagraphs });
-    request.delete();
+    responseOptions.delete();
     input.delete();
     return translatedParagraphs;
   }

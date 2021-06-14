@@ -66,15 +66,15 @@ downloadedVocabBuffers.forEach(item => alignedVocabsMemoryList.push_back(constru
 // Instantiate the Translation Service
 const translationService = new Module.Service(modelConfig, alignedModelMemory, alignedShortlistMemory, alignedVocabsMemoryList);
 
-// Instantiate the arguments of translate() API i.e. TranslationRequest and input (vector<string>)
-const request = new Module.TranslationRequest();
+// Instantiate the arguments of translate() API i.e. ResponseOptions and input (vector<string>)
+const responseOptions = new Module.ResponseOptions();
 const input = new Module.VectorString;
 
 // Initialize the input
 input.push_back("Hola"); input.push_back("Mundo");
 
 // translate the input; the result is a vector<TranslationResult>
-const result = translationService.translate(input, request);
+const result = translationService.translate(input, responseOptions);
 
 // Print original and translated text from each entry of vector<TranslationResult>
 for (let i = 0; i < result.size(); i++) {
@@ -83,7 +83,7 @@ for (let i = 0; i < result.size(); i++) {
 
 // Don't forget to clean up the instances
 translationService.delete();
-request.delete();
+responseOptions.delete();
 input.delete();
 ```
 

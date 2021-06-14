@@ -1,5 +1,5 @@
 add_executable(bergamot-translator-worker
-    bindings/ServiceBindings.cpp
+    bindings/service_bindings.cpp
     bindings/response_options_bindings.cpp
     bindings/TranslationResultBindings.cpp
 )

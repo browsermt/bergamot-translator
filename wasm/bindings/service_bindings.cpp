@@ -1,6 +1,4 @@
 /*
- * ServiceBindings.cpp
- *
  * Bindings for Service class
  */
 

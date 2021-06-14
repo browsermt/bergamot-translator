@@ -6,13 +6,7 @@ int main(int argc, char *argv[]) {
   auto options = cp.parseOptions(argc, argv, true);
   const std::string mode = options->get<std::string>("bergamot-mode");
   using namespace marian::bergamot;
-  if (mode == "test-quality-scores") {
-    testapp::qualityScores(options);
-  } else if (mode == "test-alignment-scores") {
-    testapp::alignmentAggregatedToSource(options, /*numeric=*/true);
-  } else if (mode == "test-alignment-words") {
-    testapp::alignmentAggregatedToSource(options, /*numeric=*/false);
-  } else if (mode == "test-response-source-sentences") {
+  if (mode == "test-response-source-sentences") {
     testapp::annotatedTextSentences(options, /*source=*/true);
   } else if (mode == "test-response-target-sentences") {
     testapp::annotatedTextSentences(options, /*source=*/false);

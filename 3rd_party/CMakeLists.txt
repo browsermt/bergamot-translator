@@ -1,3 +1,5 @@
+# marian-dev is tested elsewhere in both paths, turning off here.
+set(COMPILE_TESTS OFF)
 add_subdirectory(marian-dev)
 
 if(COMPILE_WASM)

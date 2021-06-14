@@ -29,7 +29,7 @@ class TagProcessor {
   std::vector<std::vector<std::vector<double>>> outside;
 
 public:
-  TagProcessor(marian::data::SoftAlignment &align,
+  TagProcessor(const marian::data::SoftAlignment &align,
                std::vector<TagNode> tagTree,
                size_t srcLength,
                size_t tgtLength) : tagTree(std::move(tagTree)), srcLength(srcLength), tgtLength(tgtLength) {
@@ -41,11 +41,11 @@ public:
 
   std::vector<TagNode> tagTreeTarget;
 
-  double alignProbability(marian::data::SoftAlignment &align, size_t s, size_t t) {
+  double alignProbability(const marian::data::SoftAlignment &align, size_t s, size_t t) {
     return align[t][s];
   }
 
-  void fillInsideNaive(marian::data::SoftAlignment &align) {
+  void fillInsideNaive(const marian::data::SoftAlignment &align) {
     for (size_t t = 0; t < tgtLength; t++) {
       for (size_t i = 0; i < srcLength; i++) {
         inside[i][i][t] = alignProbability(align, i, t);
@@ -66,7 +66,7 @@ public:
         double product = 1;
         for (size_t t = l; t < r; t++)
         {
-          product *= inside[query.begin][query.end][t] * outside[query.begin][query.end][t];
+          product *= inside[query.begin][query.end-1][t] * outside[query.begin][query.end-1][t];
         }
         if (max < product) {
           max = product;

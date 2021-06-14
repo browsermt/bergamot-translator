@@ -52,11 +52,9 @@ marian::bergamot::MemoryBundle prepareMemoryBundle(AlignedMemory* modelMemory, A
   return memoryBundle;
 }
 
-Service* ServiceFactory(const std::string& config, AlignedMemory* modelMemory,
-                                          AlignedMemory* shortlistMemory,
-                                          std::vector<AlignedMemory*> uniqueVocabsMemories) {
-  return new Service(config,
-                              std::move(prepareMemoryBundle(modelMemory, shortlistMemory, uniqueVocabsMemories)));
+Service* ServiceFactory(const std::string& config, AlignedMemory* modelMemory, AlignedMemory* shortlistMemory,
+                        std::vector<AlignedMemory*> uniqueVocabsMemories) {
+  return new Service(config, std::move(prepareMemoryBundle(modelMemory, shortlistMemory, uniqueVocabsMemories)));
 }
 
 EMSCRIPTEN_BINDINGS(translation_service) {

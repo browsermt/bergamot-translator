@@ -18,7 +18,7 @@ class TextProcessor {
   /// TextProcessor handles loading the sentencepiece vocabulary and also
   /// contains an instance of sentence-splitter based on ssplit.
   ///
-  /// Used in Service to convert an incoming blog of text to a vector of
+  /// Used in Service to convert an incoming blob of text to a vector of
   /// sentences (vector of words). In addition, the ByteRanges of the
   /// source-tokens in unnormalized text are provided as string_views.
  public:

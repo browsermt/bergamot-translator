@@ -22,7 +22,7 @@ Response translateFromStdin(Ptr<Options> options, ResponseOptions responseOption
   std::string input = inputStream.str();
 
   std::promise<Response> responsePromise;
-  std::future<Response> responseFuture = responseFuture.get_future();
+  std::future<Response> responseFuture = responsePromise.get_future();
 
   auto callback = [&responsePromise](Response &&response) { responsePromise.set_value(std::move(response)); };
   service.translate(std::move(input), callback, responseOptions);

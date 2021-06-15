@@ -54,8 +54,15 @@ void TextProcessor::wrap(Segment &segment, std::vector<string_view> &wordRanges,
     segments.back().push_back(sourceEosId());
 
     auto astart = wordRanges.begin() + offset;
+
+    // Construct a part vector of string_view representing wrapped segment, use the last string_view to create an EOS
+    // string_view manually.
+    std::vector<string_view> partWordRanges(astart, astart + diff);
+    string_view &last = partWordRanges.back();
+    const char *end = last.data() + last.size();
+    partWordRanges.emplace_back(end, 0);
     // diff > 0
-    source.recordExistingSentence(astart, astart + diff, astart->data());
+    source.recordExistingSentence(partWordRanges.begin(), partWordRanges.end(), astart->data());
   }
 }
 

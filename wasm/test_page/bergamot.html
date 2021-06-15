@@ -80,8 +80,8 @@ En consecuencia, durante el año 2011 se introdujeron 180 proyectos de ley que r
     return alignedMemory;
   }
 
-  var translationModel, request, input = undefined;
-  const constructTranslationModel = async (from, to) => {
+  var translationService, responseOptions, input = undefined;
+  const constructTranslationService = async (from, to) => {
 
     const languagePair = `${from}${to}`;
 
@@ -162,10 +162,10 @@ gemm-precision: int8shift
       var alignedVocabsMemoryList = new Module.AlignedMemoryList;
       downloadedVocabBuffers.forEach(item => alignedVocabsMemoryList.push_back(constructAlignedMemoryFromBuffer(item, 64)));
 
-      // Instantiate the TranslationModel
-      if (translationModel) translationModel.delete();
-      console.debug("Creating TranslationModel with config:", modelConfig);
-      translationModel = new Module.TranslationModel(modelConfig, alignedModelMemory, alignedShortlistMemory, alignedVocabsMemoryList);
+      // Instantiate the Translation Service
+      if (translationService) translationService.delete();
+      console.debug("Creating Translation Service with config:", modelConfig);
+      translationService = new Module.Service(modelConfig, alignedModelMemory, alignedShortlistMemory, alignedVocabsMemoryList);
     } catch (error) {
       log(error);
     }
@@ -173,8 +173,8 @@ gemm-precision: int8shift
 
   const translate = (paragraphs) => {
 
-    // Instantiate the arguments of translate() API i.e. TranslationRequest and input (vector<string>)
-    var request = new Module.TranslationRequest();
+    // Instantiate the arguments of translate() API i.e. ResponseOptions and input (vector<string>)
+    var responseOptions = new Module.ResponseOptions();
     let input = new Module.VectorString;
 
     // Initialize the input
@@ -188,14 +188,14 @@ gemm-precision: int8shift
     // Access input (just for debugging)
     console.log('Input size=', input.size());
 
-    // Translate the input; the result is a vector<TranslationResult>
-    let result = translationModel.translate(input, request);
+    // Translate the input; the result is a vector<Response>
+    let result = translationService.translate(input, responseOptions);
     const translatedParagraphs = [];
     for (let i = 0; i < result.size(); i++) {
       translatedParagraphs.push(result.get(i).getTranslatedText());
     }
     console.log({ translatedParagraphs });
-    request.delete();
+    responseOptions.delete();
     input.delete();
     return translatedParagraphs;
   }
@@ -206,10 +206,10 @@ gemm-precision: int8shift
     const from = lang.substring(0, 2);
     const to = lang.substring(2, 4);
     let start = Date.now();
-    await constructTranslationModel(from, to);
-    log(`translation model ${from}${to} construction took ${(Date.now() - start) / 1000} secs`);
+    await constructTranslationService(from, to);
+    log(`translation service ${from}${to} construction took ${(Date.now() - start) / 1000} secs`);
     document.querySelector("#load").disabled = false;
-    //log('Model Alignment:', translationModel.isAlignmentSupported());
+    //log('Model Alignment:', translationService.isAlignmentSupported());
   });
 
   const translateCall = () => {

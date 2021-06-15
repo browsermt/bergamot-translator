@@ -19,7 +19,6 @@ class Batcher {
   // RequestSentence incorporates (tentative) notions of priority with each
   // sentence. This method inserts the sentence into the internal data-structure
   // which maintains priority among sentences from multiple concurrent requests.
-  void addSentenceWithPriority(RequestSentence &sentence);
   void addWholeRequest(Ptr<Request> request);
 
   // indicate no more sentences will be added.  Does nothing here, for parity to threadsafe version.

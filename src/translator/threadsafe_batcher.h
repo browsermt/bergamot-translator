@@ -27,7 +27,6 @@ class ThreadsafeBatcher {
 
   // Add sentences to be translated by calling these (see Batcher).  When
   // done, call shutdown.
-  void addSentenceWithPriority(RequestSentence &sentence);
   void addWholeRequest(Ptr<Request> request);
   void shutdown();
 

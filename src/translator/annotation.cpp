@@ -47,7 +47,7 @@ void AnnotatedText::recordExistingSentence(std::vector<string_view>::iterator be
   assert(!annotation.token_begin_.empty());
   assert(annotation.token_begin_.back() == text.size());
   // Clip off size token ending.
-  annotation.token_begin_.resize(annotation.token_begin_.size() - 1);
+  annotation.token_begin_.pop_back();
   for (std::vector<string_view>::iterator i = begin; i != end; ++i) {
     assert(i->data() >= text.data());                                  // In range.
     assert(i->data() + i->size() <= text.data() + text.size());        // In range

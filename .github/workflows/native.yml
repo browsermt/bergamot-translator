@@ -1,0 +1,238 @@
+name: native
+'on':
+  push:
+    branches:
+    - main
+    - ci-sandbox
+  pull_request:
+    branches:
+    - '**'
+env:
+  ccache_basedir: ${{ github.workspace }}
+  ccache_dir: "${{ github.workspace }}/.ccache"
+  ccache_compilercheck: content
+  ccache_compress: 'true'
+  ccache_compresslevel: 9
+  ccache_maxsize: 200M
+  ccache_cmake: -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_C_COMPILER_LAUNCHER=ccache
+jobs:
+  ubuntu:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - name: Ubuntu 18.04 full
+          os: ubuntu-18.04
+          identifier: ubuntu_1804_full
+          cmake: -DCOMPILE_TESTS=on
+          brt_tags: ''
+          unittests: 'true'
+        - name: Ubuntu 18.04 minimal
+          os: ubuntu-18.04
+          identifier: ubuntu_1804_minimal
+          cmake: -DCOMPILE_TESTS=on -DUSE_WASM_COMPATIBLE_SOURCE=on
+          brt_tags: "'#wasm'"
+          unittests: 'false'
+        - name: Ubuntu 20.04 full
+          os: ubuntu-20.04
+          identifier: ubuntu_2004_full
+          cmake: -DCOMPILE_TESTS=on
+          brt_tags: ''
+          unittests: 'true'
+        - name: Ubuntu 20.04 minimal
+          os: ubuntu-20.04
+          identifier: ubuntu_2004_minimal
+          cmake: -DCOMPILE_TESTS=on -DUSE_WASM_COMPATIBLE_SOURCE=on
+          brt_tags: "'#wasm'"
+          unittests: 'false'
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+      with:
+        submodules: recursive
+    - name: Install Dependencies
+      run: |-
+        sudo apt-get update
+        sudo apt-get install -y \
+          libgoogle-perftools-dev libprotobuf-dev protobuf-compiler \
+          libboost-all-dev ccache
+    - name: Install MKL
+      run: |-
+        wget -qO- "https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS-2019.PUB" | sudo apt-key add -
+        sudo sh -c "echo deb https://apt.repos.intel.com/mkl all main > /etc/apt/sources.list.d/intel-mkl.list"
+        sudo apt-get update -o Dir::Etc::sourcelist="/etc/apt/sources.list.d/intel-mkl.list"
+        sudo apt-get install -y --no-install-recommends intel-mkl-64bit-2020.0-088
+    - name: Generate ccache_vars for ccache based on machine
+      shell: bash
+      id: ccache_vars
+      run: |-
+        echo "::set-output name=hash::$(echo ${{ env.ccache_compilercheck }})"
+        echo "::set-output name=timestamp::$(date '+%Y-%m-%dT%H.%M.%S')"
+    - name: Cache-op for build-cache through ccache
+      uses: actions/cache@v2
+      with:
+        path: ${{ env.ccache_dir }}
+        key: ccache-${{ matrix.identifier }}-${{ steps.ccache_vars.outputs.hash }}-${{ github.ref }}-${{ steps.ccache_vars.outputs.timestamp }}
+        restore-keys: |-
+          ccache-${{ matrix.identifier }}-${{ steps.ccache_vars.outputs.hash }}-${{ github.ref }}
+          ccache-${{ matrix.identifier }}-${{ steps.ccache_vars.outputs.hash }}
+          ccache-${{ matrix.identifier }}
+    - name: ccache environment setup
+      run: |-
+        echo "CCACHE_COMPILER_CHECK=${{ env.ccache_compilercheck }}" >> $GITHUB_ENV
+        echo "CCACHE_BASEDIR=${{ env.ccache_basedir }}" >> $GITHUB_ENV
+        echo "CCACHE_COMPRESS=${{ env.ccache_compress }}" >> $GITHUB_ENV
+        echo "CCACHE_COMPRESSLEVEL=${{ env.ccache_compresslevel }}" >> $GITHUB_ENV
+        echo "CCACHE_DIR=${{ env.ccache_dir }}" >> $GITHUB_ENV
+        echo "CCACHE_MAXSIZE=${{ env.ccache_maxsize }}" >> $GITHUB_ENV
+    - name: ccache prolog
+      run: |-
+        ccache -s # Print current cache stats
+        ccache -z # Zero cache entry
+    - name: cmake
+      run: |-
+        mkdir -p build
+        cd build
+        cmake -L .. ${{ matrix.cmake }} ${{ env.ccache_cmake }}
+    - name: Build from source
+      working-directory: build
+      run: make -j2
+    - name: ccache epilog
+      run: 'ccache -s # Print current cache stats'
+    - name: Print Versions
+      working-directory: build
+      run: ./app/bergamot --version
+    - name: Run unit tests
+      working-directory: build
+      run: make test
+      if: ${{ matrix.unittests == 'true' }}
+    - name: Install regression-test framework (BRT)
+      working-directory: bergamot-translator-tests
+      run: make install
+    - name: Run regression-tests (BRT)
+      working-directory: bergamot-translator-tests
+      id: brt_run
+      run: MARIAN=../build ./run_brt.sh ${{ matrix.brt_tags }}
+    - name: Print logs of unsuccessful BRTs
+      working-directory: bergamot-translator-tests
+      run: |-
+        grep "tests.*.sh" previous.log \
+          | sed 's/^\s*-\s*//' \
+          | xargs -I% bash -c 'echo %; tail -n20 %.log'
+      if: ${{ always() && steps.brt_run.outcome == 'failure' }}
+    - name: Upload regression-tests artifacts
+      uses: actions/upload-artifact@v2
+      if: ${{ always() && steps.brt_run.outcome != 'skipped' }}
+      with:
+        name: brt-${{ matrix.identifier }}
+        path: |-
+          bergamot-translator-tests/**/*.expected
+          bergamot-translator-tests/**/*.log
+          bergamot-translator-tests/**/*.out
+  mac:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - name: MacOS 10.15 full
+          os: macos-10.15
+          identifier: mac_1015_full
+          cmake: -DCOMPILE_TESTS=on -DUSE_APPLE_ACCELERATE=off -DUSE_FBGEMM=off -DUSE_STATIC_LIBS=off
+          brt_tags: ""
+          unittests: 'true'
+        - name: MacOS 10.15 minimal
+          os: macos-10.15
+          identifier: mac_1015_minimal
+          cmake: -DCOMPILE_TESTS=on -DUSE_APPLE_ACCELERATE=off -DUSE_FBGEMM=off -DUSE_STATIC_LIBS=on -DUSE_WASM_COMPATIBLE_SOURCE=on
+          brt_tags: "'#wasm'"
+          unittests: 'false'
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+      with:
+        submodules: recursive
+    - name: Install Dependencies
+      run: |-
+        brew update
+        brew install openblas protobuf ccache
+        brew install coreutils findutils
+    - name: Setup path with gnu
+      run: |-
+        echo "/usr/local/opt/coreutils/libexec/gnubin" >> $GITHUB_PATH
+        echo "/usr/local/opt/findutils/libexec/gnubin" >> $GITHUB_PATH
+    - name: Setup BLAS
+      run: |-
+        echo "LDFLAGS=-L/usr/local/opt/openblas/lib" >> $GITHUB_ENV
+        echo "CPPFLAGS=-I/usr/local/opt/openblas/include" >> $GITHUB_ENV
+    - name: Generate ccache_vars for ccache based on machine
+      shell: bash
+      id: ccache_vars
+      run: |-
+        echo "::set-output name=hash::$(echo ${{ env.ccache_compilercheck }})"
+        echo "::set-output name=timestamp::$(date '+%Y-%m-%dT%H.%M.%S')"
+    - name: Cache-op for build-cache through ccache
+      uses: actions/cache@v2
+      with:
+        path: ${{ env.ccache_dir }}
+        key: ccache-${{ matrix.identifier }}-${{ steps.ccache_vars.outputs.hash }}-${{ github.ref }}-${{ steps.ccache_vars.outputs.timestamp }}
+        restore-keys: |-
+          ccache-${{ matrix.identifier }}-${{ steps.ccache_vars.outputs.hash }}-${{ github.ref }}
+          ccache-${{ matrix.identifier }}-${{ steps.ccache_vars.outputs.hash }}
+          ccache-${{ matrix.identifier }}
+    - name: ccache environment setup
+      run: |-
+        echo "CCACHE_COMPILER_CHECK=${{ env.ccache_compilercheck }}" >> $GITHUB_ENV
+        echo "CCACHE_BASEDIR=${{ env.ccache_basedir }}" >> $GITHUB_ENV
+        echo "CCACHE_COMPRESS=${{ env.ccache_compress }}" >> $GITHUB_ENV
+        echo "CCACHE_COMPRESSLEVEL=${{ env.ccache_compresslevel }}" >> $GITHUB_ENV
+        echo "CCACHE_DIR=${{ env.ccache_dir }}" >> $GITHUB_ENV
+        echo "CCACHE_MAXSIZE=${{ env.ccache_maxsize }}" >> $GITHUB_ENV
+    - name: ccache prolog
+      run: |-
+        ccache -s # Print current cache stats
+        ccache -z # Zero cache entry
+    - name: cmake
+      run: |-
+        mkdir -p build
+        cd build
+        cmake -L .. ${{ matrix.cmake }} ${{ env.ccache_cmake }}
+    - name: Build from source
+      working-directory: build
+      run: make -j2
+    - name: ccache epilog
+      run: 'ccache -s # Print current cache stats'
+    - name: Print Versions
+      working-directory: build
+      run: ./app/bergamot --version
+    - name: Run unit tests
+      working-directory: build
+      run: make test
+      if: ${{ matrix.unittests == 'true' }}
+    - name: Install regression-test framework (BRT)
+      working-directory: bergamot-translator-tests
+      run: make install
+    - name: Run regression-tests (BRT)
+      working-directory: bergamot-translator-tests
+      id: brt_run
+      run: MARIAN=../build ./run_brt.sh ${{ matrix.brt_tags }}
+    - name: Print logs of unsuccessful BRTs
+      working-directory: bergamot-translator-tests
+      run: |-
+        grep "tests.*.sh" previous.log \
+          | sed 's/^\s*-\s*//' \
+          | xargs -I% bash -c 'echo %; tail -n20 %.log'
+      if: ${{ always() && steps.brt_run.outcome == 'failure' }}
+    - name: Upload regression-tests artifacts
+      uses: actions/upload-artifact@v2
+      if: ${{ always() && steps.brt_run.outcome != 'skipped' }}
+      with:
+        name: brt-${{ matrix.identifier }}
+        path: |-
+          bergamot-translator-tests/**/*.expected
+          bergamot-translator-tests/**/*.log
+          bergamot-translator-tests/**/*.out
+

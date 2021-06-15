@@ -1,9 +1,17 @@
-## Using Bergamot Translator in JavaScript
-The example file `bergamot.html` in the folder `test_page` demonstrates how to use the bergamot translator in JavaScript via a `<script>` tag.
+# Using Bergamot Translator in JavaScript
 
-### <a name="Pre-requisite"></a> Pre-requisite: Download files required for translation
+Instructions in this document assume current-directory to be
+[wasm](https://github.com/browsermt/bergamot-translator/tree/main/wasm) within
+bergamot-translator source.
 
-Please note that [Using JS APIs](#Using-JS-APIs) and [Demo](#Demo) section below assumes that the [bergamot project specific model files](https://github.com/mozilla-applied-ml/bergamot-models) are already downloaded and present in the `test_page` folder. If this is not done then use following instructions to do so:
+The example file `bergamot.html` in the folder `test_page` demonstrates how to
+use the bergamot translator in JavaScript via a `<script>` tag.
+
+## Pre-requisites
+
+**Download files required for translation**
+
+Please note that [Using JS APIs](#using-js-apis) and [Demo](#demo) section below assumes that the [bergamot project specific model files](https://github.com/mozilla-applied-ml/bergamot-models) are already downloaded and present in the `test_page` folder. If this is not done then use following instructions to do so:
 
 ```bash
 cd test_page
@@ -13,7 +21,7 @@ cp -rf bergamot-models/prod/* models
 gunzip models/*/*
 ```
 
-### <a name="Using-JS-APIs"></a> Using JS APIs
+## Using JS APIs
 
 ```js
 // The model configuration as YAML formatted string. For available configuration options, please check: https://marian-nmt.github.io/docs/cmd/marian-decoder/
@@ -55,33 +63,33 @@ var alignedShortlistMemory = constructAlignedMemoryFromBuffer(shortListBuffer, 6
 var alignedVocabsMemoryList = new Module.AlignedMemoryList;
 downloadedVocabBuffers.forEach(item => alignedVocabsMemoryList.push_back(constructAlignedMemoryFromBuffer(item, 64)));
 
-// Instantiate the TranslationModel
-const model = new Module.TranslationModel(modelConfig, alignedModelMemory, alignedShortlistMemory, alignedVocabsMemoryList);
+// Instantiate the Translation Service
+const translationService = new Module.Service(modelConfig, alignedModelMemory, alignedShortlistMemory, alignedVocabsMemoryList);
 
-// Instantiate the arguments of translate() API i.e. TranslationRequest and input (vector<string>)
-const request = new Module.TranslationRequest();
+// Instantiate the arguments of translate() API i.e. ResponseOptions and input (vector<string>)
+const responseOptions = new Module.ResponseOptions();
 const input = new Module.VectorString;
 
 // Initialize the input
 input.push_back("Hola"); input.push_back("Mundo");
 
-// translate the input; the result is a vector<TranslationResult>
-const result = model.translate(input, request);
+// translate the input; the result is a vector<Response>
+const result = translationService.translate(input, responseOptions);
 
-// Print original and translated text from each entry of vector<TranslationResult>
+// Print original and translated text from each entry of vector<Response>
 for (let i = 0; i < result.size(); i++) {
     console.log(' original=' + result.get(i).getOriginalText() + ', translation=' + result.get(i).getTranslatedText());
 }
 
 // Don't forget to clean up the instances
-model.delete();
-request.delete();
+translationService.delete();
+responseOptions.delete();
 input.delete();
 ```
 
-### <a name="Demo"></a> Demo (see everything in action)
+## Demo 
 
-* Make sure that you followed [Pre-requisite](#Pre-requisite) instructions before moving forward.
+* Make sure that you followed [Pre-requisites](#pre-requisites) instructions before moving forward.
 
 * Start the test webserver (ensure you have the latest nodejs installed)
     ```bash

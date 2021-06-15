@@ -105,7 +105,7 @@ class Service {
   /// recommended to work with futures and translate() API.
   ///
   /// @param [in] source: rvalue reference of the string to be translated
-  /// @param [in] translationRequest: ResponseOptions indicating whether or not
+  /// @param [in] responseOptions: ResponseOptions indicating whether or not
   /// to include some member in the Response, also specify any additional
   /// configurable parameters.
   std::vector<Response> translateMultiple(std::vector<std::string> &&source, ResponseOptions responseOptions);

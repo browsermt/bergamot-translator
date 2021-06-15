@@ -63,27 +63,27 @@ var alignedShortlistMemory = constructAlignedMemoryFromBuffer(shortListBuffer, 6
 var alignedVocabsMemoryList = new Module.AlignedMemoryList;
 downloadedVocabBuffers.forEach(item => alignedVocabsMemoryList.push_back(constructAlignedMemoryFromBuffer(item, 64)));
 
-// Instantiate the TranslationModel
-const model = new Module.TranslationModel(modelConfig, alignedModelMemory, alignedShortlistMemory, alignedVocabsMemoryList);
+// Instantiate the Translation Service
+const translationService = new Module.Service(modelConfig, alignedModelMemory, alignedShortlistMemory, alignedVocabsMemoryList);
 
-// Instantiate the arguments of translate() API i.e. TranslationRequest and input (vector<string>)
-const request = new Module.TranslationRequest();
+// Instantiate the arguments of translate() API i.e. ResponseOptions and input (vector<string>)
+const responseOptions = new Module.ResponseOptions();
 const input = new Module.VectorString;
 
 // Initialize the input
 input.push_back("Hola"); input.push_back("Mundo");
 
-// translate the input; the result is a vector<TranslationResult>
-const result = model.translate(input, request);
+// translate the input; the result is a vector<Response>
+const result = translationService.translate(input, responseOptions);
 
-// Print original and translated text from each entry of vector<TranslationResult>
+// Print original and translated text from each entry of vector<Response>
 for (let i = 0; i < result.size(); i++) {
     console.log(' original=' + result.get(i).getOriginalText() + ', translation=' + result.get(i).getTranslatedText());
 }
 
 // Don't forget to clean up the instances
-model.delete();
-request.delete();
+translationService.delete();
+responseOptions.delete();
 input.delete();
 ```
 

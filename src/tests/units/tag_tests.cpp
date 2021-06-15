@@ -118,7 +118,6 @@ TEST_CASE("Test Tag Nesting Features with one sentence data") {
   }
 
   SECTION("The tag is wrapped in one word") {
-    std::cout << "The tag is wrapped in one word" << std::endl;
     // [original]: <span>A</span> republican strategy to counteract the re-election of Obama.
     // [translated]:<span>Eine</span> republikanische Strategie, um der Wiederwahl Obamas entgegenzuwirken.
     std::vector<TagNode> tagTree{

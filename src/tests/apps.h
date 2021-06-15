@@ -25,15 +25,6 @@ namespace testapp {
 // a response containing translation data according responseOptions.
 Response translateFromStdin(Ptr<Options> options, ResponseOptions responseOptions);
 
-// Reads from stdin and translates. The quality score for the translations (each sentence) are printed separated by
-// empty-lines. The first line contains whole quality scores and the second line word quality scores, for each entry.
-void qualityScores(Ptr<Options> options);
-
-// Reads from stdin and translates. Alignments are printed aligned to the source-tokens, following format src-token:
-// [possible-target-alignments], if numeric is false. If numeric is true, only alignment probabilities are printed
-// instead of the tokens.
-void alignmentAggregatedToSource(Ptr<Options> options, bool numeric = false);
-
 // Reads from stdin and translates.  Prints the tokens separated by space for each sentence. Prints words from source
 // side text annotation if source=true, target annotation otherwise.
 void annotatedTextWords(Ptr<Options> options, bool source = true);

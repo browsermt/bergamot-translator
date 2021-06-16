@@ -3,12 +3,28 @@
 
 using namespace marian::bergamot;
 
+void testCase(const marian::data::SoftAlignment& softAlign, size_t srcLength, size_t tgtLength,
+              const std::vector<TagNode>& input, const std::vector<TagNode>& expected, bool isDebug=false){
+  TagProcessor tp = TagProcessor(softAlign, input, srcLength, tgtLength);
+  tp.traverseAndQuery(0, {0, tgtLength});
+  std::vector<TagNode> tagTreeTarget = tp.tagTreeTarget;
+
+  REQUIRE(tagTreeTarget.size() == expected.size());
+  for (size_t i = 0; i < tagTreeTarget.size(); i++) {
+    if(isDebug)
+      std::cout << i <<" "<<tagTreeTarget[i].bound.begin <<" "<<tagTreeTarget[i].bound.end << std::endl;
+    if(!isDebug) {
+      REQUIRE(tagTreeTarget[i].bound.begin == expected[i].bound.begin);
+      REQUIRE(tagTreeTarget[i].bound.end == expected[i].bound.end);
+    }
+  }
+}
+
 TEST_CASE("Test Tag Nesting Features with one sentence data") {
   //[original]: A republican strategy to counteract the re-election of Obama.
   // [translated]: Eine republikanische Strategie, um der Wiederwahl Obamas entgegenzuwirken.
-  // A:0  republic:1 an:2  strategy:3  to:4  counter:5 act:6  the:7  re:8 -:9 election:10  of:11  Obama:12 .:13
-  // Eine:0  :1 republik:2 anische:3  Strategie:4 ,:5  um:6  der:7  Wieder:8 wahl:9  Obama:10 s:11  entgegen:12 zu:13 wirken:14 .:15
-
+  // A:0  republic:1 an:2  strategy:3  to:4  counter:5 act:6  the:7  re:8 -:9 election:10  of:11  Obama:12 .:13 :14
+  // Eine:0  :1 republik:2 anische:3  Strategie:4 ,:5  um:6  der:7  Wieder:8 wahl:9  Obama:10 s:11  entgegen:12 zu:13 wirken:14 .:15 :16
   marian::data::SoftAlignment softAlign =
           {{0.988377,    0.0019854,   0.00502577,  0.000275177, 0.000225201, 0.00243003,  0.00129913,  0.000130121, 4.70618e-05, 9.28533e-06, 9.31939e-06, 2.97117e-06, 1.74904e-05, 9.99673e-09, 0.000166429},
            {0.00603287,  0.907779,    0.0586549,   0.0181961,   0.00461115,  0.00160618,  0.00109232,  0.000172891, 0.00037208,  0.000191994, 4.17242e-05, 1.03908e-06, 2.842e-06,   5.83511e-06, 0.00123912},
@@ -57,17 +73,8 @@ TEST_CASE("Test Tag Nesting Features with one sentence data") {
             TagNode({0, 17}, {})
     };
 
-    TagProcessor tp = TagProcessor(softAlign, tagTree, srcLength, tgtLength);
+    testCase(softAlign, srcLength, tgtLength, tagTree, tagTreeTargetExpected);
 
-    tp.traverseAndQuery(0, {0, tgtLength});
-
-    std::vector<TagNode> tagTreeTarget = tp.tagTreeTarget;
-
-    REQUIRE(tagTreeTarget.size() == tagTreeTargetExpected.size());
-    for (size_t i = 0; i < tagTreeTarget.size(); i++) {
-      REQUIRE(tagTreeTarget[i].bound.begin == tagTreeTargetExpected[i].bound.begin);
-      REQUIRE(tagTreeTarget[i].bound.end == tagTreeTargetExpected[i].bound.end);
-    }
   }
 
   SECTION("The tag is wrapped in the middle of the sentence") {
@@ -80,17 +87,7 @@ TEST_CASE("Test Tag Nesting Features with one sentence data") {
             TagNode({0, 5}, {})
     };
 
-    TagProcessor tp = TagProcessor(softAlign, tagTree, srcLength, tgtLength);
-
-    tp.traverseAndQuery(0, {0, tgtLength});
-
-    std::vector<TagNode> tagTreeTarget = tp.tagTreeTarget;
-
-    REQUIRE(tagTreeTarget.size() == tagTreeTargetExpected.size());
-    for (size_t i = 0; i < tagTreeTarget.size(); i++) {
-      REQUIRE(tagTreeTarget[i].bound.begin == tagTreeTargetExpected[i].bound.begin);
-      REQUIRE(tagTreeTarget[i].bound.end == tagTreeTargetExpected[i].bound.end);
-    }
+    testCase(softAlign, srcLength, tgtLength, tagTree, tagTreeTargetExpected);
   }
 
   SECTION("The tag is wrapped in the middle of the sentence case 2") {
@@ -104,20 +101,10 @@ TEST_CASE("Test Tag Nesting Features with one sentence data") {
             TagNode({1, 5}, {})
     };
 
-    TagProcessor tp = TagProcessor(softAlign, tagTree, srcLength, tgtLength);
-
-    tp.traverseAndQuery(0, {0, tgtLength});
-
-    std::vector<TagNode> tagTreeTarget = tp.tagTreeTarget;
-
-    REQUIRE(tagTreeTarget.size() == tagTreeTargetExpected.size());
-    for (size_t i = 0; i < tagTreeTarget.size(); i++) {
-      REQUIRE(tagTreeTarget[i].bound.begin == tagTreeTargetExpected[i].bound.begin);
-      REQUIRE(tagTreeTarget[i].bound.end == tagTreeTargetExpected[i].bound.end);
-    }
+    testCase(softAlign, srcLength, tgtLength, tagTree, tagTreeTargetExpected);
   }
 
-  SECTION("The tag is wrapped in one word") {
+  SECTION("The tag is wrapped in one word [one-to-one]") {
     // [original]: <span>A</span> republican strategy to counteract the re-election of Obama.
     // [translated]:<span>Eine</span> republikanische Strategie, um der Wiederwahl Obamas entgegenzuwirken.
     std::vector<TagNode> tagTree{
@@ -127,18 +114,22 @@ TEST_CASE("Test Tag Nesting Features with one sentence data") {
             TagNode({0, 1}, {})
     };
 
-    TagProcessor tp = TagProcessor(softAlign, tagTree, srcLength, tgtLength);
-
-    tp.traverseAndQuery(0, {0, tgtLength});
-
-    std::vector<TagNode> tagTreeTarget = tp.tagTreeTarget;
-
-    REQUIRE(tagTreeTarget.size() == tagTreeTargetExpected.size());
-    for (size_t i = 0; i < tagTreeTarget.size(); i++) {
-      REQUIRE(tagTreeTarget[i].bound.begin == tagTreeTargetExpected[i].bound.begin);
-      REQUIRE(tagTreeTarget[i].bound.end == tagTreeTargetExpected[i].bound.end);
-    }
+    testCase(softAlign, srcLength, tgtLength, tagTree, tagTreeTargetExpected);
   }
+
+//  SECTION("The tag is wrapped in one word [one-to-zero]") {
+//    // [original]: A republican strategy to counteract the re<span>-</span>election of Obama.
+//    // [translated]: Eine republikanische Strategie, um der Wiederwahl Obamas entgegenzuwirken.
+//    std::vector<TagNode> tagTree{
+//            TagNode({9, 10}, {})
+//    };
+//    // should be empty
+//    std::vector<TagNode> tagTreeTargetExpected{
+//            TagNode({0, 0}, {})
+//    };
+//
+//    testCase(softAlign, srcLength, tgtLength, tagTree, tagTreeTargetExpected);
+//  }
 
   SECTION("Nested tags with one child") {
     // [original]: <span><span>A republican strategy</span> to counteract the re-election of Obama.</span>
@@ -153,17 +144,7 @@ TEST_CASE("Test Tag Nesting Features with one sentence data") {
             TagNode({0, 5}, {})
     };
 
-    TagProcessor tp = TagProcessor(softAlign, tagTree, srcLength, tgtLength);
-
-    tp.traverseAndQuery(0, {0, tgtLength});
-
-    std::vector<TagNode> tagTreeTarget = tp.tagTreeTarget;
-
-    REQUIRE(tagTreeTarget.size() == tagTreeTargetExpected.size());
-    for (size_t i = 0; i < tagTreeTarget.size(); i++) {
-      REQUIRE(tagTreeTarget[i].bound.begin == tagTreeTargetExpected[i].bound.begin);
-      REQUIRE(tagTreeTarget[i].bound.end == tagTreeTargetExpected[i].bound.end);
-    }
+    testCase(softAlign, srcLength, tgtLength, tagTree, tagTreeTargetExpected);
   }
 
   SECTION("Nested tags with two children") {
@@ -181,17 +162,24 @@ TEST_CASE("Test Tag Nesting Features with one sentence data") {
             TagNode({8, 10}, {})
     };
 
-    TagProcessor tp = TagProcessor(softAlign, tagTree, srcLength, tgtLength);
+    testCase(softAlign, srcLength, tgtLength, tagTree, tagTreeTargetExpected);
+  }
 
-    tp.traverseAndQuery(0, {0, tgtLength});
+  SECTION("Nested tags with two children 2") {
+    // [original]: A republican strategy to <span><span>counteract</span> the re-election <span>of</span></span> Obama.
+    // [translated]: Eine republikanische Strategie, um <span>der Wiederwahl <span>Obama</span>s <span>entgegenzuwirken</span></span>.
+    std::vector<TagNode> tagTree{
+            TagNode({5, 12}, {1,2}),
+            TagNode({11, 12}, {}),
+            TagNode({5, 7}, {})
+    };
+    std::vector<TagNode> tagTreeTargetExpected{
+            TagNode({7, 15}, {1,2}),
+            TagNode({10, 11}, {}),
+            TagNode({12, 15}, {})
+    };
 
-    std::vector<TagNode> tagTreeTarget = tp.tagTreeTarget;
-
-    REQUIRE(tagTreeTarget.size() == tagTreeTargetExpected.size());
-    for (size_t i = 0; i < tagTreeTarget.size(); i++) {
-      REQUIRE(tagTreeTarget[i].bound.begin == tagTreeTargetExpected[i].bound.begin);
-      REQUIRE(tagTreeTarget[i].bound.end == tagTreeTargetExpected[i].bound.end);
-    }
+    testCase(softAlign, srcLength, tgtLength, tagTree, tagTreeTargetExpected);
   }
 
   SECTION("Two-layer nested tags with one child") {
@@ -209,20 +197,27 @@ TEST_CASE("Test Tag Nesting Features with one sentence data") {
             TagNode({0, 1}, {})
     };
 
-    TagProcessor tp = TagProcessor(softAlign, tagTree, srcLength, tgtLength);
-
-    tp.traverseAndQuery(0, {0, tgtLength});
-
-    std::vector<TagNode> tagTreeTarget = tp.tagTreeTarget;
-
-    REQUIRE(tagTreeTarget.size() == tagTreeTargetExpected.size());
-    for (size_t i = 0; i < tagTreeTarget.size(); i++) {
-//      std::cout << i <<" " << tagTreeTarget[i].bound.begin <<" " << tagTreeTarget[i].bound.end << std::endl;
-      REQUIRE(tagTreeTarget[i].bound.begin == tagTreeTargetExpected[i].bound.begin);
-      REQUIRE(tagTreeTarget[i].bound.end == tagTreeTargetExpected[i].bound.end);
-    }
+    testCase(softAlign, srcLength, tgtLength, tagTree, tagTreeTargetExpected, true);
   }
 
+  SECTION("NTwo-layer nested tags with two children 2") {
+    // [original]: A republican strategy to <span><span>counteract <span>the</span></span> re-election <span>of</span></span> Obama.
+    // [translated]: Eine republikanische Strategie, um <span>der Wiederwahl <span>Obamas</span> entgegenzuwirken</span>.
+    std::vector<TagNode> tagTree{
+            TagNode({5, 12}, {1,2}),
+            TagNode({11, 12}, {}),
+            TagNode({5, 8}, {3}),
+            TagNode({7, 8}, {}),
+    };
+    std::vector<TagNode> tagTreeTargetExpected{
+            TagNode({7, 15}, {1,2}),
+            TagNode({10, 11}, {}),
+            TagNode({11, 15}, {3}),
+            TagNode({11, 12}, {}),
+    };
+
+    testCase(softAlign, srcLength, tgtLength, tagTree, tagTreeTargetExpected, true);
+  }
 // Cannot deal properly
 //  SECTION("Two independent tags") {
 //    // [original]: <span>A republican strategy</span> to counteract the <span>re-election of Obama</span>.

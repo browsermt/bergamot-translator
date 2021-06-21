@@ -19,7 +19,6 @@ void ResponseBuilder::buildQualityScores(Histories &histories, Response &respons
     // logprobs.
     auto normalizedPathScore = std::get<2>(result);
     auto wordQualities = hyp->tracebackWordScores();
-    wordQualities.pop_back();
     response.qualityScores.push_back(Quality{normalizedPathScore, wordQualities});
   }
 }
@@ -64,7 +63,7 @@ void ResponseBuilder::buildTranslatedText(Histories &histories, Response &respon
 
     std::string decoded;
     std::vector<string_view> targetSentenceMappings;
-    vocabs_.target()->decodeWithByteRanges(words, decoded, targetSentenceMappings);
+    vocabs_.target()->decodeWithByteRanges(words, decoded, targetSentenceMappings, /*ignoreEOS=*/false);
 
     switch (responseOptions_.concatStrategy) {
       case ConcatStrategy::FAITHFUL: {

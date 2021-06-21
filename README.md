@@ -13,7 +13,7 @@ Create a folder where you want to build all the artifacts (`build-native` in thi
 mkdir build-native
 cd build-native
 cmake ../
-make -j3
+make -j2
 ```
 
 ### Build WASM
@@ -23,8 +23,8 @@ Building on wasm requires Emscripten toolchain. It can be downloaded and install
 
 * Get the latest sdk: `git clone https://github.com/emscripten-core/emsdk.git`
 * Enter the cloned directory: `cd emsdk`
-* Install the lastest sdk tools: `./emsdk install latest`
-* Activate the latest sdk tools: `./emsdk activate latest`
+* Install the lastest sdk tools: `./emsdk install 2.0.9`
+* Activate the latest sdk tools: `./emsdk activate 2.0.9`
 * Activate path variables: `source ./emsdk_env.sh`
 
 #### <a name="Compile"></a> Compile
@@ -34,7 +34,7 @@ Building on wasm requires Emscripten toolchain. It can be downloaded and install
     mkdir build-wasm
     cd build-wasm
     emcmake cmake -DCOMPILE_WASM=on ../
-    emmake make -j3
+    emmake make -j2
     ```
 
     The wasm artifacts (.js and .wasm files) will be available in the build directory ("build-wasm" in this case).

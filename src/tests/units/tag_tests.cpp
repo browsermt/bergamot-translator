@@ -6,8 +6,14 @@ using namespace marian::bergamot;
 void testCase(const marian::data::SoftAlignment& softAlign, size_t srcLength, size_t tgtLength,
               const std::vector<TagNode>& input, const std::vector<TagNode>& expected, bool isDebug=false){
   TagProcessor tp = TagProcessor(softAlign, input, srcLength, tgtLength);
-  tp.traverseAndQuery(0, {0, tgtLength});
+  ByteRange rootRange;
+  int exitStatus = tp.traverseAndQuery(0, {0, tgtLength}, rootRange);
   std::vector<TagNode> tagTreeTarget = tp.tagTreeTarget;
+
+  if (exitStatus == 0)
+    std::cout <<"Solution found" <<std::endl;
+  else
+    std::cout <<"No solution" <<std::endl;
 
   REQUIRE(tagTreeTarget.size() == expected.size());
   for (size_t i = 0; i < tagTreeTarget.size(); i++) {
@@ -197,12 +203,12 @@ TEST_CASE("Test Tag Nesting Features with one sentence data") {
             TagNode({0, 1}, {})
     };
 
-    testCase(softAlign, srcLength, tgtLength, tagTree, tagTreeTargetExpected, true);
+    testCase(softAlign, srcLength, tgtLength, tagTree, tagTreeTargetExpected);
   }
 
-  SECTION("NTwo-layer nested tags with two children 2") {
+  SECTION("Two-layer nested tags with two children 2") {
     // [original]: A republican strategy to <span><span>counteract <span>the</span></span> re-election <span>of</span></span> Obama.
-    // [translated]: Eine republikanische Strategie, um <span>der Wiederwahl <span>Obamas</span> entgegenzuwirken</span>.
+    // [translated]: Eine republikanische Strategie, um <span>der Wiederwahl <span>Obama</span><span><span>s</span> entgegenzuwirken</span></span>.
     std::vector<TagNode> tagTree{
             TagNode({5, 12}, {1,2}),
             TagNode({11, 12}, {}),
@@ -216,8 +222,43 @@ TEST_CASE("Test Tag Nesting Features with one sentence data") {
             TagNode({11, 12}, {}),
     };
 
+    testCase(softAlign, srcLength, tgtLength, tagTree, tagTreeTargetExpected);
+  }
+  SECTION("Nested tag with many children [no solution case]") {
+    // [original]: A republican strategy <span><span>to</span> <span>counter</span><span>act</span> <span>the</span></span> re-election of Obama.
+    // [translated]: Eine republikanische Strategie, um der Wiederwahl Obamas entgegenzuwirken.
+    std::vector<TagNode> tagTree{
+            TagNode({4, 8}, {1,2,3,4}),
+            TagNode({4, 5}, {}),
+            TagNode({5, 6}, {}),
+            TagNode({6, 7}, {}),
+            TagNode({7, 8}, {})
+    };
+    std::vector<TagNode> tagTreeTargetExpected{
+            TagNode({4, 8}, {1,2,3,4}),
+            TagNode({4, 5}, {}),
+            TagNode({5, 6}, {}),
+            TagNode({6, 7}, {}),
+            TagNode({7, 8}, {})
+    };
+
     testCase(softAlign, srcLength, tgtLength, tagTree, tagTreeTargetExpected, true);
   }
+
+
+  SECTION("Empty tag") {
+    // [original]: A republican strategy<br> to counteract the re-election of Obama.
+    // [translated]: Eine republikanische Strategie, um der Wiederwahl Obamas entgegenzuwirken.
+    std::vector<TagNode> tagTree{
+            TagNode({2, 2}, {})
+    };
+    std::vector<TagNode> tagTreeTargetExpected{
+            TagNode({5, 5}, {})
+    };
+
+    testCase(softAlign, srcLength, tgtLength, tagTree, tagTreeTargetExpected, true);
+  }
+
 // Cannot deal properly
 //  SECTION("Two independent tags") {
 //    // [original]: <span>A republican strategy</span> to counteract the <span>re-election of Obama</span>.

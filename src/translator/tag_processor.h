@@ -58,24 +58,41 @@ public:
     double max = 0;
     ByteRange maxi;
 
-    for (size_t l = outer.begin; l <= inner.begin; l++) {
-      for (size_t r = (l+1 > inner.end) ? (l+1) : inner.end; r <= outer.end; r++) {
-        double product = 1;
-        for (size_t t = 0; t < tgtLength_; t++)
-        {
-          if (t >= l && t < r)
+    if (query.begin < query.end)
+    {
+      for (size_t l = outer.begin; l <= inner.begin; l++) {
+        for (size_t r = (l+1 > inner.end) ? (l+1) : inner.end; r <= outer.end; r++) {
+          double product = 1;
+          for (size_t t = 0; t < tgtLength_; t++)
           {
-            product *= inside_[query.begin][query.end - 1][t];
+            if (t >= l && t < r)
+            {
+              product *= inside_[query.begin][query.end - 1][t];
+            }
+            else
+            {
+              product *= 1 - inside_[query.begin][query.end - 1][t];
+            }
           }
-          else
-          {
-            product *= 1 - inside_[query.begin][query.end - 1][t];
+          if (max < product) {
+            max = product;
+            maxi.begin = l;
+            maxi.end = r;
           }
         }
-        if (max < product) {
-          max = product;
-          maxi.begin = l;
-          maxi.end = r;
+      }
+    }
+    else
+    {
+      for (size_t d = outer.begin; d < outer.end; d++)
+      {
+        if (d <= inner.begin || d >= inner.end)
+        {
+          double product = inside_[0][query.begin][d] * (1 - inside_[query.begin+1][srcLength_-1][d]);
+          if (max < product) {
+            max = product;
+            maxi.begin = maxi.end = d;
+          }
         }
       }
     }
@@ -83,22 +100,28 @@ public:
     return maxi;
   }
 
-  ByteRange traverseAndQuery(size_t idx, ByteRange self_outer) {
+  int traverseAndQuery(size_t idx, ByteRange self_outer, ByteRange &currentRange) {
     ByteRange child_outer = self_outer;
     ByteRange self_inner;
+
+    if (self_outer.size() <= 0)
+      return 1;
 
     self_inner.begin = self_outer.end;
     self_inner.end = self_outer.begin;
 
     for (size_t i = 0; i < tagTree_[idx].child.size(); i++) {
-      ByteRange child_range = traverseAndQuery(tagTree_[idx].child[i], child_outer);
+      ByteRange child_range;
+      int childExitStatus = traverseAndQuery(tagTree_[idx].child[i], child_outer, child_range);
+      if (childExitStatus != 0)
+        return childExitStatus;
       child_outer.begin = child_range.end;
       self_inner.begin = (self_inner.begin > child_range.begin) ? child_range.begin : self_inner.begin;
       self_inner.end = (self_inner.end < child_range.end) ? child_range.end : self_inner.begin;
     }
-    ByteRange currentRange = maxProduct(tagTree_[idx].bound, self_outer, self_inner);
+    currentRange = maxProduct(tagTree_[idx].bound, self_outer, self_inner);
     tagTreeTarget[idx].bound = currentRange;
-    return currentRange;
+    return 0;
   }
 };
 }  // namespace bergamot

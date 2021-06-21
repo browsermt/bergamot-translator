@@ -3,6 +3,7 @@
 #include <vector>
 
 #include "annotation.h"
+#include "common/cli_helper.h"
 #include "common/options.h"
 #include "data/types.h"
 #include "definitions.h"
@@ -10,20 +11,84 @@
 namespace marian {
 namespace bergamot {
 
+namespace {
+ug::ssplit::SentenceStream::splitmode string2splitmode(const std::string &m) {
+  typedef ug::ssplit::SentenceStream::splitmode splitmode;
+  if (m == "sentence") {
+    return splitmode::one_sentence_per_line;
+  } else if (m == "paragraph") {
+    return splitmode::one_paragraph_per_line;
+  } else if (m == "wrapped_text") {
+    return splitmode::wrapped_text;
+  } else {
+    ABORT("Unknown ssplitmode {}, Please choose one of {sentence,paragraph,wrapped_text}");
+  }
+}
+
+ug::ssplit::SentenceSplitter loadSplitter(const std::string &ssplitPrefixFile) {
+  // Temporarily supports empty, will be removed when mozilla passes ssplitPrefixFile
+  ug::ssplit::SentenceSplitter splitter;
+  if (ssplitPrefixFile.size()) {
+    std::string interpSsplitPrefixFile = marian::cli::interpolateEnvVars(ssplitPrefixFile);
+    LOG(info, "Loading protected prefixes for sentence splitting from {}", interpSsplitPrefixFile);
+    splitter.load(interpSsplitPrefixFile);
+  } else {
+    LOG(warn,
+        "Missing list of protected prefixes for sentence splitting. "
+        "Set with --ssplit-prefix-file.");
+  }
+  return splitter;
+}
+
+ug::ssplit::SentenceSplitter loadSplitter(const AlignedMemory &memory) {
+  // Temporarily supports empty, will be removed when mozilla passes memory
+  ug::ssplit::SentenceSplitter splitter;
+  if (memory.size()) {
+    std::string_view serialized(memory.begin(), memory.size());
+    splitter.loadFromSerialized(serialized);
+  }
+  return splitter;
+}
+
+}  // namespace
+
 Segment TextProcessor::tokenize(const string_view &segment, std::vector<string_view> &wordRanges) {
   // vocabs_->sources().front() is invoked as we currently only support one source vocab
   return vocabs_.sources().front()->encodeWithByteRanges(segment, wordRanges, /*addEOS=*/false, /*inference=*/true);
 }
 
-TextProcessor::TextProcessor(Vocabs &vocabs, Ptr<Options> options) : vocabs_(vocabs), sentence_splitter_(options) {
-  max_length_break_ = options->get<int>("max-length-break");
-  max_length_break_ = max_length_break_ - 1;
-  ABORT_IF(max_length_break_ < 0, "max-length-break cannot be < 0");
+TextProcessor::TextProcessor(Ptr<Options> options, const Vocabs &vocabs, const std::string &ssplit_prefix_file)
+    : vocabs_(vocabs), ssplit_(loadSplitter(ssplit_prefix_file)) {
+  parseCommonOptions(options);
 }
 
-void TextProcessor::process(AnnotatedText &source, Segments &segments) {
-  string_view query = string_view(source.text);
-  auto sentenceStream = sentence_splitter_.createSentenceStream(query);
+TextProcessor::TextProcessor(Ptr<Options> options, const Vocabs &vocabs, const AlignedMemory &memory)
+    : vocabs_(vocabs) {
+  // This is not the best of the solutions at the moment, but is consistent with what happens among other structures
+  // like model, vocabulary or shortlist. First, we check if the bytearray is empty. If not, we load from ByteArray. In
+  // case empty, the string based loader which reads from file is called. However, ssplit allows for not supplying
+  // ssplit-prefix-file where-in the purely regular expression based splitter is activated.
+  //
+  // For now, we allow not supplying an ssplit-prefix-file.
+
+  if (memory.begin() == nullptr && memory.size()) {
+    ssplit_ = loadSplitter(memory);
+  } else {
+    ssplit_ = loadSplitter(options->get<std::string>("ssplit-prefix-file", ""));
+  }
+  parseCommonOptions(options);
+}
+
+void TextProcessor::parseCommonOptions(Ptr<Options> options) {
+  maxLengthBreak_ = options->get<size_t>("max-length-break");
+  ssplitMode_ = string2splitmode(options->get<std::string>("ssplit-mode", "paragraph"));
+}
+
+void TextProcessor::process(std::string &&input, AnnotatedText &source, Segments &segments) {
+  source = std::move(AnnotatedText(std::move(input)));
+  std::string_view input_converted(source.text.data(), source.text.size());
+  auto sentenceStream = ug::ssplit::SentenceStream(input_converted, ssplit_, ssplitMode_);
+
   std::string_view sentenceStringPiece;
 
   while (sentenceStream >> sentenceStringPiece) {
@@ -35,7 +100,7 @@ void TextProcessor::process(AnnotatedText &source, Segments &segments) {
     // There are some cases where SentencePiece or vocab returns no words
     // after normalization. 0 prevents any empty entries from being added.
     if (segment.size() > 0) {
-      // Wrap segment into sentences of at most max_length_break_ tokens and
+      // Wrap segment into sentences of at most maxLengthBreak_ tokens and
       // tell source about them.
       wrap(segment, wordRanges, segments, source);
     }
@@ -44,14 +109,21 @@ void TextProcessor::process(AnnotatedText &source, Segments &segments) {
 
 void TextProcessor::wrap(Segment &segment, std::vector<string_view> &wordRanges, Segments &segments,
                          AnnotatedText &source) {
-  for (size_t offset = 0; offset < segment.size(); offset += max_length_break_) {
+  // There's an EOS token added to the words, manually. SentencePiece/marian-vocab is set to not append EOS. Marian
+  // requires EOS to be at the end as a marker to start translating. So while we're supplied maxLengthBreak_ from
+  // outside, we need to ensure there's space for EOS in each wrapped segment.
+  Word sourceEosId = vocabs_.sources().front()->getEosId();
+  size_t wrapStep = maxLengthBreak_ - 1;
+
+  for (size_t offset = 0; offset < segment.size(); offset += wrapStep) {
     auto start = segment.begin() + offset;
 
+    // Restrict the range within bounds.
     size_t left = segment.size() - offset;
-    size_t diff = std::min(max_length_break_, left);
+    size_t diff = std::min(maxLengthBreak_, left);
 
     segments.emplace_back(start, start + diff);
-    segments.back().push_back(sourceEosId());
+    segments.back().push_back(sourceEosId);
 
     auto astart = wordRanges.begin() + offset;
 

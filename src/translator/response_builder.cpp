@@ -15,14 +15,16 @@ void ResponseBuilder::buildQualityScores(Histories &histories,
     Result result = history->top(); // Expecting only one result;
     Words words = std::get<0>(result);
     auto hyp = std::get<1>(result);
+
     // Quality scores: Sequence level is obtained as normalized path scores.
     // Word level using hypothesis traceback. These are most-likely
     // logprobs.
     auto normalizedPathScore = std::get<2>(result);
     auto wordQualities = hyp->tracebackWordScores();
-    response.qualityScores.push_back(Quality{normalizedPathScore, wordQualities});
+    response.qualityScores.push_back(
+        Quality{normalizedPathScore, wordQualities});
+    model.compute_quality_scores(response, words);
   }
-  model.compute_quality_scores(source);
 }
 
 void ResponseBuilder::buildAlignments(Histories &histories, Response &response) {

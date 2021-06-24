@@ -51,6 +51,7 @@ class TagProcessor {
     }
   }
 
+  // outer and inner are introduced to
   ByteRange maxProduct(ByteRange query, ByteRange outer, ByteRange inner) {
     double max = -std::numeric_limits<double>::infinity();
     ByteRange maxi;
@@ -73,13 +74,29 @@ class TagProcessor {
           }
         }
       }
-    } else {
-      for (size_t d = outer.begin; d < outer.end; d++) {
-        if (d <= inner.begin || d >= inner.end) {
-          double logProduct = log(inside_[0][query.begin][d]) + log1p(-inside_[query.begin + 1][srcLength_ - 1][d]);
-          if (max < logProduct) {
-            max = logProduct;
-            maxi.begin = maxi.end = d;
+    }
+    // Empty tags where query.begin = query.end
+    // Note: assume the tags are placed before the token, e.g., <b>word
+    else {
+      if (query.begin == 0) {
+        maxi.begin = maxi.end = 0;
+      } else if (query.begin == tgtLength_) {
+        maxi.begin = maxi.end = tgtLength_;
+      } else {
+        for (size_t d = outer.begin; d < outer.end; d++) {
+          if (d <= inner.begin || d >= inner.end) {
+            double logProduct = 0;
+            for (size_t t = 0; t < tgtLength_; t++) {
+              if (t < d) {
+                logProduct += log(inside_[0][query.begin - 1][t]);
+              } else {
+                logProduct += log(inside_[query.begin][srcLength_ - 1][t]);
+              }
+            }
+            if (max < logProduct) {
+              max = logProduct;
+              maxi.begin = maxi.end = d;
+            }
           }
         }
       }

@@ -180,8 +180,9 @@ TEST_CASE("Test Tag Nesting Features with one sentence data") {
 
   SECTION("Two-layer nested tags with two children 2") {
     // [original]: A republican strategy to <span><span>counteract <span>the</span></span> re-election
-    // <span>of</span></span> Obama. [translated]: Eine republikanische Strategie, um <span>der Wiederwahl
-    // <span>Obama</span><span><span>s</span> entgegenzuwirken</span></span>.
+    // <span>of</span></span> Obama.
+    // [translated]: Eine republikanische Strategie, um <span>der Wiederwahl <span>Obama</span><span><span>s</span>
+    // entgegenzuwirken</span></span>.
     std::vector<TagNode> tagTree{
         TagNode({5, 12}, {1, 2}),
         TagNode({11, 12}, {}),
@@ -199,8 +200,8 @@ TEST_CASE("Test Tag Nesting Features with one sentence data") {
   }
   SECTION("Nested tag with many children [no solution case]") {
     // [original]: A republican strategy <span><span>to</span> <span>counter</span><span>act</span>
-    // <span>the</span></span> re-election of Obama. [translated]: Eine republikanische Strategie, um der Wiederwahl
-    // Obamas entgegenzuwirken.
+    // <span>the</span></span> re-election of Obama.
+    // [translated]: Eine republikanische Strategie, um der Wiederwahl Obamas entgegenzuwirken.
     std::vector<TagNode> tagTree{TagNode({4, 8}, {1, 2, 3, 4}), TagNode({4, 5}, {}), TagNode({5, 6}, {}),
                                  TagNode({6, 7}, {}), TagNode({7, 8}, {})};
     std::vector<TagNode> tagTreeTargetExpected{TagNode({4, 8}, {1, 2, 3, 4}), TagNode({4, 5}, {}), TagNode({5, 6}, {}),
@@ -209,13 +210,31 @@ TEST_CASE("Test Tag Nesting Features with one sentence data") {
     testCase(softAlign, srcLength, tgtLength, tagTree, tagTreeTargetExpected, true);
   }
 
-  SECTION("Empty tag") {
-    // [original]: A republican strategy<br> to counteract the re-election of Obama.
-    // [translated]: Eine republikanische Strategie, um der Wiederwahl Obamas entgegenzuwirken.
-    std::vector<TagNode> tagTree{TagNode({2, 2}, {})};
-    std::vector<TagNode> tagTreeTargetExpected{TagNode({3, 3}, {})};
+  SECTION("Empty tag in the beginning") {
+    // [original]: <br>A republican strategy to counteract the re-election of Obama.
+    // [translated]: <br>Eine republikanische Strategie, um der Wiederwahl Obamas entgegenzuwirken.
+    std::vector<TagNode> tagTree{TagNode({0, 0}, {})};
+    std::vector<TagNode> tagTreeTargetExpected{TagNode({0, 0}, {})};
 
-    testCase(softAlign, srcLength, tgtLength, tagTree, tagTreeTargetExpected, true);
+    testCase(softAlign, srcLength, tgtLength, tagTree, tagTreeTargetExpected);
+  }
+
+  SECTION("Empty tag in the end") {
+    // [original]: A republican strategy to counteract the re-election of Obama.<br>
+    // [translated]: Eine republikanische Strategie, um der Wiederwahl Obamas entgegenzuwirken.<br>
+    std::vector<TagNode> tagTree{TagNode({14, 14}, {})};
+    std::vector<TagNode> tagTreeTargetExpected{TagNode({16, 16}, {})};
+
+    testCase(softAlign, srcLength, tgtLength, tagTree, tagTreeTargetExpected);
+  }
+
+  SECTION("Empty tag in the middle") {
+    // [original]: A republican <br>strategy to counteract the re-election of Obama.
+    // [translated]: Eine republikanische Strategie, um der Wiederwahl Obamas entgegenzuwirken.
+    std::vector<TagNode> tagTree{TagNode({3, 3}, {})};
+    std::vector<TagNode> tagTreeTargetExpected{TagNode({4, 4}, {})};
+
+    testCase(softAlign, srcLength, tgtLength, tagTree, tagTreeTargetExpected);
   }
 
   // Cannot deal properly

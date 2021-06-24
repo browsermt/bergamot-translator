@@ -129,7 +129,17 @@ MemoryBundle getMemoryBundleFromConfig(marian::Ptr<marian::Options> options) {
   memoryBundle.model = getModelMemoryFromConfig(options);
   memoryBundle.shortlist = getShortlistMemoryFromConfig(options);
   getVocabsMemoryFromConfig(options, memoryBundle.vocabs);
+  memoryBundle.ssplitPrefixFile = getSsplitPrefixFileMemoryFromConfig(options);
   return memoryBundle;
+}
+
+AlignedMemory getSsplitPrefixFileMemoryFromConfig(marian::Ptr<marian::Options> options) {
+  std::string fpath = options->get<std::string>("ssplit-prefix-file", "");
+  if (!fpath.empty()) {
+    return loadFileToMemory(fpath, 64);
+  }
+  // Return empty AlignedMemory
+  return AlignedMemory();
 }
 
 }  // namespace bergamot

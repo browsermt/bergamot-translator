@@ -55,27 +55,27 @@ public:
   }
 
   ByteRange maxProduct(ByteRange query, ByteRange outer, ByteRange inner) {
-    double max = 0;
+    double max = -std::numeric_limits<double>::infinity();
     ByteRange maxi;
 
     if (query.begin < query.end)
     {
       for (size_t l = outer.begin; l <= inner.begin; l++) {
         for (size_t r = (l+1 > inner.end) ? (l+1) : inner.end; r <= outer.end; r++) {
-          double product = 1;
+          double logProduct = 0;
           for (size_t t = 0; t < tgtLength_; t++)
           {
             if (t >= l && t < r)
             {
-              product *= inside_[query.begin][query.end - 1][t];
+              logProduct += log(inside_[query.begin][query.end - 1][t]);
             }
             else
             {
-              product *= 1 - inside_[query.begin][query.end - 1][t];
+              logProduct += log1p(-inside_[query.begin][query.end - 1][t]);
             }
           }
-          if (max < product) {
-            max = product;
+          if (max < logProduct) {
+            max = logProduct;
             maxi.begin = l;
             maxi.end = r;
           }
@@ -88,9 +88,9 @@ public:
       {
         if (d <= inner.begin || d >= inner.end)
         {
-          double product = inside_[0][query.begin][d] * (1 - inside_[query.begin+1][srcLength_-1][d]);
-          if (max < product) {
-            max = product;
+          double logProduct = log(inside_[0][query.begin][d]) + log1p(-inside_[query.begin + 1][srcLength_ - 1][d]);
+          if (max < logProduct) {
+            max = logProduct;
             maxi.begin = maxi.end = d;
           }
         }

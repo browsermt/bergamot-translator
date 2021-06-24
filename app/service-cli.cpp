@@ -80,6 +80,9 @@ int main(int argc, char *argv[]) {
     size_t wordIdx = 0;
     bool first = true;
     for (auto &p : quality.word) {
+      if(p==quality.word.back()){
+        break; //ignore EOS token; this should not be necessary once I get this working
+      }
       if (first) {
         first = false;
       } else {

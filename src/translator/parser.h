@@ -29,6 +29,11 @@ inline marian::ConfigParser createConfigParser() {
   cp.addOption<std::string>("--bergamot-mode", "Bergamot Options",
                             "Operating mode for bergamot: [wasm, native, decoder]", "native");
 
+  cp.addOption<std::string>(
+    "--quality", "Bergamot Options",
+    "File considering Quality Estimation model. Supported file extensions: .txt"
+  );
+
   return cp;
 }
 

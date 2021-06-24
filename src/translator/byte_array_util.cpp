@@ -125,11 +125,9 @@ void getVocabsMemoryFromConfig(marian::Ptr<marian::Options> options,
 }
 
 AlignedMemory getQualityEstimatorModel(marian::Ptr<marian::Options> options){
-  auto qualityEstimator = options->get<std::vector<std::string>>("vocabs");
-  qualityEstimator[0] = "/home/andrebarbosa/bergamot-translator/model.txt";
-  qualityEstimator.pop_back();
-  ABORT_IF(qualityEstimator.empty(), "No path to quality estimator file is given.");
-  AlignedMemory alignedMemory = loadFileToMemory(qualityEstimator[0], 64);
+  std::string qualityEstimatorPath = options->get<std::string>("quality");
+  ABORT_IF(qualityEstimatorPath.empty(), "No path to quality estimator file is given.");
+  AlignedMemory alignedMemory = loadFileToMemory(qualityEstimatorPath, 64);
   return alignedMemory;
 }
 

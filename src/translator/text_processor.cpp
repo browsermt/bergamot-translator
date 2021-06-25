@@ -120,7 +120,7 @@ void TextProcessor::wrap(Segment &segment, std::vector<string_view> &wordRanges,
 
     // Restrict the range within bounds.
     size_t left = segment.size() - offset;
-    size_t diff = std::min(maxLengthBreak_, left);
+    size_t diff = std::min(wrapStep, left);
 
     segments.emplace_back(start, start + diff);
     segments.back().push_back(sourceEosId);

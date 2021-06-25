@@ -6,7 +6,7 @@ using namespace marian::bergamot;
 void testCase(const marian::data::SoftAlignment& softAlign, size_t srcLength, size_t tgtLength,
               const std::vector<TagNode>& input, const std::vector<TagNode>& expected, bool isDebug = false) {
   TagProcessor tp = TagProcessor(softAlign, input, srcLength, tgtLength);
-  ByteRange rootRange;
+  ByteRange rootRange{};
   int exitStatus = tp.traverseAndQuery(0, {0, tgtLength}, rootRange);
   std::vector<TagNode> tagTreeTarget = tp.tagTreeTarget;
 

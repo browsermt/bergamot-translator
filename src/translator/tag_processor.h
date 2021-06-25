@@ -1,5 +1,5 @@
-#ifndef BERGAMOT_TRANSLATOR_TAG_NESTING_H_
-#define BERGAMOT_TRANSLATOR_TAG_NESTING_H_
+#ifndef BERGAMOT_TRANSLATOR_TAG_PROCESSOR_H_
+#define BERGAMOT_TRANSLATOR_TAG_PROCESSOR_H_
 
 #include <string>
 #include <vector>
@@ -11,16 +11,16 @@ namespace marian {
 namespace bergamot {
 
 struct TagNode {
-  size_t parent;  // can be removed; used if backtrack
-  ByteRange bound;
-  std::string_view label;
-  std::vector<size_t> child;
+  size_t parent;              // can be removed; used if backtrack
+  ByteRange bound;            // tag position given by the token indices [bound.begin, bound.end)
+  std::string_view label;     // tag content
+  std::vector<size_t> child;  // holds the indices of its children nodes
 
   TagNode(ByteRange bound, std::vector<size_t> child) : bound(bound), child(std::move(child)){};
 };
 
 class TagProcessor {
-  std::vector<TagNode> tagTree_;
+  std::vector<TagNode> tagTree_;  // holds the tree structure of the tag positions in the source sentence
 
   size_t srcLength_;
   size_t tgtLength_;
@@ -28,7 +28,7 @@ class TagProcessor {
   std::vector<std::vector<std::vector<double>>> inside_;
 
  public:
-  std::vector<TagNode> tagTreeTarget;  // store query results
+  std::vector<TagNode> tagTreeTarget;  // store query results: the tag positions in the target sentence
 
   TagProcessor(const marian::data::SoftAlignment &align, std::vector<TagNode> tagTree, size_t srcLength,
                size_t tgtLength)
@@ -38,23 +38,24 @@ class TagProcessor {
     fillInsideNaive(align);
   };
 
-  double alignProbability(const marian::data::SoftAlignment &align, size_t s, size_t t) { return align[t][s]; }
-
   void fillInsideNaive(const marian::data::SoftAlignment &align) {
     for (size_t t = 0; t < tgtLength_; t++) {
       for (size_t i = 0; i < srcLength_; i++) {
-        inside_[i][i][t] = alignProbability(align, i, t);
+        inside_[i][i][t] = align[t][i];
         for (size_t j = i + 1; j < srcLength_; j++) {
-          inside_[i][j][t] = inside_[i][j - 1][t] + alignProbability(align, j, t);
+          inside_[i][j][t] = inside_[i][j - 1][t] + align[t][j];
         }
       }
     }
   }
 
-  // outer and inner are introduced to
+  // outer and inner are introduced to limit the tag placements to reserve tag nesting order
+  // outer is determined by the parent node, as the current bound must be inside the parent bound
+  // inner is determined by all the children nodes, as the current tag bound cannot be overlapped
+  // with the other children bounds
   ByteRange maxProduct(ByteRange query, ByteRange outer, ByteRange inner) {
     double max = -std::numeric_limits<double>::infinity();
-    ByteRange maxi;
+    ByteRange maxBound{};
 
     if (query.begin < query.end) {
       for (size_t l = outer.begin; l <= inner.begin; l++) {
@@ -69,8 +70,8 @@ class TagProcessor {
           }
           if (max < logProduct) {
             max = logProduct;
-            maxi.begin = l;
-            maxi.end = r;
+            maxBound.begin = l;
+            maxBound.end = r;
           }
         }
       }
@@ -79,9 +80,9 @@ class TagProcessor {
     // Note: assume the tags are placed before the token, e.g., <b>word
     else {
       if (query.begin == 0) {
-        maxi.begin = maxi.end = 0;
+        maxBound.begin = maxBound.end = 0;
       } else if (query.begin == tgtLength_) {
-        maxi.begin = maxi.end = tgtLength_;
+        maxBound.begin = maxBound.end = tgtLength_;
       } else {
         for (size_t d = outer.begin; d < outer.end; d++) {
           if (d <= inner.begin || d >= inner.end) {
@@ -95,34 +96,39 @@ class TagProcessor {
             }
             if (max < logProduct) {
               max = logProduct;
-              maxi.begin = maxi.end = d;
+              maxBound.begin = maxBound.end = d;
             }
           }
         }
       }
     }
 
-    return maxi;
+    return maxBound;
   }
 
-  int traverseAndQuery(size_t idx, ByteRange self_outer, ByteRange &currentRange) {
-    ByteRange child_outer = self_outer;
-    ByteRange self_inner;
+  // return 0 if query solution is found; return 1 if no solution found
+  int traverseAndQuery(size_t idx, ByteRange selfOuter, ByteRange &currentRange) {
+    ByteRange childOuter = selfOuter;
+    ByteRange selfInner{};  // the constraints from all children nodes
 
-    if (self_outer.size() <= 0) return 1;
+    // cannot place the current tag as the parent bound is less than 0
+    if (selfOuter.size() <= 0) return 1;
 
-    self_inner.begin = self_outer.end;
-    self_inner.end = self_outer.begin;
+    selfInner.begin = selfOuter.end;
+    selfInner.end = selfOuter.begin;
 
-    for (size_t i = 0; i < tagTree_[idx].child.size(); i++) {
-      ByteRange child_range;
-      int childExitStatus = traverseAndQuery(tagTree_[idx].child[i], child_outer, child_range);
+    for (unsigned long i : tagTree_[idx].child) {
+      ByteRange childRange{};  // the constraints from all traversed children nodes
+      // traverse child node from left to right recursively
+      int childExitStatus = traverseAndQuery(i, childOuter, childRange);
       if (childExitStatus != 0) return childExitStatus;
-      child_outer.begin = child_range.end;
-      self_inner.begin = (self_inner.begin > child_range.begin) ? child_range.begin : self_inner.begin;
-      self_inner.end = (self_inner.end < child_range.end) ? child_range.end : self_inner.begin;
+      // the child outer must be after the last child node
+      childOuter.begin = childRange.end;
+      // the current inner must include the constraints fromm all traversed children nodes
+      selfInner.begin = (selfInner.begin > childRange.begin) ? childRange.begin : selfInner.begin;
+      selfInner.end = (selfInner.end < childRange.end) ? childRange.end : selfInner.begin;
     }
-    currentRange = maxProduct(tagTree_[idx].bound, self_outer, self_inner);
+    currentRange = maxProduct(tagTree_[idx].bound, selfOuter, selfInner);
     tagTreeTarget[idx].bound = currentRange;
     return 0;
   }
@@ -130,4 +136,4 @@ class TagProcessor {
 }  // namespace bergamot
 }  // namespace marian
 
-#endif  // BERGAMOT_TRANSLATOR_TAG_NESTING_H_
+#endif  // BERGAMOT_TRANSLATOR_TAG_PROCESSOR_H_

@@ -16,9 +16,7 @@ QualityEstimator::QualityEstimator(std::string file_parameters) {
   while (std::getline(istr,line, delimiter)) {
      file_input.emplace_back(line); 
   }
-  if (file_input.size()!=4) {
-      throw std::length_error("Model file should contains 4 lines, one per model parameter");
-  }
+  ABORT_IF(file_input.size()!=4, "Model file should contains 4 lines, one per model parameter");
 
   QualityEstimator::initVector(this->stds, file_input[0]);
   QualityEstimator::initVector(this->means, file_input[1]);
@@ -66,7 +64,7 @@ void QualityEstimator::mapBPEToWords(Response& sentence, Words words){
                 map[std::make_tuple(subword_begin, subword_end)] = previous_p;
                 continue;
             }
-            if (first_word == ' '){
+            if (first_word == ' ') {
                 target_words.push_back(map);
                 map.clear();
                 map[std::make_tuple(subword_begin+1, subword_end)] = p;

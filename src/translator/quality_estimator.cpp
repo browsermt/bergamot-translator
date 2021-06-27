@@ -24,21 +24,26 @@ QualityEstimator::QualityEstimator(const char* file_parameters) {
         case 2:
             QualityEstimator::initVector(this->coefficients, line);
             break;
+        case 3:
+            QualityEstimator::initVector(this->intercept, line);
+            break;
         }
-      current_str.erase(0, pos + delimiter.length());
       line_position++;
     }
-    // last line
-   QualityEstimator::initVector(this->intercept, current_str);
 }
 
 void QualityEstimator::initVector(std::vector<float> &emptyVector, std::string line){
-    std::istringstream ss(line);
-  
-    std::string elem;
-    while (ss >> elem) 
+    char delimiter=' ';
+    size_t start=0;
+    size_t end= line.find_first_of(delimiter);
+    
+    while (end <= std::string::npos) 
     {
-        emptyVector.push_back(std::stof(elem));
+        emptyVector.push_back(std::stof(line.substr(start, end-start)));
+        if (end == std::string::npos)
+	        break;
+        start=end+1;
+    	end = line.find_first_of(delimiter, start);
     }
 }
 

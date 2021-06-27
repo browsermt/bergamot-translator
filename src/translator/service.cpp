@@ -19,10 +19,7 @@ Service::Service(Ptr<Options> options, MemoryBundle memoryBundle)
       modelMemory_(std::move(memoryBundle.model)),
       shortlistMemory_(std::move(memoryBundle.shortlist)),
       qualityEstimator_(std::move(memoryBundle.qualityEstimator))
-#ifndef WASM_COMPATIBLE_SOURCE
-      // 0 elements in PCQueue is illegal and can lead to failures. Adding a
-      // guard to have at least one entry allocated. In the single-threaded
-      // case, while initialized pcqueue_ remains unused.
+#ifdef WASM_COMPATIBLE_SOURCE
       ,
       blocking_translator_(DeviceId(0, DeviceType::cpu), vocabs_, options_, &modelMemory_, &shortlistMemory_)
 #endif

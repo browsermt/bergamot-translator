@@ -1,4 +1,4 @@
-#include <sstream>
+#include <iostream>
 #include "quality_estimator.h"
 
 
@@ -6,30 +6,24 @@
 namespace marian {
 namespace bergamot {
 
-QualityEstimator::QualityEstimator(const char* file_parameters) {
-  std::string current_str(file_parameters);
-  std::string delimiter = "\n";
-  size_t pos = 0;
+QualityEstimator::QualityEstimator(std::string file_parameters) {
+  char delimiter = '\n';
   int line_position = 0;
   std::string line;
-  while ((pos = current_str.find(delimiter)) != std::string::npos) {
-      line = current_str.substr(0, pos);
-      switch (line_position) {
-        case 0:
-            QualityEstimator::initVector(this->stds, line);
-            break;
-        case 1:
-            QualityEstimator::initVector(this->means, line);
-            break;
-        case 2:
-            QualityEstimator::initVector(this->coefficients, line);
-            break;
-        case 3:
-            QualityEstimator::initVector(this->intercept, line);
-            break;
-        }
-      line_position++;
-    }
+  std::vector<std::string> file_input;
+  file_input.reserve(4);
+  std::istringstream istr(file_parameters);
+  while (std::getline(istr,line, delimiter)) {
+     file_input.emplace_back(line); 
+  }
+  if (file_input.size()!=4) {
+      throw std::length_error("Model file should contains 4 lines, one per model parameter");
+  }
+
+  QualityEstimator::initVector(this->stds, file_input[0]);
+  QualityEstimator::initVector(this->means, file_input[1]);
+  QualityEstimator::initVector(this->coefficients, file_input[2]);
+  QualityEstimator::initVector(this->intercept, file_input[3]);
 }
 
 void QualityEstimator::initVector(std::vector<float> &emptyVector, std::string line){
@@ -37,8 +31,7 @@ void QualityEstimator::initVector(std::vector<float> &emptyVector, std::string l
     size_t start=0;
     size_t end= line.find_first_of(delimiter);
     
-    while (end <= std::string::npos) 
-    {
+    while (end <= std::string::npos) {
         emptyVector.push_back(std::stof(line.substr(start, end-start)));
         if (end == std::string::npos)
 	        break;

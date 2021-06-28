@@ -23,7 +23,7 @@ void ResponseBuilder::buildQualityScores(Histories &histories,
     auto wordQualities = hyp->tracebackWordScores();
     response.qualityScores.push_back(
         Quality{normalizedPathScore, wordQualities});
-    model.compute_quality_scores(response, words);
+    model.computeQualityScores(response, words);
   }
 }
 

@@ -1,7 +1,6 @@
 #ifndef SRC_BERGAMOT_QUALITY_ESTIMATOR_H_
 #define SRC_BERGAMOT_QUALITY_ESTIMATOR_H_
 #include <iostream>
-#include <map>
 #include <string>
 #include <vector>
 

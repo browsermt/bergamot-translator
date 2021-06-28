@@ -53,9 +53,9 @@ class ResponseBuilder {
 
     // Should always be after buildTranslatedText
     if (responseOptions_.qualityScores) {
-      //TODO:
-      //Creates QualityEstimator model given qualityEstimator
-      //Pass it here
+      // TODO:
+      // Creates QualityEstimator model given qualityEstimator
+      // Pass it here
       buildQualityScores(histories, response);
     }
 

@@ -47,7 +47,7 @@ class Service {
   /// @param options Marian options object
   /// @param memoryBundle holds all byte-array memories. Can be a set/subset of
   /// model, shortlist, vocabs and ssplitPrefixFile or QualityEstimation bytes. Optional.
-  explicit Service(Ptr<Options> options, MemoryBundle memoryBundle={});
+  explicit Service(Ptr<Options> options, MemoryBundle memoryBundle = {});
 
   /// Construct Service from a string configuration. If memoryBundle is empty, Service is
   /// initialized from file-based loading. Otherwise, Service is initialized from
@@ -55,7 +55,7 @@ class Service {
   /// @param [in] config string parsable as YAML expected to adhere with marian config
   /// @param [in] memoryBundle holds all byte-array memories. Can be a set/subset of
   /// model, shortlist, vocabs and ssplitPrefixFile or qualityEstimation bytes. Optional.
-  explicit Service(const std::string &config, MemoryBundle memoryBundle={})
+  explicit Service(const std::string &config, MemoryBundle memoryBundle = {})
       : Service(parseOptions(config, /*validate=*/false), std::move(memoryBundle)) {}
 
   /// Explicit destructor to clean up after any threads initialized in
@@ -114,16 +114,15 @@ class Service {
   /// Model memory to load model passed as bytes.
   AlignedMemory modelMemory_;  // ORDER DEPENDENCY (translators_)
   /// Shortlist memory passed as bytes.
-  AlignedMemory shortlistMemory_; // ORDER DEPENDENCY (translators_)
+  AlignedMemory shortlistMemory_;  // ORDER DEPENDENCY (translators_)
 
   /// QE coefficients memory passed as bytes.
-  AlignedMemory qualityEstimator_; // ORDER DEPENDENCY (translators_)
+  AlignedMemory qualityEstimator_;  // ORDER DEPENDENCY (translators_)
 
   /// Holds instances of batch translators, just one in case
   /// of single-threaded application, numWorkers_ in case of multithreaded
   /// setting.
-  std::vector<BatchTranslator>
-      translators_; // ORDER DEPENDENCY (modelMemory_, shortlistMemory_)
+  std::vector<BatchTranslator> translators_;  // ORDER DEPENDENCY (modelMemory_, shortlistMemory_)
 
   /// Stores requestId of active request. Used to establish
   /// ordering among requests and logging/book-keeping.

@@ -27,7 +27,11 @@ class ResponseBuilder {
   /// @param [in] qualityEstimator: promise to set with the constructed Response.
   ResponseBuilder(ResponseOptions responseOptions, AnnotatedText &&source, Vocabs &vocabs,
                   std::promise<Response> &&promise, AlignedMemory &qualityEstimator)
-      : responseOptions_(responseOptions), source_(std::move(source)), vocabs_(vocabs), promise_(std::move(promise)), qualityEstimator_(&qualityEstimator) {}
+      : responseOptions_(responseOptions),
+        source_(std::move(source)),
+        vocabs_(vocabs),
+        promise_(std::move(promise)),
+        qualityEstimator_(&qualityEstimator) {}
 
   /// Constructs and sets the promise of a Response object from obtained
   /// histories after translating.
@@ -48,9 +52,9 @@ class ResponseBuilder {
 
     // Should always be after buildTranslatedText
     if (responseOptions_.qualityScores) {
-      //TODO:
-      //Creates QualityEstimator model given qualityEstimator
-      //Pass it here
+      // TODO:
+      // Creates QualityEstimator model given qualityEstimator
+      // Pass it here
       buildQualityScores(histories, response);
     }
 

@@ -86,7 +86,8 @@ std::future<Response> Service::queueRequest(std::string &&input, ResponseOptions
   std::promise<Response> responsePromise;
   auto future = responsePromise.get_future();
 
-  ResponseBuilder responseBuilder(responseOptions, std::move(source), vocabs_, std::move(responsePromise), qualityEstimator_);
+  ResponseBuilder responseBuilder(responseOptions, std::move(source), vocabs_, std::move(responsePromise),
+                                  qualityEstimator_);
   Ptr<Request> request = New<Request>(requestId_++, std::move(segments), std::move(responseBuilder));
 
   batcher_.addWholeRequest(request);

@@ -15,20 +15,20 @@ namespace bergamot {
 
 class QualityEstimator {
     private:
-        struct FeatureVector{
-            FeatureVector(float x, float y, float w, float z): 
-                feature_vector{x,y,z,w} {}
-            float feature_vector[4];
+        struct SentenceQualityEstimate {
+            std::vector<float> wordQualitityScores;
+            std::vector<ByteRange> wordByteRanges;
+            float sentenceScore;
         };
+        std::vector<SentenceQualityEstimate> quality_scores;
         std::vector<float> stds, means, coefficients, intercept;
         std::vector<std::map<std::tuple<size_t, size_t>, float>> mapping;
         void initVector(std::vector<float> &emptyVector, std::string line);
         void mapBPEToWords(Response& sentence, Words words);
-        intgemm::AlignedVector<QualityEstimator::FeatureVector>  extractFeatures(Response& sentence);
         std::vector<int> predictWordLevel(std::vector<std::vector<float>> feature_vector);
 
     public:
-        QualityEstimator(const char *file_parameters);
+        explicit QualityEstimator(std::string file_parameters);
         void compute_quality_scores(Response& sentence, Words words);
 };
 

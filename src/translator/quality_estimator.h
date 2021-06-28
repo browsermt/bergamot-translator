@@ -29,7 +29,7 @@ class QualityEstimator {
 
     public:
         explicit QualityEstimator(std::string file_parameters);
-        void compute_quality_scores(Response& sentence, Words words);
+        void computeQualityScores(Response& sentence, Words words);
 };
 
 } // namespace bergamot

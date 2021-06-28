@@ -85,10 +85,9 @@ void QualityEstimator::mapBPEToWords(Response& sentence, Words words){
         }
         this->quality_scores.push_back(sentence_quality_scores);
     }
-
 }
 
-void QualityEstimator::compute_quality_scores(Response& sentence, Words words) {
+void QualityEstimator::computeQualityScores(Response& sentence, Words words) {
     this->mapBPEToWords(sentence, words);
 }
 

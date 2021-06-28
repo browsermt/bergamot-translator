@@ -45,31 +45,29 @@ void QualityEstimator::mapBPEToWords(Response& sentence, Words words){
     // each map key is a tuple consisting of the begining and end of the specific subword
     for (int sentenceIdx = 0; sentenceIdx < sentence.size(); sentenceIdx++) {
         auto &quality = sentence.qualityScores[sentenceIdx];
-        size_t wordIdx = 0;
-        bool first = true;
-        float previous_p;
-        auto eos_token = words[wordIdx].DEFAULT_EOS_ID;
+        auto eos_token = words[0].DEFAULT_EOS_ID;
         QualityEstimator::SentenceQualityEstimate sentence_quality_scores;
         sentence_quality_scores.sentenceScore = quality.sequence;
+        //first_score
+        sentence_quality_scores.wordByteRanges.push_back(
+            sentence.target.wordAsByteRange(sentenceIdx, 0));
+        sentence_quality_scores.wordQualitityScores.push_back(
+            quality.word.front());
+        //first_score
+        size_t wordIdx = 1;
         int num_subwords=1;
-        for (auto &p : quality.word) {
+        for (int i=1; i<quality.word.size();i++) {
+            auto &p = quality.word.at(i);
             if (words[wordIdx] == eos_token){
                 break;
             }
             ByteRange subword = sentence.target.wordAsByteRange(sentenceIdx, wordIdx);
             size_t subword_begin = subword.begin;
             size_t subword_end = subword.end;
-            char first_word = sentence.target.text[subword_begin];
-            const char* str_first_word = &first_word;
+            char first_word = sentence.target.text.at(subword_begin);
+            std::string str_first_word(1, first_word);
             wordIdx++;
-            if (first){
-                first = false;
-                previous_p = p;
-                sentence_quality_scores.wordByteRanges.push_back(subword);
-                sentence_quality_scores.wordQualitityScores.push_back(previous_p);
-                continue;
-            }
-            if (std::regex_match(str_first_word, std::regex("\\s|\\t") )) {
+            if (std::regex_match(str_first_word, std::regex("\\s|\\t"))) {
                 ByteRange new_word{subword_begin+1, subword_end};
                 sentence_quality_scores.wordByteRanges.push_back(new_word);
                 sentence_quality_scores.wordQualitityScores.push_back(p);

@@ -1,3 +1,6 @@
+#ifndef SRC_BERGAMOT_CACHE_H_
+#define SRC_BERGAMOT_CACHE_H_
+
 #include <list>
 #include <mutex>
 #include <unordered_map>
@@ -57,3 +60,5 @@ typedef LRUCache<std::string, History> TranslatorLRUCache;
 
 }  // namespace bergamot
 }  // namespace marian
+
+#endif  // SRC_BERGAMOT_CACHE_H_

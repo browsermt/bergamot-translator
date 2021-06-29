@@ -11,14 +11,22 @@ namespace marian {
 namespace bergamot {
 
 // -----------------------------------------------------------------
-Request::Request(size_t Id, Segments &&segments, ResponseBuilder &&responseBuilder)
+Request::Request(size_t Id, Segments &&segments, ResponseBuilder &&responseBuilder, TranslatorLRUCache &cache)
     : Id_(Id),
       segments_(std::move(segments)),
-      responseBuilder_(std::move(responseBuilder))
+      responseBuilder_(std::move(responseBuilder)) cache_(cache)
 
 {
   counter_ = segments_.size();
   histories_.resize(segments_.size(), nullptr);
+
+  for (size_t idx = 0; idx < segments_.size(); idx++) {
+    Ptr<History> history = new History();
+    if (cache_.fetch(getSegment(idx), *history)) {
+      histories_[idx] = history;
+      --counter;
+    }
+  }
 
   // If there are no segments_, we are never able to trigger the responseBuilder
   // calls from a different thread. However, in this case we want an empty valid
@@ -27,6 +35,8 @@ Request::Request(size_t Id, Segments &&segments, ResponseBuilder &&responseBuild
     responseBuilder_(std::move(histories_));
   }
 }
+
+bool Request::isCachePrefilled(size_t index) { return (histories_[index] != nullptr); }
 
 size_t Request::numSegments() const { return segments_.size(); }
 
@@ -72,6 +82,8 @@ bool operator<(const RequestSentence &a, const RequestSentence &b) {
   }
   return a.request_ < b.request_;
 }
+
+bool RequestSentence::isCachePrefilled() { return request_->isCachePrefilled(index_); }
 
 // ----------------------------------------------------------------------
 

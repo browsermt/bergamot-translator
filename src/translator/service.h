@@ -2,6 +2,7 @@
 #define SRC_BERGAMOT_SERVICE_H_
 
 #include "batch_translator.h"
+#include "cache.h"
 #include "data/types.h"
 #include "response.h"
 #include "response_builder.h"
@@ -148,6 +149,9 @@ class Service {
   /// Batcher handles generation of batches from a request, subject to
   /// packing-efficiency and priority optimization heuristics.
   ThreadsafeBatcher batcher_;
+
+  /// LRUCache, threadsafe.
+  TranslatorLRUCache cache_;
 
   // The following constructs are available providing full capabilities on a non
   // WASM platform, where one does not have to hide threads.

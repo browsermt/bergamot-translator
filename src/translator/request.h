@@ -46,7 +46,7 @@ class Request {
   /// @param [in] responseBuilder: Callback function (of ResponseBuilder type)
   /// to be triggered upon the completion of translation of all units in a
   /// Request.
-  Request(size_t Id, Segments &&segments, ResponseBuilder &&responseBuilder);
+  Request(size_t Id, Segments &&segments, ResponseBuilder &&responseBuilder, TranslatorLRUCache &cache);
 
   /// Obtain the count of tokens in the segment correponding to index. Used to
   /// insert sentence from multiple requests into the corresponding size bucket.
@@ -67,6 +67,9 @@ class Request {
   /// compiled from requests.
   void processHistory(size_t index, Ptr<History> history);
 
+  /// Check if History has been prefilled from cache_
+  bool isCachePrefilled(size_t index);
+
  private:
   size_t Id_;
 
@@ -86,6 +89,9 @@ class Request {
   /// Constructing Response requires the vocabs_ used to generate Request.
   /// std::vector<Ptr<Vocab const>> *vocabs_;
   ResponseBuilder responseBuilder_;
+
+  /// Reference to cache to prefill / populate
+  TranslatorLRUCache &cache;
 };
 
 /// A RequestSentence provides a view to a sentence within a Request. Existence
@@ -106,6 +112,9 @@ class RequestSentence {
   /// Forwards history to Request to set history corresponding to this
   /// RequestSentence.
   void completeSentence(Ptr<History> history);
+
+  /// Check if this RequestSentence is already prefilled with a History from cache.
+  bool isCachePrefilled();
 
   friend bool operator<(const RequestSentence &a, const RequestSentence &b);
 

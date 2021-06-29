@@ -12,7 +12,7 @@ namespace marian {
 namespace bergamot {
 
 /// Thread-safe LRUCache
-template <typename Key, typename CacheItem, typename Hash = std::hash<Key>, typename KeyEqual = std::equal_to<Key>>
+template <typename Key, typename CacheItem, typename Hash = std::hash<Key>>
 class LRUCache {
  public:
   // Storage includes Key, so when LRU is evicted corresponding hashmap entry can be deleted.
@@ -52,7 +52,7 @@ class LRUCache {
  private:
   size_t sizeCap_;
   std::list<StorageItem> storage_;
-  std::unordered_map<Key, StorageItr, Hash, KeyEqual> map_;
+  std::unordered_map<Key, StorageItr, Hash> map_;
   std::mutex rwMutex_;
 };
 

@@ -29,10 +29,11 @@ Request::Request(size_t Id, Segments &&segments, ResponseBuilder &&responseBuild
     }
   }
 
-  // If there are no segments_, we are never able to trigger the responseBuilder
-  // calls from a different thread. However, in this case we want an empty valid
-  // response.
-  if (segments_.size() == 0) {
+  // If there are no segments_, we are never able to trigger the responseBuilder calls from a different thread. However,
+  // in this case we want an empty valid response. Also, if cache somehow manages to decrease all counter prefilling
+  // histories, then we'd have to trigger ResponseBuilder as well. No segments go into batching and therefore no
+  // processHistory triggers.
+  if (segments_.size() == 0 || counter_.load() == 0) {
     responseBuilder_(std::move(histories_));
   }
 }

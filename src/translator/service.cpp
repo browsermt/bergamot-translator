@@ -18,7 +18,7 @@ Service::Service(Ptr<Options> options, MemoryBundle memoryBundle)
       numWorkers_(std::max<int>(1, options->get<int>("cpu-threads"))),
       modelMemory_(std::move(memoryBundle.model)),
       shortlistMemory_(std::move(memoryBundle.shortlist)),
-      cache_(options->get<size_t>("cache-size")
+      cache_(options->get<size_t>("cache-size"))
 #ifdef WASM_COMPATIBLE_SOURCE
       ,
       blocking_translator_(DeviceId(0, DeviceType::cpu), vocabs_, options_, &modelMemory_, &shortlistMemory_)
@@ -87,7 +87,7 @@ std::future<Response> Service::queueRequest(std::string &&input, ResponseOptions
   auto future = responsePromise.get_future();
 
   ResponseBuilder responseBuilder(responseOptions, std::move(source), vocabs_, std::move(responsePromise));
-  Ptr<Request> request = New<Request>(requestId_++, std::move(segments), std::move(responseBuilder));
+  Ptr<Request> request = New<Request>(requestId_++, std::move(segments), std::move(responseBuilder), cache_);
 
   batcher_.addWholeRequest(request);
   return future;

@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "annotation.h"
+#include "cache.h"
 #include "common/logging.h"
 #include "data/types.h"
 #include "definitions.h"
@@ -91,7 +92,7 @@ class Request {
   ResponseBuilder responseBuilder_;
 
   /// Reference to cache to prefill / populate
-  TranslatorLRUCache &cache;
+  TranslatorLRUCache &cache_;
 };
 
 /// A RequestSentence provides a view to a sentence within a Request. Existence

@@ -14,17 +14,18 @@ namespace bergamot {
 Request::Request(size_t Id, Segments &&segments, ResponseBuilder &&responseBuilder, TranslatorLRUCache &cache)
     : Id_(Id),
       segments_(std::move(segments)),
-      responseBuilder_(std::move(responseBuilder)) cache_(cache)
+      responseBuilder_(std::move(responseBuilder)),
+      cache_(cache)
 
 {
   counter_ = segments_.size();
   histories_.resize(segments_.size(), nullptr);
 
   for (size_t idx = 0; idx < segments_.size(); idx++) {
-    Ptr<History> history = new History();
-    if (cache_.fetch(getSegment(idx), *history)) {
-      histories_[idx] = history;
-      --counter;
+    History history(/*lineNo=*/idx);
+    if (cache_.fetch(getSegment(idx), history)) {
+      histories_[idx] = New<History>(history);
+      --counter_;
     }
   }
 

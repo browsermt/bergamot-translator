@@ -12,7 +12,7 @@ namespace marian {
 namespace bergamot {
 
 /// Thread-safe LRUCache
-template <typename CacheItem, typename Key>
+template <typename Key, typename CacheItem, typename Hash = std::hash<Key>, typename KeyEqual = std::equal_to<Key>>
 class LRUCache {
  public:
   // Storage includes Key, so when LRU is evicted corresponding hashmap entry can be deleted.
@@ -52,11 +52,26 @@ class LRUCache {
  private:
   size_t sizeCap_;
   std::list<StorageItem> storage_;
-  std::unordered_map<Key, StorageItr> map_;
+  std::unordered_map<Key, StorageItr, Hash, KeyEqual> map_;
   std::mutex rwMutex_;
 };
 
-typedef LRUCache<std::string, History> TranslatorLRUCache;
+// Specialize for marian
+// This is a lazy hash, we'll fix this with something better later.
+struct WordsHashFn {
+  size_t operator()(const Words &words) const {
+    std::string repr("");
+    for (size_t idx = 0; idx < words.size(); idx++) {
+      if (idx != 0) {
+        repr += " ";
+      }
+      repr += words[idx].toString();
+    }
+    return std::hash<std::string>{}(repr);
+  }
+};
+
+typedef LRUCache<Words, History, WordsHashFn> TranslatorLRUCache;
 
 }  // namespace bergamot
 }  // namespace marian

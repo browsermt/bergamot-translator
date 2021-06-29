@@ -50,6 +50,9 @@ void Request::processHistory(size_t index, Ptr<History> history) {
   // ready. The container storing histories is set with the value obtained.
   histories_[index] = history;
 
+  // Update cache
+  cache_.insert(getSegment(index), *history);
+
   // In case this is last request in, completeRequest is called, which sets the
   // value of the promise.
   if (--counter_ == 0) {

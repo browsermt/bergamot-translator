@@ -17,7 +17,7 @@ Service::Service(Ptr<Options> options, MemoryBundle memoryBundle)
       batcher_(options),
       numWorkers_(std::max<int>(1, options->get<int>("cpu-threads"))),
       modelMemory_(std::move(memoryBundle.model)),
-      shortlistMemory_(std::move(memoryBundle.shortlist))
+      shortlistMemory_(std::move(memoryBundle.shortlist)),
       cache_(options->get<size_t>("cache-size")
 #ifdef WASM_COMPATIBLE_SOURCE
       ,

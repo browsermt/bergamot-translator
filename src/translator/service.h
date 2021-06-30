@@ -115,7 +115,7 @@ class Service {
   bool isAlignmentSupported() const { return options_->hasAndNotEmpty("alignment"); }
 
   /// Returns cache stats
-  const LRUCacheStats &stats() const { return cache_.stats(); }
+  const LRUCacheStats &cacheStats() const { return cache_.stats(); }
 
  private:
   /// Queue an input for translation.

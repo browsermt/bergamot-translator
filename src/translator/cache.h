@@ -48,14 +48,13 @@ class LRUCache {
 
   /// Attempt to fetch a key storing it in value. Returns true if cache-hit, false if cache-miss. Thread-safe.
   bool fetch(const Key key, Value &value) {
+    std::lock_guard<std::mutex> guard(rwMutex_);
     auto mapItr = map_.find(key);
     if (mapItr == map_.end()) {
       ++stats_.misses;
       return false;
     } else {
       ++stats_.hits;
-
-      std::lock_guard<std::mutex> guard(rwMutex_);
 
       auto storageItr = mapItr->second;
       value = storageItr->second;

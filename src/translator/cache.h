@@ -11,22 +11,23 @@
 namespace marian {
 namespace bergamot {
 
-struct LRUCacheStats {
-  size_t hits{0};
-  size_t misses{0};
-};
-
 /// Thread-safe LRUCache
-template <typename Key, typename CacheItem, typename Hash = std::hash<Key>>
+template <typename Key, typename Value, typename Hash = std::hash<Key>>
 class LRUCache {
  public:
-  // Storage includes Key, so when LRU is evicted corresponding hashmap entry can be deleted.
-  typedef std::pair<Key, CacheItem> StorageItem;
-  typedef typename std::list<StorageItem>::iterator StorageItr;
+  struct Stats {
+    size_t hits{0};
+    size_t misses{0};
+  };
+
+  /// Storage includes Key, so when LRU is evicted corresponding hashmap entry can be deleted.
+  typedef std::pair<Key, Value> KeyVal;
+  typedef typename std::list<KeyVal>::iterator StorageItr;
 
   LRUCache(size_t sizeCap) : sizeCap_(sizeCap) {}
 
-  void insert(const Key key, const CacheItem item) {
+  /// Insert a key, value into cache. Evicts least-recently-used if no space. Thread-safe.
+  void insert(const Key key, const Value value) {
     std::lock_guard<std::mutex> guard(rwMutex_);
     if (storage_.size() + 1 > sizeCap_) {
       // Evict LRU
@@ -35,35 +36,46 @@ class LRUCache {
       storage_.pop_back();
     }
 
-    storage_.push_front({key, item});
+    storage_.push_front({key, value});
     map_.insert({key, storage_.begin()});
   }
 
-  bool fetch(const Key key, CacheItem &item) {
-    std::lock_guard<std::mutex> guard(rwMutex_);
+  /// Attempt to fetch a key storing it in value. Returns true if cache-hit, false if cache-miss. Thread-safe.
+  bool fetch(const Key key, Value &value) {
     auto mapItr = map_.find(key);
     if (mapItr == map_.end()) {
       ++stats_.misses;
       return false;
     } else {
       ++stats_.hits;
+
+      std::lock_guard<std::mutex> guard(rwMutex_);
+
       auto storageItr = mapItr->second;
-      item = storageItr->second;
+      value = storageItr->second;
+
+      // If fetched, update least-recently-used by moving the element to the front of the list.
       storage_.erase(storageItr);
-      storage_.push_front({key, item});
+      storage_.push_front({key, value});
       map_.insert({key, storage_.begin()});
+
       return true;
     }
   }
 
-  const LRUCacheStats &stats() const { return stats_; }
+  const Stats &stats() const { return stats_; }
 
  private:
-  size_t sizeCap_;
-  std::list<StorageItem> storage_;
+  size_t sizeCap_;  /// Number of (key, value) to store at most.
+
+  /// Linked list to keep usage ordering and evict least-recently used.
+  std::list<KeyVal> storage_;
+
+  /// hash-map for O(1) cache access. Stores iterator to the list holding cache-elements. Iterators are valid until
+  /// they're erased (they don't invalidate on insertion / move of other elements).
   std::unordered_map<Key, StorageItr, Hash> map_;
-  std::mutex rwMutex_;
-  LRUCacheStats stats_;
+  std::mutex rwMutex_;  ///< Guards accesses to storage_, map_
+  Stats stats_;         ///< Stores hits and misses for log/checks.
 };
 
 // Specialize for marian
@@ -81,6 +93,7 @@ struct WordsHashFn {
   }
 };
 
+/// For translator, we cache (marian::Words -> History).
 typedef LRUCache<Words, History, WordsHashFn> TranslatorLRUCache;
 
 }  // namespace bergamot

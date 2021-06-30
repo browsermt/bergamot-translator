@@ -11,6 +11,11 @@
 namespace marian {
 namespace bergamot {
 
+struct LRUCacheStats {
+  size_t hits;
+  size_t misses;
+};
+
 /// Thread-safe LRUCache
 template <typename Key, typename CacheItem, typename Hash = std::hash<Key>>
 class LRUCache {
@@ -38,8 +43,10 @@ class LRUCache {
     std::lock_guard<std::mutex> guard(rwMutex_);
     auto mapItr = map_.find(key);
     if (mapItr == map_.end()) {
+      ++stats_.misses;
       return false;
     } else {
+      ++stats_.hits;
       auto storageItr = mapItr->second;
       item = storageItr->second;
       storage_.erase(storageItr);
@@ -49,11 +56,14 @@ class LRUCache {
     }
   }
 
+  const LRUCacheStats &stats() const { return stats_; }
+
  private:
   size_t sizeCap_;
   std::list<StorageItem> storage_;
   std::unordered_map<Key, StorageItr, Hash> map_;
   std::mutex rwMutex_;
+  LRUCacheStats stats_;
 };
 
 // Specialize for marian

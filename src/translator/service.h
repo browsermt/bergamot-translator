@@ -114,6 +114,9 @@ class Service {
   /// Returns if model is alignment capable or not.
   bool isAlignmentSupported() const { return options_->hasAndNotEmpty("alignment"); }
 
+  /// Returns cache stats
+  const LRUCacheStats &stats() const { return cache_.stats(); }
+
  private:
   /// Queue an input for translation.
   std::future<Response> queueRequest(std::string &&input, ResponseOptions responseOptions);

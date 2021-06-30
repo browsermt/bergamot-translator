@@ -10,17 +10,58 @@
 namespace marian {
 namespace bergamot {
 
-struct TagNode {
-  size_t parent;              // can be removed; used if backtrack
-  ByteRange bound;            // tag position given by the token indices [bound.begin, bound.end)
-  std::string_view label;     // tag content
-  std::vector<size_t> child;  // holds the indices of its children nodes
+class TagTree {
+ public:
+  friend class TagProcessor;  // allow TagProcessor class to access private members
 
-  TagNode(ByteRange bound, std::vector<size_t> child) : bound(bound), child(std::move(child)){};
+  TagTree(const ByteRange &bound) : bound_(bound) {}
+
+  // for debugging
+  void print(size_t indent = 0) const {
+    for (size_t nsp = 0; nsp < indent * 2; nsp++) std::cout << " ";
+    std::cout << bound_.begin << " " << bound_.end << std::endl;
+    for (auto &i : subtree_) {
+      i.print(indent + 1);
+    }
+  }
+
+  // bottom-up construction
+  void addSubtree(const TagTree &st) { subtree_.emplace_back(st); }
+
+  // copy the skeleton (false) or the whole tree (true)
+  TagTree copy(bool copyBound) const {
+    ByteRange newBound = copyBound ? bound_ : ByteRange{0, 0};
+    TagTree newCurrent(newBound);
+    for (auto &i : subtree_) {
+      TagTree subCopy = i.copy(copyBound);
+      newCurrent.addSubtree(subCopy);
+    }
+    return newCurrent;
+  }
+
+  friend bool operator==(const TagTree &lhs, const TagTree &rhs) {
+    if (lhs.bound_.begin != rhs.bound_.begin || lhs.bound_.end != rhs.bound_.end) return false;
+    if (lhs.subtree_.size() != rhs.subtree_.size()) return false;
+    for (size_t i = 0; i < lhs.subtree_.size(); i++) {
+      if (lhs.subtree_[i] != rhs.subtree_[i]) return false;
+    }
+    return true;
+  }
+
+  friend bool operator!=(const TagTree &lhs, const TagTree &rhs) { return !(lhs == rhs); }
+
+ private:
+  // holds tag positions given by the token indices [begin, end):
+  // for a tag pair, bound_.begin means the position of the opening tag,
+  //                 bound_.end means the position of the closing tag (excluding the current token)
+  // for an empty tag, bound_.begin = bound_.end. The tag is placed before the token, e.g., <b>word
+  ByteRange bound_;
+  std::vector<TagTree> subtree_;  // holds the children nodes
 };
 
 class TagProcessor {
-  std::vector<TagNode> tagTree_;  // holds the tree structure of the tag positions in the source sentence
+  TagTree sourceRoot_;  // holds the tree structure of the tag positions in the source sentence
+  TagTree targetRoot_;  // holds the tree structure of the tag positions in the target sentence
 
   size_t srcLength_;
   size_t tgtLength_;
@@ -28,16 +69,23 @@ class TagProcessor {
   std::vector<std::vector<std::vector<double>>> inside_;
 
  public:
-  std::vector<TagNode> tagTreeTarget;  // store query results: the tag positions in the target sentence
-
-  TagProcessor(const marian::data::SoftAlignment &align, std::vector<TagNode> tagTree, size_t srcLength,
-               size_t tgtLength)
-      : tagTree_(std::move(tagTree)), srcLength_(srcLength), tgtLength_(tgtLength) {
+  TagProcessor(const marian::data::SoftAlignment &align, const TagTree &sourceRoot, size_t srcLength, size_t tgtLength)
+      : sourceRoot_(sourceRoot.copy(true)),
+        targetRoot_(sourceRoot.copy(false)),
+        srcLength_(srcLength),
+        tgtLength_(tgtLength) {
     inside_.resize(srcLength, std::vector<std::vector<double>>(srcLength, std::vector<double>(tgtLength, 0)));
-    tagTreeTarget = tagTree_;
     fillInsideNaive(align);
   };
 
+  const TagTree &getTargetRoot() const { return targetRoot_; }
+
+  int traverseAndQuery() {
+    ByteRange targetRootRange{};
+    return traverseAndQuery(sourceRoot_, targetRoot_, ByteRange{0, tgtLength_}, targetRootRange);
+  }
+
+ private:
   void fillInsideNaive(const marian::data::SoftAlignment &align) {
     for (size_t t = 0; t < tgtLength_; t++) {
       for (size_t i = 0; i < srcLength_; i++) {
@@ -81,7 +129,7 @@ class TagProcessor {
     else {
       if (query.begin == 0) {
         maxBound.begin = maxBound.end = 0;
-      } else if (query.begin == tgtLength_) {
+      } else if (query.begin == srcLength_) {
         maxBound.begin = maxBound.end = tgtLength_;
       } else {
         for (size_t d = outer.begin; d < outer.end; d++) {
@@ -107,7 +155,7 @@ class TagProcessor {
   }
 
   // return 0 if query solution is found; return 1 if no solution found
-  int traverseAndQuery(size_t idx, ByteRange selfOuter, ByteRange &currentRange) {
+  int traverseAndQuery(TagTree sourceTagTree, TagTree &targetTagTree, ByteRange selfOuter, ByteRange &currentRange) {
     ByteRange childOuter = selfOuter;
     ByteRange selfInner{};  // the constraints from all children nodes
 
@@ -117,10 +165,11 @@ class TagProcessor {
     selfInner.begin = selfOuter.end;
     selfInner.end = selfOuter.begin;
 
-    for (unsigned long i : tagTree_[idx].child) {
+    for (size_t cid = 0; cid < sourceTagTree.subtree_.size(); cid++) {
       ByteRange childRange{};  // the constraints from all traversed children nodes
       // traverse child node from left to right recursively
-      int childExitStatus = traverseAndQuery(i, childOuter, childRange);
+      int childExitStatus =
+          traverseAndQuery(sourceTagTree.subtree_[cid], targetTagTree.subtree_[cid], childOuter, childRange);
       if (childExitStatus != 0) return childExitStatus;
       // the child outer must be after the last child node
       childOuter.begin = childRange.end;
@@ -128,8 +177,8 @@ class TagProcessor {
       selfInner.begin = (selfInner.begin > childRange.begin) ? childRange.begin : selfInner.begin;
       selfInner.end = (selfInner.end < childRange.end) ? childRange.end : selfInner.begin;
     }
-    currentRange = maxProduct(tagTree_[idx].bound, selfOuter, selfInner);
-    tagTreeTarget[idx].bound = currentRange;
+    currentRange = maxProduct(sourceTagTree.bound_, selfOuter, selfInner);
+    targetTagTree.bound_ = currentRange;
     return 0;
   }
 };

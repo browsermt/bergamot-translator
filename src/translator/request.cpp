@@ -51,12 +51,17 @@ void Request::processHistory(size_t index, Ptr<History> history) {
   // ready. The container storing histories is set with the value obtained.
   histories_[index] = history;
 
-  // Update cache
-  cache_.insert(getSegment(index), *history);
-
   // In case this is last request in, completeRequest is called, which sets the
   // value of the promise.
   if (--counter_ == 0) {
+    // For now, we will copy. It seems reasonable to replace Ptr<History> with History transferring ownership clearly
+    // eventually.
+    std::vector<History> histories;
+    for (auto history : histories_) {
+      histories.push_back(*history);
+    }
+    cache_.insertBulk(segments_, histories);
+
     responseBuilder_(std::move(histories_));
   }
 }

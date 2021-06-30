@@ -26,18 +26,24 @@ class LRUCache {
 
   LRUCache(size_t sizeCap) : sizeCap_(sizeCap) {}
 
+  /// Bulk inserts keys, values. Only single mutex for multiple sentences.
+  void insertBulk(std::vector<Key> &keys, std::vector<Value> &values) {
+    std::lock_guard<std::mutex> guard(rwMutex_);
+    while (storage_.size() > 0 && sizeCap_ - storage_.size() < keys.size()) {
+      unsafeEvict();
+    }
+    for (size_t idx = 0; idx < keys.size(); idx++) {
+      unsafeInsert(keys[idx], values[idx]);
+    }
+  }
+
   /// Insert a key, value into cache. Evicts least-recently-used if no space. Thread-safe.
   void insert(const Key key, const Value value) {
     std::lock_guard<std::mutex> guard(rwMutex_);
     if (storage_.size() + 1 > sizeCap_) {
-      // Evict LRU
-      auto p = storage_.rbegin();
-      map_.erase(/*key=*/p->first);
-      storage_.pop_back();
+      unsafeEvict();
     }
-
-    storage_.push_front({key, value});
-    map_.insert({key, storage_.begin()});
+    unsafeInsert(key, value);
   }
 
   /// Attempt to fetch a key storing it in value. Returns true if cache-hit, false if cache-miss. Thread-safe.
@@ -56,9 +62,7 @@ class LRUCache {
 
       // If fetched, update least-recently-used by moving the element to the front of the list.
       storage_.erase(storageItr);
-      storage_.push_front({key, value});
-      map_.insert({key, storage_.begin()});
-
+      unsafeInsert(key, value);
       return true;
     }
   }
@@ -66,6 +70,18 @@ class LRUCache {
   const Stats &stats() const { return stats_; }
 
  private:
+  void unsafeEvict() {
+    // Evict LRU
+    auto p = storage_.rbegin();
+    map_.erase(/*key=*/p->first);
+    storage_.pop_back();
+  }
+
+  void unsafeInsert(const Key key, const Value value) {
+    storage_.push_front({key, value});
+    map_.insert({key, storage_.begin()});
+  }
+
   size_t sizeCap_;  /// Number of (key, value) to store at most.
 
   /// Linked list to keep usage ordering and evict least-recently used.

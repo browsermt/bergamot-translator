@@ -12,8 +12,8 @@ namespace marian {
 namespace bergamot {
 
 struct LRUCacheStats {
-  size_t hits;
-  size_t misses;
+  size_t hits{0};
+  size_t misses{0};
 };
 
 /// Thread-safe LRUCache

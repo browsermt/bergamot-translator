@@ -126,8 +126,8 @@ class TagProcessor {
             maxBound.begin = l;
             maxBound.end = r;
           }
-          logProductDynamic = logProductDynamic - log(inside_[flattenOffset(query.begin, query.end - 1, r - 1)])
-                              + log1p(-inside_[flattenOffset(query.begin, query.end - 1, r - 1)]);
+          logProductDynamic = logProductDynamic - log(inside_[flattenOffset(query.begin, query.end - 1, r - 1)]) +
+                              log1p(-inside_[flattenOffset(query.begin, query.end - 1, r - 1)]);
         }
         logProductBase += log1p(-inside_[flattenOffset(query.begin, query.end - 1, l)]);
       }

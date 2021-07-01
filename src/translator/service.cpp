@@ -13,7 +13,7 @@ Service::Service(Ptr<Options> options, MemoryBundle memoryBundle)
     : requestId_(0),
       options_(options),
       vocabs_(options, std::move(memoryBundle.vocabs)),
-      text_processor_(vocabs_, options),
+      text_processor_(options, vocabs_, std::move(memoryBundle.ssplitPrefixFile)),
       batcher_(options),
       numWorkers_(std::max<int>(1, options->get<int>("cpu-threads"))),
       modelMemory_(std::move(memoryBundle.model)),
@@ -67,8 +67,9 @@ std::vector<Response> Service::translateMultiple(std::vector<std::string> &&inpu
 void Service::queueRequest(std::string &&input, std::function<void(Response &&)> &&callback,
                            ResponseOptions responseOptions) {
   Segments segments;
-  AnnotatedText source(std::move(input));
-  text_processor_.process(source, segments);
+  AnnotatedText source;
+
+  text_processor_.process(std::move(input), source, segments);
 
   ResponseBuilder responseBuilder(responseOptions, std::move(source), vocabs_, std::move(callback));
   Ptr<Request> request = New<Request>(requestId_++, std::move(segments), std::move(responseBuilder));

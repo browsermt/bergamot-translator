@@ -66,7 +66,7 @@ class TagProcessor {
   size_t srcLength_;
   size_t tgtLength_;
 
-  std::vector<std::vector<std::vector<double>>> inside_;
+  std::vector<double> inside_;
 
  public:
   TagProcessor(const marian::data::SoftAlignment &align, const TagTree &sourceRoot, size_t srcLength, size_t tgtLength)
@@ -74,7 +74,7 @@ class TagProcessor {
         targetRoot_(sourceRoot.copy(false)),
         srcLength_(srcLength),
         tgtLength_(tgtLength) {
-    inside_.resize(srcLength, std::vector<std::vector<double>>(srcLength, std::vector<double>(tgtLength, 0)));
+    inside_.resize((srcLength + 1) * srcLength / 2 * tgtLength);
     fillInsideNaive(align);
   };
 
@@ -86,12 +86,19 @@ class TagProcessor {
   }
 
  private:
+  // inside_ is actually a 3d array [srcLength][srcLength][tgtLength], here is flattened to 1d array.
+  // As inside_[srcLength][srcLength] is an upper triangle matrix,
+  // f(i,j) offset is (2*n-i-1) * i/2 + j
+  inline size_t flattenOffset(size_t i, size_t j, size_t k) const {
+    return ((((srcLength_ << 1) - i - 1) * i >> 1) + j) * tgtLength_ + k;
+  }
+
   void fillInsideNaive(const marian::data::SoftAlignment &align) {
     for (size_t t = 0; t < tgtLength_; t++) {
       for (size_t i = 0; i < srcLength_; i++) {
-        inside_[i][i][t] = align[t][i];
+        inside_[flattenOffset(i, i, t)] = align[t][i];
         for (size_t j = i + 1; j < srcLength_; j++) {
-          inside_[i][j][t] = inside_[i][j - 1][t] + align[t][j];
+          inside_[flattenOffset(i, j, t)] = inside_[flattenOffset(i, j - 1, t)] + align[t][j];
         }
       }
     }
@@ -111,9 +118,9 @@ class TagProcessor {
           double logProduct = 0;
           for (size_t t = 0; t < tgtLength_; t++) {
             if (t >= l && t < r) {
-              logProduct += log(inside_[query.begin][query.end - 1][t]);
+              logProduct += log(inside_[flattenOffset(query.begin, query.end - 1, t)]);
             } else {
-              logProduct += log1p(-inside_[query.begin][query.end - 1][t]);
+              logProduct += log1p(-inside_[flattenOffset(query.begin, query.end - 1, t)]);
             }
           }
           if (max < logProduct) {
@@ -137,9 +144,9 @@ class TagProcessor {
             double logProduct = 0;
             for (size_t t = 0; t < tgtLength_; t++) {
               if (t < d) {
-                logProduct += log(inside_[0][query.begin - 1][t]);
+                logProduct += log(inside_[flattenOffset(0, query.begin - 1, t)]);
               } else {
-                logProduct += log(inside_[query.begin][srcLength_ - 1][t]);
+                logProduct += log(inside_[flattenOffset(query.begin, srcLength_ - 1, t)]);
               }
             }
             if (max < logProduct) {

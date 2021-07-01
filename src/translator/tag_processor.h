@@ -113,22 +113,23 @@ class TagProcessor {
     ByteRange maxBound{};
 
     if (query.begin < query.end) {
+      double logProductBase = 0;
       for (size_t l = outer.begin; l <= inner.begin; l++) {
-        for (size_t r = (l + 1 > inner.end) ? (l + 1) : inner.end; r <= outer.end; r++) {
-          double logProduct = 0;
-          for (size_t t = 0; t < tgtLength_; t++) {
-            if (t >= l && t < r) {
-              logProduct += log(inside_[flattenOffset(query.begin, query.end - 1, t)]);
-            } else {
-              logProduct += log1p(-inside_[flattenOffset(query.begin, query.end - 1, t)]);
-            }
-          }
-          if (max < logProduct) {
-            max = logProduct;
+        double logProductDynamic = 0;
+        for (size_t s = l; s < tgtLength_; s++) {
+          logProductDynamic += log(inside_[flattenOffset(query.begin, query.end - 1, s)]);
+        }
+        for (size_t r = outer.end; r > l && r >= inner.end; r--) {
+          double logProductFast = logProductBase + logProductDynamic;
+          if (max < logProductFast) {
+            max = logProductFast;
             maxBound.begin = l;
             maxBound.end = r;
           }
+          logProductDynamic = logProductDynamic - log(inside_[flattenOffset(query.begin, query.end - 1, r - 1)])
+                              + log1p(-inside_[flattenOffset(query.begin, query.end - 1, r - 1)]);
         }
+        logProductBase += log1p(-inside_[flattenOffset(query.begin, query.end - 1, l)]);
       }
     }
     // Empty tags where query.begin = query.end

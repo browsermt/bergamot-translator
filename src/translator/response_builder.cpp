@@ -36,11 +36,6 @@ void ResponseBuilder::buildAlignments(Histories &histories, Response &response) 
     // mean WASM bindings for a structure deep within marian source.
     auto hyp = std::get<1>(result);
     auto softAlignment = hyp->tracebackAlignment();
-    for (size_t t = 0; t < softAlignment.size(); ++t) {
-      for (size_t s = 0; s < softAlignment[t].size(); ++s) {
-        std::cout << t << " " << s << " " << softAlignment[t][s] << std::endl;
-      }
-    }
     auto threshold = responseOptions_.alignmentThreshold;
     auto hardAlignment = data::ConvertSoftAlignToHardAlign(softAlignment, threshold);
     Alignment unified_alignment;

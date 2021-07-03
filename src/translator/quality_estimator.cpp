@@ -1,7 +1,6 @@
 #include "quality_estimator.h"
 
 #include <iostream>
-#include <regex>
 
 namespace marian {
 namespace bergamot {
@@ -61,9 +60,8 @@ void QualityEstimator::mapBPEToWords(Response& sentence, Words words) {
       size_t subword_begin = subword.begin;
       size_t subword_end = subword.end;
       char first_word = sentence.target.text.at(subword_begin);
-      std::string str_first_word(1, first_word);
       wordIdx++;
-      if (std::regex_match(str_first_word, std::regex("\\s|\\t"))) {
+      if (isspace(first_word)!=0) {
         ByteRange new_word{subword_begin + 1, subword_end};
         sentence_quality_scores.wordByteRanges.push_back(new_word);
         sentence_quality_scores.wordQualitityScores.push_back(p);

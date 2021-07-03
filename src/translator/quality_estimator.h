@@ -17,12 +17,12 @@ class QualityEstimator {
     std::vector<ByteRange> wordByteRanges;
     float sentenceScore;
   };
-  std::vector<SentenceQualityEstimate> quality_scores;
-  std::vector<float> stds, means, coefficients, intercept;
   std::vector<std::map<std::tuple<size_t, size_t>, float>> mapping;
   void initVector(std::vector<float>& emptyVector, std::string line);
   void mapBPEToWords(Response& sentence, Words words);
   std::vector<int> predictWordLevel(std::vector<std::vector<float>> feature_vector);
+  std::vector<SentenceQualityEstimate> quality_scores_;
+  std::vector<float> stds_, means_, coefficients_, intercept_;
 
  public:
   explicit QualityEstimator(std::string file_parameters);

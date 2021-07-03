@@ -17,10 +17,10 @@ QualityEstimator::QualityEstimator(std::string file_parameters) {
   }
   ABORT_IF(file_input.size() != 4, "Model file should contains 4 lines, one per model parameter");
 
-  QualityEstimator::initVector(this->stds, file_input[0]);
-  QualityEstimator::initVector(this->means, file_input[1]);
-  QualityEstimator::initVector(this->coefficients, file_input[2]);
-  QualityEstimator::initVector(this->intercept, file_input[3]);
+  QualityEstimator::initVector(this->stds_, file_input[0]);
+  QualityEstimator::initVector(this->means_, file_input[1]);
+  QualityEstimator::initVector(this->coefficients_, file_input[2]);
+  QualityEstimator::initVector(this->intercept_, file_input[3]);
 }
 
 void QualityEstimator::initVector(std::vector<float>& emptyVector, std::string line) {
@@ -76,7 +76,7 @@ void QualityEstimator::mapBPEToWords(Response& sentence, Words words) {
         current_scores = current_scores + (p - current_scores) / num_subwords;
       }
     }
-    this->quality_scores.push_back(sentence_quality_scores);
+    this->quality_scores_.push_back(sentence_quality_scores);
   }
 }
 

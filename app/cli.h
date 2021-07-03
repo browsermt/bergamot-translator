@@ -119,10 +119,9 @@ void native(Ptr<Options> options) {
   Service service(options, std::move(memoryBundle));
 
   // Read a large input text blob from stdin
-  // std::ostringstream std_input;
-  // std_input << std::cin.rdbuf();
-  // std::string input = std_input.str();
-  std::string input = "A Republican strategy to counter the re-election of Obama";
+  std::ostringstream std_input;
+  std_input << std::cin.rdbuf();
+  std::string input = std_input.str();
 
 
   ResponseOptions responseOptions;

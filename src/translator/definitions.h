@@ -31,7 +31,6 @@ struct MemoryBundle {
   AlignedMemory ssplitPrefixFile{};
 
   AlignedMemory qualityEstimatorMemory;  ///< Byte-array of shortlist (aligned to 64)
-
 };
 
 /// ByteRange stores indices for half-interval [begin, end) in a string. Can be

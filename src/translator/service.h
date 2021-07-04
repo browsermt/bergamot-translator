@@ -119,11 +119,6 @@ class Service {
 
   QualityEstimator qualityEstimator_;
 
-  /// Holds instances of batch translators, just one in case
-  /// of single-threaded application, numWorkers_ in case of multithreaded
-  /// setting.
-  std::vector<BatchTranslator> translators_;  // ORDER DEPENDENCY (modelMemory_, shortlistMemory_)
-
   /// Stores requestId of active request. Used to establish
   /// ordering among requests and logging/book-keeping.
 

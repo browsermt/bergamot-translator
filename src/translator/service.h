@@ -3,6 +3,7 @@
 
 #include "batch_translator.h"
 #include "data/types.h"
+#include "quality_estimator.h"
 #include "response.h"
 #include "response_builder.h"
 #include "text_processor.h"
@@ -134,8 +135,7 @@ class Service {
   /// Shortlist memory passed as bytes.
   AlignedMemory shortlistMemory_;  // ORDER DEPENDENCY (translators_)
 
-  /// QE coefficients memory passed as bytes.
-  AlignedMemory qualityEstimator_;  // ORDER DEPENDENCY (translators_)
+  QualityEstimator qualityEstimator_;
 
   /// Holds instances of batch translators, just one in case
   /// of single-threaded application, numWorkers_ in case of multithreaded

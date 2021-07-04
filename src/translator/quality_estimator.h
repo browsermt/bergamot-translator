@@ -23,9 +23,10 @@ class QualityEstimator {
   std::vector<int> predictWordLevel(std::vector<std::vector<float>> feature_vector);
   std::vector<SentenceQualityEstimate> quality_scores_;
   std::vector<float> stds_, means_, coefficients_, intercept_;
+  void load(AlignedMemory file_parameters);
 
  public:
-  explicit QualityEstimator(std::string file_parameters);
+  explicit QualityEstimator(AlignedMemory qualityEstimatorMemory);
   void computeQualityScores(Response& sentence, Words words);
 };
 

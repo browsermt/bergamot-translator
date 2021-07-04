@@ -1,13 +1,11 @@
 #include "response_builder.h"
 
-#include "quality_estimator.h"
 #include "response_options.h"
 
 namespace marian {
 namespace bergamot {
 
 void ResponseBuilder::buildQualityScores(Histories &histories, Response &response) {
-  QualityEstimator model(qualityEstimator_->begin());
   AnnotatedText source = response.source;
   for (auto &history : histories) {
     Result result = history->top();  // Expecting only one result;
@@ -20,7 +18,6 @@ void ResponseBuilder::buildQualityScores(Histories &histories, Response &respons
     auto normalizedPathScore = std::get<2>(result);
     auto wordQualities = hyp->tracebackWordScores();
     response.qualityScores.push_back(Quality{normalizedPathScore, wordQualities});
-    model.computeQualityScores(response, words);
   }
 }
 

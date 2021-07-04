@@ -30,7 +30,7 @@ struct MemoryBundle {
   /// @todo Not implemented yet
   AlignedMemory ssplitPrefixFile{};
 
-  AlignedMemory qualityEstimator;  ///< Byte-array of shortlist (aligned to 64)
+  AlignedMemory qualityEstimatorMemory;  ///< Byte-array of shortlist (aligned to 64)
 
   MemoryBundle() = default;
 
@@ -39,7 +39,7 @@ struct MemoryBundle {
     shortlist = std::move(from.shortlist);
     vocabs = std::move(vocabs);
     ssplitPrefixFile = std::move(from.ssplitPrefixFile);
-    qualityEstimator = std::move(from.qualityEstimator);
+    qualityEstimatorMemory = std::move(from.qualityEstimatorMemory);
   }
 
   MemoryBundle &operator=(MemoryBundle &&from) {
@@ -47,7 +47,7 @@ struct MemoryBundle {
     shortlist = std::move(from.shortlist);
     vocabs = std::move(vocabs);
     ssplitPrefixFile = std::move(from.ssplitPrefixFile);
-    qualityEstimator = std::move(from.qualityEstimator);
+    qualityEstimatorMemory = std::move(from.qualityEstimatorMemory);
     return *this;
   }
 

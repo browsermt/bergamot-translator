@@ -2,6 +2,7 @@
 #define SRC_BERGAMOT_RESPONSE_BUILDER_H_
 
 #include "data/types.h"
+#include "quality_estimator.h"
 #include "response.h"
 #include "response_options.h"
 #include "vocabs.h"
@@ -26,12 +27,12 @@ class ResponseBuilder {
   /// @param [in] promise: promise to set with the constructed Response.
   /// @param [in] qualityEstimator: promise to set with the constructed Response.
   ResponseBuilder(ResponseOptions responseOptions, AnnotatedText &&source, Vocabs &vocabs,
-                  std::promise<Response> &&promise, AlignedMemory &qualityEstimator)
+                  std::promise<Response> &&promise, QualityEstimator &qualityEstimator)
       : responseOptions_(responseOptions),
         source_(std::move(source)),
         vocabs_(vocabs),
         promise_(std::move(promise)),
-        qualityEstimator_(&qualityEstimator) {}
+        qualityEstimator_(qualityEstimator) {}
 
   /// Constructs and sets the promise of a Response object from obtained
   /// histories after translating.
@@ -93,7 +94,8 @@ class ResponseBuilder {
                                     //  after Response constructed.
   AnnotatedText source_;
 
-  AlignedMemory *qualityEstimator_;
+  // AlignedMemory *qualityEstimator_;
+  const QualityEstimator &qualityEstimator_;
 };
 }  // namespace bergamot
 }  // namespace marian

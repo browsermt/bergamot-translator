@@ -2,16 +2,23 @@
 
 #include <iostream>
 
+#include "byte_array_util.h"
+
 namespace marian {
 namespace bergamot {
 
-QualityEstimator::QualityEstimator(std::string file_parameters) {
+QualityEstimator::QualityEstimator(AlignedMemory qualityEstimatorMemory) {
+  // QE coefficients memory passed as bytes.
+  QualityEstimator::load(std::move(qualityEstimatorMemory));
+}
+
+void QualityEstimator::load(AlignedMemory file_parameters) {
   char delimiter = '\n';
   int line_position = 0;
-  std::string line;
+  std::string line(file_parameters.begin());
   std::vector<std::string> file_input;
   file_input.reserve(4);
-  std::istringstream istr(file_parameters);
+  std::istringstream istr(line);
   while (std::getline(istr, line, delimiter)) {
     file_input.emplace_back(line);
   }
@@ -61,7 +68,7 @@ void QualityEstimator::mapBPEToWords(Response& sentence, Words words) {
       size_t subword_end = subword.end;
       char first_word = sentence.target.text.at(subword_begin);
       wordIdx++;
-      if (isspace(first_word)!=0) {
+      if (isspace(first_word) != 0) {
         ByteRange new_word{subword_begin + 1, subword_end};
         sentence_quality_scores.wordByteRanges.push_back(new_word);
         sentence_quality_scores.wordQualitityScores.push_back(p);

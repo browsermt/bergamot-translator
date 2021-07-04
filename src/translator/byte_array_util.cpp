@@ -137,7 +137,7 @@ MemoryBundle getMemoryBundleFromConfig(marian::Ptr<marian::Options> options) {
   memoryBundle.shortlist = getShortlistMemoryFromConfig(options);
   getVocabsMemoryFromConfig(options, memoryBundle.vocabs);
   memoryBundle.ssplitPrefixFile = getSsplitPrefixFileMemoryFromConfig(options);
-  memoryBundle.qualityEstimator = getQualityEstimatorModel(options);
+  memoryBundle.qualityEstimatorMemory = getQualityEstimatorModel(options);
   return memoryBundle;
 }
 

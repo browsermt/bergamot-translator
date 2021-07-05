@@ -94,8 +94,7 @@ class ResponseBuilder {
                                     //  after Response constructed.
   AnnotatedText source_;
 
-  // AlignedMemory *qualityEstimator_;
-  const QualityEstimator &qualityEstimator_;
+  QualityEstimator &qualityEstimator_;
 };
 }  // namespace bergamot
 }  // namespace marian

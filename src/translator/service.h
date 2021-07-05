@@ -20,11 +20,6 @@
 namespace marian {
 namespace bergamot {
 
-/// Service offers methods create an asynchronous translation service that
-/// translates a plain (without any markups and emojis)  UTF-8 encoded text.
-/// This implementation supports translation from 1 source language to 1 target
-/// language.
-///
 ///  This is intended to be similar to the ones  provided for training or
 ///  decoding in ML pipelines with the following  additional capabilities:
 ///
@@ -37,23 +32,8 @@ namespace bergamot {
 ///  translated independent of each other. The translated sentences are then
 ///  joined back together and returned in Response.
 ///
-/// Service exposes methods to instantiate the service from a string
-/// configuration (which can cover most translators) and to translate an
-/// incoming blob of text.
-///
-///
-/// An example use of this API looks as follows:
-/// ```cpp
-///  options = ...;
-///  service = Service(options);
-///  std::string input_text = "Hello World";
-///  std::future<Response>
-///      responseFuture = service.translate(std::move(input_text));
-///  responseFuture.wait(); // Wait until translation has completed.
-///  Response response(std::move(response.get());
-///
-/// // Do things with response.
-/// ```
+/// Service exposes methods to instantiate from a string configuration (which
+/// can cover most translators) and to translate an incoming blob of text.
 ///
 /// Optionally Service can be initialized by also passing bytearray memories
 /// for purposes of efficiency (which defaults to empty and then reads from
@@ -87,11 +67,16 @@ class Service {
   /// save compute spent in constructing these objects.
   ///
   /// @param [in] source: rvalue reference of the string to be translated
+  /// @param [in] callback: A callback function provided by the client which
+  /// accepts an rvalue of a Response. Called on successful construction of a
+  /// Response following completion of translation of source by worker threads.
   /// @param [in] responseOptions: Options indicating whether or not to include
   /// some member in the Response, also specify any additional configurable
   /// parameters.
-  std::future<Response> translate(std::string &&source, ResponseOptions options = ResponseOptions());
+  void translate(std::string &&source, std::function<void(Response &&)> &&callback,
+                 ResponseOptions options = ResponseOptions());
 
+#ifdef WASM_COMPATIBLE_SOURCE
   /// Translate multiple text-blobs in a single *blocking* API call, providing
   /// ResponseOptions which applies across all text-blobs dictating how to
   /// construct Response. ResponseOptions can be used to enable/disable
@@ -102,26 +87,23 @@ class Service {
   /// text-blob. Note that there will be minor differences in output when
   /// text-blobs are individually translated due to approximations but similar
   /// quality nonetheless. If you have async/multithread capabilities, it is
-  /// recommended to work with futures and translate() API.
+  /// recommended to work with callbacks and translate() API.
   ///
   /// @param [in] source: rvalue reference of the string to be translated
   /// @param [in] responseOptions: ResponseOptions indicating whether or not
   /// to include some member in the Response, also specify any additional
   /// configurable parameters.
   std::vector<Response> translateMultiple(std::vector<std::string> &&source, ResponseOptions responseOptions);
+#endif
 
   /// Returns if model is alignment capable or not.
   bool isAlignmentSupported() const { return options_->hasAndNotEmpty("alignment"); }
 
  private:
   /// Queue an input for translation.
-  std::future<Response> queueRequest(std::string &&input, ResponseOptions responseOptions);
-
-  /// Dispatch call to translate after inserting in queue
-  void dispatchTranslate();
+  void queueRequest(std::string &&input, std::function<void(Response &&)> &&callback, ResponseOptions responseOptions);
 
   /// Translates through direct interaction between batcher_ and translators_
-  void blockIfWASM();
 
   /// Number of workers to launch.
   size_t numWorkers_;

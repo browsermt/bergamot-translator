@@ -9,6 +9,7 @@ add_library(bergamot-translator STATIC
     request.cpp 
     batcher.cpp
     response_builder.cpp
+    quality_estimator.cpp
     batch.cpp
     annotation.cpp
     service.cpp

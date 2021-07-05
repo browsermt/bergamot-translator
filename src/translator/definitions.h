@@ -31,6 +31,14 @@ struct MemoryBundle {
   AlignedMemory ssplitPrefixFile{};
 };
 
+/// ByteRange stores indices for half-interval [begin, end) in a string. Can be
+/// used to represent a sentence, word.
+struct ByteRange {
+  size_t begin;
+  size_t end;
+  const size_t size() const { return end - begin; }
+};
+
 }  // namespace bergamot
 }  // namespace marian
 

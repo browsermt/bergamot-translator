@@ -65,6 +65,16 @@ struct Response {
   /// to (sub-)words accessible through Annotation.
   std::vector<Alignment> alignments;
 
+  /// Returns the source sentence (in terms of byte range) corresponding to sentenceIdx.
+  ///
+  /// @param [in] sentenceIdx: The index representing the sentence where 0 <= sentenceIdx < Response::size()
+  ByteRange getSourceSentenceAsByteRange(size_t sentenceIdx) const { return source.sentenceAsByteRange(sentenceIdx); }
+
+  /// Returns the translated sentence (in terms of byte range) corresponding to sentenceIdx.
+  ///
+  /// @param [in] sentenceIdx: The index representing the sentence where 0 <= sentenceIdx < Response::size()
+  ByteRange getTargetSentenceAsByteRange(size_t sentenceIdx) const { return target.sentenceAsByteRange(sentenceIdx); }
+
   const std::string &getOriginalText() const { return source.text; }
 
   const std::string &getTranslatedText() const { return target.text; }

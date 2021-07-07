@@ -28,6 +28,7 @@ if(COMPILE_WASM)
   target_compile_options(bergamot-translator PRIVATE ${WASM_COMPILE_FLAGS})
 endif(COMPILE_WASM)
 
+target_compile_options(bergamot-translator PRIVATE ${BERGAMOT_WARNINGS})
 target_link_libraries(bergamot-translator marian ssplit)
 
 target_include_directories(bergamot-translator

@@ -9,6 +9,9 @@ endif(COMPILE_WASM)
 
 add_subdirectory(ssplit-cpp)
 
+set(L4_COMPILE_UNIT_TESTS OFF)
+add_subdirectory(L4)
+
 # Add include directories for 3rd party targets to be able to use it anywhere in the
 # project without explicitly specifying their include directories. Once they
 # fixe this problem, it can be removed.

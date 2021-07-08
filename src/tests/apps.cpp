@@ -21,9 +21,14 @@ Response translateFromStdin(Ptr<Options> options, ResponseOptions responseOption
   inputStream << std::cin.rdbuf();
   std::string input = inputStream.str();
 
-  // Wait on future until Response is complete
-  std::future<Response> responseFuture = service.translate(std::move(input), responseOptions);
+  std::promise<Response> responsePromise;
+  std::future<Response> responseFuture = responsePromise.get_future();
+
+  auto callback = [&responsePromise](Response &&response) { responsePromise.set_value(std::move(response)); };
+  service.translate(std::move(input), callback, responseOptions);
+
   responseFuture.wait();
+
   Response response = responseFuture.get();
   return response;
 }

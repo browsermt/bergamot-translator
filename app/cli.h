@@ -50,6 +50,8 @@ void wasm(Ptr<Options> options) {
   ResponseOptions responseOptions;
   std::vector<std::string> texts;
 
+#ifdef WASM_COMPATIBLE_SOURCE
+  // Hide the translateMultiple operation
   for (std::string line; std::getline(std::cin, line);) {
     texts.emplace_back(line);
   }
@@ -59,6 +61,7 @@ void wasm(Ptr<Options> options) {
   for (auto &result : results) {
     std::cout << result.getTranslatedText() << std::endl;
   }
+#endif
 }
 
 /// Application used to benchmark with marian-decoder from time-to-time. The implementation in this repository follows a
@@ -88,7 +91,11 @@ void decoder(Ptr<Options> options) {
   std::string input = std_input.str();
 
   // Wait on future until Response is complete
-  std::future<Response> responseFuture = service.translate(std::move(input));
+  std::promise<Response> responsePromise;
+  std::future<Response> responseFuture = responsePromise.get_future();
+  auto callback = [&responsePromise](Response &&response) { responsePromise.set_value(std::move(response)); };
+
+  service.translate(std::move(input), std::move(callback));
   responseFuture.wait();
   const Response &response = responseFuture.get();
 
@@ -126,7 +133,11 @@ void native(Ptr<Options> options) {
   ResponseOptions responseOptions;
 
   // Wait on future until Response is complete
-  std::future<Response> responseFuture = service.translate(std::move(input), responseOptions);
+  std::promise<Response> responsePromise;
+  std::future<Response> responseFuture = responsePromise.get_future();
+  auto callback = [&responsePromise](Response &&response) { responsePromise.set_value(std::move(response)); };
+
+  service.translate(std::move(input), std::move(callback), responseOptions);
   responseFuture.wait();
   Response response = responseFuture.get();
 

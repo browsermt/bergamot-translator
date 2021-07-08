@@ -1,6 +1,7 @@
 # Unit tests
 set(UNIT_TESTS
     annotation_tests
+    tag_tests
 )
 
 foreach(test ${UNIT_TESTS})

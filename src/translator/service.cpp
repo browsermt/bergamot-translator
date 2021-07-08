@@ -72,8 +72,8 @@ void Service::queueRequest(std::string &&input, std::function<void(Response &&)>
 
   text_processor_.process(std::move(input), source, segments);
 
-  ResponseBuilder responseBuilder(responseOptions, std::move(source), vocabs_, std::move(callback), cache_);
-  Ptr<Request> request = New<Request>(requestId_++, std::move(segments), std::move(responseBuilder));
+  ResponseBuilder responseBuilder(responseOptions, std::move(source), vocabs_, std::move(callback));
+  Ptr<Request> request = New<Request>(requestId_++, std::move(segments), std::move(responseBuilder), cache_);
 
   batcher_.addWholeRequest(request);
 }

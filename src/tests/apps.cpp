@@ -73,7 +73,12 @@ void translationCache(Ptr<Options> options) {
   std::string input = inputStream.str();
 
   auto translateForResponse = [&service, &responseOptions](std::string input) {
-    std::future<Response> responseFuture = service.translate(std::move(input), responseOptions);
+    std::promise<Response> responsePromise;
+    std::future<Response> responseFuture = responsePromise.get_future();
+    auto callback = [&responsePromise](Response &&response) { responsePromise.set_value(std::move(response)); };
+
+    service.translate(std::move(input), callback, responseOptions);
+
     responseFuture.wait();
     Response response = responseFuture.get();
     return response;

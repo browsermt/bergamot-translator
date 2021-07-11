@@ -26,27 +26,20 @@ class QualityEstimator {
     uint64_t magic;        // BINARY_QE_MODEL_MAGIC
     uint64_t numFeatures;  // Length of all arrays.
   };
-  struct WordFeatures {
-    float bpeMean;
-    float minBPE;
-    float lenBPE;
-    float overallMean;
-  };
   struct SentenceQualityEstimate {
     std::vector<float> wordQualityScores;
     std::vector<ByteRange> wordByteRanges;
-    std::vector<WordFeatures> wordFeatures;
     float sentenceScore;
   };
 
   void load(const char *ptr_void, size_t blobSize);
-  SentenceQualityEstimate mapBPEToWords(Response &sentence, Words words) const;
+  SentenceQualityEstimate mapBPEToWords(Quality quality, AnnotatedText target, size_t sentenceIdx, Words words) const;
   AlignedVector<float> extractFeatures(SentenceQualityEstimate qualityScores) const;
   void predictWordLevel() const;
 
  public:
   explicit QualityEstimator(const AlignedMemory &qualityEstimatorMemory);
-  void computeQualityScores(Response &sentence, Words words) const;
+  void computeQualityScores(Quality &quality, AnnotatedText &target, size_t sentenceIdx, Words &words) const;
 };
 
 }  // namespace bergamot

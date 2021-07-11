@@ -27,7 +27,7 @@ class ResponseBuilder {
   /// @param [in] promise: promise to set with the constructed Response.
   /// @param [in] qualityEstimator: promise to set with the constructed Response.
   ResponseBuilder(ResponseOptions responseOptions, AnnotatedText &&source, Vocabs &vocabs,
-                  std::promise<Response> &&promise, QualityEstimator &qualityEstimator)
+                  std::promise<Response> &&promise, const QualityEstimator &qualityEstimator)
       : responseOptions_(responseOptions),
         source_(std::move(source)),
         vocabs_(vocabs),
@@ -94,7 +94,7 @@ class ResponseBuilder {
                                     //  after Response constructed.
   AnnotatedText source_;
 
-  QualityEstimator &qualityEstimator_;
+  const QualityEstimator &qualityEstimator_;
 };
 }  // namespace bergamot
 }  // namespace marian

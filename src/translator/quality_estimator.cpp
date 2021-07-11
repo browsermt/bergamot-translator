@@ -7,34 +7,32 @@
 namespace marian {
 namespace bergamot {
 
-QualityEstimator::QualityEstimator(AlignedMemory qualityEstimatorMemory) {
-  // QE coefficients memory passed as bytes.
-  QualityEstimator::load(std::move(qualityEstimatorMemory));
+QualityEstimator::QualityEstimator(const AlignedMemory& qualityEstimatorMemory) {
+  LOG(info, "[data] Loading Quality Estimator model from buffer");
+  QualityEstimator::load(qualityEstimatorMemory.begin(), qualityEstimatorMemory.size());
 }
 
-void QualityEstimator::load(AlignedMemory file_parameters) {
-  char delimiter = '\n';
-  int line_position = 0;
-  std::string line(file_parameters.begin());
-  std::vector<std::string> file_input;
-  file_input.reserve(4);
-  std::istringstream istr(line);
-  while (std::getline(istr, line, delimiter)) {
-    file_input.emplace_back(line);
-  }
-  ABORT_IF(file_input.size() != 4, "Model file should contains 4 lines, one per model parameter");
-  QualityEstimator::initVector(this->stds_, file_input[0]);
-  QualityEstimator::initVector(this->means_, file_input[1]);
-  QualityEstimator::initVector(this->coefficients_, file_input[2]);
-  QualityEstimator::initVector(this->intercept_, file_input[3]);
-}
-
-void QualityEstimator::initVector(std::vector<float>& emptyVector, std::string line) {
-  char delimiter = ' ';
-  std::istringstream istr(line);
-  while (std::getline(istr, line, delimiter)) {
-    emptyVector.push_back(std::stof(line));
-  }
+void QualityEstimator::load(const char* ptr, size_t blobSize) {
+  /* File layout:
+   * header
+   * stds array
+   * means array
+   * coefficients array
+   * intercepts array
+   */
+  ABORT_IF(blobSize < HEADER_SIZE, "Quality estimation file too small");
+  const Header& header = *reinterpret_cast<const Header*>(ptr);
+  const int offset = header.numFeatures / sizeof(float);
+  ptr += sizeof(Header);
+  ABORT_IF(header.magic != BINARY_QE_MODEL_MAGIC, "Incorrect magic bytes for quality estimation file");
+  uint64_t expectedSize = sizeof(Header) + offset * sizeof(float) * 4;  // stds, means, intercept, coef
+  ABORT_IF(expectedSize != blobSize, "QE header claims file size should be {} bytes but file is {} bytes", expectedSize,
+           blobSize);
+  const float* begin = reinterpret_cast<const float*>(ptr);
+  stds_ = begin;
+  means_ = (begin += offset);
+  coefficients_ = (begin += offset);
+  intercept_ = (begin += offset);
 }
 
 void QualityEstimator::mapBPEToWords(Response& sentence, Words words) {

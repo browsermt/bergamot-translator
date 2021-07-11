@@ -10,9 +10,21 @@
 
 namespace marian {
 namespace bergamot {
+// ASCII and Unicode text files never start with the following 64 bits
+constexpr std::size_t BINARY_QE_MODEL_MAGIC = 0x78cc336f1d54b180;
+constexpr std::size_t HEADER_SIZE = 64 /* Keep alignment by being a multiple of 64 bytes */;
 
 class QualityEstimator {
  private:
+  const float *stds_;
+  const float *means_;
+  const float *coefficients_;
+  const float *intercept_;
+
+  struct Header {
+    uint64_t magic;        // BINARY_QE_MODEL_MAGIC
+    uint64_t numFeatures;  // Length of all arrays.
+  };
   struct WordFeatures {
     float bpe_sum_over_len;
     float min_bpe;
@@ -25,19 +37,16 @@ class QualityEstimator {
     std::vector<WordFeatures> wordFeatures;
     float sentenceScore;
   };
-  void initVector(std::vector<float>& emptyVector, std::string line);
-  void load(AlignedMemory file_parameters);
   std::vector<SentenceQualityEstimate> quality_scores_;
-  std::vector<float> stds_, means_;
-  std::vector<float> coefficients_, intercept_;
 
-  void mapBPEToWords(Response& sentence, Words words);
+  void load(const char *ptr_void, size_t blobSize);
+  void mapBPEToWords(Response &sentence, Words words);
   AlignedVector<float> extractFeatutes();
   void predictWordLevel();
 
  public:
-  explicit QualityEstimator(AlignedMemory qualityEstimatorMemory);
-  void computeQualityScores(Response& sentence, Words words);
+  explicit QualityEstimator(const AlignedMemory &qualityEstimatorMemory);
+  void computeQualityScores(Response &sentence, Words words);
 };
 
 }  // namespace bergamot

@@ -18,7 +18,7 @@ void ResponseBuilder::buildQualityScores(Histories &histories, Response &respons
     auto normalizedPathScore = std::get<2>(result);
     auto wordQualities = hyp->tracebackWordScores();
     response.qualityScores.push_back(Quality{normalizedPathScore, wordQualities});
-    qualityEstimator_.computeQualityScores(response.qualityScores[index], response.target, index, words);
+    qualityEstimator_.computeQualityScores(response.qualityScores[index], response.target, index);
     index++;
   }
 }

@@ -30,7 +30,7 @@ struct MemoryBundle {
   /// @todo Not implemented yet
   AlignedMemory ssplitPrefixFile{};
 
-  AlignedMemory qualityEstimatorMemory;  ///< Byte-array of shortlist (aligned to 64)
+  AlignedMemory qualityEstimatorMemory;  ///< Byte-array of qe model (aligned to 64)
 };
 
 }  // namespace bergamot

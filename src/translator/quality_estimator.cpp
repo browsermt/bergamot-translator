@@ -36,55 +36,56 @@ void QualityEstimator::load(const char* ptr, size_t blobSize) {
 }
 
 QualityEstimator::SentenceQualityEstimate QualityEstimator::mapBPEToWords(Quality quality, AnnotatedText target,
-                                                                          size_t sentenceIdx, Words words) const {
-  // The result is a vector of maps
-  // each element of vector is a map containing the bpes of a word
-  // each map key is a tuple consisting of the begining and end of the specific subword
-  auto eos_token = words[0].DEFAULT_EOS_ID;
+                                                                          size_t sentenceIdx) const {
+  const ByteRange& sentenceByteRange = target.sentenceAsByteRange(sentenceIdx);
   QualityEstimator::SentenceQualityEstimate sentenceQualityScores;
-  sentenceQualityScores.sentenceScore = quality.sequence;
-  // first_score
-  sentenceQualityScores.wordByteRanges.push_back(target.wordAsByteRange(sentenceIdx, 0));
-  sentenceQualityScores.wordQualityScores.push_back(quality.word.front());
-  //[0, 1, 2, 3] <- [bpe_sum_over_len, min_bpe, len_bpe, overall_mean]
-  float wordFeatures[4] = {quality.word.front(), 1, quality.word.front(), (quality.sequence / quality.word.size())};
-  // first_score
-  int wordIdx = 1;
-  int num_subwords = 1;
-  for (int i = 1; i < quality.word.size(); i++) {
-    auto& p = quality.word.at(i);
-    if (words[wordIdx] == eos_token) {
+  int bpeLen = 1;
+  int wordIdx = 0;
+  int subwordIdx = wordIdx;
+  for (float& subwordScore : quality.word) {
+    ByteRange subword = target.wordAsByteRange(sentenceIdx, subwordIdx);
+    if (subword.begin == sentenceByteRange.end) {  // EOS token
+      insertNewWord(sentenceQualityScores, subword, subwordScore, 1);
       break;
     }
-    ByteRange subword = target.wordAsByteRange(sentenceIdx, wordIdx);
-    size_t subword_begin = subword.begin;
-    size_t subword_end = subword.end;
-    char first_word = target.text.at(subword_begin);
-    wordIdx++;
-    if (isspace(first_word) != 0) {
-      ByteRange new_word{subword_begin + 1, subword_end};
-      sentenceQualityScores.wordByteRanges.push_back(new_word);
-      sentenceQualityScores.wordQualityScores.push_back(p);
-      wordFeatures[0] = p;
-      wordFeatures[1] = 1;
-      wordFeatures[2] = p;
-      num_subwords = 1;
-    } else {
-      auto& current_word = sentenceQualityScores.wordByteRanges.back();
-      float& current_scores = sentenceQualityScores.wordQualityScores.back();
-      if (wordFeatures[2] > p) {
-        wordFeatures[2] = p;
+    char firstLetter = target.text.at(subword.begin);
+    if ((isspace(firstLetter) != 0) || subwordIdx == 0) {
+      if (subwordIdx != 0) {
+        subword.begin += 1;  // ignore whitespace
       }
-      num_subwords += 1;
-      wordFeatures[3] = num_subwords;
-      ByteRange new_word{current_word.begin, subword.end};
-      current_word = new_word;
-      // incremental mean
-      current_scores = current_scores + (p - current_scores) / num_subwords;
-      wordFeatures[0] = current_scores;
+      subword.end -= 1;  // remove whitepsace
+      bpeLen = 1;
+      wordIdx++;
+      insertNewWord(sentenceQualityScores, subword, subwordScore, bpeLen);
+    } else {
+      bpeLen += 1;
+      augumentGivenWord(sentenceQualityScores, subword, subwordScore, bpeLen, wordIdx);
     }
+    subwordIdx++;
   }
   return sentenceQualityScores;
+}
+
+void QualityEstimator::insertNewWord(QualityEstimator::SentenceQualityEstimate& sentenceQualityScores,
+                                     ByteRange& subword, float& subwordScore, int lenSubwords) const {
+  numSubWords_.push_back(lenSubwords);
+  minWordScore_.push_back(subwordScore);
+  sentenceQualityScores.wordByteRanges.push_back(subword);
+  sentenceQualityScores.wordQualityScores.push_back(subwordScore);
+}
+
+void QualityEstimator::augumentGivenWord(SentenceQualityEstimate& sentenceQualityScores, ByteRange& subword,
+                                         float& subwordScore, int lenSubwords, int wordIndex) const {
+  ByteRange& currentWord = sentenceQualityScores.wordByteRanges.back();
+  float& currentScores = sentenceQualityScores.wordQualityScores.back();
+  float& minScore = minWordScore_.at(wordIndex - 1);
+  numSubWords_.at(wordIndex - 1) = lenSubwords;
+  currentWord.end = subword.end;
+  // incremental mean
+  currentScores = currentScores + (subwordScore - currentScores) / lenSubwords;
+  if (minScore > subwordScore) {
+    minScore = subwordScore;
+  }
 }
 
 void QualityEstimator::predictWordLevel() const {}
@@ -105,9 +106,8 @@ AlignedVector<float> QualityEstimator::extractFeatures(QualityEstimator::Sentenc
   return feature_matrix;
 }
 
-void QualityEstimator::computeQualityScores(Quality& quality, AnnotatedText& target, size_t sentenceIdx,
-                                            Words& words) const {
-  auto qualityScores = mapBPEToWords(quality, target, sentenceIdx, words);
+void QualityEstimator::computeQualityScores(Quality& quality, AnnotatedText& target, size_t sentenceIdx) const {
+  auto qualityScores = mapBPEToWords(quality, target, sentenceIdx);
   extractFeatures(qualityScores);
   predictWordLevel();
 }

@@ -20,7 +20,9 @@ class QualityEstimator {
   const float *means_;
   const float *coefficients_;
   const float *intercept_;
+  std::vector<float> modelParameters_;
   int numFeatures_;
+  mutable float overallMean_;
   mutable std::vector<int> numSubWords_;
   mutable std::vector<float> minWordScore_;
 
@@ -41,7 +43,8 @@ class QualityEstimator {
   void augumentGivenWord(SentenceQualityEstimate &sentenceQualityScores, ByteRange &subword, float &subwordScore,
                          int lenSubwords, int wordIndex) const;
   AlignedVector<float> extractFeatures(SentenceQualityEstimate qualityScores) const;
-  void predictWordLevel() const;
+  AlignedVector<float> buildLogisticModel() const;
+  AlignedVector<float> predictWordScores(AlignedVector<float> &featureMatrix, int numWords) const;
 
  public:
   explicit QualityEstimator(const AlignedMemory &qualityEstimatorMemory);

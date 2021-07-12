@@ -29,10 +29,19 @@ void QualityEstimator::load(const char* ptr, size_t blobSize) {
   ABORT_IF(expectedSize != blobSize, "QE header claims file size should be {} bytes but file is {} bytes", expectedSize,
            blobSize);
   const float* begin = reinterpret_cast<const float*>(ptr);
+  const int numParameters = 4;
   stds_ = begin;
   means_ = (begin += numFeatures_);
   coefficients_ = (begin += numFeatures_);
   intercept_ = (begin += numFeatures_);
+  modelParameters_.resize(numParameters * numFeatures_);
+  //[0,1,2,3]-> stds, means, coefficients, intercept
+  for (int i = 0; i < numFeatures_; i++) {
+    modelParameters_[i + 0 * numFeatures_] = stds_[i];
+    modelParameters_[i + 1 * numFeatures_] = means_[i];
+    modelParameters_[i + 2 * numFeatures_] = coefficients_[i];
+    modelParameters_[i + 3 * numFeatures_] = intercept_[i];
+  }
 }
 
 QualityEstimator::SentenceQualityEstimate QualityEstimator::mapBPEToWords(Quality quality, AnnotatedText target,
@@ -42,6 +51,7 @@ QualityEstimator::SentenceQualityEstimate QualityEstimator::mapBPEToWords(Qualit
   int bpeLen = 1;
   int wordIdx = 0;
   int subwordIdx = wordIdx;
+  float tmp;
   for (float& subwordScore : quality.word) {
     ByteRange subword = target.wordAsByteRange(sentenceIdx, subwordIdx);
     if (subword.begin == sentenceByteRange.end) {  // EOS token
@@ -63,6 +73,7 @@ QualityEstimator::SentenceQualityEstimate QualityEstimator::mapBPEToWords(Qualit
     }
     subwordIdx++;
   }
+  overallMean_ = quality.sequence / subwordIdx;
   return sentenceQualityScores;
 }
 
@@ -88,28 +99,66 @@ void QualityEstimator::augumentGivenWord(SentenceQualityEstimate& sentenceQualit
   }
 }
 
-void QualityEstimator::predictWordLevel() const {}
+AlignedVector<float> QualityEstimator::predictWordScores(AlignedVector<float>& featureMatrix, int numWords) const {
+  const intgemm::Index featureRows = numWords;
+  const intgemm::Index width = 64;
+  const intgemm::Index modelRows = 8;
+  const AlignedVector<float>& modelMatrix = QualityEstimator::buildLogisticModel();
+  float quant_mult = 1024.0f;
+  AlignedVector<int16_t> A_prepared(featureMatrix.size());
+  AlignedVector<int16_t> B_prepared(modelMatrix.size());
+  // Quantize A.
+  // TODO
+  // I dont know why is this failing
+  intgemm::Int16::PrepareA(featureMatrix.begin(), A_prepared.begin(), quant_mult, numWords, width);
+  // Quantize B.
+  // TODO
+  // I dont know why is this failing
+  intgemm::Int16::PrepareB(modelMatrix.begin(), B_prepared.begin(), quant_mult, width, modelRows);
+
+  AlignedVector<float> modelScores(numWords);
+  intgemm::Int16::Multiply(
+      A_prepared.begin(), B_prepared.begin(), numWords, width, modelRows,
+      intgemm::callbacks::UnquantizeAndWrite(1.0f / (quant_mult * quant_mult), modelScores.begin()));
+
+  return modelScores;
+}
+
+AlignedVector<float> QualityEstimator::buildLogisticModel() const {
+  const intgemm::Index width = 64;
+  const intgemm::Index modelColumn = 8;
+  AlignedVector<float> modelMatrix(width * modelColumn);
+  const int& coefficientsStart = 2 * numFeatures_;
+  for (int i = 0; i < numFeatures_; i++) {
+    modelMatrix[i] = modelParameters_[coefficientsStart + i];
+  }
+  return modelMatrix;
+}
 
 AlignedVector<float> QualityEstimator::extractFeatures(QualityEstimator::SentenceQualityEstimate qualityScores) const {
-  // auto& word_scores = qualityScores.wordFeatures;  // there will always be only one sentence
-  // const intgemm::Index num_words = word_scores.size();
-  // const intgemm::Index width = 16;
-  AlignedVector<float> feature_matrix;
-  // int j = 0;
-  // for (auto& it : word_scores) {
-  //   feature_matrix[j] = (it.bpeMean - means_[0]) / stds_[0];
-  //   feature_matrix[j + 1] = (it.lenBPE - means_[1]) / stds_[1];
-  //   feature_matrix[j + 2] = (it.minBPE - means_[2]) / stds_[2];
-  //   feature_matrix[j + 3] = (it.overallMean - means_[3]) / stds_[3];
-  //   j += numFeatures_;
-  // }
-  return feature_matrix;
+  const intgemm::Index numWords = qualityScores.wordQualityScores.size();
+  const intgemm::Index width = 64;
+  AlignedVector<float> featureMatrix(1 * width);
+  const int& stdStart = 0;
+  const int& meanStart = 1 * numFeatures_;
+  for (int i = 0; i < numWords; i++) {
+    // scale features
+    featureMatrix[i] = (qualityScores.wordQualityScores[i] - modelParameters_[meanStart]) / modelParameters_[stdStart];
+    featureMatrix[i + 1 * numFeatures_] =
+        (minWordScore_[i] - modelParameters_[meanStart + 1]) / modelParameters_[stdStart + 1];
+    featureMatrix[i + 2 * numFeatures_] =
+        (numSubWords_[i] - modelParameters_[meanStart + 2]) / modelParameters_[stdStart + 2];
+    featureMatrix[i + 3 * numFeatures_] =
+        (overallMean_ - modelParameters_[meanStart + 3]) / modelParameters_[stdStart + 3];
+  }
+
+  return featureMatrix;
 }
 
 void QualityEstimator::computeQualityScores(Quality& quality, AnnotatedText& target, size_t sentenceIdx) const {
   auto qualityScores = mapBPEToWords(quality, target, sentenceIdx);
-  extractFeatures(qualityScores);
-  predictWordLevel();
+  auto featureMatrix = extractFeatures(std::move(qualityScores));
+  predictWordScores(featureMatrix, qualityScores.wordQualityScores.size());
 }
 
 }  // namespace bergamot

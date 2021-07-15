@@ -1,6 +1,7 @@
 #ifndef SRC_BERGAMOT_RESPONSE_BUILDER_H_
 #define SRC_BERGAMOT_RESPONSE_BUILDER_H_
 
+#include "cache.h"
 #include "data/types.h"
 #include "response.h"
 #include "response_options.h"
@@ -32,51 +33,51 @@ class ResponseBuilder {
         callback_(std::move(callback)) {}
 
   /// Constructs and sets the promise of a Response object from obtained
-  /// histories after translating.
-  /// @param [in] histories: Histories obtained after translating the Request
+  /// processedRequestSentences after translating.
+  /// @param [in] processedRequestSentences: ProcessedRequestSentences obtained after translating the Request
   /// from which this functor is called.
-  void operator()(Histories &&histories) {
+  void operator()(ProcessedRequestSentences &&processedRequestSentences) {
     // TODO(jerinphilip) load ResponseOptions into options and turn build
     // functions on or off.
     // responseOptions_ is unused, but we can try something here.
-    ABORT_IF(source_.numSentences() != histories.size(), "Mismatch in source and translated sentences");
+    ABORT_IF(source_.numSentences() != processedRequestSentences.size(), "Mismatch in source and translated sentences");
     Response response;
 
     // Move source_ into response.
     response.source = std::move(source_);
 
     // Should be after source is set
-    buildTranslatedText(histories, response);
+    buildTranslatedText(processedRequestSentences, response);
 
     // Should always be after buildTranslatedText
     if (responseOptions_.qualityScores) {
-      buildQualityScores(histories, response);
+      buildQualityScores(processedRequestSentences, response);
     }
 
     if (responseOptions_.alignment) {
-      buildAlignments(histories, response);
+      buildAlignments(processedRequestSentences, response);
     }
 
     callback_(std::move(response));
   }
 
  private:
-  /// Builds qualityScores from histories and writes to response. expects
+  /// Builds qualityScores from processedRequestSentences and writes to response. expects
   /// buildTranslatedText to be run before to be able to obtain target text and
   /// subword information.
-  /// @param histories [in]
+  /// @param processedRequestSentences [in]
   /// @param response [out]
-  void buildQualityScores(Histories &histories, Response &response);
+  void buildQualityScores(ProcessedRequestSentences &processedRequestSentences, Response &response);
 
-  /// Builds alignments from histories and writes onto response.
-  /// @param histories [in]
+  /// Builds alignments from processedRequestSentences and writes onto response.
+  /// @param processedRequestSentences [in]
   /// @param response [out]
-  void buildAlignments(Histories &histories, Response &response);
+  void buildAlignments(ProcessedRequestSentences &processedRequestSentences, Response &response);
 
   /// Builds translated text and subword annotations and writes onto response.
-  /// @param histories [in]
+  /// @param processedRequestSentences [in]
   /// @param response [out]
-  void buildTranslatedText(Histories &histories, Response &response);
+  void buildTranslatedText(ProcessedRequestSentences &processedRequestSentences, Response &response);
 
   // Data members are context/curried args for the functor.
 

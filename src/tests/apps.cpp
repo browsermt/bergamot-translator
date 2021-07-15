@@ -85,17 +85,20 @@ void translationCache(Ptr<Options> options) {
   };
 
   Response response;
-  auto &stats = service.cacheStats();
 
   // Round 1
   response = translateForResponse(input);
-  LOG(info, "Cache Hits/Misses = {}/{}", stats.hits, stats.misses);
-  ABORT_IF(stats.hits != 0, "Expecting no cache hits, but hits found.");
+
+  auto statsFirstRun = service.cacheStats();
+  LOG(info, "Cache Hits/Misses = {}/{}", statsFirstRun.hits, statsFirstRun.misses);
+  ABORT_IF(statsFirstRun.hits != 0, "Expecting no cache hits, but hits found.");
 
   // Round 2; There should be cache hits
   response = translateForResponse(input);
-  LOG(info, "Cache Hits/Misses = {}/{}", stats.hits, stats.misses);
-  ABORT_IF(stats.hits == 0, "No cache hits while expected non-zero");
+
+  auto statsSecondRun = service.cacheStats();
+  LOG(info, "Cache Hits/Misses = {}/{}", statsSecondRun.hits, statsSecondRun.misses);
+  ABORT_IF(statsSecondRun.hits == 0, "No cache hits while expected non-zero");
 }
 
 }  // namespace testapp

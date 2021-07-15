@@ -12,15 +12,15 @@
 namespace marian {
 namespace bergamot {
 
+struct CacheStats {
+  size_t hits{0};
+  size_t misses{0};
+};
+
 /// Thread-safe LRUCache
 template <typename Key, typename Value, typename Hash = std::hash<Key>>
 class LRUCache {
  public:
-  struct Stats {
-    size_t hits{0};
-    size_t misses{0};
-  };
-
   /// Storage includes Key, so when LRU is evicted corresponding hashmap entry can be deleted.
   typedef std::pair<Key, Value> KeyVal;
   typedef typename std::list<KeyVal>::iterator StorageItr;
@@ -67,7 +67,7 @@ class LRUCache {
     }
   }
 
-  const Stats &stats() const { return stats_; }
+  CacheStats stats() const { return stats_; }
 
  private:
   void unsafeEvict() {
@@ -91,7 +91,7 @@ class LRUCache {
   /// they're erased (they don't invalidate on insertion / move of other elements).
   std::unordered_map<Key, StorageItr, Hash> map_;
   std::mutex rwMutex_;  ///< Guards accesses to storage_, map_
-  Stats stats_;         ///< Stores hits and misses for log/checks.
+  CacheStats stats_;    ///< Stores hits and misses for log/checks.
 };
 
 // Specialize for marian
@@ -109,14 +109,11 @@ struct WordsHashFn {
   }
 };
 
-/// For translator, we cache (marian::Words -> History).
-typedef LRUCache<Words, History, WordsHashFn> TranslatorLRUCache;
-
 namespace {
 
 // Read write into Bytes for ProcessedRequestSentence
 
-// Write
+// Write Vector
 template <class T>
 void writeVector(std::ostream &out, const std::vector<T> &t) {
   const char *data = reinterpret_cast<const char *>(t.data());
@@ -125,6 +122,7 @@ void writeVector(std::ostream &out, const std::vector<T> &t) {
   out << string_view(data, size);
 }
 
+// Read Vector
 template <class T>
 void readVector(std::istream &in, std::vector<T> &t) {
   size_t size;
@@ -151,6 +149,9 @@ void readVector(std::istream &in, std::vector<T> &t) {
 
 class ProcessedRequestSentence {
  public:
+  /// Empty construction
+  ProcessedRequestSentence() {}
+
   /// Construct from History
   ProcessedRequestSentence(const History &history) {
     IPtr<Hypothesis> hypothesis;
@@ -206,7 +207,7 @@ class ProcessedRequestSentence {
   data::SoftAlignment softAlignment_;  ///< history->traceSoftAlignment(); std::vector<std::vector<float>>
   std::vector<float> wordScores_;      ///< hyp->tracebackWordScores();
   float sentenceScore_;                ///< normalizedPathScore
-};                                     // namespace bergamot
+};
 
 /// LocklessCache Adapter built on top of L4
 
@@ -224,18 +225,16 @@ class LockLessClockCache {
   LockLessClockCache(const std::string &modelIdentifier, size_t sizeInBytes, size_t timeOutInSeconds,
                      bool removeExpired = true)
       : cacheConfig_{sizeInBytes, std::chrono::seconds(timeOutInSeconds), removeExpired},
-        modelIdentifier_(modelIdentifier) {
-    auto context = service_.GetContext();
+        modelIdentifier_(modelIdentifier),
+        context_(service_.GetContext()) {
+    // Once a context is retrieved, the operations such as
+    // operator[] on the context and Get() are lock-free.
     hashTableIndex_ = service_.AddHashTable(
         HashTableConfig(modelIdentifier_, HashTableConfig::Setting{/*numBuckets=*/1000000}, cacheConfig_));
   }
 
   bool fetch(const Key key, Value &value) {
-    auto context = service_.GetContext();
-    // Once a context is retrieved, the operations such as
-    // operator[] on the context and Get() are lock-free.
-    auto &hashTable = context[hashTableIndex_];
-
+    auto &hashTable = context_[hashTableIndex_];
     ValueBytes valBytes;
     bool fetchSuccess = hashTable.Get(keyToBytes(key), valBytes);
 
@@ -248,10 +247,8 @@ class LockLessClockCache {
     return fetchSuccess;
   }
 
-  void update(const Key key, const Value value) {
-    // Write data.
-    auto context = service_.GetContext();
-    auto &hashTable = context[hashTableIndex_];
+  void insert(const Key key, const Value value) {
+    auto &hashTable = context_[hashTableIndex_];
     hashTable.Add(keyToBytes(key), valueToBytes(value));
   }
 
@@ -270,12 +267,26 @@ class LockLessClockCache {
     return valBytes;
   }
 
+  CacheStats stats() const {
+    auto &perfData = context_[hashTableIndex_].GetPerfData();
+    CacheStats stats;
+    stats.hits = perfData.Get(L4::HashTablePerfCounter::CacheHitCount);
+    stats.misses = perfData.Get(L4::HashTablePerfCounter::CacheMissCount);
+    return stats;
+  };
+
  private:
-  static HashTableService service_;
   HashTableConfig::Cache cacheConfig_;
+  HashTableService service_;
+  L4::LocalMemory::Context context_;
   size_t hashTableIndex_;
   const std::string modelIdentifier_;
 };
+
+typedef std::vector<std::unique_ptr<ProcessedRequestSentence>> ProcessedRequestSentences;
+/// For translator, we cache (marian::Words -> ProcessedRequestSentence).
+// typedef LRUCache<Words, ProcessedRequestSentence, WordsHashFn> TranslatorLRUCache;
+typedef LockLessClockCache TranslatorLRUCache;
 
 }  // namespace bergamot
 }  // namespace marian

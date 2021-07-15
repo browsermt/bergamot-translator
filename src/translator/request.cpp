@@ -19,12 +19,13 @@ Request::Request(size_t Id, Segments &&segments, ResponseBuilder &&responseBuild
 
 {
   counter_ = segments_.size();
-  histories_.resize(segments_.size(), nullptr);
+  // processedRequestSentences_.resize(segments_.size(), nullptr);
+  processedRequestSentences_.resize(segments_.size());
 
   for (size_t idx = 0; idx < segments_.size(); idx++) {
-    History history(/*lineNo=*/idx);
-    if (cache_.fetch(getSegment(idx), history)) {
-      histories_[idx] = New<History>(history);
+    ProcessedRequestSentence processedRequestSentence;
+    if (cache_.fetch(getSegment(idx), processedRequestSentence)) {
+      processedRequestSentences_[idx] = std::make_unique<ProcessedRequestSentence>(processedRequestSentence);
       --counter_;
     }
   }
@@ -34,11 +35,11 @@ Request::Request(size_t Id, Segments &&segments, ResponseBuilder &&responseBuild
   // histories, then we'd have to trigger ResponseBuilder as well. No segments go into batching and therefore no
   // processHistory triggers.
   if (segments_.size() == 0 || counter_.load() == 0) {
-    responseBuilder_(std::move(histories_));
+    responseBuilder_(std::move(processedRequestSentences_));
   }
 }
 
-bool Request::isCachePrefilled(size_t index) { return (histories_[index] != nullptr); }
+bool Request::isCachePrefilled(size_t index) { return (processedRequestSentences_[index] != nullptr); }
 
 size_t Request::numSegments() const { return segments_.size(); }
 
@@ -49,20 +50,13 @@ Segment Request::getSegment(size_t index) const { return segments_[index]; }
 void Request::processHistory(size_t index, Ptr<History> history) {
   // Concurrently called by multiple workers as a history from translation is
   // ready. The container storing histories is set with the value obtained.
-  histories_[index] = history;
+  processedRequestSentences_[index] = std::make_unique<ProcessedRequestSentence>(*history);
+  cache_.insert(getSegment(index), *processedRequestSentences_[index]);
 
   // In case this is last request in, completeRequest is called, which sets the
   // value of the promise.
   if (--counter_ == 0) {
-    // For now, we will copy. It seems reasonable to replace Ptr<History> with History transferring ownership clearly
-    // eventually.
-    std::vector<History> histories;
-    for (auto history : histories_) {
-      histories.push_back(*history);
-    }
-    cache_.insertBulk(segments_, histories);
-
-    responseBuilder_(std::move(histories_));
+    responseBuilder_(std::move(processedRequestSentences_));
   }
 }
 

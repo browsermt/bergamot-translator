@@ -28,7 +28,7 @@ if(COMPILE_WASM)
   target_compile_options(bergamot-translator PRIVATE ${WASM_COMPILE_FLAGS})
 endif(COMPILE_WASM)
 
-target_link_libraries(bergamot-translator marian ssplit)
+target_link_libraries(bergamot-translator marian ssplit L4)
 
 target_include_directories(bergamot-translator
     PUBLIC ${PROJECT_SOURCE_DIR}

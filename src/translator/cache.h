@@ -109,32 +109,6 @@ struct WordsHashFn {
   }
 };
 
-namespace {
-
-// Read write into Bytes for ProcessedRequestSentence
-
-// Write Vector
-template <class T>
-void writeVector(std::ostream &out, const std::vector<T> &t) {
-  const char *data = reinterpret_cast<const char *>(t.data());
-  size_t size = sizeof(t) * t.size();
-  out << t.size();
-  out << string_view(data, size);
-}
-
-// Read Vector
-template <class T>
-void readVector(std::istream &in, std::vector<T> &t) {
-  size_t size;
-  in >> size;
-  t.reserve(size);
-
-  char *data = reinterpret_cast<char *>(t.data());
-  in.read(data, size * sizeof(T));
-}
-
-}  // namespace
-
 /// History is marian object with plenty of shared_ptrs lying around, which makes keeping a lid on memory hard for
 /// cache, due to copies being shallow rather than deep. We therefore process marian's lazy History management changing
 /// to something eager, keeping only what we want and units accounted for. Each of these corresponds to a
@@ -150,57 +124,20 @@ void readVector(std::istream &in, std::vector<T> &t) {
 class ProcessedRequestSentence {
  public:
   /// Empty construction
-  ProcessedRequestSentence() {}
+  ProcessedRequestSentence();
 
   /// Construct from History
-  ProcessedRequestSentence(const History &history) {
-    IPtr<Hypothesis> hypothesis;
-    Result result = history.top();
-    std::tie(words_, hypothesis, sentenceScore_) = result;
-    softAlignment_ = hypothesis->tracebackAlignment();
-    wordScores_ = hypothesis->tracebackWordScores();
-  }
-
-  /// Construct from stream of bytes
-  ProcessedRequestSentence(std::istream &stream) {
-    readVector<marian::Word>(stream, words_);
-    size_t numAlignments;
-    stream >> numAlignments;
-    softAlignment_.resize(numAlignments);
-    for (size_t i = 0; i < numAlignments; i++) {
-      readVector<float>(stream, softAlignment_[i]);
-    }
-
-    readVector<float>(stream, wordScores_);
-    stream >> sentenceScore_;
-  }
-
-  std::string bytes() const {
-    // Format is type(count, bytes[count*sizeof(type)];
-    // Convention is to maintain this in order of how the members are defined;
-    // Types are hardcoded.
-    //
-    // TODO(@jerinphilip): Probably inefficient because everyone hates C++ streams, but let's wire L4 first and fix this
-    // once that's correct.
-    //
-    std::stringstream stream;
-    writeVector<marian::Word>(stream, words_);
-
-    stream << softAlignment_.size();
-    for (auto &v : softAlignment_) {
-      writeVector<float>(stream, v);
-    }
-
-    writeVector<float>(stream, wordScores_);
-    stream << sentenceScore_;
-    return stream.str();
-  }
+  ProcessedRequestSentence(const History &history);
+  void debug();
 
   // Const accessors for private members
   const marian::Words &words() const { return words_; }
   const data::SoftAlignment &softAlignment() const { return softAlignment_; }
   const std::vector<float> &wordScores() const { return wordScores_; }
   float sentenceScore() const { return sentenceScore_; }
+
+  static ProcessedRequestSentence fromBytes(char const *data, size_t size);
+  std::string toBytes() const;
 
  private:
   marian::Words words_;                ///< vector of marian::Word, no shared_ptrs
@@ -213,9 +150,6 @@ class ProcessedRequestSentence {
 
 class LockLessClockCache {
  public:
-  using HashTableConfig = L4::HashTableConfig;
-  using HashTableService = L4::LocalMemory::HashTableService;
-
   using KeyBytes = L4::IWritableHashTable::Key;
   using ValueBytes = L4::IWritableHashTable::Value;
 
@@ -223,61 +157,17 @@ class LockLessClockCache {
   using Value = marian::bergamot::ProcessedRequestSentence;
 
   LockLessClockCache(const std::string &modelIdentifier, size_t sizeInBytes, size_t timeOutInSeconds,
-                     bool removeExpired = true)
-      : cacheConfig_{sizeInBytes, std::chrono::seconds(timeOutInSeconds), removeExpired},
-        modelIdentifier_(modelIdentifier),
-        context_(service_.GetContext()) {
-    // Once a context is retrieved, the operations such as
-    // operator[] on the context and Get() are lock-free.
-    hashTableIndex_ = service_.AddHashTable(
-        HashTableConfig(modelIdentifier_, HashTableConfig::Setting{/*numBuckets=*/1000000}, cacheConfig_));
-  }
-
-  bool fetch(const Key key, Value &value) {
-    auto &hashTable = context_[hashTableIndex_];
-    ValueBytes valBytes;
-    bool fetchSuccess = hashTable.Get(keyToBytes(key), valBytes);
-
-    if (fetchSuccess) {
-      std::string str(reinterpret_cast<const char *>(valBytes.m_data), valBytes.m_size);
-      std::stringstream istream(str);
-      value = Value(istream);
-    }
-
-    return fetchSuccess;
-  }
-
-  void insert(const Key key, const Value value) {
-    auto &hashTable = context_[hashTableIndex_];
-    hashTable.Add(keyToBytes(key), valueToBytes(value));
-  }
-
-  KeyBytes keyToBytes(const Key &key) {
-    KeyBytes keyBytes;
-    keyBytes.m_data = reinterpret_cast<const std::uint8_t *>(key.data());
-    keyBytes.m_size = sizeof(Key) * key.size();
-    return keyBytes;
-  }
-
-  ValueBytes valueToBytes(const Value &value) {
-    ValueBytes valBytes;
-    std::string serialized = value.bytes();
-    valBytes.m_data = reinterpret_cast<const std::uint8_t *>(serialized.data());
-    valBytes.m_size = serialized.size();
-    return valBytes;
-  }
-
-  CacheStats stats() const {
-    auto &perfData = context_[hashTableIndex_].GetPerfData();
-    CacheStats stats;
-    stats.hits = perfData.Get(L4::HashTablePerfCounter::CacheHitCount);
-    stats.misses = perfData.Get(L4::HashTablePerfCounter::CacheMissCount);
-    return stats;
-  };
+                     bool removeExpired = true);
+  bool fetch(const Key &key, Value &value);
+  void insert(const Key &key, const Value &value);
+  CacheStats stats() const;
 
  private:
-  HashTableConfig::Cache cacheConfig_;
-  HashTableService service_;
+  KeyBytes keyToBytes(const Key &key);
+
+  L4::HashTableConfig::Cache cacheConfig_;
+  L4::EpochManagerConfig epochManagerConfig_;
+  L4::LocalMemory::HashTableService service_;
   L4::LocalMemory::Context context_;
   size_t hashTableIndex_;
   const std::string modelIdentifier_;

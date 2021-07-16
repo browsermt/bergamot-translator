@@ -12,6 +12,7 @@ add_library(bergamot-translator STATIC
     batch.cpp
     annotation.cpp
     service.cpp
+    cache.cpp
     threadsafe_batcher.cpp
 )
 if (USE_WASM_COMPATIBLE_SOURCE)

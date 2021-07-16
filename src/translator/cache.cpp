@@ -1,5 +1,7 @@
 #include "translator/cache.h"
 
+#include <cstring>
+
 namespace marian {
 namespace bergamot {
 
@@ -9,7 +11,7 @@ template <class T>
 const char *copyInAndAdvance(const char *src, T *dest, size_t num = 1) {
   const void *vsrc = reinterpret_cast<const void *>(src);
   void *vdest = reinterpret_cast<void *>(dest);
-  memcpy(vdest, vsrc, num * sizeof(T));
+  std::memcpy(vdest, vsrc, num * sizeof(T));
   return reinterpret_cast<const char *>(src + num * sizeof(T));
 }
 

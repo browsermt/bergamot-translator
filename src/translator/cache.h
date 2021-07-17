@@ -21,26 +21,7 @@ struct CacheStats {
 template <typename Key, typename Value, typename Hash = std::hash<Key>>
 class LRUCache {
  public:
-  /// Storage includes Key, so when LRU is evicted corresponding hashmap entry can be deleted.
-  struct Record {
-    Key key;
-    Value value;
-  };
-
-  typedef typename std::list<Record>::iterator RecordIterator;
-
   LRUCache(size_t sizeCap) : sizeCap_(sizeCap) {}
-
-  /// Bulk inserts keys, values. Only single mutex for multiple sentences.
-  void insertBulk(std::vector<Key> &keys, std::vector<Value> &values) {
-    std::lock_guard<std::mutex> guard(rwMutex_);
-    while (storage_.size() > 0 && sizeCap_ - storage_.size() < keys.size()) {
-      unsafeEvict();
-    }
-    for (size_t idx = 0; idx < keys.size(); idx++) {
-      unsafeInsert(keys[idx], values[idx]);
-    }
-  }
 
   /// Insert a key, value into cache. Evicts least-recently-used if no space. Thread-safe.
   void insert(const Key key, const Value value) {
@@ -74,6 +55,12 @@ class LRUCache {
   CacheStats stats() const { return stats_; }
 
  private:
+  struct Record {
+    Key key;
+    Value value;
+  };
+
+  typedef typename std::list<Record>::iterator RecordIterator;
   void unsafeEvict() {
     // Evict LRU
     auto record = storage_.rbegin();

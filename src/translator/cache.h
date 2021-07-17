@@ -22,8 +22,12 @@ template <typename Key, typename Value, typename Hash = std::hash<Key>>
 class LRUCache {
  public:
   /// Storage includes Key, so when LRU is evicted corresponding hashmap entry can be deleted.
-  typedef std::pair<Key, Value> KeyVal;
-  typedef typename std::list<KeyVal>::iterator StorageItr;
+  struct Record {
+    Key key;
+    Value value;
+  };
+
+  typedef typename std::list<Record>::iterator RecordIterator;
 
   LRUCache(size_t sizeCap) : sizeCap_(sizeCap) {}
 
@@ -57,11 +61,11 @@ class LRUCache {
     } else {
       ++stats_.hits;
 
-      auto storageItr = mapItr->second;
-      value = storageItr->second;
+      auto record = mapItr->second;
+      value = record->value;
 
       // If fetched, update least-recently-used by moving the element to the front of the list.
-      storage_.erase(storageItr);
+      storage_.erase(record);
       unsafeInsert(key, value);
       return true;
     }
@@ -72,8 +76,8 @@ class LRUCache {
  private:
   void unsafeEvict() {
     // Evict LRU
-    auto p = storage_.rbegin();
-    map_.erase(/*key=*/p->first);
+    auto record = storage_.rbegin();
+    map_.erase(/*key=*/record->key);
     storage_.pop_back();
   }
 
@@ -85,11 +89,11 @@ class LRUCache {
   size_t sizeCap_;  /// Number of (key, value) to store at most.
 
   /// Linked list to keep usage ordering and evict least-recently used.
-  std::list<KeyVal> storage_;
+  std::list<Record> storage_;
 
   /// hash-map for O(1) cache access. Stores iterator to the list holding cache-elements. Iterators are valid until
   /// they're erased (they don't invalidate on insertion / move of other elements).
-  std::unordered_map<Key, StorageItr, Hash> map_;
+  std::unordered_map<Key, RecordIterator, Hash> map_;
   std::mutex rwMutex_;  ///< Guards accesses to storage_, map_
   CacheStats stats_;    ///< Stores hits and misses for log/checks.
 };

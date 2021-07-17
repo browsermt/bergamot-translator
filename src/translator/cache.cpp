@@ -7,6 +7,17 @@ namespace bergamot {
 
 namespace {
 
+// Generic write/read from pointers
+
+// write uses ostream, to get bytes/blob use with ostringstream(::binary)
+template <class T>
+void write(std::ostream &out, const T *data, size_t num = 1) {
+  const char *cdata = reinterpret_cast<const char *>(data);
+  out.write(cdata, num * sizeof(T));
+}
+
+// L4 stores the data as blobs. These use memcpy to construct parts from the blob given the start and size. It is the
+// responsibility of the caller to prepare the container with the correct contiguous size so memcpy works correctly.
 template <class T>
 const char *copyInAndAdvance(const char *src, T *dest, size_t num = 1) {
   const void *vsrc = reinterpret_cast<const void *>(src);
@@ -15,26 +26,21 @@ const char *copyInAndAdvance(const char *src, T *dest, size_t num = 1) {
   return reinterpret_cast<const char *>(src + num * sizeof(T));
 }
 
-template <class T>
-const char *copyInVectorAndAdvance(const char *src, std::vector<T> &v) {
-  size_t sizePrefix{0};
-  src = copyInAndAdvance<size_t>(src, &sizePrefix);
-  v.resize(sizePrefix);
-  src = copyInAndAdvance<T>(src, v.data(), sizePrefix);
-  return src;
-}
-
-template <class T>
-void write(std::ostream &out, const T *data, size_t num = 1) {
-  const char *cdata = reinterpret_cast<const char *>(data);
-  out.write(cdata, num * sizeof(T));
-}
-
+// Specializations to read and write vectors. The format stored is [size, v_0, v_1 ... v_size]
 template <class T>
 void writeVector(std::ostream &out, std::vector<T> v) {
   size_t size = v.size();
   write<size_t>(out, &size);
   write<T>(out, v.data(), v.size());
+}
+
+template <class T>
+const char *copyInVectorAndAdvance(const char *src, std::vector<T> &v) {
+  size_t sizePrefix{0};
+  src = copyInAndAdvance<size_t>(src, &sizePrefix);
+  v.reserve(sizePrefix);  // Ensure contiguous memory location exists for memcpy inside copyInAndAdvance
+  src = copyInAndAdvance<T>(src, v.data(), sizePrefix);
+  return src;
 }
 
 }  // namespace
@@ -50,28 +56,17 @@ ProcessedRequestSentence::ProcessedRequestSentence(const History &history) {
   wordScores_ = hypothesis->tracebackWordScores();
 }
 
-void ProcessedRequestSentence::debug() {
-  std::cout << "Words: " << words_.size() << std::endl;
-  for (auto &word : words_) {
-    std::cout << word.toString() << " ";
-  }
-  std::cout << std::endl;
-  std::cout << "Alignments size: " << softAlignment_.size() << std::endl;
-  for (size_t i = 0; i < softAlignment_.size(); i++) {
-    std::cout << "# alignment[" << i << "] = " << softAlignment_[i].size() << " ";
-  }
-  std::cout << std::endl;
-}
-
 std::string ProcessedRequestSentence::toBytes() const {
   std::ostringstream out(std::ostringstream::binary);
+  writeVector<marian::Word>(out, words_);
+
   size_t softAlignmentSize = softAlignment_.size();
   write<size_t>(out, &softAlignmentSize);
-  write<float>(out, &sentenceScore_);
-  writeVector<marian::Word>(out, words_);
-  for (auto &a : softAlignment_) {
-    writeVector<float>(out, a);
+  for (auto &alignment : softAlignment_) {
+    writeVector<float>(out, alignment);
   }
+
+  write<float>(out, &sentenceScore_);
   writeVector<float>(out, wordScores_);
   return out.str();
 }
@@ -80,19 +75,18 @@ std::string ProcessedRequestSentence::toBytes() const {
 ProcessedRequestSentence ProcessedRequestSentence::fromBytes(char const *data, size_t size) {
   ProcessedRequestSentence sentence;
   char const *p = data;
-  size_t softAlignmentSize{0};
-  p = copyInAndAdvance<size_t>(p, &softAlignmentSize);
-  p = copyInAndAdvance<float>(p, &sentence.sentenceScore_);
-  std::cout << "softAlignmentSize: " << softAlignmentSize << " sentenceScore: " << sentence.sentenceScore_ << std::endl;
-
-  size_t sizePrefix{0};
-  sentence.softAlignment_.resize(softAlignmentSize);
 
   p = copyInVectorAndAdvance<marian::Word>(p, sentence.words_);
+
+  size_t softAlignmentSize{0};
+  p = copyInAndAdvance<size_t>(p, &softAlignmentSize);
+  sentence.softAlignment_.resize(softAlignmentSize);
+
   for (size_t i = 0; i < softAlignmentSize; i++) {
     p = copyInVectorAndAdvance<float>(p, sentence.softAlignment_[i]);
   }
 
+  p = copyInAndAdvance<float>(p, &sentence.sentenceScore_);
   p = copyInVectorAndAdvance<float>(p, sentence.wordScores_);
   return sentence;
 }
@@ -122,21 +116,10 @@ bool LockLessClockCache::fetch(const Key &key, Value &value) {
   auto &hashTable = context_[hashTableIndex_];
   ValueBytes valBytes;
   KeyBytes keyBytes = keyToBytes(key);
-  const marian::Word *begin = reinterpret_cast<const marian::Word *>(keyBytes.m_data);
-  const marian::Word *end = reinterpret_cast<const marian::Word *>(keyBytes.m_data + keyBytes.m_size);
-
   bool fetchSuccess = hashTable.Get(keyBytes, valBytes);
-
   if (fetchSuccess) {
-    std::cout << "Cache found, entry size = " << valBytes.m_size << std::endl;
-    for (auto p = begin; p != end; p++) {
-      std::cout << p->toString() << " ";
-    }
-    std::cout << std::endl;
     value = ProcessedRequestSentence::fromBytes(reinterpret_cast<const char *>(valBytes.m_data), valBytes.m_size);
-    value.debug();
   }
-
   return fetchSuccess;
 }
 
@@ -146,7 +129,6 @@ void LockLessClockCache::insert(const Key &key, const Value &value) {
 
   ValueBytes valBytes;
   std::string serialized = value.toBytes();
-  ABORT_IF(serialized.size() == 0, "Refusing to store empty string");
 
   valBytes.m_data = reinterpret_cast<const std::uint8_t *>(serialized.data());
   valBytes.m_size = sizeof(std::string::value_type) * serialized.size();
@@ -168,6 +150,61 @@ LockLessClockCache::KeyBytes LockLessClockCache::keyToBytes(const Key &key) {
   keyBytes.m_size = sizeof(Key::value_type) * key.size();
   return keyBytes;
 }
+
+template <typename Key, typename Value, typename Hash>
+void LRUCache<Key, Value, Hash>::insert(const Key key, const Value value) {
+  std::lock_guard<std::mutex> guard(rwMutex_);
+  if (storage_.size() + 1 > sizeCap_) {
+    unsafeEvict();
+  }
+  unsafeInsert(key, value);
+}
+
+template <typename Key, typename Value, typename Hash>
+bool LRUCache<Key, Value, Hash>::fetch(const Key key, Value &value) {
+  std::lock_guard<std::mutex> guard(rwMutex_);
+  auto mapItr = map_.find(key);
+  if (mapItr == map_.end()) {
+    ++stats_.misses;
+    return false;
+  } else {
+    ++stats_.hits;
+
+    auto record = mapItr->second;
+    value = record->value;
+
+    // If fetched, update least-recently-used by moving the element to the front of the list.
+    storage_.erase(record);
+    unsafeInsert(key, value);
+    return true;
+  }
+}
+template <typename Key, typename Value, typename Hash>
+void LRUCache<Key, Value, Hash>::unsafeEvict() {
+  // Evict LRU
+  auto record = storage_.rbegin();
+  map_.erase(/*key=*/record->key);
+  storage_.pop_back();
+}
+
+template <typename Key, typename Value, typename Hash>
+void LRUCache<Key, Value, Hash>::unsafeInsert(const Key key, const Value value) {
+  storage_.push_front({key, value});
+  map_.insert({key, storage_.begin()});
+}
+
+size_t WordsHashFn::operator()(const Words &words) const {
+  std::string repr("");
+  for (size_t idx = 0; idx < words.size(); idx++) {
+    if (idx != 0) {
+      repr += " ";
+    }
+    repr += words[idx].toString();
+  }
+  return std::hash<std::string>{}(repr);
+}
+
+template class LRUCache<int, int>;
 
 }  // namespace bergamot
 }  // namespace marian

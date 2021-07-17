@@ -24,33 +24,10 @@ class LRUCache {
   LRUCache(size_t sizeCap) : sizeCap_(sizeCap) {}
 
   /// Insert a key, value into cache. Evicts least-recently-used if no space. Thread-safe.
-  void insert(const Key key, const Value value) {
-    std::lock_guard<std::mutex> guard(rwMutex_);
-    if (storage_.size() + 1 > sizeCap_) {
-      unsafeEvict();
-    }
-    unsafeInsert(key, value);
-  }
+  void insert(const Key key, const Value value);
 
   /// Attempt to fetch a key storing it in value. Returns true if cache-hit, false if cache-miss. Thread-safe.
-  bool fetch(const Key key, Value &value) {
-    std::lock_guard<std::mutex> guard(rwMutex_);
-    auto mapItr = map_.find(key);
-    if (mapItr == map_.end()) {
-      ++stats_.misses;
-      return false;
-    } else {
-      ++stats_.hits;
-
-      auto record = mapItr->second;
-      value = record->value;
-
-      // If fetched, update least-recently-used by moving the element to the front of the list.
-      storage_.erase(record);
-      unsafeInsert(key, value);
-      return true;
-    }
-  }
+  bool fetch(const Key key, Value &value);
 
   CacheStats stats() const { return stats_; }
 
@@ -61,17 +38,9 @@ class LRUCache {
   };
 
   typedef typename std::list<Record>::iterator RecordIterator;
-  void unsafeEvict() {
-    // Evict LRU
-    auto record = storage_.rbegin();
-    map_.erase(/*key=*/record->key);
-    storage_.pop_back();
-  }
 
-  void unsafeInsert(const Key key, const Value value) {
-    storage_.push_front({key, value});
-    map_.insert({key, storage_.begin()});
-  }
+  void unsafeEvict();
+  void unsafeInsert(const Key key, const Value value);
 
   size_t sizeCap_;  /// Number of (key, value) to store at most.
 
@@ -88,16 +57,7 @@ class LRUCache {
 // Specialize for marian
 // This is a lazy hash, we'll fix this with something better later.
 struct WordsHashFn {
-  size_t operator()(const Words &words) const {
-    std::string repr("");
-    for (size_t idx = 0; idx < words.size(); idx++) {
-      if (idx != 0) {
-        repr += " ";
-      }
-      repr += words[idx].toString();
-    }
-    return std::hash<std::string>{}(repr);
-  }
+  size_t operator()(const Words &words) const;
 };
 
 /// History is marian object with plenty of shared_ptrs lying around, which makes keeping a lid on memory hard for

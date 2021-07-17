@@ -36,9 +36,14 @@ void writeVector(std::ostream &out, std::vector<T> v) {
 
 template <class T>
 const char *copyInVectorAndAdvance(const char *src, std::vector<T> &v) {
+  // Read in size of the vector
   size_t sizePrefix{0};
   src = copyInAndAdvance<size_t>(src, &sizePrefix);
-  v.reserve(sizePrefix);  // Ensure contiguous memory location exists for memcpy inside copyInAndAdvance
+
+  // Ensure contiguous memory location exists for memcpy inside copyInAndAdvance
+  v.reserve(sizePrefix);
+
+  // Read in the vector
   src = copyInAndAdvance<T>(src, v.data(), sizePrefix);
   return src;
 }
@@ -49,6 +54,7 @@ ProcessedRequestSentence::ProcessedRequestSentence() : sentenceScore_{0} {}
 
 /// Construct from History
 ProcessedRequestSentence::ProcessedRequestSentence(const History &history) {
+  // Convert marian's lazy shallow-history, consolidating just the information we want.
   IPtr<Hypothesis> hypothesis;
   Result result = history.top();
   std::tie(words_, hypothesis, sentenceScore_) = result;
@@ -57,6 +63,7 @@ ProcessedRequestSentence::ProcessedRequestSentence(const History &history) {
 }
 
 std::string ProcessedRequestSentence::toBytes() const {
+  // Note: write in order of member definitions in class.
   std::ostringstream out(std::ostringstream::binary);
   writeVector<marian::Word>(out, words_);
 
@@ -91,17 +98,11 @@ ProcessedRequestSentence ProcessedRequestSentence::fromBytes(char const *data, s
   return sentence;
 }
 
-// "numActionQueues" indicates how many action containers there will be in
-// order to increase the throughput of registering an action.
-// "performActionsInParallelThreshold" indicates the threshold value above
-// which the actions are performed in parallel.
-// "maxNumThreadsToPerformActions" indicates how many threads will be used
-// when performing an action in parallel.
 LockLessClockCache::LockLessClockCache(const std::string &modelIdentifier, size_t sizeInBytes, size_t timeOutInSeconds,
                                        bool removeExpired /* = true */)
     : epochManagerConfig_(/*epochQueueSize=*/1000,
                           /*epochProcessingInterval=*/std::chrono::milliseconds(100),
-                          /*numActionQueues=*/1),
+                          /*numActionQueues=*/4),
       cacheConfig_{sizeInBytes, std::chrono::seconds(timeOutInSeconds), removeExpired},
       modelIdentifier_(modelIdentifier),
       service_(epochManagerConfig_),
@@ -193,6 +194,7 @@ void LRUCache<Key, Value, Hash>::unsafeInsert(const Key key, const Value value) 
   map_.insert({key, storage_.begin()});
 }
 
+// This is a lazy hash, we'll fix this with something better later.
 size_t WordsHashFn::operator()(const Words &words) const {
   std::string repr("");
   for (size_t idx = 0; idx < words.size(); idx++) {

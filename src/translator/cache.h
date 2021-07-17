@@ -17,7 +17,7 @@ struct CacheStats {
   size_t misses{0};
 };
 
-/// Thread-safe LRUCache
+/// Thread-safe naive LRUCache using a list and a hashmap.
 template <typename Key, typename Value, typename Hash = std::hash<Key>>
 class LRUCache {
  public:
@@ -54,8 +54,6 @@ class LRUCache {
   CacheStats stats_;    ///< Stores hits and misses for log/checks.
 };
 
-// Specialize for marian
-// This is a lazy hash, we'll fix this with something better later.
 struct WordsHashFn {
   size_t operator()(const Words &words) const;
 };
@@ -74,10 +72,10 @@ struct WordsHashFn {
 
 class ProcessedRequestSentence {
  public:
-  /// Empty construction
   ProcessedRequestSentence();
 
-  /// Construct from History
+  /// Construct from History - consolidate members which we require further and store the complete object (not
+  /// references to shared-pointers) for storage and recompute efficiency purposes.
   ProcessedRequestSentence(const History &history);
   void debug();
 
@@ -87,10 +85,18 @@ class ProcessedRequestSentence {
   const std::vector<float> &wordScores() const { return wordScores_; }
   float sentenceScore() const { return sentenceScore_; }
 
+  // Helpers to work with blobs / bytearray storing the class, particularly for L4. Storage follows the order of member
+  // definitions in this class. With vectors prefixed with sizes to allocate before reading in with the right sizes.
+
+  /// Deserialize the contents of an instance from a sequence of bytes. Compatible with toBytes.
   static ProcessedRequestSentence fromBytes(char const *data, size_t size);
+
+  /// Serialize the contents of an instance to a sequence of bytes. Should be compatible with fromBytes.
   std::string toBytes() const;
 
  private:
+  // Note: Adjust blob IO in order of the member definitions here, in the event of change.
+
   marian::Words words_;                ///< vector of marian::Word, no shared_ptrs
   data::SoftAlignment softAlignment_;  ///< history->traceSoftAlignment(); std::vector<std::vector<float>>
   std::vector<float> wordScores_;      ///< hyp->tracebackWordScores();
@@ -104,6 +110,7 @@ class LockLessClockCache {
   using KeyBytes = L4::IWritableHashTable::Key;
   using ValueBytes = L4::IWritableHashTable::Value;
 
+  // It may make sense to use (modelIdentifier, marian::Words) for key eventually when we have multiple models.
   using Key = marian::Words;
   using Value = marian::bergamot::ProcessedRequestSentence;
 

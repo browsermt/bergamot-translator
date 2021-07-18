@@ -21,42 +21,41 @@ class QualityEstimator {
   const float *means_ = nullptr;
   const float *coefficients_ = nullptr;
   const float *intercept_ = nullptr;
-  std::vector<float> modelParameters_;
   int numFeatures_ = 0;
-  mutable float overallMean_ = 0.0;
-  mutable std::vector<int> numSubWords_;
-  mutable std::vector<float> minWordScore_;
+  AlignedVector<float> modelMatrix_;
 
+  void load(const char *ptr_void, const size_t blobSize);
+
+ public:
   struct Header {
     uint64_t magic;        // BINARY_QE_MODEL_MAGIC
     uint64_t numFeatures;  // Length of all arrays.
   };
 
-  struct SentenceQualityEstimate {
+  struct WordsQualityEstimate {
     std::vector<float> wordQualityScores;
     std::vector<ByteRange> wordByteRanges;
     float sentenceScore = 0.0;
   };
 
-  void load(const char *ptr_void, const size_t blobSize);
-  void insertNewWord(SentenceQualityEstimate &sentenceQualityScores, const ByteRange &subword, const float subwordScore,
-                     const int lenSubwords) const;
-  void augumentGivenWord(SentenceQualityEstimate &sentenceQualityScores, const ByteRange &subword,
-                         const float subwordScore, const int lenSubwords, const int wordIndex) const;
+  struct ModelFeatures {
+    std::vector<float> wordMeanScores;
+    std::vector<float> minWordScores;
+    std::vector<int> numSubWords;
+    float overallMean = 0.0;
+  };
 
-  AlignedVector<float> extractFeatures(const SentenceQualityEstimate &qualityScores) const;
-  AlignedVector<float> buildLogisticModel() const;
-  void predictWordScores(const AlignedVector<float> &featureMatrix, const int numWords,
-                         SentenceQualityEstimate &sentenceQualityScores) const;
-  void computeWordProbabilities(SentenceQualityEstimate &sentenceQualityScores) const;
-
-  SentenceQualityEstimate mapBPEToWords(const Quality &quality, const AnnotatedText &target,
-                                        const size_t sentenceIdx) const;
-
- public:
   explicit QualityEstimator(AlignedMemory &&qualityEstimatorMemory);
 
-  void computeQualityScores(const Quality &quality, const AnnotatedText &target, const size_t sentenceIdx) const;
+  std::pair<std::vector<ByteRange>, ModelFeatures> mapBPEToWords(const std::vector< float > &logProbs, const AnnotatedText &target,
+                                                                 const size_t sentenceIdx) const;
+  std::vector<float> predictWordScores(const AlignedVector<float> &featureMatrix, const int numWords) const;
+  AlignedVector<float> buildLogisticModel() const;
+  AlignedVector<float> extractFeatures(const ModelFeatures &modelFeatures) const;
+  float computeWordProbabilities(std::vector<float> &wordQualityScores) const;
+
+  WordsQualityEstimate computeQualityScores(const std::vector< float > &logProbs, const AnnotatedText &target,
+                                            const size_t sentenceIdx) const;
 };
 
 }  // namespace bergamot

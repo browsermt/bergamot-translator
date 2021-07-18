@@ -23,7 +23,7 @@ class QualityEstimator {
   const float *intercept_ = nullptr;
   std::vector<float> modelParameters_;
   int numFeatures_ = 0;
-  mutable float overallMean_  = 0.0;
+  mutable float overallMean_ = 0.0;
   mutable std::vector<int> numSubWords_;
   mutable std::vector<float> minWordScore_;
 
@@ -41,21 +41,22 @@ class QualityEstimator {
   void load(const char *ptr_void, const size_t blobSize);
   void insertNewWord(SentenceQualityEstimate &sentenceQualityScores, const ByteRange &subword, const float subwordScore,
                      const int lenSubwords) const;
-  void augumentGivenWord(SentenceQualityEstimate &sentenceQualityScores, const ByteRange &subword, const float subwordScore,
-                         const int lenSubwords, const int wordIndex) const;
+  void augumentGivenWord(SentenceQualityEstimate &sentenceQualityScores, const ByteRange &subword,
+                         const float subwordScore, const int lenSubwords, const int wordIndex) const;
 
-  AlignedVector<float> extractFeatures(const SentenceQualityEstimate& qualityScores) const;
+  AlignedVector<float> extractFeatures(const SentenceQualityEstimate &qualityScores) const;
   AlignedVector<float> buildLogisticModel() const;
-  AlignedVector<float> predictWordScores(AlignedVector<float> &featureMatrix, const int numWords) const;
+  void predictWordScores(const AlignedVector<float> &featureMatrix, const int numWords,
+                         SentenceQualityEstimate &sentenceQualityScores) const;
+  void computeWordProbabilities(SentenceQualityEstimate &sentenceQualityScores) const;
 
-  SentenceQualityEstimate mapBPEToWords(const Quality& quality, const AnnotatedText& target, const size_t sentenceIdx) const;
+  SentenceQualityEstimate mapBPEToWords(const Quality &quality, const AnnotatedText &target,
+                                        const size_t sentenceIdx) const;
 
  public:
   explicit QualityEstimator(AlignedMemory &&qualityEstimatorMemory);
 
   void computeQualityScores(const Quality &quality, const AnnotatedText &target, const size_t sentenceIdx) const;
-
-
 };
 
 }  // namespace bergamot

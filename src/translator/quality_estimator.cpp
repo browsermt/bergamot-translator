@@ -44,16 +44,17 @@ void QualityEstimator::load(const char* ptr, size_t blobSize) {
   }
 }
 
-QualityEstimator::SentenceQualityEstimate QualityEstimator::mapBPEToWords(Quality quality, AnnotatedText target,
-                                                                          size_t sentenceIdx) const {
-  const ByteRange& sentenceByteRange = target.sentenceAsByteRange(sentenceIdx);
-  QualityEstimator::SentenceQualityEstimate sentenceQualityScores;
+QualityEstimator::SentenceQualityEstimate QualityEstimator::mapBPEToWords( const Quality& quality, const AnnotatedText& target,
+                                                                           const size_t sentenceIdx) const {
+  const auto sentenceByteRange = target.sentenceAsByteRange(sentenceIdx);
+  SentenceQualityEstimate sentenceQualityScores;
   int bpeLen = 1;
   int wordIdx = 0;
   int subwordIdx = wordIdx;
   float tmp;
-  for (float& subwordScore : quality.word) {
-    ByteRange subword = target.wordAsByteRange(sentenceIdx, subwordIdx);
+
+  for ( const float& subwordScore : quality.word) {
+    auto subword = target.wordAsByteRange(sentenceIdx, subwordIdx);
     if (subword.begin == sentenceByteRange.end) {  // EOS token
       insertNewWord(sentenceQualityScores, subword, subwordScore, 1);
       break;
@@ -74,19 +75,23 @@ QualityEstimator::SentenceQualityEstimate QualityEstimator::mapBPEToWords(Qualit
     subwordIdx++;
   }
   overallMean_ = quality.sequence / subwordIdx;
+
+  // sentenceQualityScores.wordByteRanges.pop_back();
+  // sentenceQualityScores.wordQualityScores.pop_back();
+
   return sentenceQualityScores;
 }
 
-void QualityEstimator::insertNewWord(QualityEstimator::SentenceQualityEstimate& sentenceQualityScores,
-                                     ByteRange& subword, float& subwordScore, int lenSubwords) const {
+void QualityEstimator::insertNewWord( SentenceQualityEstimate& sentenceQualityScores,
+                                     const ByteRange& subword, const float subwordScore, const int lenSubwords) const {
   numSubWords_.push_back(lenSubwords);
   minWordScore_.push_back(subwordScore);
   sentenceQualityScores.wordByteRanges.push_back(subword);
   sentenceQualityScores.wordQualityScores.push_back(subwordScore);
 }
 
-void QualityEstimator::augumentGivenWord(SentenceQualityEstimate& sentenceQualityScores, ByteRange& subword,
-                                         float& subwordScore, int lenSubwords, int wordIndex) const {
+void QualityEstimator::augumentGivenWord(SentenceQualityEstimate& sentenceQualityScores, const ByteRange& subword,
+                                         const float subwordScore, const int lenSubwords, const int wordIndex) const {
   ByteRange& currentWord = sentenceQualityScores.wordByteRanges.back();
   float& currentScores = sentenceQualityScores.wordQualityScores.back();
   float& minScore = minWordScore_.at(wordIndex - 1);
@@ -99,21 +104,16 @@ void QualityEstimator::augumentGivenWord(SentenceQualityEstimate& sentenceQualit
   }
 }
 
-AlignedVector<float> QualityEstimator::predictWordScores(AlignedVector<float>& featureMatrix, int numWords) const {
+AlignedVector<float> QualityEstimator::predictWordScores( const AlignedVector<float>& featureMatrix, const int numWords) const {
   const intgemm::Index featureRows = numWords;
   const intgemm::Index width = 64;
   const intgemm::Index modelRows = 8;
-  const AlignedVector<float>& modelMatrix = QualityEstimator::buildLogisticModel();
+  const auto modelMatrix = QualityEstimator::buildLogisticModel();
   float quant_mult = 1024.0f;
   AlignedVector<int16_t> A_prepared(featureMatrix.size());
   AlignedVector<int16_t> B_prepared(modelMatrix.size());
-  // Quantize A.
-  // TODO
-  // I dont know why is this failing
+
   intgemm::Int16::PrepareA(featureMatrix.begin(), A_prepared.begin(), quant_mult, numWords, width);
-  // Quantize B.
-  // TODO
-  // I dont know why is this failing
   intgemm::Int16::PrepareB(modelMatrix.begin(), B_prepared.begin(), quant_mult, width, modelRows);
 
   AlignedVector<float> modelScores(numWords);
@@ -135,29 +135,38 @@ AlignedVector<float> QualityEstimator::buildLogisticModel() const {
   return modelMatrix;
 }
 
-AlignedVector<float> QualityEstimator::extractFeatures(QualityEstimator::SentenceQualityEstimate qualityScores) const {
+AlignedVector<float> QualityEstimator::extractFeatures( const SentenceQualityEstimate& qualityScores) const {
   const intgemm::Index numWords = qualityScores.wordQualityScores.size();
-  const intgemm::Index width = 64;
-  AlignedVector<float> featureMatrix(1 * width);
-  const int& stdStart = 0;
-  const int& meanStart = 1 * numFeatures_;
+  // const intgemm::Index width = 64;
+  AlignedVector<float> featureMatrix( numWords  * numFeatures_ );
+  const int stdStart = 0;
+  const int meanStart = 1 * numFeatures_;
   for (int i = 0; i < numWords; i++) {
-    // scale features
-    featureMatrix[i] = (qualityScores.wordQualityScores[i] - modelParameters_[meanStart]) / modelParameters_[stdStart];
-    featureMatrix[i + 1 * numFeatures_] =
-        (minWordScore_[i] - modelParameters_[meanStart + 1]) / modelParameters_[stdStart + 1];
-    featureMatrix[i + 2 * numFeatures_] =
-        (numSubWords_[i] - modelParameters_[meanStart + 2]) / modelParameters_[stdStart + 2];
-    featureMatrix[i + 3 * numFeatures_] =
-        (overallMean_ - modelParameters_[meanStart + 3]) / modelParameters_[stdStart + 3];
+    featureMatrix[i* numFeatures_] = (qualityScores.wordQualityScores[i] - modelParameters_[meanStart]) / modelParameters_[stdStart];
+    featureMatrix[i* numFeatures_ + 1 ] = (minWordScore_[i] - modelParameters_[meanStart + 1]) / modelParameters_[stdStart + 1];
+    featureMatrix[i* numFeatures_ + 2 ] = (numSubWords_[i] - modelParameters_[meanStart + 2]) / modelParameters_[stdStart + 2];
+    featureMatrix[i* numFeatures_ + 3 ] = (overallMean_ - modelParameters_[meanStart + 3]) / modelParameters_[stdStart + 3];
   }
 
   return featureMatrix;
 }
 
-void QualityEstimator::computeQualityScores(Quality& quality, AnnotatedText& target, size_t sentenceIdx) const {
-  auto qualityScores = mapBPEToWords(quality, target, sentenceIdx);
-  auto featureMatrix = extractFeatures(std::move(qualityScores));
+void QualityEstimator::computeQualityScores( const Quality& quality, const AnnotatedText& target, const size_t sentenceIdx) const {
+
+  const std::vector< float > numbers = { -0.3, -0.0001, -0.002, -0.5, -0.2, -0.1, -0.001 };
+
+  float sequence =  0.0;
+
+  for( const auto number : numbers )
+  {
+    sequence += number;
+  }
+
+  const Quality qualityTemp = {  sequence, numbers };
+  // const AnnotatedText targetTemp( "Es un ejemplo." );
+
+  const auto qualityScores = mapBPEToWords(qualityTemp, target, sentenceIdx);
+  const auto featureMatrix = extractFeatures(qualityScores);
   predictWordScores(featureMatrix, qualityScores.wordQualityScores.size());
 }
 

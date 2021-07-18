@@ -30,25 +30,31 @@ class QualityEstimator {
     uint64_t magic;        // BINARY_QE_MODEL_MAGIC
     uint64_t numFeatures;  // Length of all arrays.
   };
+
   struct SentenceQualityEstimate {
     std::vector<float> wordQualityScores;
     std::vector<ByteRange> wordByteRanges;
-    float sentenceScore;
+    float sentenceScore = 0.0;
   };
 
   void load(const char *ptr_void, size_t blobSize);
-  SentenceQualityEstimate mapBPEToWords(Quality quality, AnnotatedText target, size_t sentenceIdx) const;
-  void insertNewWord(SentenceQualityEstimate &sentenceQualityScores, ByteRange &subword, float &subwordScore,
-                     int lenSubwords) const;
-  void augumentGivenWord(SentenceQualityEstimate &sentenceQualityScores, ByteRange &subword, float &subwordScore,
-                         int lenSubwords, int wordIndex) const;
-  AlignedVector<float> extractFeatures(SentenceQualityEstimate qualityScores) const;
+  void insertNewWord(SentenceQualityEstimate &sentenceQualityScores, const ByteRange &subword, const float subwordScore,
+                     const int lenSubwords) const;
+  void augumentGivenWord(SentenceQualityEstimate &sentenceQualityScores, const ByteRange &subword, const float subwordScore,
+                         const int lenSubwords, const int wordIndex) const;
+
+  AlignedVector<float> extractFeatures(const SentenceQualityEstimate& qualityScores) const;
   AlignedVector<float> buildLogisticModel() const;
-  AlignedVector<float> predictWordScores(AlignedVector<float> &featureMatrix, int numWords) const;
+  AlignedVector<float> predictWordScores(const AlignedVector<float> &featureMatrix, const int numWords) const;
+
+  SentenceQualityEstimate mapBPEToWords(const Quality& quality, const AnnotatedText& target, const size_t sentenceIdx) const;
 
  public:
   explicit QualityEstimator(const AlignedMemory &qualityEstimatorMemory);
-  void computeQualityScores(Quality &quality, AnnotatedText &target, size_t sentenceIdx) const;
+
+  void computeQualityScores(const Quality &quality, const AnnotatedText &target, const size_t sentenceIdx) const;
+
+
 };
 
 }  // namespace bergamot

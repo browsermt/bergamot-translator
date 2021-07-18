@@ -16,13 +16,14 @@ constexpr std::size_t HEADER_SIZE = 64 /* Keep alignment by being a multiple of 
 
 class QualityEstimator {
  private:
-  const float *stds_;
-  const float *means_;
-  const float *coefficients_;
-  const float *intercept_;
+  AlignedMemory memory_;
+  const float *stds_ = nullptr;
+  const float *means_ = nullptr;
+  const float *coefficients_ = nullptr;
+  const float *intercept_ = nullptr;
   std::vector<float> modelParameters_;
-  int numFeatures_;
-  mutable float overallMean_;
+  int numFeatures_ = 0;
+  mutable float overallMean_  = 0.0;
   mutable std::vector<int> numSubWords_;
   mutable std::vector<float> minWordScore_;
 
@@ -37,7 +38,7 @@ class QualityEstimator {
     float sentenceScore = 0.0;
   };
 
-  void load(const char *ptr_void, size_t blobSize);
+  void load(const char *ptr_void, const size_t blobSize);
   void insertNewWord(SentenceQualityEstimate &sentenceQualityScores, const ByteRange &subword, const float subwordScore,
                      const int lenSubwords) const;
   void augumentGivenWord(SentenceQualityEstimate &sentenceQualityScores, const ByteRange &subword, const float subwordScore,
@@ -45,12 +46,12 @@ class QualityEstimator {
 
   AlignedVector<float> extractFeatures(const SentenceQualityEstimate& qualityScores) const;
   AlignedVector<float> buildLogisticModel() const;
-  AlignedVector<float> predictWordScores(const AlignedVector<float> &featureMatrix, const int numWords) const;
+  AlignedVector<float> predictWordScores(AlignedVector<float> &featureMatrix, const int numWords) const;
 
   SentenceQualityEstimate mapBPEToWords(const Quality& quality, const AnnotatedText& target, const size_t sentenceIdx) const;
 
  public:
-  explicit QualityEstimator(const AlignedMemory &qualityEstimatorMemory);
+  explicit QualityEstimator(AlignedMemory &&qualityEstimatorMemory);
 
   void computeQualityScores(const Quality &quality, const AnnotatedText &target, const size_t sentenceIdx) const;
 

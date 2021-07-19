@@ -47,14 +47,15 @@ class QualityEstimator {
 
   explicit QualityEstimator(AlignedMemory &&qualityEstimatorMemory);
 
-  std::pair<std::vector<ByteRange>, ModelFeatures> mapBPEToWords(const std::vector< float > &logProbs, const AnnotatedText &target,
+  std::pair<std::vector<ByteRange>, ModelFeatures> mapBPEToWords(const std::vector<float> &logProbs,
+                                                                 const AnnotatedText &target,
                                                                  const size_t sentenceIdx) const;
   std::vector<float> predictWordScores(const AlignedVector<float> &featureMatrix, const int numWords) const;
   AlignedVector<float> buildLogisticModel() const;
   AlignedVector<float> extractFeatures(const ModelFeatures &modelFeatures) const;
   float computeWordProbabilities(std::vector<float> &wordQualityScores) const;
 
-  WordsQualityEstimate computeQualityScores(const std::vector< float > &logProbs, const AnnotatedText &target,
+  WordsQualityEstimate computeQualityScores(const std::vector<float> &logProbs, const AnnotatedText &target,
                                             const size_t sentenceIdx) const;
 };
 

@@ -1,6 +1,6 @@
 # Unit tests
 set(UNIT_TESTS
-    # annotation_tests
+    annotation_tests
     quality_estimator_tests
 )
 

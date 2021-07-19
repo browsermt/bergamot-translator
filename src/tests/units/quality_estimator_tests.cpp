@@ -62,7 +62,8 @@ SCENARIO("Quality Estimator Test ", "[QualityEstimator]") {
       WHEN("It's call buildLogisticModel") {
         const auto coefficientsVector = qualityEstimator.buildLogisticModel();
 
-        THEN( "Its a return a coefficients vector but beacuse of intgem will be created a 8 column matrix with other "
+        THEN(
+            "Its a return a coefficients vector but beacuse of intgem will be created a 8 column matrix with other "
             "values zero") {
           for (int i = 0; i < features.size(); ++i) {
             CHECK(coefficientsVector[i * 8] == coefficients[i]);
@@ -75,14 +76,12 @@ SCENARIO("Quality Estimator Test ", "[QualityEstimator]") {
       }
 
       WHEN("It's call mapBPEToWords") {
-        auto [wordByteRanges, modelFeatures ] = qualityEstimator.mapBPEToWords(logProbs, annotatedTarget, 0);
+        auto [wordByteRanges, modelFeatures] = qualityEstimator.mapBPEToWords(logProbs, annotatedTarget, 0);
 
         THEN("Return wordByteRanges and modelFeatures") {
-          CHECK(modelFeatures.wordMeanScores ==
-                std::vector<float>({-0.3, -0.0001, -0.002, -0.5, -0.15, -0.001}));
+          CHECK(modelFeatures.wordMeanScores == std::vector<float>({-0.3, -0.0001, -0.002, -0.5, -0.15, -0.001}));
 
-          CHECK(wordByteRanges ==
-                std::vector<ByteRange>({{0, 0}, {2, 5}, {7, 8}, {10, 11}, {13, 21}, {21, 21}}));
+          CHECK(wordByteRanges == std::vector<ByteRange>({{0, 0}, {2, 5}, {7, 8}, {10, 11}, {13, 21}, {21, 21}}));
 
           AND_WHEN("It's call extractFeatures") {
             const auto featuresMatrix = qualityEstimator.extractFeatures(modelFeatures);
@@ -91,12 +90,9 @@ SCENARIO("Quality Estimator Test ", "[QualityEstimator]") {
               REQUIRE(featuresMatrix.size() == 192);
 
               const std::vector<std::vector<float> > featuresMatrixExpected = {
-                  {-1.0, 1.56666648, -1.6, 3.1615},
-                  {0.4995, 2.56633306, -1.6, 3.1615},
-                  {0.49, 2.55999994, -1.6, 3.1615},
-                  {-2, 0.899999917, -1.6, 3.1615},
-                  {-0.25, 1.9, -1.2, 3.1615},
-                  {0.495, 2.56333327, -1.6, 3.1615}};
+                  {-1.0, 1.56666648, -1.6, 3.1615}, {0.4995, 2.56633306, -1.6, 3.1615},
+                  {0.49, 2.55999994, -1.6, 3.1615}, {-2, 0.899999917, -1.6, 3.1615},
+                  {-0.25, 1.9, -1.2, 3.1615},       {0.495, 2.56333327, -1.6, 3.1615}};
 
               for (int i = 0; i < modelFeatures.wordMeanScores.size(); ++i) {
                 INFO("Index: " + std::to_string(i))
@@ -112,20 +108,18 @@ SCENARIO("Quality Estimator Test ", "[QualityEstimator]") {
             }
 
             AND_WHEN("It's call predictWordScores") {
-              auto wordQualityScores = qualityEstimator.predictWordScores(featuresMatrix, modelFeatures.wordMeanScores.size() );
+              auto wordQualityScores =
+                  qualityEstimator.predictWordScores(featuresMatrix, modelFeatures.wordMeanScores.size());
 
               THEN("It's changed WordsQualityEstimate") {
-                CHECK(wordQualityScores ==
-                      std::vector<float>({2.021, 4.405, 4.390, 0.431, 2.984, 4.399}));
+                CHECK(wordQualityScores == std::vector<float>({2.021, 4.405, 4.390, 0.431, 2.984, 4.399}));
               }
 
               AND_WHEN("It's call WordsQualityEstimate") {
-
                 const auto sentenceScore = qualityEstimator.computeWordProbabilities(wordQualityScores);
 
                 THEN("It's changed WordsQualityEstimate") {
-                  CHECK(wordQualityScores ==
-                        std::vector<float>({0.883, 0.988, 0.988, 0.606, 0.952, 0.988}));
+                  CHECK(wordQualityScores == std::vector<float>({0.883, 0.988, 0.988, 0.606, 0.952, 0.988}));
                   CHECK(sentenceScore == Approx(0.90075));
                 }
               }

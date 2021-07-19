@@ -12,21 +12,6 @@ constexpr int getNextMultiple(const int number, const intgemm::Index multiple) {
   return (modWidth == 0) ? number : number + multiple - modWidth;
 }
 
-// AlignedVector<float> makeIntgen16Matrix(const intgemm::Index rows, const intgemm::Index columns,
-//                                         const intgemm::Index rowsMultiple, const intgemm::Index columnsMultiple) {
-//   AlignedVector<float> matrix(getNextMultiple(rows, rowsMultiple), getNextMultiple(columns, columnsMultiple));
-
-//   for (auto& elem : matrix) {
-//     elem = 0.0;
-//   }
-//   return std::move(matrix);
-// }
-
-// AlignedVector<float> makeIntgen16MatrixA(const intgemm::Index rows, const intgemm::Index columns) {
-//   return std::move(
-//       makeIntgen16Matrix(rows, columns, intgemm::Int16::tile_info.a_rows, intgemm::Int16::tile_info.a_cols));
-// }
-
 constexpr intgemm::Index getIntgenWidth(const int number) {
   return getNextMultiple(number, intgemm::Int16::tile_info.a_cols);
 }
@@ -68,7 +53,7 @@ void QualityEstimator::load(const char* ptr, const size_t blobSize) {
 }
 
 std::pair<std::vector<ByteRange>, QualityEstimator::ModelFeatures> QualityEstimator::mapBPEToWords(
-    const std::vector< float > &logProbs, const AnnotatedText& target, const size_t sentenceIdx) const {
+    const std::vector<float>& logProbs, const AnnotatedText& target, const size_t sentenceIdx) const {
   const auto sentenceByteRange = target.sentenceAsByteRange(sentenceIdx);
   std::vector<ByteRange> wordByteRanges;
   WordsQualityEstimate wordsQualityEstimate;
@@ -190,10 +175,10 @@ AlignedVector<float> QualityEstimator::extractFeatures(const ModelFeatures& mode
   for (int i = 0; i < numWords; ++i) {
     int j = 0;
 
-    for (const auto value : {modelFeatures.wordMeanScores[i],  modelFeatures.minWordScores[i],
-                             static_cast< float >( modelFeatures.numSubWords[i]), modelFeatures.overallMean}) {
-      const auto stdsTemp = *( stds_ + j ) != 0.0 ? *( stds_ + j ) : 1.0f;
-      featureMatrix[8 * i * numFeatures_ + j] = (value - *(means_ + j) ) / stdsTemp;
+    for (const auto value : {modelFeatures.wordMeanScores[i], modelFeatures.minWordScores[i],
+                             static_cast<float>(modelFeatures.numSubWords[i]), modelFeatures.overallMean}) {
+      const auto stdsTemp = *(stds_ + j) != 0.0 ? *(stds_ + j) : 1.0f;
+      featureMatrix[8 * i * numFeatures_ + j] = (value - *(means_ + j)) / stdsTemp;
       ++j;
     }
   }
@@ -201,8 +186,7 @@ AlignedVector<float> QualityEstimator::extractFeatures(const ModelFeatures& mode
   return featureMatrix;
 }
 
-float QualityEstimator::computeWordProbabilities(std::vector<float> &wordQualityScores) const {
-
+float QualityEstimator::computeWordProbabilities(std::vector<float>& wordQualityScores) const {
   float sentenceScore = 0.0;
 
   for (int i = 0; i < wordQualityScores.size(); ++i) {
@@ -215,7 +199,7 @@ float QualityEstimator::computeWordProbabilities(std::vector<float> &wordQuality
   return sentenceScore / wordQualityScores.size();
 }
 
-QualityEstimator::WordsQualityEstimate QualityEstimator::computeQualityScores(const std::vector< float > &logProbs,
+QualityEstimator::WordsQualityEstimate QualityEstimator::computeQualityScores(const std::vector<float>& logProbs,
                                                                               const AnnotatedText& target,
                                                                               const size_t sentenceIdx) const {
   auto [wordByteRanges, modelFeatures] = mapBPEToWords(logProbs, target, sentenceIdx);
@@ -225,7 +209,7 @@ QualityEstimator::WordsQualityEstimate QualityEstimator::computeQualityScores(co
 
   const auto setenceScore = computeWordProbabilities(wordQualityScores);
 
-  return {wordQualityScores, wordByteRanges, setenceScore };
+  return {wordQualityScores, wordByteRanges, setenceScore};
 }
 }  // namespace bergamot
 }  // namespace marian

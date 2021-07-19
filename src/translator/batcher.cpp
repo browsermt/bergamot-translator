@@ -46,10 +46,12 @@ bool Batcher::cleaveBatch(Batch &batch) {
 
 void Batcher::addWholeRequest(Ptr<Request> request) {
   for (size_t i = 0; i < request->numSegments(); i++) {
-    RequestSentence sentence(i, request);
-    size_t bucket_id = sentence.numTokens();
-    assert(bucket_id < bucket_.size());
-    bucket_[bucket_id].insert(sentence);
+    if (!request->isCachePrefilled(i)) {
+      RequestSentence sentence(i, request);
+      size_t bucket_id = sentence.numTokens();
+      assert(bucket_id < bucket_.size());
+      bucket_[bucket_id].insert(sentence);
+    }
   }
 }
 

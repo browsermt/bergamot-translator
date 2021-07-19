@@ -33,6 +33,8 @@ void annotatedTextWords(Ptr<Options> options, bool source = true);
 // in each line, depending on source = true or false respectively.
 void annotatedTextSentences(Ptr<Options> options, bool source = true);
 
+void translationCache(Ptr<Options> options);
+
 }  // namespace testapp
 }  // namespace bergamot
 }  // namespace marian

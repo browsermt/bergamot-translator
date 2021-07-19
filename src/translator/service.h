@@ -2,6 +2,7 @@
 #define SRC_BERGAMOT_SERVICE_H_
 
 #include "batch_translator.h"
+#include "cache.h"
 #include "data/types.h"
 #include "response.h"
 #include "response_builder.h"
@@ -99,6 +100,9 @@ class Service {
   /// Returns if model is alignment capable or not.
   bool isAlignmentSupported() const { return options_->hasAndNotEmpty("alignment"); }
 
+  /// Returns cache stats
+  CacheStats cacheStats() { return cache_.stats(); }
+
  private:
   /// Queue an input for translation.
   void queueRequest(std::string &&input, std::function<void(Response &&)> &&callback, ResponseOptions responseOptions);
@@ -130,6 +134,9 @@ class Service {
   /// Batcher handles generation of batches from a request, subject to
   /// packing-efficiency and priority optimization heuristics.
   ThreadsafeBatcher batcher_;
+
+  /// LRUCache, threadsafe.
+  TranslatorLRUCache cache_;
 
   // The following constructs are available providing full capabilities on a non
   // WASM platform, where one does not have to hide threads.

@@ -55,6 +55,52 @@ void annotatedTextSentences(Ptr<Options> options, bool source) {
   }
 }
 
+void translationCache(Ptr<Options> options) {
+  // Prepare memories for bytearrays (including model, shortlist and vocabs)
+  MemoryBundle memoryBundle;
+  ResponseOptions responseOptions;
+
+  if (options->get<bool>("bytearray")) {
+    // Load legit values into bytearrays.
+    memoryBundle = getMemoryBundleFromConfig(options);
+  }
+
+  Service service(options, std::move(memoryBundle));
+
+  // Read a large input text blob from stdin
+  std::ostringstream inputStream;
+  inputStream << std::cin.rdbuf();
+  std::string input = inputStream.str();
+
+  auto translateForResponse = [&service, &responseOptions](std::string input) {
+    std::promise<Response> responsePromise;
+    std::future<Response> responseFuture = responsePromise.get_future();
+    auto callback = [&responsePromise](Response &&response) { responsePromise.set_value(std::move(response)); };
+
+    service.translate(std::move(input), callback, responseOptions);
+
+    responseFuture.wait();
+    Response response = responseFuture.get();
+    return response;
+  };
+
+  Response response;
+
+  // Round 1
+  response = translateForResponse(input);
+
+  auto statsFirstRun = service.cacheStats();
+  LOG(info, "Cache Hits/Misses = {}/{}", statsFirstRun.hits, statsFirstRun.misses);
+  ABORT_IF(statsFirstRun.hits != 0, "Expecting no cache hits, but hits found.");
+
+  // Round 2; There should be cache hits
+  response = translateForResponse(input);
+
+  auto statsSecondRun = service.cacheStats();
+  LOG(info, "Cache Hits/Misses = {}/{}", statsSecondRun.hits, statsSecondRun.misses);
+  ABORT_IF(statsSecondRun.hits == 0, "No cache hits while expected non-zero");
+}
+
 }  // namespace testapp
 }  // namespace bergamot
 }  // namespace marian

@@ -9,6 +9,9 @@ endif(COMPILE_WASM)
 
 add_subdirectory(ssplit-cpp)
 
+set(L4_COMPILE_UNIT_TESTS OFF)
+add_subdirectory(L4)
+
 # Add include directories for 3rd party targets to be able to use it anywhere in the
 # project without explicitly specifying their include directories. Once they
 # fixe this problem, it can be removed.
@@ -18,7 +21,10 @@ target_include_directories(marian PUBLIC ${INCDIRS})
 get_property(INCLUDE_DIRECTORIES DIRECTORY ssplit-cpp/src PROPERTY INCLUDE_DIRECTORIES)
 target_include_directories(ssplit PUBLIC ${INCLUDE_DIRECTORIES})
 
+get_property(L4_INCLUDE_DIRECTORIES DIRECTORY L4 PROPERTY INCLUDE_DIRECTORIES)
+target_include_directories(L4 PUBLIC ${L4_INCLUDE_DIRECTORIES})
 # Compilation flags 
+
 get_directory_property(CMAKE_C_FLAGS DIRECTORY marian-dev DEFINITION CMAKE_C_FLAGS) 
 get_directory_property(CMAKE_CXX_FLAGS DIRECTORY marian-dev DEFINITION CMAKE_CXX_FLAGS) 
 set(CMAKE_C_FLAGS ${CMAKE_C_FLAGS} PARENT_SCOPE)    

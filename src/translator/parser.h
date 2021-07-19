@@ -29,6 +29,8 @@ inline marian::ConfigParser createConfigParser() {
   cp.addOption<std::string>("--bergamot-mode", "Bergamot Options",
                             "Operating mode for bergamot: [wasm, native, decoder]", "native");
 
+  cp.addOption<size_t>("--cache-size", "Bergamot Options", "Number of histories to keep in translation cache", 20);
+
   return cp;
 }
 

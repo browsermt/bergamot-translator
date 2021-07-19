@@ -11,22 +11,35 @@ namespace marian {
 namespace bergamot {
 
 // -----------------------------------------------------------------
-Request::Request(size_t Id, Segments &&segments, ResponseBuilder &&responseBuilder)
+Request::Request(size_t Id, Segments &&segments, ResponseBuilder &&responseBuilder, TranslatorLRUCache &cache)
     : Id_(Id),
       segments_(std::move(segments)),
-      responseBuilder_(std::move(responseBuilder))
+      responseBuilder_(std::move(responseBuilder)),
+      cache_(cache)
 
 {
   counter_ = segments_.size();
-  histories_.resize(segments_.size(), nullptr);
+  // processedRequestSentences_.resize(segments_.size(), nullptr);
+  processedRequestSentences_.resize(segments_.size());
 
-  // If there are no segments_, we are never able to trigger the responseBuilder
-  // calls from a different thread. However, in this case we want an empty valid
-  // response.
-  if (segments_.size() == 0) {
-    responseBuilder_(std::move(histories_));
+  for (size_t idx = 0; idx < segments_.size(); idx++) {
+    ProcessedRequestSentence processedRequestSentence;
+    if (cache_.fetch(getSegment(idx), processedRequestSentence)) {
+      processedRequestSentences_[idx] = std::make_unique<ProcessedRequestSentence>(processedRequestSentence);
+      --counter_;
+    }
+  }
+
+  // If there are no segments_, we are never able to trigger the responseBuilder calls from a different thread. However,
+  // in this case we want an empty valid response. Also, if cache somehow manages to decrease all counter prefilling
+  // histories, then we'd have to trigger ResponseBuilder as well. No segments go into batching and therefore no
+  // processHistory triggers.
+  if (segments_.size() == 0 || counter_.load() == 0) {
+    responseBuilder_(std::move(processedRequestSentences_));
   }
 }
+
+bool Request::isCachePrefilled(size_t index) { return (processedRequestSentences_[index] != nullptr); }
 
 size_t Request::numSegments() const { return segments_.size(); }
 
@@ -37,12 +50,13 @@ Segment Request::getSegment(size_t index) const { return segments_[index]; }
 void Request::processHistory(size_t index, Ptr<History> history) {
   // Concurrently called by multiple workers as a history from translation is
   // ready. The container storing histories is set with the value obtained.
-  histories_[index] = history;
+  processedRequestSentences_[index] = std::make_unique<ProcessedRequestSentence>(*history);
+  cache_.insert(getSegment(index), *processedRequestSentences_[index]);
 
   // In case this is last request in, completeRequest is called, which sets the
   // value of the promise.
   if (--counter_ == 0) {
-    responseBuilder_(std::move(histories_));
+    responseBuilder_(std::move(processedRequestSentences_));
   }
 }
 
@@ -72,6 +86,8 @@ bool operator<(const RequestSentence &a, const RequestSentence &b) {
   }
   return a.request_ < b.request_;
 }
+
+bool RequestSentence::isCachePrefilled() { return request_->isCachePrefilled(index_); }
 
 // ----------------------------------------------------------------------
 

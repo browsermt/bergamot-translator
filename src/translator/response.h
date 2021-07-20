@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "annotation.h"
+#include "quality_estimator.h"
 #include "data/alignment.h"
 #include "data/types.h"
 #include "definitions.h"
@@ -25,14 +26,6 @@ struct Point {
 
 /// Alignment is a sparse matrix, where Points represent entries with values.
 typedef std::vector<Point> Alignment;
-
-/// -loglikelhoods of the sequence components as proxy to quality.
-struct Quality {
-  /// Certainty/uncertainty score for sequence.
-  float sequence;
-  /// Certainty/uncertainty for each word in the sequence.
-  std::vector<float> word;
-};
 
 /// Response holds AnnotatedText(s) of source-text and translated text,
 /// alignment information between source and target sub-words and sentences.
@@ -58,7 +51,7 @@ struct Response {
   /// normalized by length, for each sentence processed by the translator.
   /// Indices correspond to ranges accessible through respective Annotation on
   /// source or target.
-  std::vector<Quality> qualityScores;
+  std::vector<QualityEstimator::WordsQualityEstimate> qualityScores;
 
   /// Alignments between source and target. Each Alignment is a
   /// sparse matrix representation with indices corresponding

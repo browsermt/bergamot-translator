@@ -7,6 +7,8 @@
 #include "response_options.h"
 #include "vocabs.h"
 
+#include <optional>
+
 // For now we will work with this, to avoid complaints another structure is hard
 // to operate with.
 
@@ -29,7 +31,7 @@ class ResponseBuilder {
   /// to provide translation quality probability.
   ResponseBuilder(ResponseOptions responseOptions, AnnotatedText &&source, Vocabs &vocabs,
                   std::function<void(Response &&)> callback,
-                  const QualityEstimator &qualityEstimator)
+                  const std::optional< QualityEstimator > &qualityEstimator)
       : responseOptions_(responseOptions),
         source_(std::move(source)),
         vocabs_(vocabs),
@@ -54,7 +56,7 @@ class ResponseBuilder {
     buildTranslatedText(histories, response);
 
     // Should always be after buildTranslatedText
-    if (responseOptions_.qualityScores) {
+    if (responseOptions_.qualityScores && qualityEstimator_.has_value() ) {
       buildQualityScores(histories, response);
     }
 
@@ -92,7 +94,7 @@ class ResponseBuilder {
                                                //  after Response constructed.
   AnnotatedText source_;
 
-  const QualityEstimator &qualityEstimator_;
+  const std::optional< QualityEstimator >& qualityEstimator_;
 };
 }  // namespace bergamot
 }  // namespace marian

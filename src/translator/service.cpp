@@ -17,13 +17,16 @@ Service::Service(Ptr<Options> options, MemoryBundle memoryBundle)
       batcher_(options),
       numWorkers_(std::max<int>(1, options->get<int>("cpu-threads"))),
       modelMemory_(std::move(memoryBundle.model)),
-      shortlistMemory_(std::move(memoryBundle.shortlist)),
-      qualityEstimator_(std::move(memoryBundle.qualityEstimatorMemory))
+      shortlistMemory_(std::move(memoryBundle.shortlist))
 #ifdef WASM_COMPATIBLE_SOURCE
       ,
       blocking_translator_(DeviceId(0, DeviceType::cpu), vocabs_, options_, &modelMemory_, &shortlistMemory_)
 #endif
 {
+  if( memoryBundle.qualityEstimatorMemory.size() > 0  )
+  {
+    qualityEstimator_.emplace( std::move(memoryBundle.qualityEstimatorMemory ) );
+  }
 #ifdef WASM_COMPATIBLE_SOURCE
   blocking_translator_.initialize();
 #else

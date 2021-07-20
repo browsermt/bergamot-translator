@@ -7,6 +7,8 @@
 #include "response_options.h"
 #include "vocabs.h"
 
+#include <optional>
+
 // For now we will work with this, to avoid complaints another structure is hard
 // to operate with.
 
@@ -25,10 +27,10 @@ class ResponseBuilder {
   /// or not in the response and any additional configurable parameters.
   /// @param [in] vocabs: marian vocab object (used in decoding)
   /// @param [in] promise: promise to set with the constructed Response.
-  /// @param [in] qualityEstimator: the QualityEstimator model that can be used 
+  /// @param [in] qualityEstimator: the QualityEstimator model that can be used
   /// to provide translation quality probability.
   ResponseBuilder(ResponseOptions responseOptions, AnnotatedText &&source, Vocabs &vocabs,
-                  std::promise<Response> &&promise, const QualityEstimator &qualityEstimator)
+                  std::promise<Response> &&promise, const std::optional< QualityEstimator > &qualityEstimator)
       : responseOptions_(responseOptions),
         source_(std::move(source)),
         vocabs_(vocabs),
@@ -53,7 +55,7 @@ class ResponseBuilder {
     buildTranslatedText(histories, response);
 
     // Should always be after buildTranslatedText
-    if (responseOptions_.qualityScores) {
+    if (responseOptions_.qualityScores && qualityEstimator_.has_value() ) {
       buildQualityScores(histories, response);
     }
 
@@ -92,7 +94,7 @@ class ResponseBuilder {
                                     //  after Response constructed.
   AnnotatedText source_;
 
-  const QualityEstimator &qualityEstimator_;
+  const std::optional< QualityEstimator >& qualityEstimator_;
 };
 }  // namespace bergamot
 }  // namespace marian

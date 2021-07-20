@@ -6,7 +6,6 @@
 
 #include "annotation.h"
 #include "intgemm/intgemm.h"
-#include "response.h"
 
 namespace marian {
 namespace bergamot {

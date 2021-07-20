@@ -25,7 +25,8 @@ class ResponseBuilder {
   /// or not in the response and any additional configurable parameters.
   /// @param [in] vocabs: marian vocab object (used in decoding)
   /// @param [in] callback: callback with operates on the constructed Response.
-  /// @param [in] qualityEstimator: promise to set with the constructed Response.
+  /// @param [in] qualityEstimator: the QualityEstimator model that can be used
+  /// to provide translation quality probability.
   ResponseBuilder(ResponseOptions responseOptions, AnnotatedText &&source, Vocabs &vocabs,
                   std::function<void(Response &&)> callback,
                   const QualityEstimator &qualityEstimator)
@@ -54,9 +55,6 @@ class ResponseBuilder {
 
     // Should always be after buildTranslatedText
     if (responseOptions_.qualityScores) {
-      // TODO:
-      // Creates QualityEstimator model given qualityEstimator
-      // Pass it here
       buildQualityScores(histories, response);
     }
 

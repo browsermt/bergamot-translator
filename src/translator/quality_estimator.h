@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "annotation.h"
+#include "definitions.h"
 #include "intgemm/intgemm.h"
 
 namespace marian {

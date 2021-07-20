@@ -33,17 +33,24 @@ constexpr std::size_t BINARY_QE_MODEL_MAGIC = 0x78cc336f1d54b180;
 /// The model takes four features: the mean of a word byte pair encoding log probabilities; 
 /// the minimum of logprobs; the number of bpe that a word is made of and the overall mean
 /// of bpe tokens log probs
-
 class QualityEstimator {
  private:
+  //AlignedMemory of QE model. This is going to be built from load model
   AlignedMemory memory_;
+  //pointer of std of features vector. This is going to be built from load model
   const float *stds_ = nullptr;
+  //pointer of means of features vector. This is going to be built from load model
   const float *means_ = nullptr;
+  //pointer of coefficient of features vector. This is going to be built from load model
   const float *coefficients_ = nullptr;
+  //pointer of intercept of features vector. This is going to be built from load model
   const float *intercept_ = nullptr;
+  //total number of features in the QE model. This is going to be built from load model
   int numFeatures_ = 0;
+  //QE model matrix representation. This is going to be loaded from buildLinearModel
   AlignedVector<float> modelMatrix_;
 
+  //binary file parser which came from AlinedMemory
   void load(const char *ptr_void, const size_t blobSize);
 
  public:

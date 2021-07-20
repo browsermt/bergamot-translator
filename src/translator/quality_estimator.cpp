@@ -193,7 +193,7 @@ float QualityEstimator::computeWordProbabilities(std::vector<float>& wordQuality
     elem = 1 / (1 + std::exp(-elem));
     sentenceScore += elem;
   }
-  // Question for the future:
+  // TODO:
   // Should we include or remove the end of sentence (EOS) token?
   return sentenceScore / wordQualityScores.size();
 }

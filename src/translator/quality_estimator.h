@@ -12,7 +12,12 @@ namespace marian {
 namespace bergamot {
 // ASCII and Unicode text files never start with the following 64 bits
 constexpr std::size_t BINARY_QE_MODEL_MAGIC = 0x78cc336f1d54b180;
-constexpr std::size_t HEADER_SIZE = 64 /* Keep alignment by being a multiple of 64 bytes */;
+
+/// QualityEstimator is responsible for measuring the quality of the translation
+/// expecting a AlignedMemory object with a Header
+///
+///
+///
 
 class QualityEstimator {
  private:
@@ -45,8 +50,14 @@ class QualityEstimator {
     float overallMean = 0.0;
   };
 
+  /// Construct a QualityEstimator
+  /// @param [in] qualityEstimatorMemory: AlignedMemory, the quality estimator information
   explicit QualityEstimator(AlignedMemory &&qualityEstimatorMemory);
 
+  /// Builds the words byte ranges and the model features
+  /// @param [in] lobProbs:
+  /// @param [in] target:
+  /// @param [in] sentence:
   std::pair<std::vector<ByteRange>, ModelFeatures> mapBPEToWords(const std::vector<float> &logProbs,
                                                                  const AnnotatedText &target,
                                                                  const size_t sentenceIdx) const;

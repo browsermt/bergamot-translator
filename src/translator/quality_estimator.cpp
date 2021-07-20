@@ -34,7 +34,8 @@ void QualityEstimator::load(const char* ptr, const size_t blobSize) {
    * coefficients array
    * intercepts array
    */
-  ABORT_IF(blobSize < HEADER_SIZE, "Quality estimation file too small");
+
+  ABORT_IF(blobSize < sizeof(Header), "Quality estimation file too small");
   const Header& header = *reinterpret_cast<const Header*>(ptr);
   numFeatures_ = header.numFeatures / sizeof(float);
   ptr += sizeof(Header);
@@ -119,8 +120,6 @@ std::pair<std::vector<ByteRange>, QualityEstimator::ModelFeatures> QualityEstima
 
 std::vector<float> QualityEstimator::predictWordScores(const AlignedVector<float>& featureMatrix,
                                                        const int numWords) const {
-  const intgemm::Index featureRows = numWords;
-
   float quant_mult = 1024.0f;
 
   AlignedVector<int16_t> A_prepared(featureMatrix.size());

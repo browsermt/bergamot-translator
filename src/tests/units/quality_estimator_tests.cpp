@@ -59,8 +59,8 @@ SCENARIO("Quality Estimator Test ", "[QualityEstimator]") {
     AND_GIVEN("QualityEstimator") {
       QualityEstimator qualityEstimator(std::move(memory));
 
-      WHEN("It's call buildLogisticModel") {
-        const auto coefficientsVector = qualityEstimator.buildLogisticModel();
+      WHEN("It's call buildLinearModel") {
+        const auto coefficientsVector = qualityEstimator.buildLinearModel();
 
         THEN(
             "Its a return a coefficients vector but beacuse of intgem will be created a 8 column matrix with other "

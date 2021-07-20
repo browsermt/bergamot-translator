@@ -50,7 +50,7 @@ void QualityEstimator::load(const char* ptr, const size_t blobSize) {
   coefficients_ = (begin += numFeatures_);
   intercept_ = (begin += numFeatures_);
 
-  modelMatrix_ = buildLogisticModel();
+  modelMatrix_ = buildLinearModel();
 }
 
 std::pair<std::vector<ByteRange>, QualityEstimator::ModelFeatures> QualityEstimator::mapBPEToWords(
@@ -146,7 +146,7 @@ std::vector<float> QualityEstimator::predictWordScores(const AlignedVector<float
   return wordQualityScores;
 }
 
-AlignedVector<float> QualityEstimator::buildLogisticModel() const {
+AlignedVector<float> QualityEstimator::buildLinearModel() const {
   AlignedVector<float> modelMatrix(getIntgenWidth(numFeatures_) * getIntgenBColumn(1));
 
   for (auto& elem : modelMatrix) {

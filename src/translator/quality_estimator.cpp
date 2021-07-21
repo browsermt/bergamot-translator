@@ -92,7 +92,11 @@ std::pair<std::vector<ByteRange>, QualityEstimator::ModelFeatures> QualityEstima
     sequence += subwordScore;
 
     auto subword = target.wordAsByteRange(sentenceIdx, subwordIdx);
-
+    /// a word is composed by multiple subtokens. The EOS token
+    /// is the only one where subword.begin si the same as the end
+    /// Therefore, if both are equal, we have reached the end of sentence
+    /// If we do not apply an break statement the code would fail since
+    /// target.text do not contain the EOS token
     if (subword.begin == sentenceByteRange.end) {  // EOS token
       insertNewWord(subword, subwordScore, 1);
       break;

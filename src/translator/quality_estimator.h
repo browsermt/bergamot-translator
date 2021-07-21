@@ -37,15 +37,17 @@ class QualityEstimator {
  private:
   // AlignedMemory of QE model. This is going to be built from load model
   AlignedMemory memory_;
-  // pointer of std of features vector. This is going to be built from load model
+  /// The current Quality Estimator model is a Logistic Model implemented through 
+  /// a linear regressor + sigmoid function. Simply speaking, a LR model depends on
+  /// features to be scaled, so it contains four elements of data: a vector of coeficients
+  /// and a intercept (which represents the linear model) and a vector os means and stds
+  /// (which are necessary for feature scaling). These pointers are firstly initialized by
+  /// parsing a file (which comes from memory) and then they are used to build a model
+  /// representation (which is a matrix)
   const float *stds_ = nullptr;
-  // pointer of means of features vector. This is going to be built from load model
   const float *means_ = nullptr;
-  // pointer of coefficient of features vector. This is going to be built from load model
   const float *coefficients_ = nullptr;
-  // pointer of intercept of features vector. This is going to be built from load model
   const float *intercept_ = nullptr;
-  // total number of features in the QE model. This is going to be built from load model
   int numFeatures_ = 0;
   // QE model matrix representation. This is going to be loaded from buildLinearModel
   AlignedVector<float> modelMatrix_;
@@ -62,10 +64,8 @@ class QualityEstimator {
   /// WordQualityScores contains the quality data of a given translated sentence
   ///
   /// It contains the confidence of each translated word quality
-  /// (bigger probabilities implies in better models); the ByteRanges of each word
-  /// the mean confidence, which represents the mean confidence.
-  ///
-  /// This is going to be the result of computeQualityScores
+  /// (higher probabilities implies in better translated words); the ByteRanges of each word
+  /// and the confidence of the whole sentence, represented as the mean word scores
   struct WordsQualityEstimate {
     std::vector<float> wordQualityScores;
     std::vector<ByteRange> wordByteRanges;
@@ -106,9 +106,9 @@ class QualityEstimator {
   /// @param [in] modelFeatures: a struct which contains the std and mean vectores of each feature
   AlignedVector<float> extractFeatures(const ModelFeatures &modelFeatures) const;
 
-  /// Applies a sigmoid function to each word in a vector and returns the mean of these probabilities
-  /// @param [in] wordQualityScores: the vector of real values returned by a linear regression
-  float computeWordProbabilities(std::vector<float> &wordQualityScores) const;
+  /// Applies a sigmoid function to each element of a vector and returns the mean of the result vector
+  /// @param [in] linearPredictedValues: the vector of real values returned by a linear regression
+  float computeWordProbabilities(std::vector<float> &linearPredictedValues) const;
 
   /// construct the struct WordsQualityEstimate
   /// @param [in] logProbs: the log probabilities given by an translation model

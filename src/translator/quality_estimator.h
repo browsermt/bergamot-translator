@@ -14,43 +14,43 @@ namespace bergamot {
 constexpr std::size_t BINARY_QE_MODEL_MAGIC = 0x78cc336f1d54b180;
 
 /// QualityEstimator is responsible for measuring the quality of a translation
-/// model. 
+/// model.
 ///
-/// Currently, it only expects an AlignedMemory, which should be provided 
-/// from a binary file, which contains a header. 
+/// Currently, it only expects an AlignedMemory, which should be provided
+/// from a binary file, which contains a header.
 ///
 /// The header contains the following structure: a vector of standard deviations
 /// of features; a vector of means of features; a vector of coefficients
 /// and a vector of constant, which correspond to the intercept.
 ///
 /// The first two ones are necessary for feature scaling whereas the last two are necessary
-/// for model computation. 
+/// for model computation.
 ///
-///The current model implementation is a Logistic Model, so after the matrix multiply, 
+/// The current model implementation is a Logistic Model, so after the matrix multiply,
 /// there is a non-linear sigmoid transformation which converts the final scores
 /// into probabilities.
 ///
-/// The model takes four features: the mean of a word byte pair encoding log probabilities; 
+/// The model takes four features: the mean of a word byte pair encoding log probabilities;
 /// the minimum of logprobs; the number of bpe that a word is made of and the overall mean
 /// of bpe tokens log probs
 class QualityEstimator {
  private:
-  //AlignedMemory of QE model. This is going to be built from load model
+  // AlignedMemory of QE model. This is going to be built from load model
   AlignedMemory memory_;
-  //pointer of std of features vector. This is going to be built from load model
+  // pointer of std of features vector. This is going to be built from load model
   const float *stds_ = nullptr;
-  //pointer of means of features vector. This is going to be built from load model
+  // pointer of means of features vector. This is going to be built from load model
   const float *means_ = nullptr;
-  //pointer of coefficient of features vector. This is going to be built from load model
+  // pointer of coefficient of features vector. This is going to be built from load model
   const float *coefficients_ = nullptr;
-  //pointer of intercept of features vector. This is going to be built from load model
+  // pointer of intercept of features vector. This is going to be built from load model
   const float *intercept_ = nullptr;
-  //total number of features in the QE model. This is going to be built from load model
+  // total number of features in the QE model. This is going to be built from load model
   int numFeatures_ = 0;
-  //QE model matrix representation. This is going to be loaded from buildLinearModel
+  // QE model matrix representation. This is going to be loaded from buildLinearModel
   AlignedVector<float> modelMatrix_;
 
-  //binary file parser which came from AlinedMemory
+  // binary file parser which came from AlinedMemory
   void load(const char *ptr_void, const size_t blobSize);
 
  public:
@@ -59,22 +59,22 @@ class QualityEstimator {
     uint64_t numFeatures;  // Length of all arrays.
   };
 
-/// WordQualityScores contains the quality data of a given translated sentence
-/// 
-/// It contains the confidence of each translated word quality 
-/// (bigger probabilities implies in better models); the ByteRanges of each word
-/// the mean confidence, which represents the mean confidence.
-///
-/// This is going to be the result of computeQualityScores
+  /// WordQualityScores contains the quality data of a given translated sentence
+  ///
+  /// It contains the confidence of each translated word quality
+  /// (bigger probabilities implies in better models); the ByteRanges of each word
+  /// the mean confidence, which represents the mean confidence.
+  ///
+  /// This is going to be the result of computeQualityScores
   struct WordsQualityEstimate {
     std::vector<float> wordQualityScores;
     std::vector<ByteRange> wordByteRanges;
     float sentenceScore = 0.0;
   };
 
-/// ModelFeatures represents the features used by a given model.
-/// 
-/// It's valued are filled through mapBPEToWords
+  /// ModelFeatures represents the features used by a given model.
+  ///
+  /// It's valued are filled through mapBPEToWords
   struct ModelFeatures {
     std::vector<float> wordMeanScores;
     std::vector<float> minWordScores;
@@ -93,9 +93,9 @@ class QualityEstimator {
   std::pair<std::vector<ByteRange>, ModelFeatures> mapBPEToWords(const std::vector<float> &logProbs,
                                                                  const AnnotatedText &target,
                                                                  const size_t sentenceIdx) const;
-  
+
   /// Calculates the scores of words through a linear model
-  /// @param [in] featureMatrix: the matrix of feature scaled values 
+  /// @param [in] featureMatrix: the matrix of feature scaled values
   /// @param [in] numWords: the total number of words, including EOS token
   std::vector<float> predictWordScores(const AlignedVector<float> &featureMatrix, const int numWords) const;
 
@@ -111,7 +111,7 @@ class QualityEstimator {
   float computeWordProbabilities(std::vector<float> &wordQualityScores) const;
 
   /// construct the struct WordsQualityEstimate
-  /// @param [in] lobProbs: the log probabilities given by an translation model
+  /// @param [in] logProbs: the log probabilities given by an translation model
   /// @param [in] target: AnnotatedText target value
   /// @param [in] sentenceIdx: the id of a candidate sentence
   WordsQualityEstimate computeQualityScores(const std::vector<float> &logProbs, const AnnotatedText &target,

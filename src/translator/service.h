@@ -17,6 +17,7 @@
 
 #include <queue>
 #include <vector>
+#include <optional>
 
 namespace marian {
 namespace bergamot {
@@ -135,7 +136,7 @@ class Service {
   /// Shortlist memory passed as bytes.
   AlignedMemory shortlistMemory_;  // ORDER DEPENDENCY (translators_)
 
-  QualityEstimator qualityEstimator_;
+  std::optional< QualityEstimator > qualityEstimator_;
 
   /// Stores requestId of active request. Used to establish
   /// ordering among requests and logging/book-keeping.

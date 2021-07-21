@@ -34,6 +34,8 @@ SCENARIO("Quality Estimator Test ", "[QualityEstimator]") {
 
     // Memory / Features
 
+    size_t featureDims = 4;
+
     std::vector<float> stds = {0.200000003, 0.300000012, 2.5, 0.100000001};
     std::vector<float> means = {-0.100000001, -0.769999981, 5, -0.5};
     std::vector<float> coefficients = {0.99000001, 0.899999976, -0.200000003, 0.5};
@@ -43,7 +45,7 @@ SCENARIO("Quality Estimator Test ", "[QualityEstimator]") {
 
     QualityEstimator::Header header = {BINARY_QE_MODEL_MAGIC, features.size() * sizeof(float)};
 
-    marian::bergamot::AlignedMemory memory(sizeof(header) + features.size() * 4 * sizeof(float));
+    marian::bergamot::AlignedMemory memory(sizeof(header) + features.size() * featureDims * sizeof(float));
 
     size_t index = 0;
     memcpy(memory.begin(), &header, sizeof(header));
@@ -90,7 +92,8 @@ SCENARIO("Quality Estimator Test ", "[QualityEstimator]") {
               REQUIRE(featuresMatrix.size() == 192);
 
               const std::vector<std::vector<float> > featuresMatrixExpected = {
-                  {-1.0, 1.56666648, -1.6, 3.1615}, {0.4995, 2.56633306, -1.6, 3.1615},
+                  {-1.0, 1.56666648, -1.6, 3.1615},
+                  {0.4995, 2.56633306, -1.6, 3.1615},
                   {0.49, 2.55999994, -1.6, 3.1615}, {-2, 0.899999917, -1.6, 3.1615},
                   {-0.25, 1.9, -1.2, 3.1615},       {0.495, 2.56333327, -1.6, 3.1615}};
 

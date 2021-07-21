@@ -111,7 +111,7 @@ class QualityEstimator {
   float computeWordProbabilities(std::vector<float> &wordQualityScores) const;
 
   /// construct the struct WordsQualityEstimate
-  /// @param [in] lobProbs: the log probabilities given by an translation model
+  /// @param [in] logProbs: the log probabilities given by an translation model
   /// @param [in] target: AnnotatedText target value
   /// @param [in] sentenceIdx: the id of a candidate sentence
   WordsQualityEstimate computeQualityScores(const std::vector<float> &logProbs, const AnnotatedText &target,

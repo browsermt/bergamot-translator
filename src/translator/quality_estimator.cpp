@@ -140,7 +140,7 @@ std::vector<float> QualityEstimator::predictWordScores(const AlignedVector<float
   std::vector<float> wordQualityScores(numWords);
 
   for (int i = 0; i < numWords; ++i) {
-    wordQualityScores[i] = modelScores[i * 8] + *intercept_;
+    wordQualityScores[i] = modelScores[i * modelMatrixColumn] + *intercept_;
   }
 
   return wordQualityScores;
@@ -169,17 +169,13 @@ AlignedVector<float> QualityEstimator::extractFeatures(const ModelFeatures& mode
     elem = 0.0;
   }
 
-  const int stdStart = 0;
-  const int meanStart = 1 * numFeatures_;
-  for (int i = 0; i < numWords; ++i) {
-    int j = 0;
+  const auto getStds = [](const auto* stds) { return *stds != 0.0 ? *stds : 1.0f; };
 
-    for (const auto value : {modelFeatures.wordMeanScores[i], modelFeatures.minWordScores[i],
-                             static_cast<float>(modelFeatures.numSubWords[i]), modelFeatures.overallMean}) {
-      const auto stdsTemp = *(stds_ + j) != 0.0 ? *(stds_ + j) : 1.0f;
-      featureMatrix[8 * i * numFeatures_ + j] = (value - *(means_ + j)) / stdsTemp;
-      ++j;
-    }
+  for (int i = 0; i < numWords; ++i) {
+    featureMatrix[8 * i * numFeatures_ + 0] = (modelFeatures.wordMeanScores[i] - *(means_ + 0)) / getStds(stds_ + 0);
+    featureMatrix[8 * i * numFeatures_ + 1] = (modelFeatures.minWordScores[i] -*(means_ + 1)) / getStds(stds_ + 1);
+    featureMatrix[8 * i * numFeatures_ + 2] = (modelFeatures.numSubWords[i] - *(means_ + 2)) / getStds(stds_ + 2);
+    featureMatrix[8 * i * numFeatures_ + 3] = (modelFeatures.overallMean - *(means_ + 3)) / getStds(stds_ + 3);
   }
 
   return featureMatrix;

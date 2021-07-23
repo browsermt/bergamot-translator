@@ -41,7 +41,9 @@ void QualityEstimator::load(const char* ptr, const size_t blobSize) {
   ptr += sizeof(Header);
   ABORT_IF(header.magic != BINARY_QE_MODEL_MAGIC, "Incorrect magic bytes for quality estimation file");
   ABORT_IF(numFeatures_ <= 0, "The number of features cannot be equal or less than zero");
-  const uint64_t expectedSize = sizeof(Header) + numFeatures_ * sizeof(float) * 4;  // stds, means, intercept, coef
+
+  const size_t featureDims = 4;
+  const uint64_t expectedSize = sizeof(Header) + numFeatures_ * sizeof(float) * featureDims;  // stds, means, intercept, coef
   ABORT_IF(expectedSize != blobSize, "QE header claims file size should be {} bytes but file is {} bytes", expectedSize,
            blobSize);
   const float* begin = reinterpret_cast<const float*>(ptr);
@@ -206,9 +208,9 @@ QualityEstimator::WordsQualityEstimate QualityEstimator::computeQualityScores(co
   const auto featureMatrix = extractFeatures(modelFeatures);
   auto wordQualityScores = predictWordScores(featureMatrix, modelFeatures.wordMeanScores.size());
 
-  const auto setenceScore = computeWordProbabilities(wordQualityScores);
+  const auto sentenceScore = computeWordProbabilities(wordQualityScores);
 
-  return {wordQualityScores, wordByteRanges, setenceScore};
+  return {wordQualityScores, wordByteRanges, sentenceScore};
 }
 }  // namespace bergamot
 }  // namespace marian

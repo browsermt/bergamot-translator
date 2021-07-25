@@ -66,8 +66,8 @@ QualityEstimator::LogisticRegressor QualityEstimator::load(const AlignedMemory& 
   scale.means.resize(LogisticRegressor::ParametersDims);
   scale.stds.resize(LogisticRegressor::ParametersDims);
 
-  IntgemmMatrix coefficientsMatrix(LogisticRegressor::ParametersDims, LogisticRegressor::CoefficientsColumn, intgemm::Int16::tile_info.b_rows,
-                                   intgemm::Int16::tile_info.b_cols);
+  IntgemmMatrix coefficientsMatrix(LogisticRegressor::ParametersDims, LogisticRegressor::CoefficientsColumnSize,
+                                   intgemm::Int16::tile_info.b_rows, intgemm::Int16::tile_info.b_cols);
 
   for (int i = 0; i < LogisticRegressor::ParametersDims; ++i) {
     scale.stds[i] = *(stds + i);
@@ -78,146 +78,68 @@ QualityEstimator::LogisticRegressor QualityEstimator::load(const AlignedMemory& 
   return LogisticRegressor(std::move(scale), std::move(coefficientsMatrix), intercept);
 }
 
-std::pair<std::vector<ByteRange>, QualityEstimator::ModelFeatures> QualityEstimator::mapBPEToWords(
+std::tuple<std::vector<ByteRange>, std::vector<QualityEstimator::WordFeatures >, float > QualityEstimator::mapBPEToWords(
     const std::vector<float>& logProbs, const AnnotatedText& target, const size_t sentenceIdx) const {
-  const auto sentenceByteRange = target.sentenceAsByteRange(sentenceIdx);
-  std::vector<ByteRange> wordByteRanges;
-  WordsQualityEstimate wordsQualityEstimate;
-  int bpeLen = 1;
-  int wordIdx = 0;
-  int subwordIdx = wordIdx;
-
-  ModelFeatures modelFeatures;
-
-  const auto insertNewWord = [&wordByteRanges, &modelFeatures](const ByteRange& subword, const float subwordScore,
-                                                               const int lenSubwords) {
-    modelFeatures.numSubWords.push_back(lenSubwords);
-    modelFeatures.minWordScores.push_back(subwordScore);
-    modelFeatures.wordMeanScores.push_back(subwordScore);
-    wordByteRanges.push_back(subword);
-  };
-
-  const auto argumentGivenWord = [&wordByteRanges, &modelFeatures](const ByteRange& subword, const float subwordScore,
-                                                                   const int lenSubwords, const int wordIndex) {
-    ByteRange& currentWord = wordByteRanges.back();
-    float& currentScores = modelFeatures.wordMeanScores.back();
-    float& minScore = modelFeatures.minWordScores.at(wordIndex - 1);
-    modelFeatures.numSubWords.at(wordIndex - 1) = lenSubwords;
-    currentWord.end = subword.end;
-    // incremental mean
-    currentScores = currentScores + (subwordScore - currentScores) / lenSubwords;
-    if (minScore > subwordScore) {
-      minScore = subwordScore;
-    }
-  };
-
-  float sequence = 0.0;
-
-  for (const float& subwordScore : logProbs) {
-    sequence += subwordScore;
-
-    auto wordText = target.word(sentenceIdx, subwordIdx);
-    ByteRange subword = target.wordAsByteRange(sentenceIdx, subwordIdx);
-    /// a word is composed by multiple subtokens. The EOS token
-    /// is the only one where subword.begin is the same as the end
-    /// Therefore, if both are equal, we have reached the end of sentence
-    /// If we do not apply an break statement the code would fail since
-    /// target.text do not contain the EOS token
-    if (subword.begin == sentenceByteRange.end) {  // EOS token
-      insertNewWord(subword, subwordScore, 1);
-      break;
-    }
-    char firstLetter = target.text.at(subword.begin);
-    if ((isspace(firstLetter) != 0) || subwordIdx == 0) {
-      if (subwordIdx != 0) {
-        subword.begin += 1;  // ignore whitespace
-      }
-      subword.end -= 1;  // remove whitepsace
-      bpeLen = 1;
-      ++wordIdx;
-      insertNewWord(subword, subwordScore, bpeLen);
-    } else {
-      bpeLen += 1;
-      argumentGivenWord(subword, subwordScore, bpeLen, wordIdx);
-    }
-    ++subwordIdx;
+  if (logProbs.empty() || target.text.empty()) {
+    return {{}, {}, 0.0 };
   }
 
-  modelFeatures.overallMean = sequence / subwordIdx;
+  std::vector<ByteRange> wordByteRanges;
+  std::vector<WordFeatures> wordsFeatures;
 
-  return {wordByteRanges, modelFeatures};
+  // The first subword it's always a beginning of a word
+  float subwordScore = logProbs[0];
+  ByteRange subword = target.wordAsByteRange(sentenceIdx, 0);
+
+  float sequence = subwordScore;
+
+  wordsFeatures.push_back({1, subwordScore, subwordScore});
+  wordByteRanges.push_back(subword);
+
+  /// a word is composed by multiple subtokens. The EOS token
+  /// is the only one where subword.begin is the same as the end
+  /// Therefore, if both are equal, we have reached the end of sentence
+  /// If we do not apply an break statement the code would fail since
+  /// target.text do not contain the EOS token
+
+  size_t subwordIdx = 1;
+
+  for (; subwordIdx < (logProbs.size() - 1); ++subwordIdx) {
+    const float subwordScore = logProbs[subwordIdx];
+    sequence += subwordScore;
+
+    ByteRange subword = target.wordAsByteRange(sentenceIdx, subwordIdx);
+
+    const char firstLetter = target.text.at(subword.begin);
+
+    // if first character is whitespace it's a begining of a new word
+    if (isspace(firstLetter)) {
+      ++subword.begin;
+      wordsFeatures.push_back({1, subwordScore, subwordScore});
+      wordByteRanges.push_back(subword);
+    } else {
+      // update last word byte range and word features
+
+      ByteRange& currentWord = wordByteRanges.back();
+      WordFeatures& currentWordFeatures = wordsFeatures.back();
+
+      currentWord.end = subword.end;
+      ++currentWordFeatures.numSubWords;
+      // incremental mean
+      currentWordFeatures.meanScore += (subwordScore - currentWordFeatures.meanScore) / currentWordFeatures.numSubWords;
+
+      if (currentWordFeatures.minScore > subwordScore) {
+        currentWordFeatures.minScore = subwordScore;
+      }
+    }
+  }
+
+  const float overallMean = sequence / subwordIdx;
+
+  return {wordByteRanges, wordsFeatures, overallMean};
 }
 
-// std::pair<std::vector<ByteRange>, std::vector<QualityEstimator::WordFeatures>> QualityEstimator::mapBPEToWords2(
-//     const std::vector<float>& logProbs, const AnnotatedText& target, const size_t sentenceIdx) const {
-//   const auto sentenceByteRange = target.sentenceAsByteRange(sentenceIdx);
-//   std::vector<ByteRange> wordByteRanges;
-//   WordsQualityEstimate wordsQualityEstimate;
-//   int bpeLen = 1;
-//   int wordIdx = 0;
-//   int subwordIdx = wordIdx;
-
-//   ModelFeatures modelFeatures;
-
-//   const auto insertNewWord = [&wordByteRanges, &modelFeatures](const ByteRange& subword, const float subwordScore,
-//                                                                const int lenSubwords) {
-//     modelFeatures.numSubWords.push_back(lenSubwords);
-//     modelFeatures.minWordScores.push_back(subwordScore);
-//     modelFeatures.wordMeanScores.push_back(subwordScore);
-//     wordByteRanges.push_back(subword);
-//   };
-
-//   const auto argumentGivenWord = [&wordByteRanges, &modelFeatures](const ByteRange& subword, const float subwordScore,
-//                                                                    const int lenSubwords, const int wordIndex) {
-//     ByteRange& currentWord = wordByteRanges.back();
-//     float& currentScores = modelFeatures.wordMeanScores.back();
-//     float& minScore = modelFeatures.minWordScores.at(wordIndex - 1);
-//     modelFeatures.numSubWords.at(wordIndex - 1) = lenSubwords;
-//     currentWord.end = subword.end;
-//     // incremental mean
-//     currentScores = currentScores + (subwordScore - currentScores) / lenSubwords;
-//     if (minScore > subwordScore) {
-//       minScore = subwordScore;
-//     }
-//   };
-
-//   float sequence = 0.0;
-
-//   for (const float& subwordScore : logProbs) {
-//     sequence += subwordScore;
-
-//     ByteRange subword = target.wordAsByteRange(sentenceIdx, subwordIdx);
-//     /// a word is composed by multiple subtokens. The EOS token
-//     /// is the only one where subword.begin si the same as the end
-//     /// Therefore, if both are equal, we have reached the end of sentence
-//     /// If we do not apply an break statement the code would fail since
-//     /// target.text do not contain the EOS token
-//     if (subword.begin == sentenceByteRange.end) {  // EOS token
-//       insertNewWord(subword, subwordScore, 1);
-//       break;
-//     }
-//     char firstLetter = target.text.at(subword.begin);
-//     if ((isspace(firstLetter) != 0) || subwordIdx == 0) {
-//       if (subwordIdx != 0) {
-//         subword.begin += 1;  // ignore whitespace
-//       }
-//       subword.end -= 1;  // remove whitepsace
-//       bpeLen = 1;
-//       ++wordIdx;
-//       insertNewWord(subword, subwordScore, bpeLen);
-//     } else {
-//       bpeLen += 1;
-//       argumentGivenWord(subword, subwordScore, bpeLen, wordIdx);
-//     }
-//     ++subwordIdx;
-//   }
-
-//   modelFeatures.overallMean = sequence / subwordIdx;
-
-//   return {wordByteRanges, modelFeatures};
-// }
-
-std::vector<float> QualityEstimator::LogisticRegressor::predictWordScores(const IntgemmMatrix& features) const {
+std::vector<float> QualityEstimator::LogisticRegressor::vectorResult(const IntgemmMatrix& features) const {
   float quant_mult = 1024.0f;
 
   AlignedVector<int16_t> A_prepared(features.data.size());
@@ -242,9 +164,9 @@ std::vector<float> QualityEstimator::LogisticRegressor::predictWordScores(const 
   return wordQualityScores;
 }
 
-QualityEstimator::IntgemmMatrix QualityEstimator::LogisticRegressor::extractFeatures(
-    const ModelFeatures& modelFeatures) const {
-  const intgemm::Index numWords = modelFeatures.wordMeanScores.size();
+QualityEstimator::IntgemmMatrix QualityEstimator::LogisticRegressor::transformFeatures(
+    const std::vector<WordFeatures> &wordsFeatures, const float overallMean) const {
+  const intgemm::Index numWords = wordsFeatures.size();
 
   QualityEstimator::IntgemmMatrix features(numWords, NumberOfFeatures, intgemm::Int16::tile_info.a_rows,
                                            intgemm::Int16::tile_info.a_cols);
@@ -252,41 +174,40 @@ QualityEstimator::IntgemmMatrix QualityEstimator::LogisticRegressor::extractFeat
   const auto getStds = [](const auto stds) { return stds != 0.0 ? stds : 1.0f; };
 
   for (int i = 0; i < numWords; ++i) {
-    features.data[features.cols * i + 0] =
-        (modelFeatures.wordMeanScores[i] - scale_.means[0]) / getStds(scale_.stds[0]);
-    features.data[features.cols * i + 1] = (modelFeatures.minWordScores[i] - scale_.means[1]) / getStds(scale_.stds[1]);
-    features.data[features.cols * i + 2] = (modelFeatures.numSubWords[i] - scale_.means[2]) / getStds(scale_.stds[2]);
-    features.data[features.cols * i + 3] = (modelFeatures.overallMean - scale_.means[3]) / getStds(scale_.stds[3]);
+    const WordFeatures& wordFeatures = wordsFeatures[i];
+    features.data[features.cols * i + 0] = (wordFeatures.meanScore - scale_.means[0]) / getStds(scale_.stds[0]);
+    features.data[features.cols * i + 1] = (wordFeatures.minScore - scale_.means[1]) / getStds(scale_.stds[1]);
+    features.data[features.cols * i + 2] = (wordFeatures.numSubWords - scale_.means[2]) / getStds(scale_.stds[2]);
+    features.data[features.cols * i + 3] = (overallMean - scale_.means[3]) / getStds(scale_.stds[3]);
   }
 
   return features;
 }
 
-float QualityEstimator::LogisticRegressor::computeWordProbabilities(std::vector<float>& wordQualityScores) const {
+float QualityEstimator::LogisticRegressor::resultToProbabilities(std::vector<float>& wordQualityScores) const {
   float sentenceScore = 0.0;
 
   for (float& wordScore : wordQualityScores) {
     wordScore = 1 / (1 + std::exp(-wordScore));
     sentenceScore += wordScore;
   }
-  // TODO:
-  // Should we include or remove the end of sentence (EOS) token?
+
   return sentenceScore / wordQualityScores.size();
 }
 
 QualityEstimator::WordsQualityEstimate QualityEstimator::LogisticRegressor::predictQualityScores(
-    const std::vector<ByteRange>& wordByteRanges, const ModelFeatures& modelFeatures) const {
-  std::vector<float> wordQualityScores = predictWordScores(extractFeatures(modelFeatures));
-  const float sentenceScore = computeWordProbabilities(wordQualityScores);
+    const std::vector<ByteRange>& wordByteRanges, const std::vector<WordFeatures>& wordsFeatures, const float overallMean) const {
+  std::vector<float> wordQualityScores = vectorResult(transformFeatures(wordsFeatures,overallMean));
+  const float sentenceScore = resultToProbabilities(wordQualityScores);
   return {wordQualityScores, wordByteRanges, sentenceScore};
 }
 
 QualityEstimator::WordsQualityEstimate QualityEstimator::computeQualityScores(const std::vector<float>& logProbs,
                                                                               const AnnotatedText& target,
                                                                               const size_t sentenceIdx) const {
-  auto [wordByteRanges, modelFeatures] = mapBPEToWords(logProbs, target, sentenceIdx);
+  const auto [wordByteRanges, wordsFeatures, overallMean] = mapBPEToWords(logProbs, target, sentenceIdx);
 
-  return logisticRegressor_.predictQualityScores(wordByteRanges, modelFeatures);
+  return logisticRegressor_.predictQualityScores(wordByteRanges, wordsFeatures, overallMean);
 }
 }  // namespace bergamot
 }  // namespace marian

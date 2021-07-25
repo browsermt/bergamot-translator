@@ -77,45 +77,45 @@ class QualityEstimator {
     std::vector<float> means;
   };
 
-  /// ModelFeatures represents the features used by a given model.
+  /// WordFeatures represents the features used by a given model.
   ///
   /// It's valued are filled through mapBPEToWords
-  struct ModelFeatures {
-    std::vector<float> wordMeanScores;
-    std::vector<float> minWordScores;
-    std::vector<int> numSubWords;
-    float overallMean = 0.0;
+  struct WordFeatures {
+    int numSubWords = 0;
+    float meanScore = 0.0;
+    float minScore = 0.0;
   };
 
   /// The current Quality Estimator model is a Logistic Model implemented through
   /// a linear regressor + sigmoid function. Simply speaking, a LR model depends on
-  /// features to be scaled, so it contains four elements of data: a vector of coeficients
+  /// features to be scaled, so it contains four elements of data: a vector of coefficients
   /// and a intercept (which represents the linear model) and a vector os means and stds
   /// (which are necessary for feature scaling). These pointers are firstly initialized by
   /// parsing a file (which comes from memory) and then they are used to build a model
   /// representation (which is a matrix)
   class LogisticRegressor {
    public:
-    enum Configuration { NumberOfFeatures = 4, ParametersDims = 4, CoefficientsColumn = 1 };
+    enum Configuration { NumberOfFeatures = 4, ParametersDims = 4, CoefficientsColumnSize = 1 };
 
     LogisticRegressor(Scale &&scale, IntgemmMatrix &&coefficients, const float intercept);
 
     WordsQualityEstimate predictQualityScores(const std::vector<ByteRange> &wordByteRanges,
-                                              const ModelFeatures &modelFeatures) const;
+                                              const std::vector<WordFeatures> &wordsFeatures,
+                                              const float overallMean) const;
 
    private:
     /// Calculates the scores of words through a linear model
     /// @param [in] featureMatrix: the matrix of feature scaled values
-    /// @param [in] numWords: the total number of words, including EOS token
-    std::vector<float> predictWordScores(const IntgemmMatrix &features) const;
+    std::vector<float> vectorResult(const IntgemmMatrix &features) const;
 
     /// Given the modelFeatures construct, it builds the feature matrix with scaled values
-    /// @param [in] modelFeatures: a struct which contains the std and mean vectores of each feature
-    IntgemmMatrix extractFeatures(const ModelFeatures &modelFeatures) const;
+    /// @param [in] wordFeatures: a struct which contains the std and mean vectors of each feature
+    /// @param [in] overallMean: a float record that represents the mean of sentence bpe tokens logprobs
+    IntgemmMatrix transformFeatures(const std::vector<WordFeatures> &wordsFeatures, const float overallMean) const;
 
     /// Applies a sigmoid function to each element of a vector and returns the mean of the result vector
     /// @param [in] linearPredictedValues: the vector of real values returned by a linear regression
-    float computeWordProbabilities(std::vector<float> &linearPredictedValues) const;
+    float resultToProbabilities(std::vector<float> &linearPredictedValues) const;
 
     const Scale scale_;
     const IntgemmMatrix coefficients_;
@@ -129,17 +129,9 @@ class QualityEstimator {
   /// @param [in] lobProbs: the log probabilities given by an translation model
   /// @param [in] target: AnnotatedText target value
   /// @param [in] sentenceIdx: the id of a candidate sentence
-  std::pair<std::vector<ByteRange>, ModelFeatures> mapBPEToWords(const std::vector<float> &logProbs,
-                                                                 const AnnotatedText &target,
-                                                                 const size_t sentenceIdx) const;
-
-  /// Builds the words byte ranges (including EOS token) and defines the ModelFeatures values
-  /// @param [in] lobProbs: the log probabilities given by an translation model
-  /// @param [in] target: AnnotatedText target value
-  /// @param [in] sentenceIdx: the id of a candidate sentence
-  // std::pair<std::vector<ByteRange>, std::vector<WordFeatures>> mapBPEToWords2(const std::vector<float> &logProbs,
-  //                                                                             const AnnotatedText &target,
-  //                                                                             const size_t sentenceIdx) const;
+  std::tuple<std::vector<ByteRange>, std::vector<WordFeatures>, float> mapBPEToWords(const std::vector<float> &logProbs,
+                                                                                     const AnnotatedText &target,
+                                                                                     const size_t sentenceIdx) const;
 
   LogisticRegressor logisticRegressor_;
 };

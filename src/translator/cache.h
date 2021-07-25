@@ -110,18 +110,16 @@ class LockLessClockCache {
   using KeyBytes = L4::IWritableHashTable::Key;
   using ValueBytes = L4::IWritableHashTable::Value;
 
-  // It may make sense to use (modelIdentifier, marian::Words) for key eventually when we have multiple models.
-  using Key = marian::Words;
-  using Value = marian::bergamot::ProcessedRequestSentence;
-
   LockLessClockCache(const std::string &modelIdentifier, size_t sizeInBytes, size_t timeOutInSeconds,
-                     bool removeExpired = true);
-  bool fetch(const Key &key, Value &value);
-  void insert(const Key &key, const Value &value);
+                     bool removeExpired = false);
+  bool fetch(const marian::Words &words, ProcessedRequestSentence &processedRequestSentence);
+  void insert(const marian::Words &words, const ProcessedRequestSentence &processedRequestSentence);
   CacheStats stats() const;
 
+  void debug(std::string) const;
+
  private:
-  KeyBytes keyToBytes(const Key &key);
+  std::string wordsToString(const marian::Words &words);
 
   L4::HashTableConfig::Cache cacheConfig_;
   L4::EpochManagerConfig epochManagerConfig_;

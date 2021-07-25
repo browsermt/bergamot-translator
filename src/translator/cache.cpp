@@ -101,7 +101,7 @@ ProcessedRequestSentence ProcessedRequestSentence::fromBytes(char const *data, s
 LockLessClockCache::LockLessClockCache(const std::string &modelIdentifier, size_t sizeInBytes, size_t timeOutInSeconds,
                                        bool removeExpired /* = true */)
     : epochManagerConfig_(/*epochQueueSize=*/1000,
-                          /*epochProcessingInterval=*/std::chrono::milliseconds(100),
+                          /*epochProcessingInterval=*/std::chrono::milliseconds(1000),
                           /*numActionQueues=*/4),
       cacheConfig_{sizeInBytes, std::chrono::seconds(timeOutInSeconds), removeExpired},
       modelIdentifier_(modelIdentifier),
@@ -110,31 +110,48 @@ LockLessClockCache::LockLessClockCache(const std::string &modelIdentifier, size_
   // Once a context is retrieved, the operations such as
   // operator[] on the context and Get() are lock-free.
   hashTableIndex_ = service_.AddHashTable(
-      L4::HashTableConfig(modelIdentifier_, L4::HashTableConfig::Setting{/*numBuckets=*/1000000}, cacheConfig_));
+      L4::HashTableConfig(modelIdentifier_, L4::HashTableConfig::Setting{/*numBuckets=*/10000}, cacheConfig_));
 }
 
-bool LockLessClockCache::fetch(const Key &key, Value &value) {
+bool LockLessClockCache::fetch(const marian::Words &words, ProcessedRequestSentence &processedRequestSentence) {
   auto &hashTable = context_[hashTableIndex_];
+
+  KeyBytes keyBytes;
+  std::string keyStr = wordsToString(words);
+
+  keyBytes.m_data = reinterpret_cast<const std::uint8_t *>(keyStr.data());
+  keyBytes.m_size = sizeof(std::string::value_type) * keyStr.size();
+
   ValueBytes valBytes;
-  KeyBytes keyBytes = keyToBytes(key);
   bool fetchSuccess = hashTable.Get(keyBytes, valBytes);
   if (fetchSuccess) {
-    value = ProcessedRequestSentence::fromBytes(reinterpret_cast<const char *>(valBytes.m_data), valBytes.m_size);
+    processedRequestSentence =
+        ProcessedRequestSentence::fromBytes(reinterpret_cast<const char *>(valBytes.m_data), valBytes.m_size);
   }
+
+  debug("After Fetch");
   return fetchSuccess;
 }
 
-void LockLessClockCache::insert(const Key &key, const Value &value) {
-  auto &hashTable = context_[hashTableIndex_];
-  KeyBytes keyBytes = keyToBytes(key);
+void LockLessClockCache::insert(const marian::Words &words, const ProcessedRequestSentence &processedRequestSentence) {
+  auto context = service_.GetContext();
+  auto &hashTable = context[hashTableIndex_];
+
+  KeyBytes keyBytes;
+  std::string keyStr = wordsToString(words);
+
+  keyBytes.m_data = reinterpret_cast<const std::uint8_t *>(keyStr.data());
+  keyBytes.m_size = sizeof(std::string::value_type) * keyStr.size();
 
   ValueBytes valBytes;
-  std::string serialized = value.toBytes();
+  std::string serialized = processedRequestSentence.toBytes();
 
   valBytes.m_data = reinterpret_cast<const std::uint8_t *>(serialized.data());
   valBytes.m_size = sizeof(std::string::value_type) * serialized.size();
 
+  debug("Before Add");
   hashTable.Add(keyBytes, valBytes);
+  debug("After Add");
 }
 
 CacheStats LockLessClockCache::stats() const {
@@ -143,13 +160,33 @@ CacheStats LockLessClockCache::stats() const {
   stats.hits = perfData.Get(L4::HashTablePerfCounter::CacheHitCount);
   stats.misses = perfData.Get(L4::HashTablePerfCounter::CacheMissCount);
   return stats;
+}
+
+void LockLessClockCache::debug(std::string label) const {
+  std::cout << "--- L4: " << label << std::endl;
+  auto &perfData = context_[hashTableIndex_].GetPerfData();
+#define __l4inspect(key) std::cout << #key << " " << perfData.Get(L4::HashTablePerfCounter::key) << std::endl;
+
+  __l4inspect(CacheHitCount);
+  __l4inspect(CacheMissCount);
+  __l4inspect(RecordsCount);
+  __l4inspect(EvictedRecordsCount);
+  __l4inspect(TotalIndexSize);
+  __l4inspect(TotalKeySize);
+  __l4inspect(TotalValueSize);
+
+  std::cout << "---- " << std::endl;
 };
 
-LockLessClockCache::KeyBytes LockLessClockCache::keyToBytes(const Key &key) {
-  KeyBytes keyBytes;
-  keyBytes.m_data = reinterpret_cast<const std::uint8_t *>(key.data());
-  keyBytes.m_size = sizeof(Key::value_type) * key.size();
-  return keyBytes;
+std::string LockLessClockCache::wordsToString(const marian::Words &words) {
+  std::string repr;
+  for (size_t i = 0; i < words.size(); i++) {
+    if (i != 0) {
+      repr += " ";
+    }
+    repr += words[i].toString();
+  }
+  return repr;
 }
 
 template <typename Key, typename Value, typename Hash>

@@ -20,7 +20,7 @@ Service::Service(Ptr<Options> options, MemoryBundle memoryBundle)
       shortlistMemory_(std::move(memoryBundle.shortlist)),
       // cache_(options->get<size_t>("cache-size"))
       cache_("en-de",                                           // model identifier
-             options->get<size_t>("cache-size") * 1024 * 1024,  // sizeInBytes
+             options->get<size_t>("cache-size") * 1024 * 1024,  // sizeInBytes, x 1024 x 1024 = sizeInMB
              60 * 60 * 60                                       // timeOutInSeconds
              )
 #ifdef WASM_COMPATIBLE_SOURCE

@@ -55,7 +55,8 @@ class ResponseBuilder {
     buildTranslatedText(histories, response);
 
     // Should always be after buildTranslatedText
-    if (responseOptions_.qualityScores && qualityEstimator_.has_value()) {
+    if (responseOptions_.qualityScores ) {
+      ABORT_IF( !qualityEstimator_.has_value(), "No quality estimator file was given" );
       buildQualityScores(histories, response);
     }
 

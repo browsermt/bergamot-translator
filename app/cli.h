@@ -130,9 +130,8 @@ void native(Ptr<Options> options) {
   std_input << std::cin.rdbuf();
   std::string input = std_input.str();
 
-
   ResponseOptions responseOptions;
-  responseOptions.qualityScores = true;
+  responseOptions.qualityScores = !( options->get<std::string>("quality", "").empty() );
 
   // Wait on future until Response is complete
   std::promise<Response> responsePromise;

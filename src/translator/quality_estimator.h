@@ -13,109 +13,127 @@ namespace bergamot {
 // ASCII and Unicode text files never start with the following 64 bits
 constexpr std::size_t BINARY_QE_MODEL_MAGIC = 0x78cc336f1d54b180;
 
-/// QualityEstimator is responsible for measuring the quality of a translation
-/// model.
+/// QualityEstimator (QE) is responsible for measuring the quality of a translation model.
+/// It returns the probability of each translated term being a valid one.
+/// It's worthwhile mentioning that a word is made of one or more byte pair encoding (BPE) tokens.
+
+/// Currently, it only expects an AlignedMemory, which is given from a binary file,
+/// which contains a header.
+/// The header includes the following structure:
+/// - a vector of standard deviations of features
+/// - a vector of means of features
+/// - a vector of coefficients
+/// - vector of constants, which correspond to the intercept
 ///
-/// Currently, it only expects an AlignedMemory, which should be provided
-/// from a binary file, which contains a header.
-///
-/// The header contains the following structure: a vector of standard deviations
-/// of features; a vector of means of features; a vector of coefficients
-/// and a vector of constant, which correspond to the intercept.
-///
-/// The first two ones are necessary for feature scaling whereas the last two are necessary
-/// for model computation.
-///
+/// Where each feature corresponds to one of the following:
+/// - the mean BPE log Probabilities of a given word.
+/// - the minimum BPE log Probabilities of a given word.
+/// - the number of BPE tokens that a word is made of
+/// - the overall mean considering all BPE tokens in a sentence
+
 /// The current model implementation is a Logistic Model, so after the matrix multiply,
-/// there is a non-linear sigmoid transformation which converts the final scores
-/// into probabilities.
-///
-/// The model takes four features: the mean of a word byte pair encoding log probabilities;
-/// the minimum of logprobs; the number of bpe that a word is made of and the overall mean
-/// of bpe tokens log probs
+// there is a non-linear sigmoid transformation that converts the final scores into probabilities.
 class QualityEstimator {
- private:
-  // AlignedMemory of QE model. This is going to be built from load model
-  AlignedMemory memory_;
-  // pointer of std of features vector. This is going to be built from load model
-  const float *stds_ = nullptr;
-  // pointer of means of features vector. This is going to be built from load model
-  const float *means_ = nullptr;
-  // pointer of coefficient of features vector. This is going to be built from load model
-  const float *coefficients_ = nullptr;
-  // pointer of intercept of features vector. This is going to be built from load model
-  const float *intercept_ = nullptr;
-  // total number of features in the QE model. This is going to be built from load model
-  int numFeatures_ = 0;
-  // QE model matrix representation. This is going to be loaded from buildLinearModel
-  AlignedVector<float> modelMatrix_;
-
-  // binary file parser which came from AlinedMemory
-  void load(const char *ptr_void, const size_t blobSize);
-
  public:
   struct Header {
     uint64_t magic;        // BINARY_QE_MODEL_MAGIC
     uint64_t numFeatures;  // Length of all arrays.
   };
 
-  /// WordQualityScores contains the quality data of a given translated sentence
-  ///
-  /// It contains the confidence of each translated word quality
-  /// (bigger probabilities implies in better models); the ByteRanges of each word
-  /// the mean confidence, which represents the mean confidence.
-  ///
-  /// This is going to be the result of computeQualityScores
+  /// WordsQualityEstimate contains the quality data of a given translated sentence.
+  /// It includes the confidence (proxied by a probability) of each decoded word
+  /// (higher probabilities imply better-translated words), the ByteRanges of each term,
+  /// and the probability of the whole sentence, represented as the mean word scores.
   struct WordsQualityEstimate {
     std::vector<float> wordQualityScores;
     std::vector<ByteRange> wordByteRanges;
     float sentenceScore = 0.0;
   };
 
-  /// ModelFeatures represents the features used by a given model.
-  ///
-  /// It's valued are filled through mapBPEToWords
-  struct ModelFeatures {
-    std::vector<float> wordMeanScores;
-    std::vector<float> minWordScores;
-    std::vector<int> numSubWords;
-    float overallMean = 0.0;
-  };
-
   /// Construct a QualityEstimator
   /// @param [in] qualityEstimatorMemory: AlignedMemory built from quality estimator binary file
-  explicit QualityEstimator(AlignedMemory &&qualityEstimatorMemory);
-
-  /// Builds the words byte ranges (including EOS token) and defines the ModelFeatures values
-  /// @param [in] lobProbs: the log probabilities given by an translation model
-  /// @param [in] target: AnnotatedText target value
-  /// @param [in] sentenceIdx: the id of a candidate sentence
-  std::pair<std::vector<ByteRange>, ModelFeatures> mapBPEToWords(const std::vector<float> &logProbs,
-                                                                 const AnnotatedText &target,
-                                                                 const size_t sentenceIdx) const;
-
-  /// Calculates the scores of words through a linear model
-  /// @param [in] featureMatrix: the matrix of feature scaled values
-  /// @param [in] numWords: the total number of words, including EOS token
-  std::vector<float> predictWordScores(const AlignedVector<float> &featureMatrix, const int numWords) const;
-
-  /// Defines a vector which correspond to a Linear Regression model
-  AlignedVector<float> buildLinearModel() const;
-
-  /// Given the modelFeatures construct, it builds the feature matrix with scaled values
-  /// @param [in] modelFeatures: a struct which contains the std and mean vectores of each feature
-  AlignedVector<float> extractFeatures(const ModelFeatures &modelFeatures) const;
-
-  /// Applies a sigmoid function to each word in a vector and returns the mean of these probabilities
-  /// @param [in] wordQualityScores: the vector of real values returned by a linear regression
-  float computeWordProbabilities(std::vector<float> &wordQualityScores) const;
+  explicit QualityEstimator(const AlignedMemory &qualityEstimatorMemory);
 
   /// construct the struct WordsQualityEstimate
-  /// @param [in] lobProbs: the log probabilities given by an translation model
+  /// @param [in] logProbs: the log probabilities given by an translation model
   /// @param [in] target: AnnotatedText target value
   /// @param [in] sentenceIdx: the id of a candidate sentence
   WordsQualityEstimate computeQualityScores(const std::vector<float> &logProbs, const AnnotatedText &target,
                                             const size_t sentenceIdx) const;
+
+ private:
+  struct IntgemmMatrix {
+    IntgemmMatrix(const intgemm::Index rowsParam, const intgemm::Index widthParam, const intgemm::Index rowsMultiplier,
+                  const intgemm::Index widthMultiplier);
+
+    intgemm::Index rows;
+    intgemm::Index cols;
+    AlignedVector<float> data;
+  };
+
+  struct Scale {
+    std::vector<float> stds;
+    std::vector<float> means;
+  };
+
+  /// WordFeatures represents the features used by a given model.
+  ///
+  /// It's valued are filled through mapBPEToWords
+  struct WordFeatures {
+    int numSubWords = 0;
+    float meanScore = 0.0;
+    float minScore = 0.0;
+  };
+
+  /// The current Quality Estimator model is a Logistic Model implemented through
+  /// a linear regressor + sigmoid function. Simply speaking, an LR model depends
+  /// on features to be scaled, so it contains four elements of data: a vector of coefficients
+  /// and an intercept (which represents the linear model) and a vector of means and stds
+  /// (which are necessary for feature scaling).
+  ///
+  /// These pointers are firstly initialized by parsing a file (which comes from memory),
+  /// and then they are used to build a model representation (which is a matrix)
+  class LogisticRegressor {
+   public:
+    enum Configuration { NumberOfFeatures = 4, ParametersDims = 4, CoefficientsColumnSize = 1 };
+
+    LogisticRegressor(Scale &&scale, IntgemmMatrix &&coefficients, const float intercept);
+
+    WordsQualityEstimate predictQualityScores(const std::vector<ByteRange> &wordByteRanges,
+                                              const std::vector<WordFeatures> &wordsFeatures,
+                                              const float overallMean) const;
+
+   private:
+    /// Calculates the scores of words through a linear model
+    /// @param [in] featureMatrix: the matrix of feature scaled values
+    std::vector<float> vectorResult(const IntgemmMatrix &features) const;
+
+    /// Given the modelFeatures construct, it builds the feature matrix with scaled values
+    /// @param [in] wordFeatures: a struct which contains the std and mean vectors of each feature
+    /// @param [in] overallMean: a float record that represents the mean of sentence bpe tokens logprobs
+    IntgemmMatrix transformFeatures(const std::vector<WordFeatures> &wordsFeatures, const float overallMean) const;
+
+    /// Applies a sigmoid function to each element of a vector and returns the mean of the result vector
+    /// @param [in] linearPredictedValues: the vector of real values returned by a linear regression
+    float resultToProbabilities(std::vector<float> &linearPredictedValues) const;
+
+    const Scale scale_;
+    const IntgemmMatrix coefficients_;
+    const float intercept_;
+  };
+
+  /// binary file parser which came from AlinedMemory
+  static LogisticRegressor load(const AlignedMemory &qualityEstimatorMemory);
+
+  /// Builds the words byte ranges and defines the WordFeature values
+  /// @param [in] lobProbs: the log probabilities given by an translation model
+  /// @param [in] target: AnnotatedText target value
+  /// @param [in] sentenceIdx: the id of a candidate sentence
+  std::tuple<std::vector<ByteRange>, std::vector<WordFeatures>, float> mapBPEToWords(const std::vector<float> &logProbs,
+                                                                                     const AnnotatedText &target,
+                                                                                     const size_t sentenceIdx) const;
+
+  LogisticRegressor logisticRegressor_;
 };
 
 }  // namespace bergamot

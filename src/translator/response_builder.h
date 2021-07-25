@@ -30,8 +30,7 @@ class ResponseBuilder {
   /// @param [in] qualityEstimator: the QualityEstimator model that can be used
   /// to provide translation quality probability.
   ResponseBuilder(ResponseOptions responseOptions, AnnotatedText &&source, Vocabs &vocabs,
-                  std::function<void(Response &&)> callback,
-                  const std::optional<QualityEstimator> &qualityEstimator)
+                  std::function<void(Response &&)> callback, const std::optional<QualityEstimator> &qualityEstimator)
       : responseOptions_(responseOptions),
         source_(std::move(source)),
         vocabs_(vocabs),

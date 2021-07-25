@@ -132,7 +132,7 @@ void native(Ptr<Options> options) {
 
 
   ResponseOptions responseOptions;
-  responseOptions.qualityScores=true;
+  responseOptions.qualityScores = true;
 
   // Wait on future until Response is complete
   std::promise<Response> responsePromise;

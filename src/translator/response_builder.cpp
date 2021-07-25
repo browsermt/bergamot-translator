@@ -13,9 +13,9 @@ void ResponseBuilder::buildQualityScores(Histories &histories, Response &respons
     auto hyp = std::get<1>(result);
 
     auto normalizedPathScore = std::get<2>(result);
-    auto wordQualities = hyp->tracebackWordScores();  // neg logprobs of bpe translated tokens
+    auto logProbs = hyp->tracebackWordScores();  // logprobs of bpe translated tokens
 
-    auto qualityScores = qualityEstimator_->computeQualityScores(wordQualities, response.target, index);
+    auto qualityScores = qualityEstimator_->computeQualityScores(logProbs, response.target, index);
     response.qualityScores.push_back(qualityScores);
 
     ++index;

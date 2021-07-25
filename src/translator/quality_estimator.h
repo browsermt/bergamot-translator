@@ -53,7 +53,7 @@ class QualityEstimator {
 
   /// Construct a QualityEstimator
   /// @param [in] qualityEstimatorMemory: AlignedMemory built from quality estimator binary file
-  explicit QualityEstimator(AlignedMemory &&qualityEstimatorMemory);
+  explicit QualityEstimator(const AlignedMemory &qualityEstimatorMemory);
 
   /// construct the struct WordsQualityEstimate
   /// @param [in] logProbs: the log probabilities given by an translation model
@@ -61,7 +61,22 @@ class QualityEstimator {
   /// @param [in] sentenceIdx: the id of a candidate sentence
   WordsQualityEstimate computeQualityScores(const std::vector<float> &logProbs, const AnnotatedText &target,
                                             const size_t sentenceIdx) const;
+
  private:
+  struct IntgemmMatrix {
+    IntgemmMatrix(const intgemm::Index rowsParam, const intgemm::Index widthParam, const intgemm::Index rowsMultiplier,
+                  const intgemm::Index widthMultiplier);
+
+    intgemm::Index rows;
+    intgemm::Index cols;
+    AlignedVector<float> data;
+  };
+
+  struct Scale {
+    std::vector<float> stds;
+    std::vector<float> means;
+  };
+
   /// ModelFeatures represents the features used by a given model.
   ///
   /// It's valued are filled through mapBPEToWords
@@ -72,8 +87,43 @@ class QualityEstimator {
     float overallMean = 0.0;
   };
 
+  /// The current Quality Estimator model is a Logistic Model implemented through
+  /// a linear regressor + sigmoid function. Simply speaking, a LR model depends on
+  /// features to be scaled, so it contains four elements of data: a vector of coeficients
+  /// and a intercept (which represents the linear model) and a vector os means and stds
+  /// (which are necessary for feature scaling). These pointers are firstly initialized by
+  /// parsing a file (which comes from memory) and then they are used to build a model
+  /// representation (which is a matrix)
+  class LogisticRegressor {
+   public:
+    enum Configuration { NumberOfFeatures = 4, ParametersDims = 4, CoefficientsColumn = 1 };
+
+    LogisticRegressor(Scale &&scale, IntgemmMatrix &&coefficients, const float intercept);
+
+    WordsQualityEstimate predictQualityScores(const std::vector<ByteRange> &wordByteRanges,
+                                              const ModelFeatures &modelFeatures) const;
+
+   private:
+    /// Calculates the scores of words through a linear model
+    /// @param [in] featureMatrix: the matrix of feature scaled values
+    /// @param [in] numWords: the total number of words, including EOS token
+    std::vector<float> predictWordScores(const IntgemmMatrix &features) const;
+
+    /// Given the modelFeatures construct, it builds the feature matrix with scaled values
+    /// @param [in] modelFeatures: a struct which contains the std and mean vectores of each feature
+    IntgemmMatrix extractFeatures(const ModelFeatures &modelFeatures) const;
+
+    /// Applies a sigmoid function to each element of a vector and returns the mean of the result vector
+    /// @param [in] linearPredictedValues: the vector of real values returned by a linear regression
+    float computeWordProbabilities(std::vector<float> &linearPredictedValues) const;
+
+    const Scale scale_;
+    const IntgemmMatrix coefficients_;
+    const float intercept_;
+  };
+
   /// binary file parser which came from AlinedMemory
-  void load(const char *ptr_void, const size_t blobSize);
+  static LogisticRegressor load(const AlignedMemory &qualityEstimatorMemory);
 
   /// Builds the words byte ranges (including EOS token) and defines the ModelFeatures values
   /// @param [in] lobProbs: the log probabilities given by an translation model
@@ -83,38 +133,15 @@ class QualityEstimator {
                                                                  const AnnotatedText &target,
                                                                  const size_t sentenceIdx) const;
 
-  /// Calculates the scores of words through a linear model
-  /// @param [in] featureMatrix: the matrix of feature scaled values
-  /// @param [in] numWords: the total number of words, including EOS token
-  std::vector<float> predictWordScores(const AlignedVector<float> &featureMatrix, const int numWords) const;
+  /// Builds the words byte ranges (including EOS token) and defines the ModelFeatures values
+  /// @param [in] lobProbs: the log probabilities given by an translation model
+  /// @param [in] target: AnnotatedText target value
+  /// @param [in] sentenceIdx: the id of a candidate sentence
+  // std::pair<std::vector<ByteRange>, std::vector<WordFeatures>> mapBPEToWords2(const std::vector<float> &logProbs,
+  //                                                                             const AnnotatedText &target,
+  //                                                                             const size_t sentenceIdx) const;
 
-  /// Defines a vector which correspond to a Linear Regression model
-  AlignedVector<float> buildLinearModel() const;
-
-  /// Given the modelFeatures construct, it builds the feature matrix with scaled values
-  /// @param [in] modelFeatures: a struct which contains the std and mean vectores of each feature
-  AlignedVector<float> extractFeatures(const ModelFeatures &modelFeatures) const;
-
-  /// Applies a sigmoid function to each element of a vector and returns the mean of the result vector
-  /// @param [in] linearPredictedValues: the vector of real values returned by a linear regression
-  float computeWordProbabilities(std::vector<float> &linearPredictedValues) const;
-
-  // AlignedMemory of QE model. This is going to be built from load model
-  AlignedMemory memory_;
-  /// The current Quality Estimator model is a Logistic Model implemented through
-  /// a linear regressor + sigmoid function. Simply speaking, a LR model depends on
-  /// features to be scaled, so it contains four elements of data: a vector of coeficients
-  /// and a intercept (which represents the linear model) and a vector os means and stds
-  /// (which are necessary for feature scaling). These pointers are firstly initialized by
-  /// parsing a file (which comes from memory) and then they are used to build a model
-  /// representation (which is a matrix)
-  const float *stds_ = nullptr;
-  const float *means_ = nullptr;
-  const float *coefficients_ = nullptr;
-  const float *intercept_ = nullptr;
-  int numFeatures_ = 0;
-  // QE model matrix representation. This is going to be loaded from buildLinearModel
-  AlignedVector<float> modelMatrix_;
+  LogisticRegressor logisticRegressor_;
 };
 
 }  // namespace bergamot

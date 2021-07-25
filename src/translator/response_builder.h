@@ -1,13 +1,13 @@
 #ifndef SRC_BERGAMOT_RESPONSE_BUILDER_H_
 #define SRC_BERGAMOT_RESPONSE_BUILDER_H_
 
+#include <optional>
+
 #include "data/types.h"
 #include "quality_estimator.h"
 #include "response.h"
 #include "response_options.h"
 #include "vocabs.h"
-
-#include <optional>
 
 // For now we will work with this, to avoid complaints another structure is hard
 // to operate with.
@@ -30,7 +30,7 @@ class ResponseBuilder {
   /// @param [in] qualityEstimator: the QualityEstimator model that can be used
   /// to provide translation quality probability.
   ResponseBuilder(ResponseOptions responseOptions, AnnotatedText &&source, Vocabs &vocabs,
-                  std::promise<Response> &&promise, const std::optional< QualityEstimator > &qualityEstimator)
+                  std::promise<Response> &&promise, const std::optional<QualityEstimator> &qualityEstimator)
       : responseOptions_(responseOptions),
         source_(std::move(source)),
         vocabs_(vocabs),
@@ -55,7 +55,7 @@ class ResponseBuilder {
     buildTranslatedText(histories, response);
 
     // Should always be after buildTranslatedText
-    if (responseOptions_.qualityScores && qualityEstimator_.has_value() ) {
+    if (responseOptions_.qualityScores && qualityEstimator_.has_value()) {
       buildQualityScores(histories, response);
     }
 
@@ -94,7 +94,7 @@ class ResponseBuilder {
                                     //  after Response constructed.
   AnnotatedText source_;
 
-  const std::optional< QualityEstimator >& qualityEstimator_;
+  const std::optional<QualityEstimator> &qualityEstimator_;
 };
 }  // namespace bergamot
 }  // namespace marian

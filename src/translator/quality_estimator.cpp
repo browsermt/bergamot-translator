@@ -78,10 +78,10 @@ QualityEstimator::LogisticRegressor QualityEstimator::load(const AlignedMemory& 
   return LogisticRegressor(std::move(scale), std::move(coefficientsMatrix), intercept);
 }
 
-std::tuple<std::vector<ByteRange>, std::vector<QualityEstimator::WordFeatures >, float > QualityEstimator::mapBPEToWords(
+std::tuple<std::vector<ByteRange>, std::vector<QualityEstimator::WordFeatures>, float> QualityEstimator::mapBPEToWords(
     const std::vector<float>& logProbs, const AnnotatedText& target, const size_t sentenceIdx) const {
   if (logProbs.empty() || target.text.empty()) {
-    return {{}, {}, 0.0 };
+    return {{}, {}, 0.0};
   }
 
   std::vector<ByteRange> wordByteRanges;
@@ -96,14 +96,10 @@ std::tuple<std::vector<ByteRange>, std::vector<QualityEstimator::WordFeatures >,
   wordsFeatures.push_back({1, subwordScore, subwordScore});
   wordByteRanges.push_back(subword);
 
-  /// a word is composed by multiple subtokens. The EOS token
-  /// is the only one where subword.begin is the same as the end
-  /// Therefore, if both are equal, we have reached the end of sentence
-  /// If we do not apply an break statement the code would fail since
-  /// target.text do not contain the EOS token
-
   size_t subwordIdx = 1;
-
+  ///  A word is composed of multiple subtokens. The definition of an "entire"
+  /// word is the presence of whitespace. The QE model ignores the presence
+  /// of the EOS token, and hence we only need to iterate n-1 positions.
   for (; subwordIdx < (logProbs.size() - 1); ++subwordIdx) {
     const float subwordScore = logProbs[subwordIdx];
     sequence += subwordScore;
@@ -112,7 +108,7 @@ std::tuple<std::vector<ByteRange>, std::vector<QualityEstimator::WordFeatures >,
 
     const char firstLetter = target.text.at(subword.begin);
 
-    // if first character is whitespace it's a begining of a new word
+    // if the first character is whitespace, it's a beginning of a new word
     if (isspace(firstLetter)) {
       ++subword.begin;
       wordsFeatures.push_back({1, subwordScore, subwordScore});
@@ -165,7 +161,7 @@ std::vector<float> QualityEstimator::LogisticRegressor::vectorResult(const Intge
 }
 
 QualityEstimator::IntgemmMatrix QualityEstimator::LogisticRegressor::transformFeatures(
-    const std::vector<WordFeatures> &wordsFeatures, const float overallMean) const {
+    const std::vector<WordFeatures>& wordsFeatures, const float overallMean) const {
   const intgemm::Index numWords = wordsFeatures.size();
 
   QualityEstimator::IntgemmMatrix features(numWords, NumberOfFeatures, intgemm::Int16::tile_info.a_rows,
@@ -196,8 +192,9 @@ float QualityEstimator::LogisticRegressor::resultToProbabilities(std::vector<flo
 }
 
 QualityEstimator::WordsQualityEstimate QualityEstimator::LogisticRegressor::predictQualityScores(
-    const std::vector<ByteRange>& wordByteRanges, const std::vector<WordFeatures>& wordsFeatures, const float overallMean) const {
-  std::vector<float> wordQualityScores = vectorResult(transformFeatures(wordsFeatures,overallMean));
+    const std::vector<ByteRange>& wordByteRanges, const std::vector<WordFeatures>& wordsFeatures,
+    const float overallMean) const {
+  std::vector<float> wordQualityScores = vectorResult(transformFeatures(wordsFeatures, overallMean));
   const float sentenceScore = resultToProbabilities(wordQualityScores);
   return {wordQualityScores, wordByteRanges, sentenceScore};
 }

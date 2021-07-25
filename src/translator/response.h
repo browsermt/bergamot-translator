@@ -6,10 +6,10 @@
 #include <vector>
 
 #include "annotation.h"
-#include "quality_estimator.h"
 #include "data/alignment.h"
 #include "data/types.h"
 #include "definitions.h"
+#include "quality_estimator.h"
 #include "translator/beam_search.h"
 
 namespace marian {

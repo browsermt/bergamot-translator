@@ -43,7 +43,7 @@ SCENARIO("Quality Estimator Test ", "[QualityEstimator]") {
     std::vector<std::vector<float> > lrParameters = {stds, means, coefficients, intercept};
 
     AND_GIVEN("QualityEstimator") {
-      QualityEstimator qualityEstimator(std::move(QualityHelper::writeQualityEstimatorMemory( lrParameters )));
+      QualityEstimator qualityEstimator(std::move(QualityHelper::writeQualityEstimatorMemory(lrParameters)));
 
       WHEN("It's call computeQualityScores") {
         auto wordsQualityEstimate = qualityEstimator.computeQualityScores(logProbs, annotatedTarget, 0);
@@ -52,9 +52,8 @@ SCENARIO("Quality Estimator Test ", "[QualityEstimator]") {
           CHECK(wordsQualityEstimate.wordByteRanges ==
                 std::vector<ByteRange>({{0, 1}, {2, 6}, {7, 9}, {10, 12}, {13, 21}}));
 
-          CHECK(wordsQualityEstimate.wordQualityScores ==
-                std::vector<float>({0.883, 0.988, 0.988, 0.606, 0.952}));
-          CHECK(wordsQualityEstimate.sentenceScore == Approx( 0.88341f));
+          CHECK(wordsQualityEstimate.wordQualityScores == std::vector<float>({0.883, 0.988, 0.988, 0.606, 0.952}));
+          CHECK(wordsQualityEstimate.sentenceScore == Approx(0.88341f));
         }
       }
     }

@@ -13,26 +13,26 @@ namespace bergamot {
 // ASCII and Unicode text files never start with the following 64 bits
 constexpr std::size_t BINARY_QE_MODEL_MAGIC = 0x78cc336f1d54b180;
 
-/// QualityEstimator is responsible for measuring the quality of a translation
-/// model.
+/// QualityEstimator (QE) is responsible for measuring the quality of a translation model.
+/// It returns the probability of each translated term being a valid one.
+/// It's worthwhile mentioning that a word is made of one or more byte pair encoding (BPE) tokens.
+
+/// Currently, it only expects an AlignedMemory, which is given from a binary file,
+/// which contains a header.
+/// The header includes the following structure:
+/// - a vector of standard deviations of features
+/// - a vector of means of features
+/// - a vector of coefficients
+/// - vector of constants, which correspond to the intercept
 ///
-/// Currently, it only expects an AlignedMemory, which should be provided
-/// from a binary file, which contains a header.
-///
-/// The header contains the following structure: a vector of standard deviations
-/// of features; a vector of means of features; a vector of coefficients
-/// and a vector of constant, which correspond to the intercept.
-///
-/// The first two ones are necessary for feature scaling whereas the last two are necessary
-/// for model computation.
-///
+/// Where each feature corresponds to one of the following:
+/// - the mean BPE log Probabilities of a given word.
+/// - the minimum BPE log Probabilities of a given word.
+/// - the number of BPE tokens that a word is made of
+/// - the overall mean considering all BPE tokens in a sentence
+
 /// The current model implementation is a Logistic Model, so after the matrix multiply,
-/// there is a non-linear sigmoid transformation which converts the final scores
-/// into probabilities.
-///
-/// The model takes four features: the mean of a word byte pair encoding log probabilities;
-/// the minimum of logprobs; the number of bpe that a word is made of and the overall mean
-/// of bpe tokens log probs
+// there is a non-linear sigmoid transformation that converts the final scores into probabilities.
 class QualityEstimator {
  public:
   struct Header {
@@ -40,11 +40,10 @@ class QualityEstimator {
     uint64_t numFeatures;  // Length of all arrays.
   };
 
-  /// WordQualityScores contains the quality data of a given translated sentence
-  ///
-  /// It contains the confidence of each translated word quality
-  /// (higher probabilities implies in better translated words); the ByteRanges of each word
-  /// and the confidence of the whole sentence, represented as the mean word scores
+  /// WordQualityScores contains the quality data of a given translated sentence.
+  /// It includes the confidence (proxied by a probability) of each decoded word
+  /// (higher probabilities imply better-translated words), the ByteRanges of each term,
+  /// and the probability of the whole sentence, represented as the mean word scores.
   struct WordsQualityEstimate {
     std::vector<float> wordQualityScores;
     std::vector<ByteRange> wordByteRanges;
@@ -87,12 +86,13 @@ class QualityEstimator {
   };
 
   /// The current Quality Estimator model is a Logistic Model implemented through
-  /// a linear regressor + sigmoid function. Simply speaking, a LR model depends on
-  /// features to be scaled, so it contains four elements of data: a vector of coefficients
-  /// and a intercept (which represents the linear model) and a vector os means and stds
-  /// (which are necessary for feature scaling). These pointers are firstly initialized by
-  /// parsing a file (which comes from memory) and then they are used to build a model
-  /// representation (which is a matrix)
+  /// a linear regressor + sigmoid function. Simply speaking, an LR model depends
+  /// on features to be scaled, so it contains four elements of data: a vector of coefficients
+  /// and an intercept (which represents the linear model) and a vector of means and stds
+  /// (which are necessary for feature scaling).
+  ///
+  /// These pointers are firstly initialized by parsing a file (which comes from memory),
+  /// and then they are used to build a model representation (which is a matrix)
   class LogisticRegressor {
    public:
     enum Configuration { NumberOfFeatures = 4, ParametersDims = 4, CoefficientsColumnSize = 1 };
@@ -125,7 +125,7 @@ class QualityEstimator {
   /// binary file parser which came from AlinedMemory
   static LogisticRegressor load(const AlignedMemory &qualityEstimatorMemory);
 
-  /// Builds the words byte ranges (including EOS token) and defines the ModelFeatures values
+  /// Builds the words byte ranges and defines the WordFeature values
   /// @param [in] lobProbs: the log probabilities given by an translation model
   /// @param [in] target: AnnotatedText target value
   /// @param [in] sentenceIdx: the id of a candidate sentence

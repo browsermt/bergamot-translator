@@ -5,10 +5,10 @@
 namespace marian {
 namespace bergamot {
 
-class QualityHelper
-{
-public:
-    static AlignedMemory writeQualityEstimatorMemory( const std::vector< std::vector< float > >& logisticRegressorParameters );
+/// QualityEstimatorHelper is a utility function that writes a QualityEstimator Aligned Memory
+class QualityHelper {
+ public:
+  static AlignedMemory writeQualityEstimatorMemory(const std::vector<std::vector<float> >& logisticRegressorParameters);
 };
-}
-}
+}  // namespace bergamot
+}  // namespace marian

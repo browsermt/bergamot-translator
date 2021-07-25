@@ -23,9 +23,8 @@ Service::Service(Ptr<Options> options, MemoryBundle memoryBundle)
       blocking_translator_(DeviceId(0, DeviceType::cpu), vocabs_, options_, &modelMemory_, &shortlistMemory_)
 #endif
 {
-  if( memoryBundle.qualityEstimatorMemory.size() > 0  )
-  {
-    qualityEstimator_.emplace( std::move(memoryBundle.qualityEstimatorMemory ) );
+  if (memoryBundle.qualityEstimatorMemory.size() > 0) {
+    qualityEstimator_.emplace(std::move(memoryBundle.qualityEstimatorMemory));
   }
 #ifdef WASM_COMPATIBLE_SOURCE
   blocking_translator_.initialize();

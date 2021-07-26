@@ -163,6 +163,7 @@ CacheStats LockLessClockCache::stats() const {
 }
 
 void LockLessClockCache::debug(std::string label) const {
+    /*
   std::cout << "--- L4: " << label << std::endl;
   auto &perfData = context_[hashTableIndex_].GetPerfData();
 #define __l4inspect(key) std::cout << #key << " " << perfData.Get(L4::HashTablePerfCounter::key) << std::endl;
@@ -176,6 +177,7 @@ void LockLessClockCache::debug(std::string label) const {
   __l4inspect(TotalValueSize);
 
   std::cout << "---- " << std::endl;
+  */
 };
 
 std::string LockLessClockCache::wordsToString(const marian::Words &words) {

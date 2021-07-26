@@ -1,7 +1,6 @@
 # Unit tests
 set(UNIT_TESTS
     annotation_tests
-    cache_tests
 )
 
 foreach(test ${UNIT_TESTS})

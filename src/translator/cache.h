@@ -17,47 +17,6 @@ struct CacheStats {
   size_t misses{0};
 };
 
-/// Thread-safe naive LRUCache using a list and a hashmap.
-template <typename Key, typename Value, typename Hash = std::hash<Key>>
-class LRUCache {
- public:
-  LRUCache(size_t sizeCap) : sizeCap_(sizeCap) {}
-
-  /// Insert a key, value into cache. Evicts least-recently-used if no space. Thread-safe.
-  void insert(const Key key, const Value value);
-
-  /// Attempt to fetch a key storing it in value. Returns true if cache-hit, false if cache-miss. Thread-safe.
-  bool fetch(const Key key, Value &value);
-
-  CacheStats stats() const { return stats_; }
-
- private:
-  struct Record {
-    Key key;
-    Value value;
-  };
-
-  typedef typename std::list<Record>::iterator RecordIterator;
-
-  void unsafeEvict();
-  void unsafeInsert(const Key key, const Value value);
-
-  size_t sizeCap_;  /// Number of (key, value) to store at most.
-
-  /// Linked list to keep usage ordering and evict least-recently used.
-  std::list<Record> storage_;
-
-  /// hash-map for O(1) cache access. Stores iterator to the list holding cache-elements. Iterators are valid until
-  /// they're erased (they don't invalidate on insertion / move of other elements).
-  std::unordered_map<Key, RecordIterator, Hash> map_;
-  std::mutex rwMutex_;  ///< Guards accesses to storage_, map_
-  CacheStats stats_;    ///< Stores hits and misses for log/checks.
-};
-
-struct WordsHashFn {
-  size_t operator()(const Words &words) const;
-};
-
 /// History is marian object with plenty of shared_ptrs lying around, which makes keeping a lid on memory hard for
 /// cache, due to copies being shallow rather than deep. We therefore process marian's lazy History management changing
 /// to something eager, keeping only what we want and units accounted for. Each of these corresponds to a

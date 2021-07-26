@@ -98,9 +98,8 @@ class LockLessClockCache {
   void insert(const marian::Words &words, const ProcessedRequestSentence &processedRequestSentence);
   CacheStats stats() const;
 
-  void debug(std::string) const;
-
  private:
+  void debug(std::string) const;
   std::string wordsToString(const marian::Words &words) { return cache_util::wordsToString(words); };
 
   L4::HashTableConfig::Cache cacheConfig_;
@@ -131,11 +130,11 @@ class ThreadUnsafeCache {
 
   std::list<Record> storage_;
   typedef std::list<Record>::iterator RecordPtr;
-
   std::unordered_map<marian::Words, RecordPtr, cache_util::HashWords> cache_;
 
   size_t storageSize_;
   size_t storageSizeLimit_;
+
   CacheStats stats_;
 };
 

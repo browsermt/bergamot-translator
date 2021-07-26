@@ -198,10 +198,13 @@ bool ThreadUnsafeCache::fetch(const marian::Words &words, ProcessedRequestSenten
     processedRequestSentence = ProcessedRequestSentence::fromBytes(value.data(), value.size());
 
     // Refresh recently used
-    storage_.push_back(*recordPtr);
+    storageSize_ -= recordPtr->size();
+    auto record = *recordPtr;
     storage_.erase(recordPtr);
+    storage_.insert(storage_.end(), std::move(record));
 
     ++stats_.hits;
+    return true;
   }
 
   ++stats_.misses;
@@ -225,7 +228,10 @@ void ThreadUnsafeCache::insert(const marian::Words &words, const ProcessedReques
   }
 }
 
-CacheStats ThreadUnsafeCache::stats() const { return stats_; }
+CacheStats ThreadUnsafeCache::stats() const {
+  CacheStats stats = stats_;
+  return stats;
+}
 
 }  // namespace bergamot
 }  // namespace marian

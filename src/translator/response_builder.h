@@ -3,6 +3,7 @@
 
 #include "cache.h"
 #include "data/types.h"
+#include "processed_request_sentence.h"
 #include "response.h"
 #include "response_options.h"
 #include "vocabs.h"

@@ -14,6 +14,7 @@
 #include "common/logging.h"
 #include "data/types.h"
 #include "definitions.h"
+#include "processed_request_sentence.h"
 #include "response.h"
 #include "response_builder.h"
 #include "translator/beam_search.h"

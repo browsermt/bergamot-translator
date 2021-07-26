@@ -10,6 +10,7 @@
 #include "3rd_party/L4/inc/L4/LocalMemory/HashTableService.h"
 #endif
 
+#include "processed_request_sentence.h"
 #include "translator/beam_search.h"
 
 namespace marian {
@@ -18,16 +19,7 @@ namespace bergamot {
 namespace cache_util {
 
 // Provides a unique representation of marian::Words as a string
-inline std::string wordsToString(const marian::Words &words) {
-  std::string repr;
-  for (size_t i = 0; i < words.size(); i++) {
-    if (i != 0) {
-      repr += " ";
-    }
-    repr += words[i].toString();
-  }
-  return repr;
-}
+std::string wordsToString(const marian::Words &words);
 
 struct HashWords {
   size_t operator()(const Words &words) const { return std::hash<std::string>{}(wordsToString(words)); }
@@ -40,52 +32,19 @@ struct CacheStats {
   size_t misses{0};
 };
 
-/// History is marian object with plenty of shared_ptrs lying around, which makes keeping a lid on memory hard for
-/// cache, due to copies being shallow rather than deep. We therefore process marian's lazy History management changing
-/// to something eager, keeping only what we want and units accounted for. Each of these corresponds to a
-/// `RequestSentence` and retains the minimum information required to reconstruct a full Response if saved in Cache.
+/// LocklessClockCache is an Adapter built on top of L4 specialized for the use-case of bergamot-translator. L4 is a
+/// thread-safe cache implementation written in the "lock-free" paradigm using atomic constucts. There is locking when
+/// structures are deleted, which runs in the background using an epoch based memory reclamation (EBR) scheme. Eviction
+/// follows the "Clock" algorithm, which is a practical approximation for LRU. Records live either until they're used at
+/// least once, or there is no space left without removing one that's not been used yet. This implementation creates on
+/// additional thread which manages the garbage collection for the class.
 ///
-/// L4 requires byte-streams, if we are to keep tight control over "memory" we need to have accounting for cache-size
-/// based on memory/bytes as well.
+/// The additional thread makes using this class unsuitable for WASM's blocking workflow.
 ///
-/// If the layout of this struct changes, we should be able to use version mismatches to invalidate cache to avoid
-/// false positives, if the cache ever makes it to disk / external storage. While this is desirable, for now this is
-/// in-memory.
-
-class ProcessedRequestSentence {
- public:
-  ProcessedRequestSentence();
-
-  /// Construct from History - consolidate members which we require further and store the complete object (not
-  /// references to shared-pointers) for storage and recompute efficiency purposes.
-  ProcessedRequestSentence(const History &history);
-  void debug();
-
-  // Const accessors for private members
-  const marian::Words &words() const { return words_; }
-  const data::SoftAlignment &softAlignment() const { return softAlignment_; }
-  const std::vector<float> &wordScores() const { return wordScores_; }
-  float sentenceScore() const { return sentenceScore_; }
-
-  // Helpers to work with blobs / bytearray storing the class, particularly for L4. Storage follows the order of member
-  // definitions in this class. With vectors prefixed with sizes to allocate before reading in with the right sizes.
-
-  /// Deserialize the contents of an instance from a sequence of bytes. Compatible with toBytes.
-  static ProcessedRequestSentence fromBytes(char const *data, size_t size);
-
-  /// Serialize the contents of an instance to a sequence of bytes. Should be compatible with fromBytes.
-  std::string toBytes() const;
-
- private:
-  // Note: Adjust blob IO in order of the member definitions here, in the event of change.
-
-  marian::Words words_;                ///< vector of marian::Word, no shared_ptrs
-  data::SoftAlignment softAlignment_;  ///< history->traceSoftAlignment(); std::vector<std::vector<float>>
-  std::vector<float> wordScores_;      ///< hyp->tracebackWordScores();
-  float sentenceScore_;                ///< normalizedPathScore
-};
-
-/// LocklessCache Adapter built on top of L4
+/// Keys are marian::Words, values are ProcessedRequestSentences.
+///
+/// There is a serialization (converting to binary (data*, size)) of structs overhead with this class as well, which
+/// helps keep tight lid on memory usage. This should however be cheaper in comparison to recomputing through the graph.
 
 #ifndef WASM_COMPATIBLE_SOURCE
 class LockLessClockCache {
@@ -100,23 +59,40 @@ class LockLessClockCache {
 
  private:
   void debug(std::string) const;
-  std::string wordsToString(const marian::Words &words) { return cache_util::wordsToString(words); };
 
+  /// cacheConfig {sizeInBytes, recordTimeToLive, removeExpired} determins the upper limit on cache storage, time for a
+  /// record to live and whether or not to evict expired records.
   L4::HashTableConfig::Cache cacheConfig_;
+
+  /// epochManagerConfig_{epochQueueSize, epochProcessingInterval, numActionQueues}:
+  /// - epochQueueSize (How many actions to keep in a Queue)
+  /// - epochProcessingInterval (Reclaimation runs in a background thread. The interval at which this thread is run).
+  /// - numActionQueues (Possibly to increase throughput of registering actions by a finer-granularity of locking).
+  /// .. and "action" is an std::function<void(void)>..., which is run by the background thread.
   L4::EpochManagerConfig epochManagerConfig_;
+
+  /// L4 Service. There's a string key based registration through service_ and accesses from multiple processes to get
+  /// the same map.
   L4::LocalMemory::HashTableService service_;
+
+  /// An L4 Context, does magic with epochs everytime accessed;  "Once a context is retrieved, the operations such as
+  /// operator[] on the context and Get() are lock-free."
   L4::LocalMemory::Context context_;
+
+  /// context_[hashTableIndex_] gives the hashmap for Get(...) or Add(...) operations
   size_t hashTableIndex_;
 };
 
 #endif
 
-/// Alternative cache for non-thread based workflow. Clock Eviction Policy. Uses a lot of std::list
-/// Yes, std::list; If you need a more efficient version, look into threads and go for LockLessClockCache.
+/// Alternative cache for non-thread based workflow (particularly WASM). LRU Eviction Policy. Uses a lot of std::list.
+/// Yes, std::list; If someone needs a more efficient version, look into threads and go for LocklessClockCache.
+/// This class comes as an afterthought, so expect parameters which may not be used to achieve parity with
+/// LocklessClockCache.
 
-class ThreadUnsafeCache {
+class ThreadUnsafeLRUCache {
  public:
-  ThreadUnsafeCache(size_t sizeInBytes, size_t timeOutInSeconds, bool removeExpired = false);
+  ThreadUnsafeLRUCache(size_t sizeInBytes, size_t timeOutInSeconds, bool removeExpired = false);
   bool fetch(const marian::Words &words, ProcessedRequestSentence &processedRequestSentence);
   void insert(const marian::Words &words, const ProcessedRequestSentence &processedRequestSentence);
   CacheStats stats() const;
@@ -130,20 +106,22 @@ class ThreadUnsafeCache {
 
   std::list<Record> storage_;
   typedef std::list<Record>::iterator RecordPtr;
+
   std::unordered_map<marian::Words, RecordPtr, cache_util::HashWords> cache_;
 
+  /// Active sizes (in bytes) stored in storage_
   size_t storageSize_;
+
+  // Limit of size (in bytes) of storage_
   size_t storageSizeLimit_;
 
   CacheStats stats_;
 };
 
-typedef std::vector<std::unique_ptr<ProcessedRequestSentence>> ProcessedRequestSentences;
-
 #ifndef WASM_COMPATIBLE_SOURCE
 typedef LockLessClockCache TranslatorLRUCache;
 #else
-typedef ThreadUnsafeCache TranslatorLRUCache;
+typedef ThreadUnsafeLRUCache TranslatorLRUCache;
 #endif
 
 }  // namespace bergamot

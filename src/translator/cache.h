@@ -110,8 +110,7 @@ class LockLessClockCache {
   using KeyBytes = L4::IWritableHashTable::Key;
   using ValueBytes = L4::IWritableHashTable::Value;
 
-  LockLessClockCache(const std::string &modelIdentifier, size_t sizeInBytes, size_t timeOutInSeconds,
-                     bool removeExpired = false);
+  LockLessClockCache(size_t sizeInBytes, size_t timeOutInSeconds, bool removeExpired = false);
   bool fetch(const marian::Words &words, ProcessedRequestSentence &processedRequestSentence);
   void insert(const marian::Words &words, const ProcessedRequestSentence &processedRequestSentence);
   CacheStats stats() const;
@@ -126,7 +125,6 @@ class LockLessClockCache {
   L4::LocalMemory::HashTableService service_;
   L4::LocalMemory::Context context_;
   size_t hashTableIndex_;
-  const std::string modelIdentifier_;
 };
 
 typedef std::vector<std::unique_ptr<ProcessedRequestSentence>> ProcessedRequestSentences;

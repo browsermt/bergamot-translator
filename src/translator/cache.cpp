@@ -98,19 +98,21 @@ ProcessedRequestSentence ProcessedRequestSentence::fromBytes(char const *data, s
   return sentence;
 }
 
-LockLessClockCache::LockLessClockCache(const std::string &modelIdentifier, size_t sizeInBytes, size_t timeOutInSeconds,
-                                       bool removeExpired /* = true */)
+LockLessClockCache::LockLessClockCache(size_t sizeInBytes, size_t timeOutInSeconds, bool removeExpired /* = true */)
     : epochManagerConfig_(/*epochQueueSize=*/1000,
                           /*epochProcessingInterval=*/std::chrono::milliseconds(1000),
                           /*numActionQueues=*/4),
       cacheConfig_{sizeInBytes, std::chrono::seconds(timeOutInSeconds), removeExpired},
-      modelIdentifier_(modelIdentifier),
       service_(epochManagerConfig_),
       context_(service_.GetContext()) {
-  // Once a context is retrieved, the operations such as
-  // operator[] on the context and Get() are lock-free.
+  // For now, we use a hard-coded modelIdentifier; In the future we may keep separate caches for models or change the
+  // Key to use <modelIdentifier, marian::Words> to keep a global lid on cache memory usage.
+  //
+  // L4's API requires this string identifier, which for now is called "global-cache"
+
+  const std::string modelIdentifier = "global-cache";
   hashTableIndex_ = service_.AddHashTable(
-      L4::HashTableConfig(modelIdentifier_, L4::HashTableConfig::Setting{/*numBuckets=*/10000}, cacheConfig_));
+      L4::HashTableConfig(modelIdentifier, L4::HashTableConfig::Setting{/*numBuckets=*/10000}, cacheConfig_));
 }
 
 bool LockLessClockCache::fetch(const marian::Words &words, ProcessedRequestSentence &processedRequestSentence) {
@@ -134,6 +136,8 @@ bool LockLessClockCache::fetch(const marian::Words &words, ProcessedRequestSente
 }
 
 void LockLessClockCache::insert(const marian::Words &words, const ProcessedRequestSentence &processedRequestSentence) {
+  // Once a context is retrieved, the operations such as
+  // operator[] on the context and Get() are lock-free.
   auto context = service_.GetContext();
   auto &hashTable = context[hashTableIndex_];
 

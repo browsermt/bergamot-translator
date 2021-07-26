@@ -121,9 +121,9 @@ class ThreadUnsafeLRUCache {
 };
 
 #ifndef WASM_COMPATIBLE_SOURCE
-typedef LockLessClockCache TranslatorLRUCache;
+typedef LockLessClockCache TranslationCache;
 #else
-typedef ThreadUnsafeLRUCache TranslatorLRUCache;
+typedef ThreadUnsafeLRUCache TranslationCache;
 #endif
 
 }  // namespace bergamot

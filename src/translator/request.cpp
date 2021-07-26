@@ -11,7 +11,7 @@ namespace marian {
 namespace bergamot {
 
 // -----------------------------------------------------------------
-Request::Request(size_t Id, Segments &&segments, ResponseBuilder &&responseBuilder, TranslatorLRUCache &cache)
+Request::Request(size_t Id, Segments &&segments, ResponseBuilder &&responseBuilder, TranslationCache &cache)
     : Id_(Id),
       segments_(std::move(segments)),
       responseBuilder_(std::move(responseBuilder)),

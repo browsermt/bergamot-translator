@@ -135,7 +135,7 @@ class Service {
   /// packing-efficiency and priority optimization heuristics.
   ThreadsafeBatcher batcher_;
 
-  TranslatorLRUCache cache_;
+  TranslationCache cache_;
 
   // The following constructs are available providing full capabilities on a non
   // WASM platform, where one does not have to hide threads.

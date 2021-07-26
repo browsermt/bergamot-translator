@@ -52,7 +52,7 @@ class Request {
   /// @param [in] responseBuilder: Callback function (of ResponseBuilder type)
   /// to be triggered upon the completion of translation of all units in a
   /// Request.
-  Request(size_t Id, Segments &&segments, ResponseBuilder &&responseBuilder, TranslatorLRUCache &cache);
+  Request(size_t Id, Segments &&segments, ResponseBuilder &&responseBuilder, TranslationCache &cache);
 
   /// Obtain the count of tokens in the segment correponding to index. Used to
   /// insert sentence from multiple requests into the corresponding size bucket.
@@ -97,7 +97,7 @@ class Request {
   ResponseBuilder responseBuilder_;
 
   /// Reference to cache to prefill / populate
-  TranslatorLRUCache &cache_;
+  TranslationCache &cache_;
 };
 
 /// A RequestSentence provides a view to a sentence within a Request. Existence

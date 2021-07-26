@@ -135,7 +135,6 @@ class Service {
   /// packing-efficiency and priority optimization heuristics.
   ThreadsafeBatcher batcher_;
 
-  /// LRUCache, threadsafe.
   TranslatorLRUCache cache_;
 
   // The following constructs are available providing full capabilities on a non

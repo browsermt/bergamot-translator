@@ -6,7 +6,10 @@
 #include <unordered_map>
 #include <utility>
 
+#ifndef WASM_COMPATIBLE_SOURCE
 #include "3rd_party/L4/inc/L4/LocalMemory/HashTableService.h"
+#endif
+
 #include "translator/beam_search.h"
 
 namespace marian {
@@ -84,6 +87,7 @@ class ProcessedRequestSentence {
 
 /// LocklessCache Adapter built on top of L4
 
+#ifndef WASM_COMPATIBLE_SOURCE
 class LockLessClockCache {
  public:
   using KeyBytes = L4::IWritableHashTable::Key;
@@ -106,17 +110,33 @@ class LockLessClockCache {
   size_t hashTableIndex_;
 };
 
-/// Alternative cache for non-thread based workflow. Random eviction policy.
+#endif
+
+/// Alternative cache for non-thread based workflow. Clock Eviction Policy. Uses a lot of std::list
+/// Yes, std::list; If you need a more efficient version, look into threads and go for LockLessClockCache.
+
 class ThreadUnsafeCache {
  public:
   ThreadUnsafeCache(size_t sizeInBytes, size_t timeOutInSeconds, bool removeExpired = false);
   bool fetch(const marian::Words &words, ProcessedRequestSentence &processedRequestSentence);
   void insert(const marian::Words &words, const ProcessedRequestSentence &processedRequestSentence);
+  CacheStats stats() const;
 
  private:
-  std::unordered_map<marian::Words, ProcessedRequestSentence, cache_util::HashWords> cache_;
+  struct Record {
+    marian::Words key;
+    std::string value;
+    size_t size() const { return key.size() * sizeof(marian::Word) + value.size() * sizeof(std::string::value_type); }
+  };
+
+  std::list<Record> storage_;
+  typedef std::list<Record>::iterator RecordPtr;
+
+  std::unordered_map<marian::Words, RecordPtr, cache_util::HashWords> cache_;
+
   size_t storageSize_;
   size_t storageSizeLimit_;
+  CacheStats stats_;
 };
 
 typedef std::vector<std::unique_ptr<ProcessedRequestSentence>> ProcessedRequestSentences;

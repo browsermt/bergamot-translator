@@ -98,6 +98,7 @@ ProcessedRequestSentence ProcessedRequestSentence::fromBytes(char const *data, s
   return sentence;
 }
 
+#ifndef WASM_COMPATIBLE_SOURCE
 LockLessClockCache::LockLessClockCache(size_t sizeInBytes, size_t timeOutInSeconds, bool removeExpired /* = true */)
     : epochManagerConfig_(/*epochQueueSize=*/1000,
                           /*epochProcessingInterval=*/std::chrono::milliseconds(1000),
@@ -184,21 +185,47 @@ void LockLessClockCache::debug(std::string label) const {
   */
 };
 
+#endif
+
 ThreadUnsafeCache::ThreadUnsafeCache(size_t sizeInBytes, size_t timeOutInSeconds, bool removeExpired)
     : storageSizeLimit_(sizeInBytes), storageSize_(0) {}
 
 bool ThreadUnsafeCache::fetch(const marian::Words &words, ProcessedRequestSentence &processedRequestSentence) {
   auto p = cache_.find(words);
   if (p != cache_.end()) {
-    processedRequestSentence = p->second;
+    auto recordPtr = p->second;
+    const std::string &value = recordPtr->value;
+    processedRequestSentence = ProcessedRequestSentence::fromBytes(value.data(), value.size());
+
+    // Refresh recently used
+    storage_.push_back(*recordPtr);
+    storage_.erase(recordPtr);
+
+    ++stats_.hits;
   }
+
+  ++stats_.misses;
   return false;
 }
 
 void ThreadUnsafeCache::insert(const marian::Words &words, const ProcessedRequestSentence &processedRequestSentence) {
-  // TODO(measure storage size, evict randomly, or maybe use clock
-  cache_.emplace(words, processedRequestSentence);
+  Record candidate{words, processedRequestSentence.toBytes()};
+  auto removeCandidatePtr = storage_.begin();
+
+  while (storageSize_ + candidate.size() > storageSizeLimit_ && removeCandidatePtr != storage_.end()) {
+    storageSize_ -= removeCandidatePtr->size();
+    storage_.erase(removeCandidatePtr);
+    ++removeCandidatePtr;
+  }
+
+  if (storageSize_ + candidate.size() <= storageSizeLimit_) {
+    auto recordPtr = storage_.insert(storage_.end(), std::move(candidate));
+    cache_.emplace(std::make_pair(words, recordPtr));
+    storageSize_ += candidate.size();
+  }
 }
+
+CacheStats ThreadUnsafeCache::stats() const { return stats_; }
 
 }  // namespace bergamot
 }  // namespace marian

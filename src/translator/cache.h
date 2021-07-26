@@ -12,6 +12,26 @@
 namespace marian {
 namespace bergamot {
 
+namespace cache_util {
+
+// Provides a unique representation of marian::Words as a string
+inline std::string wordsToString(const marian::Words &words) {
+  std::string repr;
+  for (size_t i = 0; i < words.size(); i++) {
+    if (i != 0) {
+      repr += " ";
+    }
+    repr += words[i].toString();
+  }
+  return repr;
+}
+
+struct HashWords {
+  size_t operator()(const Words &words) const { return std::hash<std::string>{}(wordsToString(words)); }
+};
+
+}  // namespace cache_util
+
 struct CacheStats {
   size_t hits{0};
   size_t misses{0};
@@ -77,7 +97,7 @@ class LockLessClockCache {
   void debug(std::string) const;
 
  private:
-  std::string wordsToString(const marian::Words &words);
+  std::string wordsToString(const marian::Words &words) { return cache_util::wordsToString(words); };
 
   L4::HashTableConfig::Cache cacheConfig_;
   L4::EpochManagerConfig epochManagerConfig_;
@@ -86,9 +106,26 @@ class LockLessClockCache {
   size_t hashTableIndex_;
 };
 
+/// Alternative cache for non-thread based workflow. Random eviction policy.
+class ThreadUnsafeCache {
+ public:
+  ThreadUnsafeCache(size_t sizeInBytes, size_t timeOutInSeconds, bool removeExpired = false);
+  bool fetch(const marian::Words &words, ProcessedRequestSentence &processedRequestSentence);
+  void insert(const marian::Words &words, const ProcessedRequestSentence &processedRequestSentence);
+
+ private:
+  std::unordered_map<marian::Words, ProcessedRequestSentence, cache_util::HashWords> cache_;
+  size_t storageSize_;
+  size_t storageSizeLimit_;
+};
+
 typedef std::vector<std::unique_ptr<ProcessedRequestSentence>> ProcessedRequestSentences;
-/// For translator, we cache (marian::Words -> ProcessedRequestSentence).
+
+#ifndef WASM_COMPATIBLE_SOURCE
 typedef LockLessClockCache TranslatorLRUCache;
+#else
+typedef ThreadUnsafeCache TranslatorLRUCache;
+#endif
 
 }  // namespace bergamot
 }  // namespace marian

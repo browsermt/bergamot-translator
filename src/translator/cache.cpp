@@ -119,7 +119,7 @@ bool LockLessClockCache::fetch(const marian::Words &words, ProcessedRequestSente
   auto &hashTable = context_[hashTableIndex_];
 
   KeyBytes keyBytes;
-  std::string keyStr = wordsToString(words);
+  std::string keyStr = cache_util::wordsToString(words);
 
   keyBytes.m_data = reinterpret_cast<const std::uint8_t *>(keyStr.data());
   keyBytes.m_size = sizeof(std::string::value_type) * keyStr.size();
@@ -142,7 +142,7 @@ void LockLessClockCache::insert(const marian::Words &words, const ProcessedReque
   auto &hashTable = context[hashTableIndex_];
 
   KeyBytes keyBytes;
-  std::string keyStr = wordsToString(words);
+  std::string keyStr = cache_util::wordsToString(words);
 
   keyBytes.m_data = reinterpret_cast<const std::uint8_t *>(keyStr.data());
   keyBytes.m_size = sizeof(std::string::value_type) * keyStr.size();
@@ -184,15 +184,20 @@ void LockLessClockCache::debug(std::string label) const {
   */
 };
 
-std::string LockLessClockCache::wordsToString(const marian::Words &words) {
-  std::string repr;
-  for (size_t i = 0; i < words.size(); i++) {
-    if (i != 0) {
-      repr += " ";
-    }
-    repr += words[i].toString();
+ThreadUnsafeCache::ThreadUnsafeCache(size_t sizeInBytes, size_t timeOutInSeconds, bool removeExpired)
+    : storageSizeLimit_(sizeInBytes), storageSize_(0) {}
+
+bool ThreadUnsafeCache::fetch(const marian::Words &words, ProcessedRequestSentence &processedRequestSentence) {
+  auto p = cache_.find(words);
+  if (p != cache_.end()) {
+    processedRequestSentence = p->second;
   }
-  return repr;
+  return false;
+}
+
+void ThreadUnsafeCache::insert(const marian::Words &words, const ProcessedRequestSentence &processedRequestSentence) {
+  // TODO(measure storage size, evict randomly, or maybe use clock
+  cache_.emplace(words, processedRequestSentence);
 }
 
 }  // namespace bergamot

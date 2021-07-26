@@ -48,8 +48,9 @@ bool LockLessClockCache::fetch(const marian::Words &words, ProcessedRequestSente
   ValueBytes valBytes;
   bool fetchSuccess = hashTable.Get(keyBytes, valBytes);
   if (fetchSuccess) {
-    processedRequestSentence =
-        ProcessedRequestSentence::fromBytes(reinterpret_cast<const char *>(valBytes.m_data), valBytes.m_size);
+    const char *data = reinterpret_cast<const char *>(valBytes.m_data);
+    size_t size = valBytes.m_size;
+    processedRequestSentence = ProcessedRequestSentence::fromBytes(data, size);
   }
 
   debug("After Fetch");
@@ -88,7 +89,7 @@ CacheStats LockLessClockCache::stats() const {
 void LockLessClockCache::debug(std::string label) const {
   std::cerr << "--- L4: " << label << std::endl;
   auto &perfData = context_[hashTableIndex_].GetPerfData();
-#define __l4inspect(key) std::cout << #key << " " << perfData.Get(L4::HashTablePerfCounter::key) << std::endl;
+#define __l4inspect(key) std::cerr << #key << " " << perfData.Get(L4::HashTablePerfCounter::key) << std::endl;
 
   __l4inspect(CacheHitCount);
   __l4inspect(CacheMissCount);
@@ -105,7 +106,7 @@ void LockLessClockCache::debug(std::string label) const {
 
 #endif
 
-ThreadUnsafeLRUCache::ThreadUnsafeLRUCache(size_t sizeInBytes, size_t timeOutInSeconds, bool removeExpired)
+ThreadUnsafeLRUCache::ThreadUnsafeLRUCache(size_t sizeInBytes, size_t /*timeOutInSeconds*/, bool /*removeExpired*/)
     : storageSizeLimit_(sizeInBytes), storageSize_(0) {}
 
 bool ThreadUnsafeLRUCache::fetch(const marian::Words &words, ProcessedRequestSentence &processedRequestSentence) {
@@ -116,7 +117,6 @@ bool ThreadUnsafeLRUCache::fetch(const marian::Words &words, ProcessedRequestSen
     processedRequestSentence = ProcessedRequestSentence::fromBytes(value.data(), value.size());
 
     // Refresh recently used
-    storageSize_ -= recordPtr->size();
     auto record = *recordPtr;
     storage_.erase(recordPtr);
     storage_.insert(storage_.end(), std::move(record));
@@ -134,12 +134,14 @@ void ThreadUnsafeLRUCache::insert(const marian::Words &words,
   Record candidate{words, processedRequestSentence.toBytes()};
   auto removeCandidatePtr = storage_.begin();
 
+  // Loop until not end or we have room to insert candidate adhering to configured storage limits.
   while (storageSize_ + candidate.size() > storageSizeLimit_ && removeCandidatePtr != storage_.end()) {
     storageSize_ -= removeCandidatePtr->size();
     storage_.erase(removeCandidatePtr);
     ++removeCandidatePtr;
   }
 
+  // Only insert new candidate if we have room after adhering to storage-limit
   if (storageSize_ + candidate.size() <= storageSizeLimit_) {
     auto recordPtr = storage_.insert(storage_.end(), std::move(candidate));
     cache_.emplace(std::make_pair(words, recordPtr));

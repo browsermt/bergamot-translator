@@ -36,10 +36,11 @@ struct CacheStats {
 /// thread-safe cache implementation written in the "lock-free" paradigm using atomic constucts. There is locking when
 /// structures are deleted, which runs in the background using an epoch based memory reclamation (EBR) scheme. Eviction
 /// follows the "Clock" algorithm, which is a practical approximation for LRU. Records live either until they're used at
-/// least once, or there is no space left without removing one that's not been used yet. This implementation creates on
-/// additional thread which manages the garbage collection for the class.
+/// least once, or there is no space left without removing one that's not been used yet.
 ///
-/// The additional thread makes using this class unsuitable for WASM's blocking workflow.
+/// This implementation creates one additional thread which manages the garbage collection for the class.  While it may
+/// be possible to get this class to compile in WASM architecture, the additional thread makes using this class
+/// unsuitable for WASM's current blocking workflow.
 ///
 /// Keys are marian::Words, values are ProcessedRequestSentences.
 ///
@@ -85,7 +86,7 @@ class LockLessClockCache {
 
 #endif
 
-/// Alternative cache for non-thread based workflow (particularly WASM). LRU Eviction Policy. Uses a lot of std::list.
+/// Alternative cache for non-thread based workflow (specifically WASM). LRU Eviction Policy. Uses a lot of std::list.
 /// Yes, std::list; If someone needs a more efficient version, look into threads and go for LocklessClockCache.
 /// This class comes as an afterthought, so expect parameters which may not be used to achieve parity with
 /// LocklessClockCache.
@@ -100,13 +101,14 @@ class ThreadUnsafeLRUCache {
  private:
   struct Record {
     marian::Words key;
-    std::string value;
+    std::string value;  // serialized representation from ProcessedRequestSentence.toBytes()
     size_t size() const { return key.size() * sizeof(marian::Word) + value.size() * sizeof(std::string::value_type); }
   };
 
+  // A list representing memory where the items are stored and a hashmap (unordered_map) with values pointing to this
+  // storage is used for a naive LRU implementation.
   std::list<Record> storage_;
   typedef std::list<Record>::iterator RecordPtr;
-
   std::unordered_map<marian::Words, RecordPtr, cache_util::HashWords> cache_;
 
   /// Active sizes (in bytes) stored in storage_

@@ -88,7 +88,6 @@ class LockLessClockCache {
 
 typedef std::vector<std::unique_ptr<ProcessedRequestSentence>> ProcessedRequestSentences;
 /// For translator, we cache (marian::Words -> ProcessedRequestSentence).
-// typedef LRUCache<Words, ProcessedRequestSentence, WordsHashFn> TranslatorLRUCache;
 typedef LockLessClockCache TranslatorLRUCache;
 
 }  // namespace bergamot

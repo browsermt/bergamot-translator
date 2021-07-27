@@ -18,8 +18,7 @@ Service::Service(Ptr<Options> options, MemoryBundle memoryBundle)
       numWorkers_(std::max<int>(1, options->get<int>("cpu-threads"))),
       modelMemory_(std::move(memoryBundle.model)),
       shortlistMemory_(std::move(memoryBundle.shortlist)),
-      cache_(options->get<size_t>("cache-size") * 1024 * 1024  // sizeInBytes, x 1024 x 1024 = sizeInMB
-             )
+      cache_(options)
 #ifdef WASM_COMPATIBLE_SOURCE
       ,
       blocking_translator_(DeviceId(0, DeviceType::cpu), vocabs_, options_, &modelMemory_, &shortlistMemory_)

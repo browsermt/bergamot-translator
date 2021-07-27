@@ -12,6 +12,7 @@ namespace bergamot {
 
 inline marian::ConfigParser createConfigParser() {
   marian::ConfigParser cp(marian::cli::mode::translation);
+  // clang-format off
   cp.addOption<std::string>("--ssplit-prefix-file", "Bergamot Options",
                             "File with nonbreaking prefixes for sentence splitting.");
 
@@ -29,7 +30,15 @@ inline marian::ConfigParser createConfigParser() {
   cp.addOption<std::string>("--bergamot-mode", "Bergamot Options",
                             "Operating mode for bergamot: [wasm, native, decoder]", "native");
 
-  cp.addOption<size_t>("--cache-size", "Bergamot Options", "Number of histories to keep in translation cache", 20);
+  cp.addOption<size_t>("--cache-size",           "Bergamot Cache Options", "Number of histories to keep in translation cache");
+  cp.addOption<size_t>("--cache-ebr-queue-size", "Bergamot Cache Options", "Number of action to allow in a queue for epoch based reclamation.");
+  cp.addOption<size_t>("--cache-ebr-num-queues", "Bergamot Cache Options", "Number of queues of actions to maintain, increase to increase throughput.");
+  cp.addOption<size_t>("--cache-ebr-interval",   "Bergamot Cache Options", "Time between runs of background thread for epoch-based-reclamation, in milliseconds.");
+  cp.addOption<size_t>("--cache-buckets",        "Bergamot Cache Options", "Number of buckets to keep in the hashtable");
+  cp.addOption<bool  >("--cache-remove-expired", "Bergamot Cache Options", "Whether to remove expired records on a garbage collection iteration or not. Expiry determined by user-specified time-window");
+  cp.addOption<size_t>("--cache-time-to-live",   "Bergamot Cache Options", "How long a record in cache should be valid for. This is insignificant without remove expired flag set.");
+
+  // clang-format on
 
   return cp;
 }

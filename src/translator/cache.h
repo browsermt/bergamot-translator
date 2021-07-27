@@ -58,7 +58,7 @@ class ThreadSafeL4Cache {
   ///
   /// @param [in] sizeInBytes: Storage cap for the cache specified in bytes. Note that records are marked for deletion,
   /// not immediately deleted to achieve desirable features during concurrent operations.
-  ThreadSafeL4Cache(size_t sizeInBytes);
+  ThreadSafeL4Cache(Ptr<Options> options);
 
   /// Fetches a record from cache, storing it in processedRequestSentence if found. Calls to fetch are thread-safe and
   /// lock-free.
@@ -116,7 +116,7 @@ class ThreadUnsafeLRUCache {
  public:
   /// @param [in] sizeInBytes: Storage cap for the cache specified in bytes. Note that records are marked for deletion,
   /// not immediately deleted to achieve desirable features during concurrent operations.
-  ThreadUnsafeLRUCache(size_t sizeInBytes);
+  ThreadUnsafeLRUCache(Ptr<Options> options);
 
   /// Fetches a record from cache, storing it in processedRequestSentence if found. Not thread-safe.
   ///

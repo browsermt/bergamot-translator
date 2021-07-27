@@ -101,7 +101,7 @@ class Service {
   bool isAlignmentSupported() const { return options_->hasAndNotEmpty("alignment"); }
 
   /// Returns cache stats
-  CacheStats cacheStats() { return cache_.stats(); }
+  CacheStats cacheStats();
 
  private:
   /// Queue an input for translation.
@@ -135,7 +135,8 @@ class Service {
   /// packing-efficiency and priority optimization heuristics.
   ThreadsafeBatcher batcher_;
 
-  TranslationCache cache_;
+  /// Cache to store translations in for reuse if a sentence comes again for translation.
+  std::unique_ptr<TranslationCache> cache_{nullptr};
 
   // The following constructs are available providing full capabilities on a non
   // WASM platform, where one does not have to hide threads.

@@ -31,6 +31,7 @@ inline marian::ConfigParser createConfigParser() {
 
   // clang-format off
   
+  cp.addOption<bool  >("--cache-translations",   "Bergamot Cache Options", "To cache translations or not", true);
   cp.addOption<size_t>("--cache-size",           "Bergamot Cache Options", "Number of histories to keep in translation cache", 20);
   cp.addOption<size_t>("--cache-ebr-queue-size", "Bergamot Cache Options", "Number of action to allow in a queue for epoch based reclamation.", 1000);
   cp.addOption<size_t>("--cache-ebr-num-queues", "Bergamot Cache Options", "Number of queues of actions to maintain, increase to increase throughput.", 4);

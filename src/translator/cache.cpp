@@ -88,6 +88,7 @@ CacheStats ThreadSafeL4Cache::stats() const {
 }
 
 void ThreadSafeL4Cache::debug(std::string label) const {
+  return;
   std::cerr << "--- L4: " << label << std::endl;
   auto &perfData = context_[hashTableIndex_].GetPerfData();
 #define __l4inspect(key) std::cerr << #key << " " << perfData.Get(L4::HashTablePerfCounter::key) << std::endl;

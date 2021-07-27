@@ -17,13 +17,15 @@ Service::Service(Ptr<Options> options, MemoryBundle memoryBundle)
       batcher_(options),
       numWorkers_(std::max<int>(1, options->get<int>("cpu-threads"))),
       modelMemory_(std::move(memoryBundle.model)),
-      shortlistMemory_(std::move(memoryBundle.shortlist)),
-      cache_(options)
+      shortlistMemory_(std::move(memoryBundle.shortlist))
 #ifdef WASM_COMPATIBLE_SOURCE
       ,
       blocking_translator_(DeviceId(0, DeviceType::cpu), vocabs_, options_, &modelMemory_, &shortlistMemory_)
 #endif
 {
+  if (options->get<bool>("cache-translations")) {
+    cache_ = std::make_unique<TranslationCache>(options);
+  }
 #ifdef WASM_COMPATIBLE_SOURCE
   blocking_translator_.initialize();
 #else
@@ -73,7 +75,7 @@ void Service::queueRequest(std::string &&input, std::function<void(Response &&)>
   text_processor_.process(std::move(input), source, segments);
 
   ResponseBuilder responseBuilder(responseOptions, std::move(source), vocabs_, std::move(callback));
-  Ptr<Request> request = New<Request>(requestId_++, std::move(segments), std::move(responseBuilder), cache_);
+  Ptr<Request> request = New<Request>(requestId_++, std::move(segments), std::move(responseBuilder), cache_.get());
 
   batcher_.addWholeRequest(request);
 }
@@ -91,6 +93,14 @@ Service::~Service() {
     worker.join();
   }
 #endif
+}
+
+CacheStats Service::cacheStats() {
+  if (cache_ != nullptr) {
+    return cache_->stats();
+  } else {
+    return CacheStats{0, 0};
+  }
 }
 
 }  // namespace bergamot

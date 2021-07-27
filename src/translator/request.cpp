@@ -11,7 +11,7 @@ namespace marian {
 namespace bergamot {
 
 // -----------------------------------------------------------------
-Request::Request(size_t Id, Segments &&segments, ResponseBuilder &&responseBuilder, TranslationCache &cache)
+Request::Request(size_t Id, Segments &&segments, ResponseBuilder &&responseBuilder, TranslationCache *cache)
     : Id_(Id),
       segments_(std::move(segments)),
       responseBuilder_(std::move(responseBuilder)),
@@ -21,11 +21,13 @@ Request::Request(size_t Id, Segments &&segments, ResponseBuilder &&responseBuild
   counter_ = segments_.size();
   processedRequestSentences_.resize(segments_.size());
 
-  for (size_t idx = 0; idx < segments_.size(); idx++) {
-    ProcessedRequestSentence processedRequestSentence;
-    if (cache_.fetch(getSegment(idx), processedRequestSentence)) {
-      processedRequestSentences_[idx] = processedRequestSentence;
-      --counter_;
+  if (cache_ != nullptr) {
+    for (size_t idx = 0; idx < segments_.size(); idx++) {
+      ProcessedRequestSentence processedRequestSentence;
+      if (cache_->fetch(getSegment(idx), processedRequestSentence)) {
+        processedRequestSentences_[idx] = processedRequestSentence;
+        --counter_;
+      }
     }
   }
 
@@ -50,7 +52,9 @@ void Request::processHistory(size_t index, Ptr<History> history) {
   // Concurrently called by multiple workers as a history from translation is
   // ready. The container storing histories is set with the value obtained.
   processedRequestSentences_[index] = ProcessedRequestSentence(*history);
-  cache_.insert(getSegment(index), processedRequestSentences_[index]);
+  if (cache_ != nullptr) {
+    cache_->insert(getSegment(index), processedRequestSentences_[index]);
+  }
 
   // In case this is last request in, completeRequest is called, which sets the
   // value of the promise.

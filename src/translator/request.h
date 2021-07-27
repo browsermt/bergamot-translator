@@ -42,17 +42,16 @@ namespace bergamot {
 /// future at client.
 class Request {
  public:
-  /// Constructs an internal representation of the Request identified by Id,
-  /// processed Segments and accepts a callback (ResponseBuilder) which builds
-  /// the Response upon completion of the Request.
-  ///
+  /// Constructs an internal representation of the Request identified by Id, processed Segments and accepts a callback
+  /// (ResponseBuilder) which builds the Response upon completion of the Request.
   ///
   /// @param [in] Id: Identifier assigned to Request by Service.
   /// @param [in] segments: Each segment is a unit to be translated.
-  /// @param [in] responseBuilder: Callback function (of ResponseBuilder type)
-  /// to be triggered upon the completion of translation of all units in a
-  /// Request.
-  Request(size_t Id, Segments &&segments, ResponseBuilder &&responseBuilder, TranslationCache &cache);
+  /// @param [in] responseBuilder: Callback function (of ResponseBuilder type) to be triggered upon the completion of
+  /// translation of all units in a Request.
+  /// @param [in] cache: Cache to use when looking for translation. If nullptr, cache is inactive and translations are
+  /// freshly generated.
+  Request(size_t Id, Segments &&segments, ResponseBuilder &&responseBuilder, TranslationCache *cache = nullptr);
 
   /// Obtain the count of tokens in the segment correponding to index. Used to
   /// insert sentence from multiple requests into the corresponding size bucket.
@@ -97,7 +96,7 @@ class Request {
   ResponseBuilder responseBuilder_;
 
   /// Reference to cache to prefill / populate
-  TranslationCache &cache_;
+  TranslationCache *cache_;
 };
 
 /// A RequestSentence provides a view to a sentence within a Request. Existence

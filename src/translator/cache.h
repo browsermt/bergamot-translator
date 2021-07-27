@@ -54,10 +54,10 @@ class ThreadSafeL4Cache {
   using KeyBytes = L4::IWritableHashTable::Key;
   using ValueBytes = L4::IWritableHashTable::Value;
 
-  /// Construct a ThreadSafeL4Cache with the following options:
+  /// Construct a ThreadSafeL4Cache from configuration passed via key values in an Options object:
   ///
-  /// @param [in] sizeInBytes: Storage cap for the cache specified in bytes. Note that records are marked for deletion,
-  /// not immediately deleted to achieve desirable features during concurrent operations.
+  /// @param [in] options: Options object which is used to configure the cache. See command-line parser for
+  /// documentation (`marian::bergamot::createConfigParser()`)
   ThreadSafeL4Cache(Ptr<Options> options);
 
   /// Fetches a record from cache, storing it in processedRequestSentence if found. Calls to fetch are thread-safe and
@@ -114,8 +114,10 @@ class ThreadSafeL4Cache {
 
 class ThreadUnsafeLRUCache {
  public:
-  /// @param [in] sizeInBytes: Storage cap for the cache specified in bytes. Note that records are marked for deletion,
-  /// not immediately deleted to achieve desirable features during concurrent operations.
+  /// Construct a ThreadUnSafeLRUCache from configuration passed via key values in an Options object:
+  ///
+  /// @param [in] options: Options object which is used to configure the cache. See command-line parser for
+  /// documentation (`marian::bergamot::createConfigParser()`)
   ThreadUnsafeLRUCache(Ptr<Options> options);
 
   /// Fetches a record from cache, storing it in processedRequestSentence if found. Not thread-safe.

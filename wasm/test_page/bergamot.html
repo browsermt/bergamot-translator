@@ -81,6 +81,8 @@ En consecuencia, durante el año 2011 se introdujeron 180 proyectos de ley que r
   }
 
   var translationService, responseOptions, input = undefined;
+  const encoder = new TextEncoder(); // string to utf-8 converter
+  const decoder = new TextDecoder(); // utf-8 to string converter
   const constructTranslationService = async (from, to) => {
 
     const languagePair = `${from}${to}`;
@@ -188,16 +190,54 @@ gemm-precision: int8shift
     // Access input (just for debugging)
     console.log('Input size=', input.size());
 
-    // Translate the input; the result is a vector<Response>
+    // Translate the input, which is a vector<String>; the result is a vector<Response>
     let result = translationService.translate(input, responseOptions);
+
     const translatedParagraphs = [];
+    const translatedSentencesOfParagraphs = [];
+    const sourceSentencesOfParagraphs = [];
     for (let i = 0; i < result.size(); i++) {
       translatedParagraphs.push(result.get(i).getTranslatedText());
+      translatedSentencesOfParagraphs.push(getAllTranslatedSentencesOfParagraph(result.get(i)));
+      sourceSentencesOfParagraphs.push(getAllSourceSentencesOfParagraph(result.get(i)));
     }
     console.log({ translatedParagraphs });
+    console.log({ translatedSentencesOfParagraphs });
+    console.log({ sourceSentencesOfParagraphs });
+
     responseOptions.delete();
     input.delete();
     return translatedParagraphs;
+  }
+
+  // This function extracts all the translated sentences from the Response and returns them.
+  const getAllTranslatedSentencesOfParagraph = (response) => {
+    const sentences = [];
+    const text = response.getTranslatedText();
+    for (let sentenceIndex = 0; sentenceIndex < response.size(); sentenceIndex++) {
+      const utf8SentenceByteRange = response.getTranslatedSentence(sentenceIndex);
+      sentences.push(_getSentenceFromByteRange(text, utf8SentenceByteRange));
+    }
+    return sentences;
+  }
+
+  // This function extracts all the source sentences from the Response and returns them.
+  const getAllSourceSentencesOfParagraph = (response) => {
+    const sentences = [];
+    const text = response.getOriginalText();
+    for (let sentenceIndex = 0; sentenceIndex < response.size(); sentenceIndex++) {
+      const utf8SentenceByteRange = response.getSourceSentence(sentenceIndex);
+      sentences.push(_getSentenceFromByteRange(text, utf8SentenceByteRange));
+    }
+    return sentences;
+  }
+
+  // This function returns a substring of text (a string). The substring is represented by
+  // byteRange (begin and end endices) within the utf-8 encoded version of the text.
+  const _getSentenceFromByteRange = (text, byteRange) => {
+    const utf8BytesView = encoder.encode(text);
+    const utf8SentenceBytes = utf8BytesView.subarray(byteRange.begin, byteRange.end);
+    return decoder.decode(utf8SentenceBytes);
   }
 
   document.querySelector("#load").addEventListener("click", async() => {

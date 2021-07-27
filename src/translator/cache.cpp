@@ -19,24 +19,24 @@ std::string wordsToString(const marian::Words &words) {
 }  // namespace cache_util
 
 #ifndef WASM_COMPATIBLE_SOURCE
-LockLessClockCache::LockLessClockCache(size_t sizeInBytes, size_t timeOutInSeconds, bool removeExpired /* = true */)
+
+ThreadSafeL4Cache::ThreadSafeL4Cache(size_t sizeInBytes)
     : epochManagerConfig_(/*epochQueueSize=*/1000,
                           /*epochProcessingInterval=*/std::chrono::milliseconds(1000),
                           /*numActionQueues=*/4),
-      cacheConfig_{sizeInBytes, std::chrono::seconds(timeOutInSeconds), removeExpired},
+      cacheConfig_{sizeInBytes,
+                   /*recordTimeToLive=*/std::chrono::seconds(100),
+                   /*removeExpired=*/false},
       service_(epochManagerConfig_),
       context_(service_.GetContext()) {
-  // For now, we use a hard-coded modelIdentifier; In the future we may keep separate caches for models or change the
-  // Key to use <modelIdentifier, marian::Words> to keep a global lid on cache memory usage.
-  //
-  // L4's API requires this string identifier, which for now is called "global-cache"
-
-  const std::string modelIdentifier = "global-cache";
+  // There is only a single cache we use. However, L4 construction API given by example demands we give it a string
+  // identifier.
+  const std::string cacheIdentifier = "global-cache";
   hashTableIndex_ = service_.AddHashTable(
-      L4::HashTableConfig(modelIdentifier, L4::HashTableConfig::Setting{/*numBuckets=*/10000}, cacheConfig_));
+      L4::HashTableConfig(cacheIdentifier, L4::HashTableConfig::Setting{/*numBuckets=*/10000}, cacheConfig_));
 }
 
-bool LockLessClockCache::fetch(const marian::Words &words, ProcessedRequestSentence &processedRequestSentence) {
+bool ThreadSafeL4Cache::fetch(const marian::Words &words, ProcessedRequestSentence &processedRequestSentence) {
   auto &hashTable = context_[hashTableIndex_];
 
   KeyBytes keyBytes;
@@ -57,7 +57,7 @@ bool LockLessClockCache::fetch(const marian::Words &words, ProcessedRequestSente
   return fetchSuccess;
 }
 
-void LockLessClockCache::insert(const marian::Words &words, const ProcessedRequestSentence &processedRequestSentence) {
+void ThreadSafeL4Cache::insert(const marian::Words &words, const ProcessedRequestSentence &processedRequestSentence) {
   auto context = service_.GetContext();
   auto &hashTable = context[hashTableIndex_];
 
@@ -78,7 +78,7 @@ void LockLessClockCache::insert(const marian::Words &words, const ProcessedReque
   debug("After Add");
 }
 
-CacheStats LockLessClockCache::stats() const {
+CacheStats ThreadSafeL4Cache::stats() const {
   auto &perfData = context_[hashTableIndex_].GetPerfData();
   CacheStats stats;
   stats.hits = perfData.Get(L4::HashTablePerfCounter::CacheHitCount);
@@ -86,7 +86,7 @@ CacheStats LockLessClockCache::stats() const {
   return stats;
 }
 
-void LockLessClockCache::debug(std::string label) const {
+void ThreadSafeL4Cache::debug(std::string label) const {
   std::cerr << "--- L4: " << label << std::endl;
   auto &perfData = context_[hashTableIndex_].GetPerfData();
 #define __l4inspect(key) std::cerr << #key << " " << perfData.Get(L4::HashTablePerfCounter::key) << std::endl;
@@ -106,8 +106,7 @@ void LockLessClockCache::debug(std::string label) const {
 
 #endif
 
-ThreadUnsafeLRUCache::ThreadUnsafeLRUCache(size_t sizeInBytes, size_t /*timeOutInSeconds*/, bool /*removeExpired*/)
-    : storageSizeLimit_(sizeInBytes), storageSize_(0) {}
+ThreadUnsafeLRUCache::ThreadUnsafeLRUCache(size_t sizeInBytes) : storageSizeLimit_(sizeInBytes), storageSize_(0) {}
 
 bool ThreadUnsafeLRUCache::fetch(const marian::Words &words, ProcessedRequestSentence &processedRequestSentence) {
   auto p = cache_.find(words);
@@ -134,14 +133,14 @@ void ThreadUnsafeLRUCache::insert(const marian::Words &words,
   Record candidate{words, processedRequestSentence.toBytes()};
   auto removeCandidatePtr = storage_.begin();
 
-  // Loop until not end or we have room to insert candidate adhering to configured storage limits.
+  // Loop until not end and we have not found space to insert candidate adhering to configured storage limits.
   while (storageSize_ + candidate.size() > storageSizeLimit_ && removeCandidatePtr != storage_.end()) {
     storageSize_ -= removeCandidatePtr->size();
     storage_.erase(removeCandidatePtr);
     ++removeCandidatePtr;
   }
 
-  // Only insert new candidate if we have room after adhering to storage-limit
+  // Only insert new candidate if we have space after adhering to storage-limit
   if (storageSize_ + candidate.size() <= storageSizeLimit_) {
     auto recordPtr = storage_.insert(storage_.end(), std::move(candidate));
     cache_.emplace(std::make_pair(words, recordPtr));

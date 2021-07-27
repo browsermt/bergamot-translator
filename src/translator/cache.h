@@ -32,11 +32,12 @@ struct CacheStats {
   size_t misses{0};
 };
 
-/// LocklessClockCache is an Adapter built on top of L4 specialized for the use-case of bergamot-translator. L4 is a
+/// ThreadSafeL4Cache is an adapter built on top of L4 specialized for the use-case of bergamot-translator. L4 is a
 /// thread-safe cache implementation written in the "lock-free" paradigm using atomic constucts. There is locking when
 /// structures are deleted, which runs in the background using an epoch based memory reclamation (EBR) scheme. Eviction
 /// follows the "Clock" algorithm, which is a practical approximation for LRU. Records live either until they're used at
-/// least once, or there is no space left without removing one that's not been used yet.
+/// least once, or if there is no space left without removing one that's not been used yet, with removal triggered to
+/// make space for new insertions.
 ///
 /// This implementation creates one additional thread which manages the garbage collection for the class.  While it may
 /// be possible to get this class to compile in WASM architecture, the additional thread makes using this class
@@ -48,14 +49,34 @@ struct CacheStats {
 /// helps keep tight lid on memory usage. This should however be cheaper in comparison to recomputing through the graph.
 
 #ifndef WASM_COMPATIBLE_SOURCE
-class LockLessClockCache {
+class ThreadSafeL4Cache {
  public:
   using KeyBytes = L4::IWritableHashTable::Key;
   using ValueBytes = L4::IWritableHashTable::Value;
 
-  LockLessClockCache(size_t sizeInBytes, size_t timeOutInSeconds, bool removeExpired = false);
+  /// Construct a ThreadSafeL4Cache with the following options:
+  ///
+  /// @param [in] sizeInBytes: Storage cap for the cache specified in bytes. Note that records are marked for deletion,
+  /// not immediately deleted to achieve desirable features during concurrent operations.
+  ThreadSafeL4Cache(size_t sizeInBytes);
+
+  /// Fetches a record from cache, storing it in processedRequestSentence if found. Calls to fetch are thread-safe and
+  /// lock-free.
+  ///
+  /// @param [in]  words: query marian:Words for which translation results are looked up in cache.
+  /// @param [out] processedRequestSentence: stores cached results for use outside if found.
+  ///
+  /// @returns true if query found in cache false otherwise.
   bool fetch(const marian::Words &words, ProcessedRequestSentence &processedRequestSentence);
+
+  /// Inserts a new record into cache. Thread-safe. Modifies the structure so takes locks, configure sharding to
+  /// configure how fine-grained the locks are to reduce contention.
+  ///
+  /// @param [in] words: marian::Words processed from a sentence
+  /// @param [in] processedRequestSentence: minimum translated information corresponding to words
+  ///
   void insert(const marian::Words &words, const ProcessedRequestSentence &processedRequestSentence);
+
   CacheStats stats() const;
 
  private:
@@ -87,15 +108,31 @@ class LockLessClockCache {
 #endif
 
 /// Alternative cache for non-thread based workflow (specifically WASM). LRU Eviction Policy. Uses a lot of std::list.
-/// Yes, std::list; If someone needs a more efficient version, look into threads and go for LocklessClockCache.
+/// Yes, std::list; If someone needs a more efficient version, look into threads and go for ThreadSafeL4Cache.
 /// This class comes as an afterthought, so expect parameters which may not be used to achieve parity with
-/// LocklessClockCache.
+/// ThreadSafeL4Cache.
 
 class ThreadUnsafeLRUCache {
  public:
-  ThreadUnsafeLRUCache(size_t sizeInBytes, size_t timeOutInSeconds, bool removeExpired = false);
+  /// @param [in] sizeInBytes: Storage cap for the cache specified in bytes. Note that records are marked for deletion,
+  /// not immediately deleted to achieve desirable features during concurrent operations.
+  ThreadUnsafeLRUCache(size_t sizeInBytes);
+
+  /// Fetches a record from cache, storing it in processedRequestSentence if found. Not thread-safe.
+  ///
+  /// @param [in]  words: query marian:Words for which translation results are looked up in cache.
+  /// @param [out] processedRequestSentence: stores cached results for use outside if found.
+  ///
+  /// @returns true if query found in cache false otherwise.
   bool fetch(const marian::Words &words, ProcessedRequestSentence &processedRequestSentence);
+
+  /// Inserts a new record into cache. Modifies the structure so takes locks, configure sharding to configure how
+  /// fine-grained the locks are to reduce contention.
+  ///
+  /// @param [in] words: marian::Words processed from a sentence
+  /// @param [in] processedRequestSentence: minimum translated information corresponding to words
   void insert(const marian::Words &words, const ProcessedRequestSentence &processedRequestSentence);
+
   CacheStats stats() const;
 
  private:
@@ -121,7 +158,7 @@ class ThreadUnsafeLRUCache {
 };
 
 #ifndef WASM_COMPATIBLE_SOURCE
-typedef LockLessClockCache TranslationCache;
+typedef ThreadSafeL4Cache TranslationCache;
 #else
 typedef ThreadUnsafeLRUCache TranslationCache;
 #endif

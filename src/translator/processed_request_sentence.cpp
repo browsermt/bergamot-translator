@@ -1,6 +1,8 @@
 #include "processed_request_sentence.h"
 
 #include <cstring>
+#include <iostream>
+
 namespace marian {
 namespace bergamot {
 

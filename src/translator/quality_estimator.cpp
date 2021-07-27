@@ -1,6 +1,7 @@
 #include "quality_estimator.h"
 
 #include <iostream>
+#include <numeric>
 
 #include "byte_array_util.h"
 
@@ -12,14 +13,38 @@ constexpr intgemm::Index getNextMultiple(const intgemm::Index number, const intg
   return (modWidth == 0) ? number : number + multiple - modWidth;
 }
 
-QualityEstimator::IntgemmMatrix::IntgemmMatrix(const intgemm::Index rowsParam, const intgemm::Index colsParam,
-                                               const intgemm::Index rowsMultiplier, const intgemm::Index colsMultiplier)
-    : rows(getNextMultiple(rowsParam, rowsMultiplier)),
-      cols(getNextMultiple(colsParam, colsMultiplier)),
-      data(rows * cols) {
+QualityEstimator::Matrix::Matrix(const size_t rowsParam, const size_t colsParam)
+    : rows(rowsParam), cols(colsParam), data(rows * cols) {
   for (float& elem : data) {
     elem = 0.0;
   }
+}
+
+const float& QualityEstimator::Matrix::at(const size_t row, const size_t col) const { return data[row * cols + col]; }
+
+float& QualityEstimator::Matrix::at(const size_t row, const size_t col) { return data[row * cols + col]; }
+
+QualityEstimator::IntgemmMatrix::IntgemmMatrix(const intgemm::Index rowsParam, const intgemm::Index colsParam,
+                                               const intgemm::Index rowsMultiplier, const intgemm::Index colsMultiplier)
+    : Matrix(getNextMultiple(rowsParam, rowsMultiplier), getNextMultiple(colsParam, colsMultiplier)) {}
+
+QualityEstimator::Matrix QualityEstimator::IntgemmMatrix::operator*(const IntgemmMatrix& matrixb) const {
+  const float quant_mult = 1024.0f;
+
+  AlignedVector<int16_t> A_prepared(data.size());
+  AlignedVector<int16_t> B_prepared(matrixb.data.size());
+
+  intgemm::Int16::PrepareA(data.begin(), A_prepared.begin(), quant_mult, rows, cols);
+  intgemm::Int16::PrepareB(matrixb.data.begin(), B_prepared.begin(), quant_mult, matrixb.rows,
+                           matrixb.cols);
+
+  Matrix result(rows, matrixb.cols);
+
+  intgemm::Int16::Multiply(
+      A_prepared.begin(), B_prepared.begin(), rows, cols, matrixb.cols,
+      intgemm::callbacks::UnquantizeAndWrite(1.0f / (quant_mult * quant_mult), result.data.begin()));
+
+  return result;
 }
 
 QualityEstimator::LogisticRegressor::LogisticRegressor(Scale&& scaleParam, IntgemmMatrix&& coefficientsParam,
@@ -79,7 +104,7 @@ QualityEstimator::LogisticRegressor QualityEstimator::fromAlignedMemory(const Al
   for (int i = 0; i < header.lrParametersDims; ++i) {
     scale.stds[i] = *(stds + i);
     scale.means[i] = *(means + i);
-    coefficientsMatrix.data[i * coefficientsMatrix.cols] = *(coefficients + i);
+    coefficientsMatrix.at(i, 0) = *(coefficients + i);
   }
 
   return LogisticRegressor(std::move(scale), std::move(coefficientsMatrix), header.lrParametersDims, intercept);
@@ -112,7 +137,7 @@ AlignedMemory QualityEstimator::toAlignedMemory() const {
   }
 
   for (size_t i = 0; i < lrParametersDims; ++i) {
-    const float coefficient = logisticRegressor_.coefficients.data[i * logisticRegressor_.coefficients.cols];
+    const float coefficient = logisticRegressor_.coefficients.at(i, 0);
     memcpy(buffer, &coefficient, sizeof(coefficient));
     buffer += sizeof(coefficient);
   }
@@ -124,7 +149,7 @@ AlignedMemory QualityEstimator::toAlignedMemory() const {
 }
 
 std::tuple<std::vector<ByteRange>, std::vector<QualityEstimator::WordFeatures>, float> QualityEstimator::mapBPEToWords(
-    const std::vector<float>& logProbs, const AnnotatedText& target, const size_t sentenceIdx) const {
+    const std::vector<float>& logProbs, const AnnotatedText& target, const size_t sentenceIdx) {
   if (logProbs.empty() || target.text.empty()) {
     return {{}, {}, 0.0};
   }
@@ -180,70 +205,64 @@ std::tuple<std::vector<ByteRange>, std::vector<QualityEstimator::WordFeatures>, 
   return {wordByteRanges, wordsFeatures, overallMean};
 }
 
-std::vector<float> QualityEstimator::LogisticRegressor::vectorResult(const IntgemmMatrix& features) const {
-  float quant_mult = 1024.0f;
+QualityEstimator::Matrix QualityEstimator::convertToMatrix(const std::vector<WordFeatures>& wordsFeatures,
+                                                           const float overallMean) {
+  const size_t numFeatures = 4;  // numSubWords, meanScore, minScore and overallMean
 
-  AlignedVector<int16_t> A_prepared(features.data.size());
-  AlignedVector<int16_t> B_prepared(coefficients.data.size());
+  Matrix matrix(wordsFeatures.size(), numFeatures);
 
-  intgemm::Int16::PrepareA(features.data.begin(), A_prepared.begin(), quant_mult, features.rows, features.cols);
-  intgemm::Int16::PrepareB(coefficients.data.begin(), B_prepared.begin(), quant_mult, coefficients.rows,
-                           coefficients.cols);
+  size_t i = 0;
 
-  AlignedVector<float> modelScores(features.rows * coefficients.cols);
-
-  intgemm::Int16::Multiply(
-      A_prepared.begin(), B_prepared.begin(), features.rows, features.cols, coefficients.cols,
-      intgemm::callbacks::UnquantizeAndWrite(1.0f / (quant_mult * quant_mult), modelScores.begin()));
-
-  std::vector<float> wordQualityScores(features.rows);
-
-  for (int i = 0; i < features.rows; ++i) {
-    wordQualityScores[i] = modelScores[i * coefficients.cols] + intercept;
+  for (const WordFeatures& features : wordsFeatures) {
+    matrix.data[i++] = features.meanScore;
+    matrix.data[i++] = features.minScore;
+    matrix.data[i++] = features.numSubWords;
+    matrix.data[i++] = overallMean;
   }
 
-  return wordQualityScores;
+  return matrix;
 }
 
-QualityEstimator::IntgemmMatrix QualityEstimator::LogisticRegressor::transformFeatures(
-    const std::vector<WordFeatures>& wordsFeatures, const float overallMean) const {
-  const intgemm::Index numWords = wordsFeatures.size();
+std::vector<float> QualityEstimator::LogisticRegressor::vectorResult(const IntgemmMatrix& features) const {
 
+  const Matrix modelScores = features * coefficients;
+
+  std::vector<float> scores(features.rows);
+
+  for (int i = 0; i < modelScores.rows; ++i) {
+    scores[i] = modelScores.at(i, 0) + intercept;
+  }
+
+  return scores;
+}
+
+QualityEstimator::IntgemmMatrix QualityEstimator::LogisticRegressor::transformFeatures(const Matrix& features) const {
   const size_t numFeatures = 4;
 
-  QualityEstimator::IntgemmMatrix features(numWords, numFeatures, intgemm::Int16::tile_info.a_rows,
-                                           intgemm::Int16::tile_info.a_cols);
+  QualityEstimator::IntgemmMatrix resultFeatures(features.rows, features.cols, intgemm::Int16::tile_info.a_rows,
+                                                 intgemm::Int16::tile_info.a_cols);
 
   const auto getStds = [](const auto stds) { return stds != 0.0 ? stds : 1.0f; };
 
-  for (int i = 0; i < numWords; ++i) {
-    const WordFeatures& wordFeatures = wordsFeatures[i];
-    features.data[features.cols * i + 0] = (wordFeatures.meanScore - scale.means[0]) / getStds(scale.stds[0]);
-    features.data[features.cols * i + 1] = (wordFeatures.minScore - scale.means[1]) / getStds(scale.stds[1]);
-    features.data[features.cols * i + 2] = (wordFeatures.numSubWords - scale.means[2]) / getStds(scale.stds[2]);
-    features.data[features.cols * i + 3] = (overallMean - scale.means[3]) / getStds(scale.stds[3]);
+  for (int i = 0; i < features.rows; ++i) {
+    for (int j = 0; j < features.cols; ++j) {
+      resultFeatures.at(i, j) = (features.at(i, j) - scale.means[j]) / getStds(scale.stds[j]);
+    }
   }
 
-  return features;
+  return resultFeatures;
 }
 
-float QualityEstimator::LogisticRegressor::resultToProbabilities(std::vector<float>& wordQualityScores) const {
-  float sentenceScore = 0.0;
-
-  for (float& wordScore : wordQualityScores) {
-    wordScore = 1 / (1 + std::exp(-wordScore));
-    sentenceScore += wordScore;
+void QualityEstimator::LogisticRegressor::resultToProbabilities(std::vector<float>& linearPredictedValues) const {
+  for (float& value : linearPredictedValues) {
+    value = 1 / (1 + std::exp(-value));
   }
-
-  return sentenceScore / wordQualityScores.size();
 }
 
-QualityEstimator::WordsQualityEstimate QualityEstimator::LogisticRegressor::predictQualityScores(
-    const std::vector<ByteRange>& wordByteRanges, const std::vector<WordFeatures>& wordsFeatures,
-    const float overallMean) const {
-  std::vector<float> wordQualityScores = vectorResult(transformFeatures(wordsFeatures, overallMean));
-  const float sentenceScore = resultToProbabilities(wordQualityScores);
-  return {wordQualityScores, wordByteRanges, sentenceScore};
+std::vector<float> QualityEstimator::LogisticRegressor::predict(const Matrix& features) const {
+  std::vector<float> scores = vectorResult(transformFeatures(features));
+  resultToProbabilities(scores);
+  return scores;
 }
 
 QualityEstimator::WordsQualityEstimate QualityEstimator::computeQualityScores(const std::vector<float>& logProbs,
@@ -251,7 +270,12 @@ QualityEstimator::WordsQualityEstimate QualityEstimator::computeQualityScores(co
                                                                               const size_t sentenceIdx) const {
   const auto [wordByteRanges, wordsFeatures, overallMean] = mapBPEToWords(logProbs, target, sentenceIdx);
 
-  return logisticRegressor_.predictQualityScores(wordByteRanges, wordsFeatures, overallMean);
+  const auto wordQualityScores = logisticRegressor_.predict(convertToMatrix(wordsFeatures, overallMean));
+
+  const auto sentenceScore = std::accumulate(std::begin(wordQualityScores), std::end(wordQualityScores), float(0.0)) /
+                             wordQualityScores.size();
+
+  return {wordQualityScores, wordByteRanges, sentenceScore};
 }
 }  // namespace bergamot
 }  // namespace marian

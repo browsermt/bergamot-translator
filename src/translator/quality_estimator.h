@@ -64,13 +64,22 @@ class QualityEstimator {
   AlignedMemory toAlignedMemory() const;
 
  private:
-  struct IntgemmMatrix {
+  struct Matrix {
+    Matrix(const size_t rowsParam, const size_t widthParam);
+
+    const float &at(const size_t row, const size_t col) const;
+    float &at(const size_t row, const size_t col);
+
+    const size_t rows;
+    const size_t cols;
+    AlignedVector<float> data;
+  };
+
+  struct IntgemmMatrix : Matrix {
     IntgemmMatrix(const intgemm::Index rowsParam, const intgemm::Index widthParam, const intgemm::Index rowsMultiplier,
                   const intgemm::Index widthMultiplier);
 
-    intgemm::Index rows;
-    intgemm::Index cols;
-    AlignedVector<float> data;
+     Matrix operator*( const IntgemmMatrix& matrixb ) const;
   };
 
   struct Scale {
@@ -105,23 +114,21 @@ class QualityEstimator {
     LogisticRegressor(Scale &&scaleParam, IntgemmMatrix &&coefficientsParam, const size_t numCoefficientsParam,
                       const float interceptParam);
 
-    WordsQualityEstimate predictQualityScores(const std::vector<ByteRange> &wordByteRanges,
-                                              const std::vector<WordFeatures> &wordsFeatures,
-                                              const float overallMean) const;
+    std::vector<float> predict(const Matrix &features) const;
 
    private:
     /// Calculates the scores of words through a linear model
-    /// @param [in] featureMatrix: the matrix of feature scaled values
+    /// @param [in] features: the matrix of feature scaled values
     std::vector<float> vectorResult(const IntgemmMatrix &features) const;
 
     /// Given the modelFeatures construct, it builds the feature matrix with scaled values
-    /// @param [in] wordFeatures: a struct which contains the std and mean vectors of each feature
+    /// @param [in] feature: a struct matrix which contains the std and mean vectors of each feature
     /// @param [in] overallMean: a float record that represents the mean of sentence bpe tokens logprobs
-    IntgemmMatrix transformFeatures(const std::vector<WordFeatures> &wordsFeatures, const float overallMean) const;
+    IntgemmMatrix transformFeatures(const Matrix &features) const;
 
     /// Applies a sigmoid function to each element of a vector and returns the mean of the result vector
     /// @param [in] linearPredictedValues: the vector of real values returned by a linear regression
-    float resultToProbabilities(std::vector<float> &linearPredictedValues) const;
+    void resultToProbabilities(std::vector<float> &linearPredictedValues) const;
   };
 
   /// binary file parser which came from AlignedMemory
@@ -131,9 +138,10 @@ class QualityEstimator {
   /// @param [in] logProbs: the log probabilities given by an translation model
   /// @param [in] target: AnnotatedText target value
   /// @param [in] sentenceIdx: the id of a candidate sentence
-  std::tuple<std::vector<ByteRange>, std::vector<WordFeatures>, float> mapBPEToWords(const std::vector<float> &logProbs,
-                                                                                     const AnnotatedText &target,
-                                                                                     const size_t sentenceIdx) const;
+  static std::tuple<std::vector<ByteRange>, std::vector<WordFeatures>, float> mapBPEToWords(
+      const std::vector<float> &logProbs, const AnnotatedText &target, const size_t sentenceIdx);
+
+  static Matrix convertToMatrix(const std::vector<WordFeatures> &wordsFeatures, const float overallMean);
 
   LogisticRegressor logisticRegressor_;
 };

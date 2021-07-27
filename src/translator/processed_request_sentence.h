@@ -36,6 +36,9 @@ class ProcessedRequestSentence {
   /// Serialize the contents of an instance to a sequence of bytes. Should be compatible with `fromBytes`.
   std::string toBytes() const;
 
+  /// Returns if a ProcessedRequestSentence is empty.
+  bool empty() { return words_.size() == 0; }
+
   void debug();
 
   // Const accessors for private members
@@ -52,7 +55,7 @@ class ProcessedRequestSentence {
   float sentenceScore_;                ///< normalizedPathScore
 };
 
-typedef std::vector<std::unique_ptr<ProcessedRequestSentence>> ProcessedRequestSentences;
+typedef std::vector<ProcessedRequestSentence> ProcessedRequestSentences;
 
 }  // namespace bergamot
 }  // namespace marian

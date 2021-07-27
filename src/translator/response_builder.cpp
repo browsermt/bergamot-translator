@@ -10,13 +10,13 @@ void ResponseBuilder::buildQualityScores(ProcessedRequestSentences &processedReq
   for (auto &processedRequestSentence : processedRequestSentences) {
     // TODO(jerin): Change hardcode of nBest = 1
     response.qualityScores.push_back(
-        Quality{processedRequestSentence->sentenceScore(), processedRequestSentence->wordScores()});
+        Quality{processedRequestSentence.sentenceScore(), processedRequestSentence.wordScores()});
   }
 }
 
 void ResponseBuilder::buildAlignments(ProcessedRequestSentences &processedRequestSentences, Response &response) {
   for (auto &processedRequestSentence : processedRequestSentences) {
-    auto softAlignment = processedRequestSentence->softAlignment();
+    auto softAlignment = processedRequestSentence.softAlignment();
     auto threshold = responseOptions_.alignmentThreshold;
     auto hardAlignment = data::ConvertSoftAlignToHardAlign(softAlignment, threshold);
     Alignment unified_alignment;
@@ -36,7 +36,7 @@ void ResponseBuilder::buildTranslatedText(ProcessedRequestSentences &processedRe
   for (size_t sentenceIdx = 0; sentenceIdx < processedRequestSentences.size(); sentenceIdx++) {
     // TODO(jerin): Change hardcode of nBest = 1
 
-    const Words &words = processedRequestSentences[sentenceIdx]->words();
+    const Words &words = processedRequestSentences[sentenceIdx].words();
     std::string decoded;
     std::vector<string_view> targetSentenceMappings;
     vocabs_.target()->decodeWithByteRanges(words, decoded, targetSentenceMappings, /*ignoreEOS=*/false);

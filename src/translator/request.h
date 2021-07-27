@@ -90,7 +90,7 @@ class Request {
 
   /// histories_ is a buffer which eventually stores the translations of each
   /// segment in the corresponding index.
-  std::vector<std::unique_ptr<ProcessedRequestSentence>> processedRequestSentences_;
+  std::vector<ProcessedRequestSentence> processedRequestSentences_;
 
   /// Constructing Response requires the vocabs_ used to generate Request.
   /// std::vector<Ptr<Vocab const>> *vocabs_;

@@ -23,7 +23,7 @@ constexpr std::size_t BINARY_QE_MODEL_MAGIC = 0x78cc336f1d54b180;
 /// - a vector of standard deviations of features
 /// - a vector of means of features
 /// - a vector of coefficients
-/// - vector of constants, which correspond to the intercept
+/// - a intercept value
 ///
 /// Where each feature corresponds to one of the following:
 /// - the mean BPE log Probabilities of a given word.
@@ -36,8 +36,8 @@ constexpr std::size_t BINARY_QE_MODEL_MAGIC = 0x78cc336f1d54b180;
 class QualityEstimator {
  public:
   struct Header {
-    uint64_t magic;        // BINARY_QE_MODEL_MAGIC
-    uint64_t numFeatures;  // Length of all arrays.
+    uint64_t magic;             // BINARY_QE_MODEL_MAGIC
+    uint64_t lrParametersDims;  // Length of lr parameters stds, means and coefficients .
   };
 
   /// WordsQualityEstimate contains the quality data of a given translated sentence.
@@ -60,6 +60,8 @@ class QualityEstimator {
   /// @param [in] sentenceIdx: the id of a candidate sentence
   WordsQualityEstimate computeQualityScores(const std::vector<float> &logProbs, const AnnotatedText &target,
                                             const size_t sentenceIdx) const;
+
+  AlignedMemory toAlignedMemory() const;
 
  private:
   struct IntgemmMatrix {
@@ -95,9 +97,13 @@ class QualityEstimator {
   /// and then they are used to build a model representation (which is a matrix)
   class LogisticRegressor {
    public:
-    enum Configuration { NumberOfFeatures = 4, ParametersDims = 4, CoefficientsColumnSize = 1 };
+    const Scale scale;
+    const IntgemmMatrix coefficients;
+    const size_t numCoefficients;
+    const float intercept;
 
-    LogisticRegressor(Scale &&scale, IntgemmMatrix &&coefficients, const float intercept);
+    LogisticRegressor(Scale &&scaleParam, IntgemmMatrix &&coefficientsParam, const size_t numCoefficientsParam,
+                      const float interceptParam);
 
     WordsQualityEstimate predictQualityScores(const std::vector<ByteRange> &wordByteRanges,
                                               const std::vector<WordFeatures> &wordsFeatures,
@@ -116,17 +122,13 @@ class QualityEstimator {
     /// Applies a sigmoid function to each element of a vector and returns the mean of the result vector
     /// @param [in] linearPredictedValues: the vector of real values returned by a linear regression
     float resultToProbabilities(std::vector<float> &linearPredictedValues) const;
-
-    const Scale scale_;
-    const IntgemmMatrix coefficients_;
-    const float intercept_;
   };
 
-  /// binary file parser which came from AlinedMemory
-  static LogisticRegressor load(const AlignedMemory &qualityEstimatorMemory);
+  /// binary file parser which came from AlignedMemory
+  static LogisticRegressor fromAlignedMemory(const AlignedMemory &qualityEstimatorMemory);
 
   /// Builds the words byte ranges and defines the WordFeature values
-  /// @param [in] lobProbs: the log probabilities given by an translation model
+  /// @param [in] logProbs: the log probabilities given by an translation model
   /// @param [in] target: AnnotatedText target value
   /// @param [in] sentenceIdx: the id of a candidate sentence
   std::tuple<std::vector<ByteRange>, std::vector<WordFeatures>, float> mapBPEToWords(const std::vector<float> &logProbs,

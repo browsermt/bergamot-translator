@@ -4,7 +4,6 @@
 
 #include "catch.hpp"
 #include "translator/quality_estimator.h"
-#include "translator/quality_helper.h"
 
 using namespace marian::bergamot;
 
@@ -35,15 +34,33 @@ SCENARIO("Quality Estimator Test ", "[QualityEstimator]") {
 
     // Memory / Features
 
-    std::vector<float> stds = {0.200000003, 0.300000012, 2.5, 0.100000001};
-    std::vector<float> means = {-0.100000001, -0.769999981, 5, -0.5};
-    std::vector<float> coefficients = {0.99000001, 0.899999976, -0.200000003, 0.5};
-    std::vector<float> intercept = {-0.300000012, -0.300000012, -0.300000012, -0.300000012};
+    const std::vector<float> stds = {0.200000003, 0.300000012, 2.5, 0.100000001};
+    const std::vector<float> means = {-0.100000001, -0.769999981, 5, -0.5};
+    const std::vector<float> coefficients = {0.99000001, 0.899999976, -0.200000003, 0.5};
+    const float intercept = {-0.300000012};
+    const size_t parametersDims = stds.size();
+    const std::vector<std::vector<float> > lrParameters = {stds, means, coefficients};
 
-    std::vector<std::vector<float> > lrParameters = {stds, means, coefficients, intercept};
+    const QualityEstimator::Header header = {BINARY_QE_MODEL_MAGIC, parametersDims};
+
+    marian::bergamot::AlignedMemory memory(sizeof(header) + lrParameters.size() * parametersDims * sizeof(float) +
+                                           sizeof(intercept));
+
+    size_t index = 0;
+    memcpy(memory.begin(), &header, sizeof(header));
+    index += sizeof(header);
+
+    for (const auto& parameters : lrParameters) {
+      for (const float value : parameters) {
+        memcpy(memory.begin() + index, &value, sizeof(float));
+        index += sizeof(float);
+      }
+    }
+
+    memcpy(memory.begin() + index, &intercept, sizeof(intercept));
 
     AND_GIVEN("QualityEstimator") {
-      QualityEstimator qualityEstimator(std::move(QualityHelper::writeQualityEstimatorMemory(lrParameters)));
+      QualityEstimator qualityEstimator(memory);
 
       WHEN("It's call computeQualityScores") {
         auto wordsQualityEstimate = qualityEstimator.computeQualityScores(logProbs, annotatedTarget, 0);

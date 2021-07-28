@@ -35,8 +35,7 @@ QualityEstimator::Matrix QualityEstimator::IntgemmMatrix::operator*(const Intgem
   AlignedVector<int16_t> B_prepared(matrixb.data.size());
 
   intgemm::Int16::PrepareA(data.begin(), A_prepared.begin(), quant_mult, rows, cols);
-  intgemm::Int16::PrepareB(matrixb.data.begin(), B_prepared.begin(), quant_mult, matrixb.rows,
-                           matrixb.cols);
+  intgemm::Int16::PrepareB(matrixb.data.begin(), B_prepared.begin(), quant_mult, matrixb.rows, matrixb.cols);
 
   Matrix result(rows, matrixb.cols);
 
@@ -59,13 +58,6 @@ QualityEstimator::QualityEstimator(const AlignedMemory& qualityEstimatorMemory)
 
 QualityEstimator::LogisticRegressor QualityEstimator::fromAlignedMemory(const AlignedMemory& qualityEstimatorMemory) {
   LOG(info, "[data] Loading Quality Estimator model from buffer");
-  /* File layout:
-   * header
-   * stds array
-   * means array
-   * coefficients array
-   * intercept
-   */
 
   const char* ptr = qualityEstimatorMemory.begin();
   const size_t blobSize = qualityEstimatorMemory.size();
@@ -148,8 +140,58 @@ AlignedMemory QualityEstimator::toAlignedMemory() const {
   return memory;
 }
 
+// mapBPEToWords takes the following arguments:
+// - the log probabilities (logProbs) of byte pair encodings (BPE)
+//   that comes from the tracebackWordScores method (which belongs to hypothesis.h in Marian)
+// - the AnnotatedText from the translated word
+// - the index of a translated sentence
+//
+// This method is responsible for mapping BPE tokens to word tokens representing them through ByteRanges.
+//
+// The words byte ranges are expected to be alphanumeric characters, and they are split using whitespaces. Moreover,
+// this method is also responsible for extracting the features that the QE model will further use. The features
+// extracted are the following:
+//
+// - meanScore = the mean of bpe's  logProbs  that a given word corresponds to
+// - minScore = the minimum bpe's logProbs that a given word corresponds to
+// - numSubWords = the number of bpe tokens that a term is made of
+// - overallMean = the mean of bpe's logProbs regarding the whole translated sentence
+//
+// The return of this function is a ByteRange vector of the words and a WordFeatures vector.
+//
+// If a translated sentence does not contain any alphanumeric character (therefore, it is made basically of the EOS
+// token), this method ignores it and returns an empty ByteRange vector of words and an empty WordFeatures vector.
+//
+// Examples:
+// Suppose that you have the following source target (A): marian is a good translation service and the translate service
+// gives you the following sentence (B):
+//
+// ma(0.15) ri(0.15) an(0.2) es(0.3) un(0.1) bu(0.3) en(0.2) ser(0.1) vi(0.2) cio(0.4) de(0.1) tra(0.4) du(0.2)
+// cción(0.1)
+//
+// The numbers that the words follow represent the logProb of each BPE token.
+//
+// Then, the result would be something like:
+// a vector where each position corresponds to the ByteRanges of the following words: marian es un buen servicio de
+// traducción. Hence, its length is 7.
+//
+// An vector of WordFeatures with length 7 where, for instance:
+//
+// the values of the first element (marian) would be:
+// - meanScores= (0.15+0.15+0.3)/3=0.2
+// - minScores= 0.15
+// - numSubWords = 3
+// - overallMean = 0.207
+//
+// the values of the second element (es) would be:
+// - meanScores= 0.3
+// - minScores= 0.3
+// - numSubWords = 1
+// - overallMean = 0.207
+//
 std::tuple<std::vector<ByteRange>, std::vector<QualityEstimator::WordFeatures>, float> QualityEstimator::mapBPEToWords(
     const std::vector<float>& logProbs, const AnnotatedText& target, const size_t sentenceIdx) {
+  // Ignore empty target
   if (logProbs.empty() || target.text.empty()) {
     return {{}, {}, 0.0};
   }
@@ -167,7 +209,7 @@ std::tuple<std::vector<ByteRange>, std::vector<QualityEstimator::WordFeatures>, 
   wordByteRanges.push_back(subword);
 
   size_t subwordIdx = 1;
-  ///  A word is composed of multiple subtokens. The definition of an "entire"
+  /// A word is composed of multiple subtokens. The definition of an "entire"
   /// word is the presence of whitespace. The QE model ignores the presence
   /// of the EOS token, and hence we only need to iterate n-1 positions.
   for (; subwordIdx < (logProbs.size() - 1); ++subwordIdx) {
@@ -224,7 +266,6 @@ QualityEstimator::Matrix QualityEstimator::convertToMatrix(const std::vector<Wor
 }
 
 std::vector<float> QualityEstimator::LogisticRegressor::vectorResult(const IntgemmMatrix& features) const {
-
   const Matrix modelScores = features * coefficients;
 
   std::vector<float> scores(features.rows);
@@ -237,8 +278,6 @@ std::vector<float> QualityEstimator::LogisticRegressor::vectorResult(const Intge
 }
 
 QualityEstimator::IntgemmMatrix QualityEstimator::LogisticRegressor::transformFeatures(const Matrix& features) const {
-  const size_t numFeatures = 4;
-
   QualityEstimator::IntgemmMatrix resultFeatures(features.rows, features.cols, intgemm::Int16::tile_info.a_rows,
                                                  intgemm::Int16::tile_info.a_cols);
 

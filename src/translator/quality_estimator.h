@@ -17,9 +17,9 @@ constexpr std::size_t BINARY_QE_MODEL_MAGIC = 0x78cc336f1d54b180;
 /// It returns the probability of each translated term being a valid one.
 /// It's worthwhile mentioning that a word is made of one or more byte pair encoding (BPE) tokens.
 
-/// Currently, it only expects an AlignedMemory, which is given from a binary file,
-/// which contains a header.
-/// The header includes the following structure:
+/// Currently, it only expects an AlignedMemory, which is given from a binary file.
+/// It's expected from AlignedMemory the following structure:
+/// - a header with the number of parameters dimensions
 /// - a vector of standard deviations of features
 /// - a vector of means of features
 /// - a vector of coefficients
@@ -75,6 +75,7 @@ class QualityEstimator {
     AlignedVector<float> data;
   };
 
+  /// A strcut to simplify the usage of intgemm
   struct IntgemmMatrix : Matrix {
     IntgemmMatrix(const intgemm::Index rowsParam, const intgemm::Index widthParam, const intgemm::Index rowsMultiplier,
                   const intgemm::Index widthMultiplier);
@@ -87,9 +88,9 @@ class QualityEstimator {
     std::vector<float> means;
   };
 
-  /// WordFeatures represents the features used by a given model.
+  /// WordFeatures represents N-1 features that are used by a given model.
   ///
-  /// It's valued are filled through mapBPEToWords
+  /// It's values are filled through mapBPEToWords
   struct WordFeatures {
     int numSubWords = 0;
     float meanScore = 0.0;
@@ -102,8 +103,8 @@ class QualityEstimator {
   /// and an intercept (which represents the linear model) and a vector of means and stds
   /// (which are necessary for feature scaling).
   ///
-  /// These pointers are firstly initialized by parsing a file (which comes from memory),
-  /// and then they are used to build a model representation (which is a matrix)
+  /// These variables are firstly initialized by parsing a file (which comes from memory),
+  /// and then they are used to build a model representation
   class LogisticRegressor {
    public:
     const Scale scale;
@@ -117,13 +118,12 @@ class QualityEstimator {
     std::vector<float> predict(const Matrix &features) const;
 
    private:
-    /// Calculates the scores of words through a linear model
+    /// Calculates the scores through a linear model
     /// @param [in] features: the matrix of feature scaled values
     std::vector<float> vectorResult(const IntgemmMatrix &features) const;
 
-    /// Given the modelFeatures construct, it builds the feature matrix with scaled values
-    /// @param [in] feature: a struct matrix which contains the std and mean vectors of each feature
-    /// @param [in] overallMean: a float record that represents the mean of sentence bpe tokens logprobs
+    /// It scale the values from feature matrix such that all columns have std 1 and mean 0
+    /// @param [in] features: a struct matrix with the features values
     IntgemmMatrix transformFeatures(const Matrix &features) const;
 
     /// Applies a sigmoid function to each element of a vector and returns the mean of the result vector

@@ -37,10 +37,10 @@ jobs:
       shell: powershell
 
     - name: Prepare vcpkg
-      uses: lukka/run-vcpkg@v7.3
+      uses: lukka/run-vcpkg@v7.4
       with:
         vcpkgArguments: protobuf pcre2
-        vcpkgGitCommitId: 6185aa76504a5025f36754324abf307cc776f3da 
+        vcpkgGitCommitId: 8dddc6c899ce6fdbeab38b525a31e7f23cb2d5bb
         vcpkgDirectory: ${{ github.workspace }}/vcpkg/
         vcpkgTriplet: x64-windows-static
 

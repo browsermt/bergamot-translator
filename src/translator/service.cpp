@@ -12,15 +12,10 @@ namespace bergamot {
 Service::Service(Ptr<Options> options, MemoryBundle memoryBundle)
     : requestId_(0),
       options_(options),
-      // vocabs_(options, std::move(memoryBundle.vocabs)),
-      // text_processor_(options, vocabs_, std::move(memoryBundle.ssplitPrefixFile)),
       batcher_(options),
       numWorkers_(std::max<int>(1, options->get<int>("cpu-threads"))),
-      // modelMemory_(std::move(memoryBundle.model)),
-      // shortlistMemory_(std::move(memoryBundle.shortlist)),
-      translationModel_(options_, std::move(memoryBundle), /*replicas=*/numWorkers_)
-// blocking_translator_(DeviceId(0, DeviceType::cpu), vocabs_, options_, &modelMemory_, &shortlistMemory_)
-{
+      translationModel_(options_, std::move(memoryBundle), /*replicas=*/numWorkers_) {
+#ifndef WASM_COMPATIBLE_SOURCE
   workers_.reserve(numWorkers_);
   for (size_t cpuId = 0; cpuId < numWorkers_; cpuId++) {
     workers_.emplace_back([cpuId, this] {
@@ -31,6 +26,7 @@ Service::Service(Ptr<Options> options, MemoryBundle memoryBundle)
       }
     });
   }
+#endif
 }
 
 #ifdef WASM_COMPATIBLE_SOURCE
@@ -55,8 +51,8 @@ std::vector<Response> Service::translateMultiple(std::vector<std::string> &&inpu
 }
 #endif
 
-void Service::queueRequest(TranslationModel &translationModel, std::string &&input,
-                           std::function<void(Response &&)> &&callback, ResponseOptions responseOptions) {
+void Service::queueRequest(TranslationModel &translationModel, std::string &&input, CallbackType &&callback,
+                           ResponseOptions responseOptions) {
   Segments segments;
   AnnotatedText source;
 
@@ -68,8 +64,7 @@ void Service::queueRequest(TranslationModel &translationModel, std::string &&inp
   batcher_.addWholeRequest(request);
 }
 
-void Service::translate(std::string &&input, std::function<void(Response &&)> &&callback,
-                        ResponseOptions responseOptions) {
+void Service::translate(std::string &&input, CallbackType &&callback, ResponseOptions responseOptions) {
   queueRequest(translationModel_, std::move(input), std::move(callback), responseOptions);
 }
 

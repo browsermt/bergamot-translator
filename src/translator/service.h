@@ -41,6 +41,8 @@ namespace bergamot {
 ///
 class Service {
  public:
+  using CallbackType = std::function<void(Response &&)>;
+
   /// Construct Service from Marian options. If memoryBundle is empty, Service is
   /// initialized from file-based loading. Otherwise, Service is initialized from
   /// the given bytearray memories.
@@ -73,8 +75,7 @@ class Service {
   /// @param [in] responseOptions: Options indicating whether or not to include
   /// some member in the Response, also specify any additional configurable
   /// parameters.
-  void translate(std::string &&source, std::function<void(Response &&)> &&callback,
-                 ResponseOptions options = ResponseOptions());
+  void translate(std::string &&source, CallbackType &&callback, ResponseOptions options = ResponseOptions());
 
 #ifdef WASM_COMPATIBLE_SOURCE
   /// Translate multiple text-blobs in a single *blocking* API call, providing
@@ -101,8 +102,8 @@ class Service {
 
  private:
   /// Queue an input for translation.
-  void queueRequest(TranslationModel &translationModel, std::string &&input,
-                    std::function<void(Response &&)> &&callback, ResponseOptions responseOptions);
+  void queueRequest(TranslationModel &translationModel, std::string &&input, CallbackType &&callback,
+                    ResponseOptions responseOptions);
 
   /// Translates through direct interaction between batcher_ and translators_
 
@@ -112,21 +113,10 @@ class Service {
   /// Options object holding the options Service was instantiated with.
   Ptr<Options> options_;
 
-  /// Model memory to load model passed as bytes.
-  // AlignedMemory modelMemory_;  // ORDER DEPENDENCY (translators_)
-  /// Shortlist memory passed as bytes.
-  // AlignedMemory shortlistMemory_;  // ORDER DEPENDENCY (translators_)
-
   /// Stores requestId of active request. Used to establish
   /// ordering among requests and logging/book-keeping.
 
   size_t requestId_;
-  /// Store vocabs representing source and target.
-  // Vocabs vocabs_;  // ORDER DEPENDENCY (text_processor_)
-
-  /// TextProcesser takes a blob of text and converts into format consumable by
-  /// the batch-translator and annotates sentences and words.
-  // TextProcessor text_processor_;  // ORDER DEPENDENCY (vocabs_)
 
   /// Batcher handles generation of batches from a request, subject to
   /// packing-efficiency and priority optimization heuristics.
@@ -136,9 +126,7 @@ class Service {
 
   // The following constructs are available providing full capabilities on a non
   // WASM platform, where one does not have to hide threads.
-#ifdef WASM_COMPATIBLE_SOURCE
-  BatchTranslator blocking_translator_;  // ORDER DEPENDENCY (modelMemory_, shortlistMemory_)
-#else
+#ifndef WASM_COMPATIBLE_SOURCE
   std::vector<std::thread> workers_;
 #endif  // WASM_COMPATIBLE_SOURCE
 };

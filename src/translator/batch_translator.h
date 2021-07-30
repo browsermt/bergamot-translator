@@ -45,6 +45,8 @@ class TranslationModel {
     ShortlistGenerator shortlistGenerator;
   };
 
+  void loadBackend(size_t idx);
+
   Ptr<Options> options_;
   MemoryBundle memory_;
   Vocabs vocabs_;

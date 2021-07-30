@@ -15,6 +15,7 @@ TranslationModel::TranslationModel(Ptr<Options> options, MemoryBundle &&memory, 
       memory_(std::move(memory)),
       vocabs_(options, std::move(memory_.vocabs)),
       textProcessor_(options, vocabs_, std::move(memory_.ssplitPrefixFile)) {
+  backend_.resize(replicas);
   // ShortList: Load from memoryBundle or options
   for (size_t idx = 0; idx < replicas; idx++) {
     // Aliasing to reuse old code.

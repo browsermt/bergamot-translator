@@ -10,11 +10,12 @@
 namespace marian {
 namespace bergamot {
 
-TranslationModel::TranslationModel(Ptr<Options> options, MemoryBundle &&memory, size_t replicas /*=1*/)
+TranslationModel::TranslationModel(Ptr<Options> options, MemoryBundle &&memory, size_t replicas)
     : options_(options),
       memory_(std::move(memory)),
       vocabs_(options, std::move(memory_.vocabs)),
       textProcessor_(options, vocabs_, std::move(memory_.ssplitPrefixFile)) {
+  ABORT_IF(replicas == 0, "At least one replica needs to be created.");
   backend_.resize(replicas);
   // ShortList: Load from memoryBundle or options
   for (size_t idx = 0; idx < replicas; idx++) {

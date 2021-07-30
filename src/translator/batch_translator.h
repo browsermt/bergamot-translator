@@ -24,9 +24,9 @@ class TranslationModel {
   using ShortlistGenerator = Ptr<data::ShortlistGenerator const>;
   TranslationModel(Ptr<Options> options, MemoryBundle&& memory, size_t replicas = 1);
 
-  const Graph& graph(size_t id = 0) const { return backend_[id].graph; }
-  const ScorerEnsemble& scorerEnsemble(size_t id = 0) { return backend_[id].scorerEnsemble; }
-  const ShortlistGenerator& shortlistGenerator(size_t id = 0) { return backend_[id].shortlistGenerator; }
+  const Graph& graph(size_t id) const { return backend_[id].graph; }
+  const ScorerEnsemble& scorerEnsemble(size_t id) { return backend_[id].scorerEnsemble; }
+  const ShortlistGenerator& shortlistGenerator(size_t id) { return backend_[id].shortlistGenerator; }
   const Ptr<Options> options() { return options_; }
   const Vocabs& vocabs() { return vocabs_; }
   TextProcessor& textProcessor() { return textProcessor_; }

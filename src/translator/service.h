@@ -101,7 +101,8 @@ class Service {
 
  private:
   /// Queue an input for translation.
-  void queueRequest(std::string &&input, std::function<void(Response &&)> &&callback, ResponseOptions responseOptions);
+  void queueRequest(TranslationModel &translationModel, std::string &&input,
+                    std::function<void(Response &&)> &&callback, ResponseOptions responseOptions);
 
   /// Translates through direct interaction between batcher_ and translators_
 
@@ -112,24 +113,26 @@ class Service {
   Ptr<Options> options_;
 
   /// Model memory to load model passed as bytes.
-  AlignedMemory modelMemory_;  // ORDER DEPENDENCY (translators_)
+  // AlignedMemory modelMemory_;  // ORDER DEPENDENCY (translators_)
   /// Shortlist memory passed as bytes.
-  AlignedMemory shortlistMemory_;  // ORDER DEPENDENCY (translators_)
+  // AlignedMemory shortlistMemory_;  // ORDER DEPENDENCY (translators_)
 
   /// Stores requestId of active request. Used to establish
   /// ordering among requests and logging/book-keeping.
 
   size_t requestId_;
   /// Store vocabs representing source and target.
-  Vocabs vocabs_;  // ORDER DEPENDENCY (text_processor_)
+  // Vocabs vocabs_;  // ORDER DEPENDENCY (text_processor_)
 
   /// TextProcesser takes a blob of text and converts into format consumable by
   /// the batch-translator and annotates sentences and words.
-  TextProcessor text_processor_;  // ORDER DEPENDENCY (vocabs_)
+  // TextProcessor text_processor_;  // ORDER DEPENDENCY (vocabs_)
 
   /// Batcher handles generation of batches from a request, subject to
   /// packing-efficiency and priority optimization heuristics.
   ThreadsafeBatcher batcher_;
+
+  TranslationModel translationModel_;
 
   // The following constructs are available providing full capabilities on a non
   // WASM platform, where one does not have to hide threads.

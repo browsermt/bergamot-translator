@@ -12,34 +12,25 @@ namespace bergamot {
 Service::Service(Ptr<Options> options, MemoryBundle memoryBundle)
     : requestId_(0),
       options_(options),
-      vocabs_(options, std::move(memoryBundle.vocabs)),
-      text_processor_(options, vocabs_, std::move(memoryBundle.ssplitPrefixFile)),
+      // vocabs_(options, std::move(memoryBundle.vocabs)),
+      // text_processor_(options, vocabs_, std::move(memoryBundle.ssplitPrefixFile)),
       batcher_(options),
       numWorkers_(std::max<int>(1, options->get<int>("cpu-threads"))),
-      modelMemory_(std::move(memoryBundle.model)),
-      shortlistMemory_(std::move(memoryBundle.shortlist))
-#ifdef WASM_COMPATIBLE_SOURCE
-      ,
-      blocking_translator_(DeviceId(0, DeviceType::cpu), vocabs_, options_, &modelMemory_, &shortlistMemory_)
-#endif
+      // modelMemory_(std::move(memoryBundle.model)),
+      // shortlistMemory_(std::move(memoryBundle.shortlist)),
+      translationModel_(options_, std::move(memoryBundle), /*replicas=*/numWorkers_)
+// blocking_translator_(DeviceId(0, DeviceType::cpu), vocabs_, options_, &modelMemory_, &shortlistMemory_)
 {
-#ifdef WASM_COMPATIBLE_SOURCE
-  blocking_translator_.initialize();
-#else
   workers_.reserve(numWorkers_);
   for (size_t cpuId = 0; cpuId < numWorkers_; cpuId++) {
     workers_.emplace_back([cpuId, this] {
-      marian::DeviceId deviceId(cpuId, DeviceType::cpu);
-      BatchTranslator translator(deviceId, vocabs_, options_, &modelMemory_, &shortlistMemory_);
-      translator.initialize();
       Batch batch;
       // Run thread mainloop
       while (batcher_ >> batch) {
-        translator.translate(batch);
+        translateBatch(cpuId, translationModel_, batch);
       }
     });
   }
-#endif
 }
 
 #ifdef WASM_COMPATIBLE_SOURCE
@@ -51,27 +42,27 @@ std::vector<Response> Service::translateMultiple(std::vector<std::string> &&inpu
 
   for (size_t i = 0; i < inputs.size(); i++) {
     auto callback = [i, &responses](Response &&response) { responses[i] = std::move(response); };  //
-    queueRequest(std::move(inputs[i]), std::move(callback), responseOptions);
+    queueRequest(translationModel_, std::move(inputs[i]), std::move(callback), responseOptions);
   }
 
   Batch batch;
   // There's no need to do shutdown here because it's single threaded.
   while (batcher_ >> batch) {
-    blocking_translator_.translate(batch);
+    translateBatch(/*deviceId=*/0, translationModel_, batch);
   }
 
   return responses;
 }
 #endif
 
-void Service::queueRequest(std::string &&input, std::function<void(Response &&)> &&callback,
-                           ResponseOptions responseOptions) {
+void Service::queueRequest(TranslationModel &translationModel, std::string &&input,
+                           std::function<void(Response &&)> &&callback, ResponseOptions responseOptions) {
   Segments segments;
   AnnotatedText source;
 
-  text_processor_.process(std::move(input), source, segments);
+  translationModel_.textProcessor().process(std::move(input), source, segments);
 
-  ResponseBuilder responseBuilder(responseOptions, std::move(source), vocabs_, std::move(callback));
+  ResponseBuilder responseBuilder(responseOptions, std::move(source), translationModel.vocabs(), std::move(callback));
   Ptr<Request> request = New<Request>(requestId_++, std::move(segments), std::move(responseBuilder));
 
   batcher_.addWholeRequest(request);
@@ -79,7 +70,7 @@ void Service::queueRequest(std::string &&input, std::function<void(Response &&)>
 
 void Service::translate(std::string &&input, std::function<void(Response &&)> &&callback,
                         ResponseOptions responseOptions) {
-  queueRequest(std::move(input), std::move(callback), responseOptions);
+  queueRequest(translationModel_, std::move(input), std::move(callback), responseOptions);
 }
 
 Service::~Service() {

@@ -29,6 +29,7 @@ class TranslationModel {
   const ShortlistGenerator& shortlistGenerator(size_t id = 0) { return backend_[id].shortlistGenerator; }
   const Ptr<Options> options() { return options_; }
   const Vocabs& vocabs() { return vocabs_; }
+  TextProcessor& textProcessor() { return textProcessor_; }
 
  private:
   struct MarianBackend {
@@ -52,7 +53,7 @@ class TranslationModel {
   // TODO: QualityEstimator qualityEstimator_;
 };
 
-void translate(size_t deviceId, TranslationModel& model, const Batch& batch);
+void translateBatch(size_t deviceId, TranslationModel& model, Batch& batch);
 
 class BatchTranslator {
   // Launches minimal marian-translation (only CPU at the moment) in individual

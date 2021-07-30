@@ -24,7 +24,7 @@ class ResponseBuilder {
   /// or not in the response and any additional configurable parameters.
   /// @param [in] vocabs: marian vocab object (used in decoding)
   /// @param [in] callback: callback with operates on the constructed Response.
-  ResponseBuilder(ResponseOptions responseOptions, AnnotatedText &&source, Vocabs &vocabs,
+  ResponseBuilder(ResponseOptions responseOptions, AnnotatedText &&source, const Vocabs &vocabs,
                   std::function<void(Response &&)> callback)
       : responseOptions_(responseOptions),
         source_(std::move(source)),

@@ -13,8 +13,8 @@ Service::Service(Ptr<Options> options, MemoryBundle memoryBundle)
     : requestId_(0),
       options_(options),
       batcher_(options),
-      numWorkers_(std::max<int>(1, options->get<int>("cpu-threads"))),
-      translationModel_(options_, std::move(memoryBundle), /*replicas=*/numWorkers_) {
+      numWorkers_(std::max<int>(1, options->get<int>("cpu-threads"))) {
+  translationModel_ = New<TranslationModel>(options_, std::move(memoryBundle), /*replicas=*/numWorkers_);
 #ifndef WASM_COMPATIBLE_SOURCE
   workers_.reserve(numWorkers_);
   for (size_t cpuId = 0; cpuId < numWorkers_; cpuId++) {
@@ -51,14 +51,14 @@ std::vector<Response> Service::translateMultiple(std::vector<std::string> &&inpu
 }
 #endif
 
-void Service::queueRequest(TranslationModel &translationModel, std::string &&input, CallbackType &&callback,
+void Service::queueRequest(Ptr<TranslationModel> translationModel, std::string &&input, CallbackType &&callback,
                            ResponseOptions responseOptions) {
   Segments segments;
   AnnotatedText source;
 
-  translationModel_.textProcessor().process(std::move(input), source, segments);
+  translationModel->textProcessor().process(std::move(input), source, segments);
 
-  ResponseBuilder responseBuilder(responseOptions, std::move(source), translationModel.vocabs(), std::move(callback));
+  ResponseBuilder responseBuilder(responseOptions, std::move(source), translationModel->vocabs(), std::move(callback));
   Ptr<Request> request = New<Request>(requestId_++, std::move(segments), std::move(responseBuilder));
 
   batcher_.addWholeRequest(request);

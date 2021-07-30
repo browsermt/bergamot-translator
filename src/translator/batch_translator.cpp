@@ -83,7 +83,7 @@ void TranslationModel::loadBackend(size_t idx) {
   graph_->forward();
 }
 
-void translateBatch(size_t deviceId, TranslationModel &model, Batch &batch) {
+void translateBatch(size_t deviceId, Ptr<TranslationModel> model, Batch &batch) {
   std::vector<data::SentenceTuple> batchVector;
 
   auto &sentences = batch.sentences();
@@ -113,7 +113,7 @@ void translateBatch(size_t deviceId, TranslationModel &model, Batch &batch) {
 
   std::vector<Ptr<SubBatch>> subBatches;
   for (size_t j = 0; j < maxDims.size(); ++j) {
-    subBatches.emplace_back(New<SubBatch>(batchSize, maxDims[j], model.vocabs().sources().at(j)));
+    subBatches.emplace_back(New<SubBatch>(batchSize, maxDims[j], model->vocabs().sources().at(j)));
   }
 
   std::vector<size_t> words(maxDims.size(), 0);
@@ -132,8 +132,8 @@ void translateBatch(size_t deviceId, TranslationModel &model, Batch &batch) {
   auto corpus_batch = New<CorpusBatch>(subBatches);
   corpus_batch->setSentenceIds(sentenceIds);
 
-  auto search = New<BeamSearch>(model.options(), model.scorerEnsemble(deviceId), model.vocabs().target());
-  auto histories = search->search(model.graph(deviceId), corpus_batch);
+  auto search = New<BeamSearch>(model->options(), model->scorerEnsemble(deviceId), model->vocabs().target());
+  auto histories = search->search(model->graph(deviceId), corpus_batch);
   batch.completeBatch(histories);
 }
 

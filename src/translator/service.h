@@ -102,7 +102,7 @@ class Service {
 
  private:
   /// Queue an input for translation.
-  void queueRequest(TranslationModel &translationModel, std::string &&input, CallbackType &&callback,
+  void queueRequest(std::shared_ptr<TranslationModel> translationModel, std::string &&input, CallbackType &&callback,
                     ResponseOptions responseOptions);
 
   /// Translates through direct interaction between batcher_ and translators_
@@ -122,7 +122,7 @@ class Service {
   /// packing-efficiency and priority optimization heuristics.
   ThreadsafeBatcher batcher_;
 
-  TranslationModel translationModel_;
+  Ptr<TranslationModel> translationModel_;
 
   // The following constructs are available providing full capabilities on a non
   // WASM platform, where one does not have to hide threads.

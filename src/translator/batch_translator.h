@@ -55,7 +55,7 @@ class TranslationModel {
   // TODO: QualityEstimator qualityEstimator_;
 };
 
-void translateBatch(size_t deviceId, TranslationModel& model, Batch& batch);
+void translateBatch(size_t deviceId, Ptr<TranslationModel> model, Batch& batch);
 
 }  // namespace bergamot
 }  // namespace marian

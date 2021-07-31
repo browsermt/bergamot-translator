@@ -15,16 +15,13 @@
 namespace marian {
 namespace bergamot {
 
-#ifdef WASM_COMPATIBLE_SOURCE
-// No threads, no locks.
-typedef AggregateBatchingPool ThreadsafeBatcher;
-#else
+#ifndef WASM_COMPATIBLE_SOURCE
 
-class ThreadsafeBatcher {
+class ThreadsafeAggregateBatchingPool {
  public:
-  explicit ThreadsafeBatcher();
+  explicit ThreadsafeAggregateBatchingPool();
 
-  ~ThreadsafeBatcher();
+  ~ThreadsafeAggregateBatchingPool();
 
   // Add sentences to be translated by calling these (see Batcher).  When
   // done, call shutdown.

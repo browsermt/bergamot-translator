@@ -6,7 +6,7 @@
 namespace marian {
 namespace bergamot {
 
-ThreadsafeBatcher::ThreadsafeBatcher(Ptr<Options> options) : enqueued_(0), shutdown_(false) {}
+ThreadsafeBatcher::ThreadsafeBatcher() : enqueued_(0), shutdown_(false) {}
 
 ThreadsafeBatcher::~ThreadsafeBatcher() { shutdown(); }
 

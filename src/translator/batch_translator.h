@@ -68,6 +68,9 @@ class AggregateBatchingPool {
     aggregateQueue_.push(model);
   }
 
+  // no-op, for parity
+  void shutdown() {}
+
   bool generateBatch(Ptr<TranslationModel>& model, Batch& batch) {
     while (model == nullptr && !aggregateQueue_.empty()) {
       std::weak_ptr<TranslationModel> weakModel = aggregateQueue_.front();

@@ -22,7 +22,7 @@ typedef AggregateBatchingPool ThreadsafeBatcher;
 
 class ThreadsafeBatcher {
  public:
-  explicit ThreadsafeBatcher(Ptr<Options> options);
+  explicit ThreadsafeBatcher();
 
   ~ThreadsafeBatcher();
 

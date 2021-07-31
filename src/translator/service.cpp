@@ -10,10 +10,7 @@ namespace marian {
 namespace bergamot {
 
 Service::Service(Ptr<Options> options, MemoryBundle memoryBundle)
-    : requestId_(0),
-      options_(options),
-      batcher_(options),
-      numWorkers_(std::max<int>(1, options->get<int>("cpu-threads"))) {
+    : requestId_(0), options_(options), numWorkers_(std::max<int>(1, options->get<int>("cpu-threads"))) {
   translationModel_ = New<TranslationModel>(options_, std::move(memoryBundle), /*replicas=*/numWorkers_);
 #ifndef WASM_COMPATIBLE_SOURCE
   workers_.reserve(numWorkers_);
@@ -44,8 +41,9 @@ std::vector<Response> Service::translateMultiple(std::vector<std::string> &&inpu
 
   Batch batch;
   // There's no need to do shutdown here because it's single threaded.
-  while (batcher_.generateBatch(batch)) {
-    translateBatch(/*deviceId=*/0, translationModel_, batch);
+  Ptr<TranslationModel> model{nullptr};
+  while (batcher_.generateBatch(model, batch)) {
+    translateBatch(/*deviceId=*/0, model, batch);
   }
 
   return responses;

@@ -17,7 +17,7 @@ namespace bergamot {
 
 #ifdef WASM_COMPATIBLE_SOURCE
 // No threads, no locks.
-typedef Batcher ThreadsafeBatcher;
+typedef AggregateBatchingPool ThreadsafeBatcher;
 #else
 
 class ThreadsafeBatcher {

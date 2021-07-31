@@ -45,7 +45,9 @@ void wasm(Ptr<Options> options) {
   // Overkill, yes.
 
   std::string config = options->asYamlString();
-  Service model(config);
+  MemoryBundle memoryBundle = getMemoryBundleFromConfig(options);
+  Ptr<TranslationModel> translationModel = New<TranslationModel>(config, std::move(memoryBundle));
+  Service service(config);
 
   ResponseOptions responseOptions;
   std::vector<std::string> texts;
@@ -56,7 +58,7 @@ void wasm(Ptr<Options> options) {
     texts.emplace_back(line);
   }
 
-  auto results = model.translateMultiple(std::move(texts), responseOptions);
+  auto results = service.translateMultiple(translationModel, std::move(texts), responseOptions);
 
   for (auto &result : results) {
     std::cout << result.getTranslatedText() << std::endl;
@@ -85,6 +87,10 @@ void wasm(Ptr<Options> options) {
 void decoder(Ptr<Options> options) {
   marian::timer::Timer decoderTimer;
   Service service(options);
+  size_t numWorkers = options->get<size_t>("cpu-threads");
+  MemoryBundle memoryBundle;
+  Ptr<TranslationModel> translationModel =
+      New<TranslationModel>(options, std::move(memoryBundle), /*replicas=*/numWorkers);
   // Read a large input text blob from stdin
   std::ostringstream std_input;
   std_input << std::cin.rdbuf();
@@ -95,7 +101,7 @@ void decoder(Ptr<Options> options) {
   std::future<Response> responseFuture = responsePromise.get_future();
   auto callback = [&responsePromise](Response &&response) { responsePromise.set_value(std::move(response)); };
 
-  service.translate(std::move(input), std::move(callback));
+  service.translate(translationModel, std::move(input), std::move(callback));
   responseFuture.wait();
   const Response &response = responseFuture.get();
 
@@ -123,7 +129,11 @@ void native(Ptr<Options> options) {
     memoryBundle = getMemoryBundleFromConfig(options);
   }
 
-  Service service(options, std::move(memoryBundle));
+  size_t numWorkers = options->get<size_t>("cpu-threads");
+  Ptr<TranslationModel> translationModel =
+      New<TranslationModel>(options, std::move(memoryBundle), /*replicas=*/numWorkers);
+
+  Service service(options);
 
   // Read a large input text blob from stdin
   std::ostringstream std_input;
@@ -137,7 +147,7 @@ void native(Ptr<Options> options) {
   std::future<Response> responseFuture = responsePromise.get_future();
   auto callback = [&responsePromise](Response &&response) { responsePromise.set_value(std::move(response)); };
 
-  service.translate(std::move(input), std::move(callback), responseOptions);
+  service.translate(translationModel, std::move(input), std::move(callback), responseOptions);
   responseFuture.wait();
   Response response = responseFuture.get();
 

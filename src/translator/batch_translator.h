@@ -23,6 +23,7 @@ class TranslationModel {
   using Graph = Ptr<ExpressionGraph>;
   using ScorerEnsemble = std::vector<Ptr<Scorer>>;
   using ShortlistGenerator = Ptr<data::ShortlistGenerator const>;
+  TranslationModel(const std::string& config, MemoryBundle&& memory);
   TranslationModel(Ptr<Options> options, MemoryBundle&& memory, size_t replicas = 1);
 
   const Graph& graph(size_t id) const { return backend_[id].graph; }

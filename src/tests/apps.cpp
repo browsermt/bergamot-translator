@@ -14,7 +14,8 @@ Response translateFromStdin(Ptr<Options> options, ResponseOptions responseOption
     memoryBundle = getMemoryBundleFromConfig(options);
   }
 
-  Service service(options, std::move(memoryBundle));
+  Ptr<TranslationModel> translationModel = New<TranslationModel>(options, std::move(memoryBundle));
+  Service service(options);
 
   // Read a large input text blob from stdin
   std::ostringstream inputStream;
@@ -25,7 +26,7 @@ Response translateFromStdin(Ptr<Options> options, ResponseOptions responseOption
   std::future<Response> responseFuture = responsePromise.get_future();
 
   auto callback = [&responsePromise](Response &&response) { responsePromise.set_value(std::move(response)); };
-  service.translate(std::move(input), callback, responseOptions);
+  service.translate(translationModel, std::move(input), callback, responseOptions);
 
   responseFuture.wait();
 

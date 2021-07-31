@@ -9,9 +9,9 @@
 namespace marian {
 namespace bergamot {
 
-Service::Service(Ptr<Options> options, MemoryBundle memoryBundle)
+Service::Service(Ptr<Options> options)
     : requestId_(0), options_(options), numWorkers_(std::max<int>(1, options->get<int>("cpu-threads"))) {
-  translationModel_ = New<TranslationModel>(options_, std::move(memoryBundle), /*replicas=*/numWorkers_);
+  // translationModel_ = New<TranslationModel>(options_, std::move(memoryBundle), /*replicas=*/numWorkers_);
 #ifndef WASM_COMPATIBLE_SOURCE
   workers_.reserve(numWorkers_);
   for (size_t cpuId = 0; cpuId < numWorkers_; cpuId++) {
@@ -28,7 +28,8 @@ Service::Service(Ptr<Options> options, MemoryBundle memoryBundle)
 }
 
 #ifdef WASM_COMPATIBLE_SOURCE
-std::vector<Response> Service::translateMultiple(std::vector<std::string> &&inputs, ResponseOptions responseOptions) {
+std::vector<Response> Service::translateMultiple(Ptr<TranslationModel> translationModel,
+                                                 std::vector<std::string> &&inputs, ResponseOptions responseOptions) {
   // We queue the individual Requests so they get compiled at batches to be
   // efficiently translated.
   std::vector<Response> responses;
@@ -36,7 +37,7 @@ std::vector<Response> Service::translateMultiple(std::vector<std::string> &&inpu
 
   for (size_t i = 0; i < inputs.size(); i++) {
     auto callback = [i, &responses](Response &&response) { responses[i] = std::move(response); };  //
-    queueRequest(translationModel_, std::move(inputs[i]), std::move(callback), responseOptions);
+    queueRequest(translationModel, std::move(inputs[i]), std::move(callback), responseOptions);
   }
 
   Batch batch;
@@ -63,8 +64,9 @@ void Service::queueRequest(Ptr<TranslationModel> translationModel, std::string &
   batcher_.addRequest(translationModel, request);
 }
 
-void Service::translate(std::string &&input, CallbackType &&callback, ResponseOptions responseOptions) {
-  queueRequest(translationModel_, std::move(input), std::move(callback), responseOptions);
+void Service::translate(Ptr<TranslationModel> translationModel, std::string &&input, CallbackType &&callback,
+                        ResponseOptions responseOptions) {
+  queueRequest(translationModel, std::move(input), std::move(callback), responseOptions);
 }
 
 Service::~Service() {

@@ -47,18 +47,15 @@ class Service {
   /// initialized from file-based loading. Otherwise, Service is initialized from
   /// the given bytearray memories.
   /// @param options Marian options object
-  /// @param memoryBundle holds all byte-array memories. Can be a set/subset of
   /// model, shortlist, vocabs and ssplitPrefixFile bytes. Optional.
-  explicit Service(Ptr<Options> options, MemoryBundle memoryBundle = {});
+  explicit Service(Ptr<Options> options);
 
   /// Construct Service from a string configuration. If memoryBundle is empty, Service is
   /// initialized from file-based loading. Otherwise, Service is initialized from
   /// the given bytearray memories.
   /// @param [in] config string parsable as YAML expected to adhere with marian config
-  /// @param [in] memoryBundle holds all byte-array memories. Can be a set/subset of
   /// model, shortlist, vocabs and ssplitPrefixFile bytes. Optional.
-  explicit Service(const std::string &config, MemoryBundle memoryBundle = {})
-      : Service(parseOptions(config, /*validate=*/false), std::move(memoryBundle)) {}
+  explicit Service(const std::string &config) : Service(parseOptions(config, /*validate=*/false)) {}
 
   /// Explicit destructor to clean up after any threads initialized in
   /// asynchronous operation mode.
@@ -75,7 +72,8 @@ class Service {
   /// @param [in] responseOptions: Options indicating whether or not to include
   /// some member in the Response, also specify any additional configurable
   /// parameters.
-  void translate(std::string &&source, CallbackType &&callback, ResponseOptions options = ResponseOptions());
+  void translate(Ptr<TranslationModel> translationModel, std::string &&source, CallbackType &&callback,
+                 ResponseOptions options = ResponseOptions());
 
 #ifdef WASM_COMPATIBLE_SOURCE
   /// Translate multiple text-blobs in a single *blocking* API call, providing
@@ -94,7 +92,8 @@ class Service {
   /// @param [in] responseOptions: ResponseOptions indicating whether or not
   /// to include some member in the Response, also specify any additional
   /// configurable parameters.
-  std::vector<Response> translateMultiple(std::vector<std::string> &&source, ResponseOptions responseOptions);
+  std::vector<Response> translateMultiple(Ptr<TranslationModel> translationModel, std::vector<std::string> &&source,
+                                          ResponseOptions responseOptions);
 #endif
 
   /// Returns if model is alignment capable or not.
@@ -121,8 +120,6 @@ class Service {
   /// Batcher handles generation of batches from a request, subject to
   /// packing-efficiency and priority optimization heuristics.
   ThreadsafeBatcher batcher_;
-
-  Ptr<TranslationModel> translationModel_;
 
   // The following constructs are available providing full capabilities on a non
   // WASM platform, where one does not have to hide threads.

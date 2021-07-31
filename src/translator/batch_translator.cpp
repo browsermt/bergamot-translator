@@ -5,10 +5,14 @@
 #include "common/logging.h"
 #include "data/corpus.h"
 #include "data/text_input.h"
+#include "parser.h"
 #include "translator/beam_search.h"
 
 namespace marian {
 namespace bergamot {
+
+TranslationModel::TranslationModel(const std::string &config, MemoryBundle &&memory)
+    : TranslationModel(parseOptions(config, /*validate=*/false), std::move(memory), /*replicas=*/1){};
 
 TranslationModel::TranslationModel(Ptr<Options> options, MemoryBundle &&memory, size_t replicas)
     : options_(options),
@@ -60,8 +64,8 @@ void TranslationModel::loadBackend(size_t idx) {
   // Marian Model: Load from memoryBundle or shortList
   if (memory_.model.size() > 0 &&
       memory_.model.begin() !=
-          nullptr) {  // If we have provided a byte array that contains the model memory, we can initialise the model
-                      // from there, as opposed to from reading in the config file
+          nullptr) {  // If we have provided a byte array that contains the model memory, we can initialise the
+                      // model from there, as opposed to from reading in the config file
     ABORT_IF((uintptr_t)memory_.model.begin() % 256 != 0,
              "The provided memory is not aligned to 256 bytes and will crash when vector instructions are used on it.");
     if (options_->get<bool>("check-bytearray")) {

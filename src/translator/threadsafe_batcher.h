@@ -2,6 +2,7 @@
 #ifndef SRC_BERGAMOT_THREADSAFE_BATCHER_H_
 #define SRC_BERGAMOT_THREADSAFE_BATCHER_H_
 
+#include "batch_translator.h"
 #include "batcher.h"
 #include "common/options.h"
 #include "definitions.h"
@@ -27,14 +28,14 @@ class ThreadsafeBatcher {
 
   // Add sentences to be translated by calling these (see Batcher).  When
   // done, call shutdown.
-  void addWholeRequest(Ptr<Request> request);
+  void addRequest(Ptr<TranslationModel> translationModel, Ptr<Request> request);
   void shutdown();
 
   // Get a batch out of the batcher.  Return false to shutdown worker.
-  bool operator>>(Batch &batch);
+  bool generateBatch(Ptr<TranslationModel> &translationModel, Batch &batch);
 
  private:
-  Batcher backend_;
+  AggregateBatchingPool backend_;
 
   // Number of sentences in backend_;
   size_t enqueued_;

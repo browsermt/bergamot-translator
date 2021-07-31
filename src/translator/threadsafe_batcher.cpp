@@ -6,14 +6,14 @@
 namespace marian {
 namespace bergamot {
 
-ThreadsafeBatcher::ThreadsafeBatcher(Ptr<Options> options) : backend_(options), enqueued_(0), shutdown_(false) {}
+ThreadsafeBatcher::ThreadsafeBatcher(Ptr<Options> options) : enqueued_(0), shutdown_(false) {}
 
 ThreadsafeBatcher::~ThreadsafeBatcher() { shutdown(); }
 
-void ThreadsafeBatcher::addWholeRequest(Ptr<Request> request) {
+void ThreadsafeBatcher::addRequest(Ptr<TranslationModel> translationModel, Ptr<Request> request) {
   std::unique_lock<std::mutex> lock(mutex_);
   assert(!shutdown_);
-  backend_.addWholeRequest(request);
+  backend_.addRequest(translationModel, request);
   enqueued_ += request->numSegments();
   work_.notify_all();
 }
@@ -24,10 +24,10 @@ void ThreadsafeBatcher::shutdown() {
   work_.notify_all();
 }
 
-bool ThreadsafeBatcher::operator>>(Batch &batch) {
+bool ThreadsafeBatcher::generateBatch(Ptr<TranslationModel> &translationModel, Batch &batch) {
   std::unique_lock<std::mutex> lock(mutex_);
   work_.wait(lock, [this]() { return enqueued_ || shutdown_; });
-  bool ret = backend_ >> batch;
+  bool ret = backend_.generateBatch(translationModel, batch);
   assert(ret || shutdown_);
   enqueued_ -= batch.size();
   return ret;

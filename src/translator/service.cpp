@@ -21,8 +21,9 @@ Service::Service(Ptr<Options> options, MemoryBundle memoryBundle)
     workers_.emplace_back([cpuId, this] {
       Batch batch;
       // Run thread mainloop
-      while (batcher_ >> batch) {
-        translateBatch(cpuId, translationModel_, batch);
+      Ptr<TranslationModel> translationModel{nullptr};
+      while (batcher_.generateBatch(translationModel, batch)) {
+        translateBatch(cpuId, translationModel, batch);
       }
     });
   }
@@ -61,7 +62,7 @@ void Service::queueRequest(Ptr<TranslationModel> translationModel, std::string &
   ResponseBuilder responseBuilder(responseOptions, std::move(source), translationModel->vocabs(), std::move(callback));
   Ptr<Request> request = New<Request>(requestId_++, std::move(segments), std::move(responseBuilder));
 
-  batcher_.addWholeRequest(request);
+  batcher_.addRequest(translationModel, request);
 }
 
 void Service::translate(std::string &&input, CallbackType &&callback, ResponseOptions responseOptions) {

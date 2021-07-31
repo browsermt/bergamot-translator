@@ -14,7 +14,8 @@ TranslationModel::TranslationModel(Ptr<Options> options, MemoryBundle &&memory, 
     : options_(options),
       memory_(std::move(memory)),
       vocabs_(options, std::move(memory_.vocabs)),
-      textProcessor_(options, vocabs_, std::move(memory_.ssplitPrefixFile)) {
+      textProcessor_(options, vocabs_, std::move(memory_.ssplitPrefixFile)),
+      batchingPool_(options) {
   ABORT_IF(replicas == 0, "At least one replica needs to be created.");
   backend_.resize(replicas);
   // ShortList: Load from memoryBundle or options

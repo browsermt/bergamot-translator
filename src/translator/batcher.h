@@ -12,6 +12,7 @@
 
 namespace marian {
 namespace bergamot {
+
 class Batcher {
  public:
   explicit Batcher(Ptr<Options> options);
@@ -24,16 +25,17 @@ class Batcher {
   // indicate no more sentences will be added.  Does nothing here, for parity to threadsafe version.
   void shutdown() {}
 
-  bool operator>>(Batch &batch) { return cleaveBatch(batch); }
-
- private:
   // Loads sentences with sentences compiled from (tentatively) multiple
   // requests optimizing for both padding and priority.
-  bool cleaveBatch(Batch &batch);
+  bool generateBatch(Batch &batch);
+
+ private:
   size_t miniBatchWords;
   std::vector<std::set<RequestSentence>> bucket_;
   size_t batchNumber_{0};
 };
+
+typedef Batcher BatchingPool;
 
 }  // namespace bergamot
 }  // namespace marian

@@ -16,7 +16,7 @@ Batcher::Batcher(Ptr<Options> options) {
            "longer than what can fit in a batch.");
 }
 
-bool Batcher::cleaveBatch(Batch &batch) {
+bool Batcher::generateBatch(Batch &batch) {
   // For now simply iterates on buckets and converts batches greedily.  This
   // has to be enhanced with optimizing over priority. The baseline
   // implementation should at least be as fast as marian's maxi-batch with full

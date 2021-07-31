@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "batch.h"
+#include "batcher.h"
 #include "common/utils.h"
 #include "data/shortlist.h"
 #include "definitions.h"
@@ -31,6 +32,9 @@ class TranslationModel {
   const Vocabs& vocabs() { return vocabs_; }
   TextProcessor& textProcessor() { return textProcessor_; }
 
+  void addRequest(Ptr<Request> request) { batchingPool_.addWholeRequest(request); };
+  bool generateBatch(Batch& batch) { return batchingPool_.generateBatch(batch); }
+
  private:
   struct MarianBackend {
     // 1. Construction:
@@ -53,6 +57,39 @@ class TranslationModel {
   TextProcessor textProcessor_;
   std::vector<MarianBackend> backend_;
   // TODO: QualityEstimator qualityEstimator_;
+
+  BatchingPool batchingPool_;  // If someone deletes a batcher, there is no reason to hold on to this.
+};
+
+class AggregateBatchingPool {
+ public:
+  void addRequest(Ptr<TranslationModel> model, Ptr<Request> request) {
+    model->addRequest(request);
+    aggregateQueue_.push(model);
+  }
+
+  bool generateBatch(Ptr<TranslationModel>& model, Batch& batch) {
+    while (model == nullptr && !aggregateQueue_.empty()) {
+      std::weak_ptr<TranslationModel> weakModel = aggregateQueue_.front();
+      model = weakModel.lock();
+      if (model) {
+        bool retCode = model->generateBatch(batch);
+        if (retCode) {
+          // We found a batch.
+          return true;
+        } else {
+          // Try the next model's batching pool.
+          aggregateQueue_.pop();
+        }
+      }
+    }
+
+    // Ran out of models and elements in queue, no batches further.
+    return false;
+  }
+
+ private:
+  std::queue<std::weak_ptr<TranslationModel>> aggregateQueue_;
 };
 
 void translateBatch(size_t deviceId, Ptr<TranslationModel> model, Batch& batch);

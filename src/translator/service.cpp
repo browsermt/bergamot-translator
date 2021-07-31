@@ -44,7 +44,7 @@ std::vector<Response> Service::translateMultiple(std::vector<std::string> &&inpu
 
   Batch batch;
   // There's no need to do shutdown here because it's single threaded.
-  while (batcher_ >> batch) {
+  while (batcher_.generateBatch(batch)) {
     translateBatch(/*deviceId=*/0, translationModel_, batch);
   }
 

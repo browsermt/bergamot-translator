@@ -13,14 +13,14 @@
 namespace marian {
 namespace bergamot {
 
-class Batcher {
+class BatchingPool {
  public:
-  explicit Batcher(Ptr<Options> options);
+  explicit BatchingPool(Ptr<Options> options);
 
   // RequestSentence incorporates (tentative) notions of priority with each
   // sentence. This method inserts the sentence into the internal data-structure
   // which maintains priority among sentences from multiple concurrent requests.
-  void addWholeRequest(Ptr<Request> request);
+  void addRequest(Ptr<Request> request);
 
   // indicate no more sentences will be added.  Does nothing here, for parity to threadsafe version.
   void shutdown() {}
@@ -34,8 +34,6 @@ class Batcher {
   std::vector<std::set<RequestSentence>> bucket_;
   size_t batchNumber_{0};
 };
-
-typedef Batcher BatchingPool;
 
 }  // namespace bergamot
 }  // namespace marian

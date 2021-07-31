@@ -33,7 +33,7 @@ class TranslationModel {
   const Vocabs& vocabs() { return vocabs_; }
   TextProcessor& textProcessor() { return textProcessor_; }
 
-  void addRequest(Ptr<Request> request) { batchingPool_.addWholeRequest(request); };
+  void addRequest(Ptr<Request> request) { batchingPool_.addRequest(request); };
   bool generateBatch(Batch& batch) { return batchingPool_.generateBatch(batch); }
 
  private:

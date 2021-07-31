@@ -8,7 +8,7 @@
 namespace marian {
 namespace bergamot {
 
-Batcher::Batcher(Ptr<Options> options) {
+BatchingPool::BatchingPool(Ptr<Options> options) {
   miniBatchWords = options->get<int>("mini-batch-words");
   bucket_.resize(options->get<int>("max-length-break") + 1);
   ABORT_IF(bucket_.size() - 1 > miniBatchWords,
@@ -16,7 +16,7 @@ Batcher::Batcher(Ptr<Options> options) {
            "longer than what can fit in a batch.");
 }
 
-bool Batcher::generateBatch(Batch &batch) {
+bool BatchingPool::generateBatch(Batch &batch) {
   // For now simply iterates on buckets and converts batches greedily.  This
   // has to be enhanced with optimizing over priority. The baseline
   // implementation should at least be as fast as marian's maxi-batch with full
@@ -44,7 +44,7 @@ bool Batcher::generateBatch(Batch &batch) {
   return isValidBatch;
 }
 
-void Batcher::addWholeRequest(Ptr<Request> request) {
+void BatchingPool::addRequest(Ptr<Request> request) {
   for (size_t i = 0; i < request->numSegments(); i++) {
     RequestSentence sentence(i, request);
     size_t bucket_id = sentence.numTokens();

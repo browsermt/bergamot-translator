@@ -35,8 +35,6 @@ void annotatedTextSentences(Ptr<Options> options, bool source = true);
 
 void translationCache(Ptr<Options> options);
 
-void translationCacheWASM(Ptr<Options> options);
-
 }  // namespace testapp
 }  // namespace bergamot
 }  // namespace marian

@@ -108,9 +108,6 @@ void translationCache(Ptr<Options> options) {
            "Mismatch in expected hits. This test is supposed to check if all previous misses are hit in second run. "
            "Ensure you give an input file and cache-size caps within reasonable limits.");
 
-  std::cout << firstResponse.target.text;
-  std::cout << secondResponse.target.text;
-
   ABORT_IF(firstResponse.target.text != secondResponse.target.text,
            "Recompiled string provided different output when operated with cache. On the same hardware while using "
            "same path, this is expected to be same.");

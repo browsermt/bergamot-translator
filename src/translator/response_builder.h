@@ -68,17 +68,17 @@ class ResponseBuilder {
   /// subword information.
   /// @param processedRequestSentences [in]
   /// @param response [out]
-  void buildQualityScores(ProcessedRequestSentences &processedRequestSentences, Response &response);
+  void buildQualityScores(const ProcessedRequestSentences &processedRequestSentences, Response &response);
 
   /// Builds alignments from processedRequestSentences and writes onto response.
   /// @param processedRequestSentences [in]
   /// @param response [out]
-  void buildAlignments(ProcessedRequestSentences &processedRequestSentences, Response &response);
+  void buildAlignments(const ProcessedRequestSentences &processedRequestSentences, Response &response);
 
   /// Builds translated text and subword annotations and writes onto response.
   /// @param processedRequestSentences [in]
   /// @param response [out]
-  void buildTranslatedText(ProcessedRequestSentences &processedRequestSentences, Response &response);
+  void buildTranslatedText(const ProcessedRequestSentences &processedRequestSentences, Response &response);
 
   // Data members are context/curried args for the functor.
 

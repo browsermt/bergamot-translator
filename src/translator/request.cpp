@@ -31,11 +31,16 @@ Request::Request(size_t Id, Segments &&segments, ResponseBuilder &&responseBuild
     }
   }
 
-  // If there are no segments_, we are never able to trigger the responseBuilder calls from a different thread. However,
-  // in this case we want an empty valid response. Also, if cache somehow manages to decrease all counter prefilling
-  // histories, then we'd have to trigger ResponseBuilder as well. No segments go into batching and therefore no
-  // processHistory triggers.
-  if (segments_.size() == 0 || counter_.load() == 0) {
+  // 1. If there are no segments_, we are never able to trigger the responseBuilder calls from a different thread. This
+  // happens when the use provides empty input, or the sentence and subword preprocessing deems no translatable units
+  // present. However, in this case we want an empty valid response.
+  //
+  // 2. Also, if cache somehow manages to decrease all counter prefilling histories, then we'd have to trigger
+  // ResponseBuilder as well. No segments go into batching and therefore no processHistory triggers.
+  //
+  // In both these cases, counter_ reflects the sentences remaining to be freshly translated and can be used to check if
+  // we need to trigger the response construction directly here.
+  if (counter_.load() == 0) {
     responseBuilder_(std::move(processedRequestSentences_));
   }
 }

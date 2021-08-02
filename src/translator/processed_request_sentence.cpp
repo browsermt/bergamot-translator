@@ -38,11 +38,11 @@ void writeVector(std::ostream &out, std::vector<T> v) {
 template <class T>
 const char *copyInVectorAndAdvance(const char *src, std::vector<T> &v) {
   // Read in size of the vector
-  size_t sizePrefix{0};
+  size_t sizePrefix;
   src = copyInAndAdvance<size_t>(src, &sizePrefix);
 
   // Ensure contiguous memory location exists for memcpy inside copyInAndAdvance
-  v.reserve(sizePrefix);
+  v.resize(sizePrefix);
 
   // Read in the vector
   src = copyInAndAdvance<T>(src, v.data(), sizePrefix);

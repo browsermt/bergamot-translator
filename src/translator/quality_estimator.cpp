@@ -192,7 +192,7 @@ AlignedMemory QualityEstimator::toAlignedMemory() const {
 std::tuple<std::vector<ByteRange>, std::vector<QualityEstimator::WordFeatures>, float> QualityEstimator::mapBPEToWords(
     const std::vector<float>& logProbs, const AnnotatedText& target, const size_t sentenceIdx) {
   // Ignore empty target
-  if (logProbs.empty() || target.text.empty()) {
+  if ((logProbs.size() < 2 ) || target.text.empty()) {
     return {{}, {}, 0.0};
   }
 

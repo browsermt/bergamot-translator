@@ -4,6 +4,7 @@
 #include <utility>
 
 #include "batch.h"
+#include "byte_array_util.h"
 #include "definitions.h"
 
 namespace marian {
@@ -23,8 +24,12 @@ Service::Service(Ptr<Options> options, MemoryBundle memoryBundle)
       blocking_translator_(DeviceId(0, DeviceType::cpu), vocabs_, options_, &modelMemory_, &shortlistMemory_)
 #endif
 {
-  if (memoryBundle.qualityEstimatorMemory.size() > 0) {
-    qualityEstimator_.emplace(std::move(memoryBundle.qualityEstimatorMemory));
+  if (!options->get<std::string>("quality", "").empty()) {
+    if (memoryBundle.qualityEstimatorMemory.size() != 0 ) {
+      qualityEstimator_.emplace(std::move(memoryBundle.qualityEstimatorMemory));
+    } else {
+      qualityEstimator_.emplace(std::move(getQualityEstimatorModel(options)));
+    }
   }
 #ifdef WASM_COMPATIBLE_SOURCE
   blocking_translator_.initialize();

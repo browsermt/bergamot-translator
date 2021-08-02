@@ -128,8 +128,7 @@ class ThreadUnsafeLRUCache {
   /// @returns true if query found in cache false otherwise.
   bool fetch(const marian::Words &words, ProcessedRequestSentence &processedRequestSentence);
 
-  /// Inserts a new record into cache. Modifies the structure so takes locks, configure sharding to configure how
-  /// fine-grained the locks are to reduce contention.
+  /// Inserts a new record into cache.
   ///
   /// @param [in] words: marian::Words processed from a sentence
   /// @param [in] processedRequestSentence: minimum translated information corresponding to words

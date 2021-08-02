@@ -1,5 +1,7 @@
 #include "translator/cache.h"
 
+#include <cstdlib>
+
 namespace marian {
 namespace bergamot {
 
@@ -88,22 +90,23 @@ CacheStats ThreadSafeL4Cache::stats() const {
 }
 
 void ThreadSafeL4Cache::debug(std::string label) const {
-  return;
-  std::cerr << "--- L4: " << label << std::endl;
-  auto &perfData = context_[hashTableIndex_].GetPerfData();
+  if (std::getenv("BERGAMOT_L4_CACHE_DEBUG")) {
+    std::cerr << "--- L4: " << label << std::endl;
+    auto &perfData = context_[hashTableIndex_].GetPerfData();
 #define __l4inspect(key) std::cerr << #key << " " << perfData.Get(L4::HashTablePerfCounter::key) << std::endl;
 
-  __l4inspect(CacheHitCount);
-  __l4inspect(CacheMissCount);
-  __l4inspect(RecordsCount);
-  __l4inspect(EvictedRecordsCount);
-  __l4inspect(TotalIndexSize);
-  __l4inspect(TotalKeySize);
-  __l4inspect(TotalValueSize);
+    __l4inspect(CacheHitCount);
+    __l4inspect(CacheMissCount);
+    __l4inspect(RecordsCount);
+    __l4inspect(EvictedRecordsCount);
+    __l4inspect(TotalIndexSize);
+    __l4inspect(TotalKeySize);
+    __l4inspect(TotalValueSize);
 
-  std::cerr << "---- " << std::endl;
+    std::cerr << "---- " << std::endl;
 
 #undef __l4inspect
+  }
 };
 
 #endif

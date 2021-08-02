@@ -40,7 +40,7 @@ class ProcessedRequestSentence {
   std::string toBytes() const;
 
   /// Returns if a ProcessedRequestSentence is empty.
-  bool empty() { return words_.size() == 0; }
+  bool empty() const { return words_.size() == 0; }
 
   /// Prints L4 debug information during cache ops if environment variable `BERGAMOT_L4_DEBUG_CACHE` is set. This is a
   /// development artifact and maybe removed in the future.

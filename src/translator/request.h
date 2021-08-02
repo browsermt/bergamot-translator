@@ -60,6 +60,9 @@ class Request {
   /// Obtain number of segments in a request.
   size_t numSegments() const;
 
+  /// Obtain the number of remaining sentences to be translated in a request, accounts for any prefilling from cache.
+  size_t numToBeFreshlyTranslated() const;
+
   /// Obtains segment corresponding to index  to create a batch of segments
   /// among several requests.
   Segment getSegment(size_t index) const;

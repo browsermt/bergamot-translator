@@ -50,6 +50,8 @@ bool Request::isCachePrefilled(size_t index) { return !(processedRequestSentence
 
 size_t Request::numSegments() const { return segments_.size(); }
 
+size_t Request::numToBeFreshlyTranslated() const { return counter_.load(); }
+
 size_t Request::segmentTokens(size_t index) const { return (segments_[index].size()); }
 
 Segment Request::getSegment(size_t index) const { return segments_[index]; }

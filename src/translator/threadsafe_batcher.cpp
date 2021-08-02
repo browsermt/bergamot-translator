@@ -14,7 +14,7 @@ void ThreadsafeBatcher::addWholeRequest(Ptr<Request> request) {
   std::unique_lock<std::mutex> lock(mutex_);
   assert(!shutdown_);
   backend_.addWholeRequest(request);
-  enqueued_ += request->numSegments();
+  enqueued_ += request->numToBeFreshlyTranslated();
   work_.notify_all();
 }
 

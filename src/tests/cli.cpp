@@ -16,6 +16,8 @@ int main(int argc, char *argv[]) {
     testapp::annotatedTextWords(options, /*source=*/false);
   } else if (mode == "test-translation-cache") {
     testapp::translationCache(options);
+  } else if (mode == "test-translation-cache-wasm") {
+    testapp::translationCacheWASM(options);
   } else {
     ABORT("Unknown --mode {}. Please run a valid test", mode);
   }

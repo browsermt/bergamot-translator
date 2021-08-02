@@ -101,6 +101,42 @@ void translationCache(Ptr<Options> options) {
   ABORT_IF(statsSecondRun.hits == 0, "No cache hits while expected non-zero");
 }
 
+void translationCacheWASM(Ptr<Options> options) {
+  // Prepare memories for bytearrays (including model, shortlist and vocabs)
+  MemoryBundle memoryBundle;
+  ResponseOptions responseOptions;
+
+  if (options->get<bool>("bytearray")) {
+    // Load legit values into bytearrays.
+    memoryBundle = getMemoryBundleFromConfig(options);
+  }
+
+  Service service(options, std::move(memoryBundle));
+
+  // Read a large input text blob from stdin
+  std::ostringstream inputStream;
+  inputStream << std::cin.rdbuf();
+  std::string input = inputStream.str();
+
+  auto translateWithCopy = [&service](std::string input) {
+    ResponseOptions responseOptions;
+    std::vector<Response> response = service.translateMultiple({input}, responseOptions);
+    return response;
+  };
+
+  auto firstSetOfResponses = translateWithCopy(input);
+  auto statsFirstRun = service.cacheStats();
+  LOG(info, "Cache Hits/Misses = {}/{}", statsFirstRun.hits, statsFirstRun.misses);
+  ABORT_IF(statsFirstRun.hits != 0, "Expecting no cache hits, but hits found.");
+
+  // Round 2; There should be cache hits
+  auto secondSetOfResponses = translateWithCopy(input);
+
+  auto statsSecondRun = service.cacheStats();
+  LOG(info, "Cache Hits/Misses = {}/{}", statsSecondRun.hits, statsSecondRun.misses);
+  ABORT_IF(statsSecondRun.hits == 0, "No cache hits while expected non-zero");
+}
+
 }  // namespace testapp
 }  // namespace bergamot
 }  // namespace marian

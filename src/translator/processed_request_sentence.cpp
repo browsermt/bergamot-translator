@@ -51,7 +51,7 @@ const char *copyInVectorAndAdvance(const char *src, std::vector<T> &v) {
 
 }  // namespace
 
-ProcessedRequestSentence::ProcessedRequestSentence() : sentenceScore_{0} {}
+ProcessedRequestSentence::ProcessedRequestSentence() {}
 
 /// Construct from History
 ProcessedRequestSentence::ProcessedRequestSentence(const History &history) {

@@ -29,6 +29,9 @@ Request::Request(size_t Id, Segments &&segments, ResponseBuilder &&responseBuild
     processedRequestSentences_.resize(segments_.size());
 
     if (cache_ != nullptr) {
+      // Iterate through segments, see if any can be prefilled from cache. If prefilled, mark the particular segments as
+      // complete (non-empty ProcessedRequestSentence). Also update accounting used elsewhere (counter_) to reflect one
+      // less segment to translate.
       for (size_t idx = 0; idx < segments_.size(); idx++) {
         ProcessedRequestSentence processedRequestSentence;
         if (cache_->fetch(getSegment(idx), processedRequestSentence)) {
@@ -36,12 +39,11 @@ Request::Request(size_t Id, Segments &&segments, ResponseBuilder &&responseBuild
           --counter_;
         }
       }
-    }
-
-    // 2. Also, if cache somehow manages to decrease all counter prefilling histories, then we'd have to trigger
-    // ResponseBuilder as well. No segments go into batching and therefore no processHistory triggers.
-    if (counter_.load() == 0) {
-      responseBuilder_(std::move(processedRequestSentences_));
+      // 2. Also, if cache somehow manages to decrease all counter prefilling histories, then we'd have to trigger
+      // ResponseBuilder as well. No segments go into batching and therefore no processHistory triggers.
+      if (counter_.load() == 0) {
+        responseBuilder_(std::move(processedRequestSentences_));
+      }
     }
   }
 }
@@ -59,6 +61,9 @@ Segment Request::getSegment(size_t index) const { return segments_[index]; }
 void Request::processHistory(size_t index, Ptr<History> history) {
   // Concurrently called by multiple workers as a history from translation is
   // ready. The container storing histories is set with the value obtained.
+
+  // Fill in placeholder from History obtained by freshly translating. Since this was a cache-miss to have got through,
+  // update cache if available to store the result.
   processedRequestSentences_[index] = ProcessedRequestSentence(*history);
   if (cache_ != nullptr) {
     cache_->insert(getSegment(index), processedRequestSentences_[index]);

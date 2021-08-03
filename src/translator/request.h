@@ -98,7 +98,7 @@ class Request {
   /// std::vector<Ptr<Vocab const>> *vocabs_;
   ResponseBuilder responseBuilder_;
 
-  /// Reference to cache to prefill / populate
+  /// Reference to cache to prefill / populate.
   TranslationCache *cache_;
 };
 

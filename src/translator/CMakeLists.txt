@@ -5,9 +5,9 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/project_version.h.in
 add_library(bergamot-translator STATIC
     byte_array_util.cpp
     text_processor.cpp
-    batch_translator.cpp 
+    translation_model.cpp 
     request.cpp 
-    batcher.cpp
+    batching_pool.cpp
     response_builder.cpp
     batch.cpp
     annotation.cpp

@@ -1,12 +1,12 @@
 #ifndef SRC_BERGAMOT_SERVICE_H_
 #define SRC_BERGAMOT_SERVICE_H_
 
-#include "batch_translator.h"
 #include "data/types.h"
 #include "response.h"
 #include "response_builder.h"
 #include "text_processor.h"
 #include "threadsafe_batcher.h"
+#include "translation_model.h"
 #include "translator/parser.h"
 #include "vocabs.h"
 

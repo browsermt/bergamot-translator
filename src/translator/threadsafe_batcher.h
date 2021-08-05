@@ -2,10 +2,10 @@
 #ifndef SRC_BERGAMOT_THREADSAFE_BATCHER_H_
 #define SRC_BERGAMOT_THREADSAFE_BATCHER_H_
 
-#include "batch_translator.h"
-#include "batcher.h"
+#include "batching_pool.h"
 #include "common/options.h"
 #include "definitions.h"
+#include "translation_model.h"
 
 #ifndef WASM_COMPATIBLE_SOURCE
 #include <condition_variable>

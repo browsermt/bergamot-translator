@@ -15,7 +15,6 @@ class AggregateBatchingPool {
   void addRequest(Ptr<TranslationModel> model, Ptr<Request> request);
   bool generateBatch(Ptr<TranslationModel>& model, Batch& batch);
   // no-op, for parity
-  //
   void shutdown() {}
 
  private:

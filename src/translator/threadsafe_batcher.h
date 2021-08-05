@@ -2,6 +2,7 @@
 #ifndef SRC_BERGAMOT_THREADSAFE_BATCHER_H_
 #define SRC_BERGAMOT_THREADSAFE_BATCHER_H_
 
+#include "aggregate_batching_pool.h"
 #include "batching_pool.h"
 #include "common/options.h"
 #include "definitions.h"

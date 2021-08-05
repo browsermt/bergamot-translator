@@ -14,8 +14,6 @@ class AggregateBatchingPool {
  public:
   void addRequest(Ptr<TranslationModel> model, Ptr<Request> request);
   bool generateBatch(Ptr<TranslationModel>& model, Batch& batch);
-  // no-op, for parity
-  void shutdown() {}
 
  private:
   std::queue<std::weak_ptr<TranslationModel>> aggregateQueue_;

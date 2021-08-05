@@ -22,9 +22,6 @@ class BatchingPool {
   // which maintains priority among sentences from multiple concurrent requests.
   void addRequest(Ptr<Request> request);
 
-  // indicate no more sentences will be added.  Does nothing here, for parity to threadsafe version.
-  void shutdown() {}
-
   // Loads sentences with sentences compiled from (tentatively) multiple
   // requests optimizing for both padding and priority.
   bool generateBatch(Batch &batch);

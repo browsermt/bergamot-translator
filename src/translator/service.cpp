@@ -70,8 +70,8 @@ void Service::translate(Ptr<TranslationModel> translationModel, std::string &&in
 }
 
 Service::~Service() {
-  batcher_.shutdown();
 #ifndef WASM_COMPATIBLE_SOURCE
+  batcher_.shutdown();
   for (std::thread &worker : workers_) {
     assert(worker.joinable());
     worker.join();

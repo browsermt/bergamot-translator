@@ -117,12 +117,9 @@ class Service {
 
   size_t requestId_;
 
-#ifdef WASM_COMPATIBLE_SOURCE
-  AggregateBatchingPool batcher_;
-#else
-  /// Batcher handles generation of batches from a request, subject to
-  /// packing-efficiency and priority optimization heuristics.
-  ThreadsafeAggregateBatchingPool batcher_;
+  AggregateBatchingPool aggregateBatchingPool_;
+#ifndef WASM_COMPATIBLE_SOURCE
+  GuardedBatchingPoolAccess<AggregateBatchingPool> aggregateBatchingPoolAccess_;
 #endif
 
   // The following constructs are available providing full capabilities on a non

@@ -16,7 +16,7 @@ BatchingPool::BatchingPool(Ptr<Options> options) {
            "longer than what can fit in a batch.");
 }
 
-bool BatchingPool::generateBatch(Batch &batch) {
+size_t BatchingPool::generateBatch(Batch &batch) {
   // For now simply iterates on buckets and converts batches greedily.  This
   // has to be enhanced with optimizing over priority. The baseline
   // implementation should at least be as fast as marian's maxi-batch with full
@@ -35,22 +35,23 @@ bool BatchingPool::generateBatch(Batch &batch) {
       } else {
         // Check if elements exist
         assert(batch.size() > 0);
-        return true;
+        return batch.size();
       }
     }
   }
 
-  bool isValidBatch = batch.size() > 0;
-  return isValidBatch;
+  return batch.size();
 }
 
-void BatchingPool::addRequest(Ptr<Request> request) {
+size_t BatchingPool::addRequest(Ptr<Request> request) {
   for (size_t i = 0; i < request->numSegments(); i++) {
     RequestSentence sentence(i, request);
     size_t bucket_id = sentence.numTokens();
     assert(bucket_id < bucket_.size());
     bucket_[bucket_id].insert(sentence);
   }
+
+  return request->numSegments();
 }
 
 }  // namespace bergamot

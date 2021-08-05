@@ -1,38 +1,48 @@
-#ifndef WASM_COMPATIBLE_SOURCE
-#include "threadsafe_batcher.h"
+
+#ifndef SRC_BERGAMOT_THREADSAFE_BATCHER_IMPL
+#error "This is an impl file and must not be included directly!"
+#endif
 
 #include <cassert>
 
 namespace marian {
 namespace bergamot {
 
-ThreadsafeAggregateBatchingPool::ThreadsafeAggregateBatchingPool() : enqueued_(0), shutdown_(false) {}
+template <class BatchingPoolType>
+GuardedBatchingPoolAccess<BatchingPoolType>::GuardedBatchingPoolAccess(BatchingPoolType &backend)
+    : backend_(backend), enqueued_(0), shutdown_(false) {}
 
-ThreadsafeAggregateBatchingPool::~ThreadsafeAggregateBatchingPool() { shutdown(); }
+template <class BatchingPoolType>
+GuardedBatchingPoolAccess<BatchingPoolType>::~GuardedBatchingPoolAccess() {
+  shutdown();
+}
 
-void ThreadsafeAggregateBatchingPool::addRequest(Ptr<TranslationModel> translationModel, Ptr<Request> request) {
+template <class BatchingPoolType>
+template <class... Args>
+void GuardedBatchingPoolAccess<BatchingPoolType>::addRequest(Args &&... args) {
   std::unique_lock<std::mutex> lock(mutex_);
   assert(!shutdown_);
-  backend_.addRequest(translationModel, request);
-  enqueued_ += request->numSegments();
+  enqueued_ += backend_.addRequest(std::forward<Args>(args)...);
   work_.notify_all();
 }
 
-void ThreadsafeAggregateBatchingPool::shutdown() {
+template <class BatchingPoolType>
+void GuardedBatchingPoolAccess<BatchingPoolType>::shutdown() {
   std::unique_lock<std::mutex> lock(mutex_);
   shutdown_ = true;
   work_.notify_all();
 }
 
-bool ThreadsafeAggregateBatchingPool::generateBatch(Ptr<TranslationModel> &translationModel, Batch &batch) {
+template <class BatchingPoolType>
+template <class... Args>
+size_t GuardedBatchingPoolAccess<BatchingPoolType>::generateBatch(Args &&... args) {
   std::unique_lock<std::mutex> lock(mutex_);
   work_.wait(lock, [this]() { return enqueued_ || shutdown_; });
-  bool ret = backend_.generateBatch(translationModel, batch);
-  assert(ret || shutdown_);
-  enqueued_ -= batch.size();
-  return ret;
+  size_t sentencesInBatch = backend_.generateBatch(std::forward<Args>(args)...);
+  assert(sentencesInBatch > 0 || shutdown_);
+  enqueued_ -= sentencesInBatch;
+  return sentencesInBatch;
 }
 
 }  // namespace bergamot
 }  // namespace marian
-#endif  // WASM_COMPATIBLE_SOURCE

@@ -10,7 +10,11 @@ namespace marian {
 namespace bergamot {
 
 Service::Service(Ptr<Options> options)
-    : requestId_(0), options_(options), numWorkers_(std::max<int>(1, options->get<int>("cpu-threads"))) {
+    : requestId_(0),
+      options_(options),
+      numWorkers_(std::max<int>(1, options->get<int>("cpu-threads"))),
+      aggregateBatchingPool_(options),
+      aggregateBatchingPoolAccess_(aggregateBatchingPool_) {
   // translationModel_ = New<TranslationModel>(options_, std::move(memoryBundle), /*replicas=*/numWorkers_);
 #ifndef WASM_COMPATIBLE_SOURCE
   workers_.reserve(numWorkers_);
@@ -19,7 +23,7 @@ Service::Service(Ptr<Options> options)
       Batch batch;
       // Run thread mainloop
       Ptr<TranslationModel> translationModel{nullptr};
-      while (batcher_.generateBatch(translationModel, batch)) {
+      while (aggregateBatchingPoolAccess_.generateBatch(translationModel, batch)) {
         translateBatch(cpuId, translationModel, batch);
       }
     });
@@ -43,7 +47,7 @@ std::vector<Response> Service::translateMultiple(Ptr<TranslationModel> translati
   Batch batch;
   // There's no need to do shutdown here because it's single threaded.
   Ptr<TranslationModel> model{nullptr};
-  while (batcher_.generateBatch(model, batch)) {
+  while (aggregateBatchingPoolAccess_.generateBatch(model, batch)) {
     translateBatch(/*deviceId=*/0, model, batch);
   }
 
@@ -61,7 +65,7 @@ void Service::queueRequest(Ptr<TranslationModel> translationModel, std::string &
   ResponseBuilder responseBuilder(responseOptions, std::move(source), translationModel->vocabs(), std::move(callback));
   Ptr<Request> request = New<Request>(requestId_++, std::move(segments), std::move(responseBuilder));
 
-  batcher_.addRequest(translationModel, request);
+  aggregateBatchingPoolAccess_.addRequest(translationModel, request);
 }
 
 void Service::translate(Ptr<TranslationModel> translationModel, std::string &&input, CallbackType &&callback,
@@ -71,7 +75,7 @@ void Service::translate(Ptr<TranslationModel> translationModel, std::string &&in
 
 Service::~Service() {
 #ifndef WASM_COMPATIBLE_SOURCE
-  batcher_.shutdown();
+  aggregateBatchingPoolAccess_.shutdown();
   for (std::thread &worker : workers_) {
     assert(worker.joinable());
     worker.join();

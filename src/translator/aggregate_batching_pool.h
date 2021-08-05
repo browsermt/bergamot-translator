@@ -12,8 +12,9 @@ namespace bergamot {
 
 class AggregateBatchingPool {
  public:
-  void addRequest(Ptr<TranslationModel> model, Ptr<Request> request);
-  bool generateBatch(Ptr<TranslationModel>& model, Batch& batch);
+  AggregateBatchingPool(Ptr<Options> options);
+  size_t addRequest(Ptr<TranslationModel> model, Ptr<Request> request);
+  size_t generateBatch(Ptr<TranslationModel>& model, Batch& batch);
 
  private:
   std::queue<std::weak_ptr<TranslationModel>> aggregateQueue_;

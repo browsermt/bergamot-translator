@@ -20,11 +20,11 @@ class BatchingPool {
   // RequestSentence incorporates (tentative) notions of priority with each
   // sentence. This method inserts the sentence into the internal data-structure
   // which maintains priority among sentences from multiple concurrent requests.
-  void addRequest(Ptr<Request> request);
+  size_t addRequest(Ptr<Request> request);
 
   // Loads sentences with sentences compiled from (tentatively) multiple
   // requests optimizing for both padding and priority.
-  bool generateBatch(Batch &batch);
+  size_t generateBatch(Batch &batch);
 
  private:
   size_t miniBatchWords;

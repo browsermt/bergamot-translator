@@ -11,29 +11,26 @@
 #ifndef WASM_COMPATIBLE_SOURCE
 #include <condition_variable>
 #include <mutex>
-#endif
 
 namespace marian {
 namespace bergamot {
 
-#ifndef WASM_COMPATIBLE_SOURCE
-
-class ThreadsafeAggregateBatchingPool {
+template <class BatchingPoolType>
+class GuardedBatchingPoolAccess {
  public:
-  explicit ThreadsafeAggregateBatchingPool();
+  GuardedBatchingPoolAccess(BatchingPoolType &backend);
+  ~GuardedBatchingPoolAccess();
 
-  ~ThreadsafeAggregateBatchingPool();
+  template <class... Args>
+  void addRequest(Args &&... args);
 
-  // Add sentences to be translated by calling these (see Batcher).  When
-  // done, call shutdown.
-  void addRequest(Ptr<TranslationModel> translationModel, Ptr<Request> request);
+  template <class... Args>
+  size_t generateBatch(Args &&... args);
+
   void shutdown();
 
-  // Get a batch out of the batcher.  Return false to shutdown worker.
-  bool generateBatch(Ptr<TranslationModel> &translationModel, Batch &batch);
-
  private:
-  AggregateBatchingPool backend_;
+  BatchingPoolType &backend_;
 
   // Number of sentences in backend_;
   size_t enqueued_;
@@ -48,9 +45,12 @@ class ThreadsafeAggregateBatchingPool {
   std::condition_variable work_;
 };
 
-#endif
-
 }  // namespace bergamot
 }  // namespace marian
 
+#define SRC_BERGAMOT_THREADSAFE_BATCHER_IMPL
+#include "threadsafe_batcher.cpp"
+#undef SRC_BERGAMOT_THREADSAFE_BATCHER_IMPL
+
+#endif  // WASM_COMPATIBLE_SOURCE
 #endif  // SRC_BERGAMOT_THREADSAFE_BATCHER_H_

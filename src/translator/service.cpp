@@ -32,6 +32,7 @@ Service::Service(Ptr<Options> options)
 }
 
 #ifdef WASM_COMPATIBLE_SOURCE
+// WASM only
 std::vector<Response> Service::translateMultiple(Ptr<TranslationModel> translationModel,
                                                  std::vector<std::string> &&inputs, ResponseOptions responseOptions) {
   // We queue the individual Requests so they get compiled at batches to be
@@ -57,6 +58,7 @@ std::vector<Response> Service::translateMultiple(Ptr<TranslationModel> translati
 
 void Service::queueRequest(Ptr<TranslationModel> translationModel, std::string &&input, CallbackType &&callback,
                            ResponseOptions responseOptions) {
+  /* begin common code between Blocking and Async */
   Segments segments;
   AnnotatedText source;
 
@@ -65,9 +67,12 @@ void Service::queueRequest(Ptr<TranslationModel> translationModel, std::string &
   ResponseBuilder responseBuilder(responseOptions, std::move(source), translationModel->vocabs(), std::move(callback));
   Ptr<Request> request = New<Request>(requestId_++, std::move(segments), std::move(responseBuilder));
 
+  /* end of common code between Blocking and Async */
+
   aggregateBatchingPoolAccess_.addRequest(translationModel, request);
 }
 
+// Async only.
 void Service::translate(Ptr<TranslationModel> translationModel, std::string &&input, CallbackType &&callback,
                         ResponseOptions responseOptions) {
   queueRequest(translationModel, std::move(input), std::move(callback), responseOptions);

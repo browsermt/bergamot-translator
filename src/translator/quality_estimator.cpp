@@ -20,6 +20,10 @@ QualityEstimator::Matrix::Matrix(const size_t rowsParam, const size_t colsParam)
   }
 }
 
+QualityEstimator::Matrix::Matrix(Matrix && other)
+    : rows(other.rows), cols(other.cols), data(std::move(other.data)) {
+}
+
 const float& QualityEstimator::Matrix::at(const size_t row, const size_t col) const { return data[row * cols + col]; }
 
 float& QualityEstimator::Matrix::at(const size_t row, const size_t col) { return data[row * cols + col]; }
@@ -189,15 +193,31 @@ AlignedMemory QualityEstimator::toAlignedMemory() const {
 // - numSubWords = 1
 // - overallMean = 0.207
 //
-std::tuple<std::vector<ByteRange>, std::vector<QualityEstimator::WordFeatures>, float> QualityEstimator::mapBPEToWords(
+std::pair<std::vector<ByteRange>, QualityEstimator::Matrix > QualityEstimator::mapBPEToWords(
     const std::vector<float>& logProbs, const AnnotatedText& target, const size_t sentenceIdx) {
   // Ignore empty target
-  if ((logProbs.size() < 2 ) || target.text.empty()) {
-    return {{}, {}, 0.0};
+  if ((logProbs.size() < 2 ) || ( target.numWords( sentenceIdx ) == 0 ) )
+  {
+    return {{}, Matrix( 0, 0 ) };
   }
 
+  enum Features
+  {
+    MeanScore = 0,
+    MinScore = 1,
+    NumSubWords = 2,
+    OverallMean  = 3
+  };
+
+  const string_view sentence = target.sentence( sentenceIdx );
+
+  const size_t numWords = std::count( std::begin( sentence ), std::end( sentence ), ' ' ) + 1;
+
+  const size_t numFeatures = 4;
+
   std::vector<ByteRange> wordByteRanges;
-  std::vector<WordFeatures> wordsFeatures;
+
+  Matrix features( numWords,numFeatures );
 
   // The first subword it's always a beginning of a word
   float subwordScore = logProbs[0];
@@ -205,7 +225,12 @@ std::tuple<std::vector<ByteRange>, std::vector<QualityEstimator::WordFeatures>, 
 
   float sequence = subwordScore;
 
-  wordsFeatures.push_back({1, subwordScore, subwordScore});
+  size_t featureRow = 0;
+
+  features.at( featureRow, MeanScore ) = subwordScore;
+  features.at( featureRow, MinScore ) = subwordScore;
+  features.at( featureRow, NumSubWords ) = 1;
+
   wordByteRanges.push_back(subword);
 
   size_t subwordIdx = 1;
@@ -223,46 +248,40 @@ std::tuple<std::vector<ByteRange>, std::vector<QualityEstimator::WordFeatures>, 
     // if the first character is whitespace, it's a beginning of a new word
     if (isspace(firstLetter)) {
       ++subword.begin;
-      wordsFeatures.push_back({1, subwordScore, subwordScore});
+      ++featureRow;
+      features.at( featureRow, MeanScore ) = subwordScore;
+      features.at( featureRow, MinScore ) = subwordScore;
+      features.at( featureRow, NumSubWords ) = 1;
+
       wordByteRanges.push_back(subword);
     } else {
       // update last word byte range and word features
 
       ByteRange& currentWord = wordByteRanges.back();
-      WordFeatures& currentWordFeatures = wordsFeatures.back();
+
+      float& meanScore = features.at( featureRow, MeanScore );
+      float& minScore = features.at( featureRow, MinScore );
+      float& numSubWords = features.at( featureRow, NumSubWords );
 
       currentWord.end = subword.end;
-      ++currentWordFeatures.numSubWords;
+      ++numSubWords;
       // incremental mean
-      currentWordFeatures.meanScore += (subwordScore - currentWordFeatures.meanScore) / currentWordFeatures.numSubWords;
+      meanScore += (subwordScore - meanScore) / numSubWords;
 
-      if (currentWordFeatures.minScore > subwordScore) {
-        currentWordFeatures.minScore = subwordScore;
+      if (minScore > subwordScore) {
+        minScore = subwordScore;
       }
     }
   }
 
   const float overallMean = sequence / subwordIdx;
 
-  return {wordByteRanges, wordsFeatures, overallMean};
-}
-
-QualityEstimator::Matrix QualityEstimator::convertToMatrix(const std::vector<WordFeatures>& wordsFeatures,
-                                                           const float overallMean) {
-  const size_t numFeatures = 4;  // numSubWords, meanScore, minScore and overallMean
-
-  Matrix matrix(wordsFeatures.size(), numFeatures);
-
-  size_t i = 0;
-
-  for (const WordFeatures& features : wordsFeatures) {
-    matrix.data[i++] = features.meanScore;
-    matrix.data[i++] = features.minScore;
-    matrix.data[i++] = features.numSubWords;
-    matrix.data[i++] = overallMean;
+  for( int i = 0; i < features.rows ; ++i )
+  {
+    features.at( i, OverallMean ) = overallMean;
   }
 
-  return matrix;
+  return { wordByteRanges, std::move(features) };
 }
 
 std::vector<float> QualityEstimator::LogisticRegressor::vectorResult(const IntgemmMatrix& features) const {
@@ -307,9 +326,9 @@ std::vector<float> QualityEstimator::LogisticRegressor::predict(const Matrix& fe
 QualityEstimator::WordsQualityEstimate QualityEstimator::computeQualityScores(const std::vector<float>& logProbs,
                                                                               const AnnotatedText& target,
                                                                               const size_t sentenceIdx) const {
-  const auto [wordByteRanges, wordsFeatures, overallMean] = mapBPEToWords(logProbs, target, sentenceIdx);
+  const auto [wordByteRanges, features] = mapBPEToWords(logProbs, target, sentenceIdx);
 
-  const auto wordQualityScores = logisticRegressor_.predict(convertToMatrix(wordsFeatures, overallMean));
+  const auto wordQualityScores = logisticRegressor_.predict(features);
 
   const auto sentenceScore = std::accumulate(std::begin(wordQualityScores), std::end(wordQualityScores), float(0.0)) /
                              wordQualityScores.size();

@@ -37,34 +37,11 @@ SCENARIO("Quality Estimator Test ", "[QualityEstimator]") {
 
     // Memory / Features
 
-    // {
-    //     "mean_": [
-    //         -0.23515637219436597,
-    //         -0.41058617943548387,
-    //         2.546706989247312,
-    //         -0.18946239170117798
-    //     ],
-    //     "scale_": [
-    //         0.29801481765167837,
-    //         0.4796714344066216,
-    //         1.5305477848377145,
-    //         0.103550684449697
-    //     ],
-    //     "coef_": [
-    //         0.12835516184041088,
-    //         -1.1683037932196483,
-    //         0.648637158173214,
-    //         -0.4848115618235599
-    //     ],
-    //     "intercept_": 0.15527772370082504
-    // };
+    const std::vector<float> stds = {0.200000003, 0.300000012, 2.5, 0.100000001 };
+    const std::vector<float> means = {-0.100000001, -0.769999981, 5, -0.5};
+    const std::vector<float> coefficients = {0.99000001, 0.899999976, -0.200000003, 0.5};
+    const float intercept = {-0.300000012};
 
-    const std::vector<float> stds = {0.29801481765167837, 0.4796714344066216, 1.5305477848377145, 0.103550684449697};
-    const std::vector<float> means = {-0.23515637219436597, -0.41058617943548387, 2.546706989247312,
-                                      -0.18946239170117798};
-    const std::vector<float> coefficients = {0.12835516184041088, -1.1683037932196483, 0.648637158173214,
-                                             -0.4848115618235599};
-    const float intercept = {0.15527772370082504};
     const size_t parametersDims = stds.size();
     const std::vector<std::vector<float> > lrParameters = {stds, means, coefficients};
 

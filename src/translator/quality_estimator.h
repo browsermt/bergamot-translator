@@ -65,6 +65,7 @@ class QualityEstimator {
 
  private:
   struct Matrix {
+    Matrix(Matrix&& other );
     Matrix(const size_t rowsParam, const size_t widthParam);
 
     const float &at(const size_t row, const size_t col) const;
@@ -86,15 +87,6 @@ class QualityEstimator {
   struct Scale {
     std::vector<float> stds;
     std::vector<float> means;
-  };
-
-  /// WordFeatures represents N-1 features that are used by a given model.
-  ///
-  /// It's values are filled through mapBPEToWords
-  struct WordFeatures {
-    int numSubWords = 0;
-    float meanScore = 0.0;
-    float minScore = 0.0;
   };
 
   /// The current Quality Estimator model is a Logistic Model implemented through
@@ -138,10 +130,8 @@ class QualityEstimator {
   /// @param [in] logProbs: the log probabilities given by an translation model
   /// @param [in] target: AnnotatedText target value
   /// @param [in] sentenceIdx: the id of a candidate sentence
-  static std::tuple<std::vector<ByteRange>, std::vector<WordFeatures>, float> mapBPEToWords(
+  static std::pair<std::vector<ByteRange>, Matrix > mapBPEToWords(
       const std::vector<float> &logProbs, const AnnotatedText &target, const size_t sentenceIdx);
-
-  static Matrix convertToMatrix(const std::vector<WordFeatures> &wordsFeatures, const float overallMean);
 
   LogisticRegressor logisticRegressor_;
 };

@@ -34,7 +34,7 @@ void annotatedTextWords(Ptr<Options> options, bool source = true);
 void annotatedTextSentences(Ptr<Options> options, bool source = true);
 
 // Reads from stdin and translates the read content. Prints the quality scores for each sentence.
-void qualityEstimatorScores( const Ptr<Options>& options);
+void qualityEstimatorScores(const Ptr<Options>& options);
 
 }  // namespace testapp
 }  // namespace bergamot

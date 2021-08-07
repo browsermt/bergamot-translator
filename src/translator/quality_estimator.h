@@ -65,7 +65,7 @@ class QualityEstimator {
 
  private:
   struct Matrix {
-    Matrix(Matrix&& other );
+    Matrix(Matrix &&other);
     Matrix(const size_t rowsParam, const size_t widthParam);
 
     const float &at(const size_t row, const size_t col) const;
@@ -81,7 +81,7 @@ class QualityEstimator {
     IntgemmMatrix(const intgemm::Index rowsParam, const intgemm::Index widthParam, const intgemm::Index rowsMultiplier,
                   const intgemm::Index widthMultiplier);
 
-     Matrix operator*( const IntgemmMatrix& matrixb ) const;
+    Matrix operator*(const IntgemmMatrix &matrixb) const;
   };
 
   struct Scale {
@@ -99,17 +99,20 @@ class QualityEstimator {
   /// and then they are used to build a model representation
   class LogisticRegressor {
    public:
-    const Scale scale;
-    const IntgemmMatrix coefficients;
-    const size_t numCoefficients;
-    const float intercept;
-
-    LogisticRegressor(Scale &&scaleParam, IntgemmMatrix &&coefficientsParam, const size_t numCoefficientsParam,
-                      const float interceptParam);
+    LogisticRegressor(Scale &&scale, IntgemmMatrix &&coefficients, const size_t numCoefficients, const float intercept);
 
     std::vector<float> predict(const Matrix &features) const;
 
+    /// binary file parser which came from AlignedMemory
+    static LogisticRegressor fromAlignedMemory(const AlignedMemory &qualityEstimatorMemory);
+    AlignedMemory toAlignedMemory() const;
+
    private:
+    const Scale scale_;
+    const IntgemmMatrix coefficients_;
+    const size_t numCoefficients_;
+    const float intercept_;
+
     /// Calculates the scores through a linear model
     /// @param [in] features: the matrix of feature scaled values
     std::vector<float> vectorResult(const IntgemmMatrix &features) const;
@@ -123,15 +126,12 @@ class QualityEstimator {
     void resultToProbabilities(std::vector<float> &linearPredictedValues) const;
   };
 
-  /// binary file parser which came from AlignedMemory
-  static LogisticRegressor fromAlignedMemory(const AlignedMemory &qualityEstimatorMemory);
-
   /// Builds the words byte ranges and defines the WordFeature values
   /// @param [in] logProbs: the log probabilities given by an translation model
   /// @param [in] target: AnnotatedText target value
   /// @param [in] sentenceIdx: the id of a candidate sentence
-  static std::pair<std::vector<ByteRange>, Matrix > mapBPEToWords(
-      const std::vector<float> &logProbs, const AnnotatedText &target, const size_t sentenceIdx);
+  static std::pair<std::vector<ByteRange>, Matrix> mapBPEToWords(const std::vector<float> &logProbs,
+                                                                 const AnnotatedText &target, const size_t sentenceIdx);
 
   LogisticRegressor logisticRegressor_;
 };

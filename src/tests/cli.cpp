@@ -12,7 +12,7 @@ int main(int argc, char *argv[]) {
     testapp::annotatedTextSentences(options, /*source=*/false);
   } else if (mode == "test-response-source-words") {
     testapp::annotatedTextWords(options, /*source=*/true);
-  } else if (mode == std::string("test-quality-estimator" ) ) {
+  } else if (mode == std::string("test-quality-estimator")) {
     testapp::qualityEstimatorScores(options);
   } else {
     ABORT("Unknown --mode {}. Please run a valid test", mode);

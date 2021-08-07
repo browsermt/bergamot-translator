@@ -20,9 +20,7 @@ QualityEstimator::Matrix::Matrix(const size_t rowsParam, const size_t colsParam)
   }
 }
 
-QualityEstimator::Matrix::Matrix(Matrix && other)
-    : rows(other.rows), cols(other.cols), data(std::move(other.data)) {
-}
+QualityEstimator::Matrix::Matrix(Matrix&& other) : rows(other.rows), cols(other.cols), data(std::move(other.data)) {}
 
 const float& QualityEstimator::Matrix::at(const size_t row, const size_t col) const { return data[row * cols + col]; }
 
@@ -50,17 +48,15 @@ QualityEstimator::Matrix QualityEstimator::IntgemmMatrix::operator*(const Intgem
   return result;
 }
 
-QualityEstimator::LogisticRegressor::LogisticRegressor(Scale&& scaleParam, IntgemmMatrix&& coefficientsParam,
-                                                       const size_t numCoefficientsParam, const float interceptParam)
-    : scale(std::move(scaleParam)),
-      coefficients(std::move(coefficientsParam)),
-      numCoefficients(numCoefficientsParam),
-      intercept(interceptParam) {}
+QualityEstimator::LogisticRegressor::LogisticRegressor(Scale&& scale, IntgemmMatrix&& coefficients,
+                                                       const size_t numCoefficients, const float intercept)
+    : scale_(std::move(scale)),
+      coefficients_(std::move(coefficients)),
+      numCoefficients_(numCoefficients),
+      intercept_(intercept) {}
 
-QualityEstimator::QualityEstimator(const AlignedMemory& qualityEstimatorMemory)
-    : logisticRegressor_(QualityEstimator::fromAlignedMemory(qualityEstimatorMemory)) {}
-
-QualityEstimator::LogisticRegressor QualityEstimator::fromAlignedMemory(const AlignedMemory& qualityEstimatorMemory) {
+QualityEstimator::LogisticRegressor QualityEstimator::LogisticRegressor::fromAlignedMemory(
+    const AlignedMemory& qualityEstimatorMemory) {
   LOG(info, "[data] Loading Quality Estimator model from buffer");
 
   const char* ptr = qualityEstimatorMemory.begin();
@@ -100,7 +96,7 @@ QualityEstimator::LogisticRegressor QualityEstimator::fromAlignedMemory(const Al
   for (int i = 0; i < header.lrParametersDims; ++i) {
     scale.stds[i] = *(stds + i);
 
-    ABORT_IF( scale.stds[i] == 0.0, "Invalid stds" );
+    ABORT_IF(scale.stds[i] == 0.0, "Invalid stds");
 
     scale.means[i] = *(means + i);
     coefficientsMatrix.at(i, 0) = *(coefficients + i);
@@ -109,13 +105,11 @@ QualityEstimator::LogisticRegressor QualityEstimator::fromAlignedMemory(const Al
   return LogisticRegressor(std::move(scale), std::move(coefficientsMatrix), header.lrParametersDims, intercept);
 }
 
-AlignedMemory QualityEstimator::toAlignedMemory() const {
-  const size_t lrParametersDims = logisticRegressor_.scale.means.size();
+AlignedMemory QualityEstimator::LogisticRegressor::toAlignedMemory() const {
+  const size_t lrParametersDims = scale_.means.size();
 
-  const size_t lrSize = (logisticRegressor_.scale.means.size() + logisticRegressor_.scale.stds.size() +
-                         logisticRegressor_.numCoefficients) *
-                            sizeof(float) +
-                        sizeof(logisticRegressor_.intercept);
+  const size_t lrSize =
+      (scale_.means.size() + scale_.stds.size() + numCoefficients_) * sizeof(float) + sizeof(intercept_);
 
   QualityEstimator::Header header = {BINARY_QE_MODEL_MAGIC, lrParametersDims};
   marian::bergamot::AlignedMemory memory(sizeof(header) + lrSize);
@@ -125,215 +119,214 @@ AlignedMemory QualityEstimator::toAlignedMemory() const {
   memcpy(buffer, &header, sizeof(header));
   buffer += sizeof(header);
 
-  for (const float std : logisticRegressor_.scale.stds) {
+  for (const float std : scale_.stds) {
     memcpy(buffer, &std, sizeof(std));
     buffer += sizeof(std);
   }
 
-  for (const float mean : logisticRegressor_.scale.means) {
+  for (const float mean : scale_.means) {
     memcpy(buffer, &mean, sizeof(mean));
     buffer += sizeof(mean);
   }
 
   for (size_t i = 0; i < lrParametersDims; ++i) {
-    const float coefficient = logisticRegressor_.coefficients.at(i, 0);
+    const float coefficient = coefficients_.at(i, 0);
     memcpy(buffer, &coefficient, sizeof(coefficient));
     buffer += sizeof(coefficient);
   }
 
-  memcpy(buffer, &logisticRegressor_.intercept, sizeof(logisticRegressor_.intercept));
-  buffer += sizeof(logisticRegressor_.intercept);
+  memcpy(buffer, &intercept_, sizeof(intercept_));
+  buffer += sizeof(intercept_);
 
   return memory;
 }
 
-// mapBPEToWords takes the following arguments:
-// - the log probabilities (logProbs) of byte pair encodings (BPE)
-//   that comes from the tracebackWordScores method (which belongs to hypothesis.h in Marian)
-// - the AnnotatedText from the translated word
-// - the index of a translated sentence
-//
-// This method is responsible for mapping BPE tokens to word tokens representing them through ByteRanges.
-//
-// The words byte ranges are expected to be alphanumeric characters, and they are split using whitespaces. Moreover,
-// this method is also responsible for extracting the features that the QE model will further use. The features
-// extracted are the following:
-//
-// - meanScore = the mean of bpe's  logProbs  that a given word corresponds to
-// - minScore = the minimum bpe's logProbs that a given word corresponds to
-// - numSubWords = the number of bpe tokens that a term is made of
-// - overallMean = the mean of bpe's logProbs regarding the whole translated sentence
-//
-// The return of this function is a ByteRange vector of the words and a WordFeatures vector.
-//
-// If a translated sentence does not contain any alphanumeric character (therefore, it is made basically of the EOS
-// token), this method ignores it and returns an empty ByteRange vector of words and an empty WordFeatures vector.
-//
-// Examples:
-// Suppose that you have the following source target (A): marian is a good translation service and the translate service
-// gives you the following sentence (B):
-//
-// ma(0.15) ri(0.15) an(0.2) es(0.3) un(0.1) bu(0.3) en(0.2) ser(0.1) vi(0.2) cio(0.4) de(0.1) tra(0.4) du(0.2)
-// cción(0.1)
-//
-// The numbers that the words follow represent the logProb of each BPE token.
-//
-// Then, the result would be something like:
-// a vector where each position corresponds to the ByteRanges of the following words: marian es un buen servicio de
-// traducción. Hence, its length is 7.
-//
-// An vector of WordFeatures with length 7 where, for instance:
-//
-// the values of the first element (marian) would be:
-// - meanScores= (0.15+0.15+0.3)/3=0.2
-// - minScores= 0.15
-// - numSubWords = 3
-// - overallMean = 0.207
-//
-// the values of the second element (es) would be:
-// - meanScores= 0.3
-// - minScores= 0.3
-// - numSubWords = 1
-// - overallMean = 0.207
-//
-std::pair<std::vector<ByteRange>, QualityEstimator::Matrix > QualityEstimator::mapBPEToWords(
-    const std::vector<float>& logProbs, const AnnotatedText& target, const size_t sentenceIdx) {
-  // Ignore empty target
-  if ((logProbs.size() < 2 ) || ( target.numWords( sentenceIdx ) == 0 ) )
-  {
-    return {{}, Matrix( 0, 0 ) };
-  }
+QualityEstimator::QualityEstimator(const AlignedMemory& qualityEstimatorMemory)
+    : logisticRegressor_(LogisticRegressor::fromAlignedMemory(qualityEstimatorMemory)) {}
 
-  enum Features
-  {
-    MeanScore = 0,
-    MinScore = 1,
-    NumSubWords = 2,
-    OverallMean  = 3
-  };
+AlignedMemory QualityEstimator::toAlignedMemory() const
+{
+  return logisticRegressor_.toAlignedMemory();
+}
 
-  const string_view sentence = target.sentence( sentenceIdx );
+  // mapBPEToWords takes the following arguments:
+  // - the log probabilities (logProbs) of byte pair encodings (BPE)
+  //   that comes from the tracebackWordScores method (which belongs to hypothesis.h in Marian)
+  // - the AnnotatedText from the translated word
+  // - the index of a translated sentence
+  //
+  // This method is responsible for mapping BPE tokens to word tokens representing them through ByteRanges.
+  //
+  // The words byte ranges are expected to be alphanumeric characters, and they are split using whitespaces. Moreover,
+  // this method is also responsible for extracting the features that the QE model will further use. The features
+  // extracted are the following:
+  //
+  // - meanScore = the mean of bpe's  logProbs  that a given word corresponds to
+  // - minScore = the minimum bpe's logProbs that a given word corresponds to
+  // - numSubWords = the number of bpe tokens that a term is made of
+  // - overallMean = the mean of bpe's logProbs regarding the whole translated sentence
+  //
+  // The return of this function is a ByteRange vector of the words and a WordFeatures vector.
+  //
+  // If a translated sentence does not contain any alphanumeric character (therefore, it is made basically of the EOS
+  // token), this method ignores it and returns an empty ByteRange vector of words and an empty WordFeatures vector.
+  //
+  // Examples:
+  // Suppose that you have the following source target (A): marian is a good translation service and the translate
+  // service gives you the following sentence (B):
+  //
+  // ma(0.15) ri(0.15) an(0.2) es(0.3) un(0.1) bu(0.3) en(0.2) ser(0.1) vi(0.2) cio(0.4) de(0.1) tra(0.4) du(0.2)
+  // cción(0.1)
+  //
+  // The numbers that the words follow represent the logProb of each BPE token.
+  //
+  // Then, the result would be something like:
+  // a vector where each position corresponds to the ByteRanges of the following words: marian es un buen servicio de
+  // traducción. Hence, its length is 7.
+  //
+  // An vector of WordFeatures with length 7 where, for instance:
+  //
+  // the values of the first element (marian) would be:
+  // - meanScores= (0.15+0.15+0.3)/3=0.2
+  // - minScores= 0.15
+  // - numSubWords = 3
+  // - overallMean = 0.207
+  //
+  // the values of the second element (es) would be:
+  // - meanScores= 0.3
+  // - minScores= 0.3
+  // - numSubWords = 1
+  // - overallMean = 0.207
+  //
+  std::pair<std::vector<ByteRange>, QualityEstimator::Matrix> QualityEstimator::mapBPEToWords(
+      const std::vector<float>& logProbs, const AnnotatedText& target, const size_t sentenceIdx) {
+    // Ignore empty target
+    if ((logProbs.size() < 2) || (target.numWords(sentenceIdx) == 0)) {
+      return {{}, Matrix(0, 0)};
+    }
 
-  const size_t numWords = std::count( std::begin( sentence ), std::end( sentence ), ' ' ) + 1;
+    enum Features { MeanScore = 0, MinScore = 1, NumSubWords = 2, OverallMean = 3 };
 
-  const size_t numFeatures = 4;
+    const string_view sentence = target.sentence(sentenceIdx);
 
-  std::vector<ByteRange> wordByteRanges;
+    const size_t numWords = std::count(std::begin(sentence), std::end(sentence), ' ') + 1;
 
-  Matrix features( numWords,numFeatures );
+    const size_t numFeatures = 4;
 
-  // The first subword it's always a beginning of a word
-  float subwordScore = logProbs[0];
-  ByteRange subword = target.wordAsByteRange(sentenceIdx, 0);
+    std::vector<ByteRange> wordByteRanges;
 
-  float sequence = subwordScore;
+    Matrix features(numWords, numFeatures);
 
-  size_t featureRow = 0;
+    // The first subword it's always a beginning of a word
+    float subwordScore = logProbs[0];
+    ByteRange subword = target.wordAsByteRange(sentenceIdx, 0);
 
-  features.at( featureRow, MeanScore ) = subwordScore;
-  features.at( featureRow, MinScore ) = subwordScore;
-  features.at( featureRow, NumSubWords ) = 1;
+    float sequence = subwordScore;
 
-  wordByteRanges.push_back(subword);
+    size_t featureRow = 0;
 
-  size_t subwordIdx = 1;
-  /// A word is composed of multiple subtokens. The definition of an "entire"
-  /// word is the presence of whitespace. The QE model ignores the presence
-  /// of the EOS token, and hence we only need to iterate n-1 positions.
-  for (; subwordIdx < (logProbs.size() - 1); ++subwordIdx) {
-    const float subwordScore = logProbs[subwordIdx];
-    sequence += subwordScore;
+    features.at(featureRow, MeanScore) = subwordScore;
+    features.at(featureRow, MinScore) = subwordScore;
+    features.at(featureRow, NumSubWords) = 1;
 
-    ByteRange subword = target.wordAsByteRange(sentenceIdx, subwordIdx);
+    wordByteRanges.push_back(subword);
 
-    const char firstLetter = target.text.at(subword.begin);
+    size_t subwordIdx = 1;
+    /// A word is composed of multiple subtokens. The definition of an "entire"
+    /// word is the presence of whitespace. The QE model ignores the presence
+    /// of the EOS token, and hence we only need to iterate n-1 positions.
+    for (; subwordIdx < (logProbs.size() - 1); ++subwordIdx) {
+      const float subwordScore = logProbs[subwordIdx];
+      sequence += subwordScore;
 
-    // if the first character is whitespace, it's a beginning of a new word
-    if (isspace(firstLetter)) {
-      ++subword.begin;
-      ++featureRow;
-      features.at( featureRow, MeanScore ) = subwordScore;
-      features.at( featureRow, MinScore ) = subwordScore;
-      features.at( featureRow, NumSubWords ) = 1;
+      ByteRange subword = target.wordAsByteRange(sentenceIdx, subwordIdx);
 
-      wordByteRanges.push_back(subword);
-    } else {
-      // update last word byte range and word features
+      const char firstLetter = target.text.at(subword.begin);
 
-      ByteRange& currentWord = wordByteRanges.back();
+      // if the first character is whitespace, it's a beginning of a new word
+      if (isspace(firstLetter)) {
+        ++subword.begin;
+        ++featureRow;
+        features.at(featureRow, MeanScore) = subwordScore;
+        features.at(featureRow, MinScore) = subwordScore;
+        features.at(featureRow, NumSubWords) = 1;
 
-      float& meanScore = features.at( featureRow, MeanScore );
-      float& minScore = features.at( featureRow, MinScore );
-      float& numSubWords = features.at( featureRow, NumSubWords );
+        wordByteRanges.push_back(subword);
+      } else {
+        // update last word byte range and word features
 
-      currentWord.end = subword.end;
-      ++numSubWords;
-      // incremental mean
-      meanScore += (subwordScore - meanScore) / numSubWords;
+        ByteRange& currentWord = wordByteRanges.back();
 
-      if (minScore > subwordScore) {
-        minScore = subwordScore;
+        float& meanScore = features.at(featureRow, MeanScore);
+        float& minScore = features.at(featureRow, MinScore);
+        float& numSubWords = features.at(featureRow, NumSubWords);
+
+        currentWord.end = subword.end;
+        ++numSubWords;
+        // incremental mean
+        meanScore += (subwordScore - meanScore) / numSubWords;
+
+        if (minScore > subwordScore) {
+          minScore = subwordScore;
+        }
       }
     }
+
+    const float overallMean = sequence / subwordIdx;
+
+    for (int i = 0; i < features.rows; ++i) {
+      features.at(i, OverallMean) = overallMean;
+    }
+
+    return {wordByteRanges, std::move(features)};
   }
 
-  const float overallMean = sequence / subwordIdx;
+  std::vector<float> QualityEstimator::LogisticRegressor::vectorResult(const IntgemmMatrix& features) const {
+    const Matrix modelScores = features * coefficients_;
 
-  for( int i = 0; i < features.rows ; ++i )
-  {
-    features.at( i, OverallMean ) = overallMean;
+    std::vector<float> scores(features.rows);
+
+    for (int i = 0; i < modelScores.rows; ++i) {
+      scores[i] = modelScores.at(i, 0) + intercept_;
+    }
+
+    return scores;
   }
 
-  return { wordByteRanges, std::move(features) };
-}
+  QualityEstimator::IntgemmMatrix QualityEstimator::LogisticRegressor::transformFeatures(const Matrix& features) const {
+    QualityEstimator::IntgemmMatrix resultFeatures(features.rows, features.cols, intgemm::Int16::tile_info.a_rows,
+                                                   intgemm::Int16::tile_info.a_cols);
+    for (int i = 0; i < features.rows; ++i) {
+      for (int j = 0; j < features.cols; ++j) {
+        resultFeatures.at(i, j) = (features.at(i, j) - scale_.means[j]) / scale_.stds[j];
+      }
+    }
 
-std::vector<float> QualityEstimator::LogisticRegressor::vectorResult(const IntgemmMatrix& features) const {
-  const Matrix modelScores = features * coefficients;
-
-  std::vector<float> scores(features.rows);
-
-  for (int i = 0; i < modelScores.rows; ++i) {
-    scores[i] = modelScores.at(i, 0) + intercept;
+    return resultFeatures;
   }
 
-  return scores;
-}
-
-QualityEstimator::IntgemmMatrix QualityEstimator::LogisticRegressor::transformFeatures(const Matrix& features) const {
-  QualityEstimator::IntgemmMatrix resultFeatures(features.rows, features.cols, intgemm::Int16::tile_info.a_rows,
-                                                 intgemm::Int16::tile_info.a_cols);
-  for (int i = 0; i < features.rows; ++i) {
-    for (int j = 0; j < features.cols; ++j) {
-      resultFeatures.at(i, j) = (features.at(i, j) - scale.means[j]) / scale.stds[j];
+  void QualityEstimator::LogisticRegressor::resultToProbabilities(std::vector<float> & linearPredictedValues) const {
+    for (float& value : linearPredictedValues) {
+      value = 1 / (1 + std::exp(-value));
     }
   }
 
-  return resultFeatures;
-}
-
-void QualityEstimator::LogisticRegressor::resultToProbabilities(std::vector<float>& linearPredictedValues) const {
-  for (float& value : linearPredictedValues) {
-    value = 1 / (1 + std::exp(-value));
+  std::vector<float> QualityEstimator::LogisticRegressor::predict(const Matrix& features) const {
+    std::vector<float> scores = vectorResult(transformFeatures(features));
+    resultToProbabilities(scores);
+    return scores;
   }
-}
 
-std::vector<float> QualityEstimator::LogisticRegressor::predict(const Matrix& features) const {
-  std::vector<float> scores = vectorResult(transformFeatures(features));
-  resultToProbabilities(scores);
-  return scores;
-}
+  QualityEstimator::WordsQualityEstimate QualityEstimator::computeQualityScores(
+      const std::vector<float>& logProbs, const AnnotatedText& target, const size_t sentenceIdx) const {
+    const auto [wordByteRanges, features] = mapBPEToWords(logProbs, target, sentenceIdx);
 
-QualityEstimator::WordsQualityEstimate QualityEstimator::computeQualityScores(const std::vector<float>& logProbs,
-                                                                              const AnnotatedText& target,
-                                                                              const size_t sentenceIdx) const {
-  const auto [wordByteRanges, features] = mapBPEToWords(logProbs, target, sentenceIdx);
+    const auto wordQualityScores = logisticRegressor_.predict(features);
 
-  const auto wordQualityScores = logisticRegressor_.predict(features);
+    const auto sentenceScore = std::accumulate(std::begin(wordQualityScores), std::end(wordQualityScores), float(0.0)) /
+                               wordQualityScores.size();
 
-  const auto sentenceScore = std::accumulate(std::begin(wordQualityScores), std::end(wordQualityScores), float(0.0)) /
-                             wordQualityScores.size();
-
-  return {wordQualityScores, wordByteRanges, sentenceScore};
-}
+    return {wordQualityScores, wordByteRanges, sentenceScore};
+  }
 }  // namespace bergamot
-}  // namespace marian
+}  // namespace bergamot

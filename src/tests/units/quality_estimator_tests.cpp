@@ -1,7 +1,6 @@
 #include "quality_estimator_tests.h"
 
 #include <algorithm>
-
 #include <iostream>
 #include <ostream>
 
@@ -37,7 +36,7 @@ SCENARIO("Quality Estimator Test ", "[QualityEstimator]") {
 
     // Memory / Features
 
-    const std::vector<float> stds = {0.200000003, 0.300000012, 2.5, 0.100000001 };
+    const std::vector<float> stds = {0.200000003, 0.300000012, 2.5, 0.100000001};
     const std::vector<float> means = {-0.100000001, -0.769999981, 5, -0.5};
     const std::vector<float> coefficients = {0.99000001, 0.899999976, -0.200000003, 0.5};
     const float intercept = {-0.300000012};
@@ -63,8 +62,8 @@ SCENARIO("Quality Estimator Test ", "[QualityEstimator]") {
 
     memcpy(memory.begin() + index, &intercept, sizeof(intercept));
 
-    std::ofstream file( "/home/felipe/quality_model.bin", std::ios::binary );
-    file.write(memory.begin(), memory.size() );
+    std::ofstream file("/home/felipe/quality_model.bin", std::ios::binary);
+    file.write(memory.begin(), memory.size());
     file.close();
 
     AND_GIVEN("QualityEstimator") {

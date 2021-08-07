@@ -55,7 +55,7 @@ void annotatedTextSentences(Ptr<Options> options, bool source) {
   }
 }
 
-void qualityEstimatorScores(const Ptr<Options>& options) {
+void qualityEstimatorScores(const Ptr<Options> &options) {
   ResponseOptions responseOptions;
   const Response response = translateFromStdin(options, responseOptions);
 
@@ -63,23 +63,21 @@ void qualityEstimatorScores(const Ptr<Options>& options) {
     std::cout << "[src Sentence]:" << response.source.sentence(s) << "\n";
     std::cout << "[tgt Sentence]:" << response.target.sentence(s) << "\n";
 
-    if( response.qualityScores.size() <= s )
-    {
+    if (response.qualityScores.size() <= s) {
       continue;
     }
 
     const auto &wordsQualityEstimate = response.qualityScores[s];
 
-    std::cout << "[score Sentence]:" <<  wordsQualityEstimate.sentenceScore << "\n";
+    std::cout << "[score Sentence]:" << wordsQualityEstimate.sentenceScore << "\n";
     std::cout << "[words Scores]:";
 
     for (size_t i = 0; i < wordsQualityEstimate.wordQualityScores.size(); ++i) {
       const ByteRange wordByteRange = wordsQualityEstimate.wordByteRanges[i];
       const float wordScore = wordsQualityEstimate.wordQualityScores[i];
-      const string_view word(response.target.text.data() + wordByteRange.begin, wordByteRange.size() );
+      const string_view word(response.target.text.data() + wordByteRange.begin, wordByteRange.size());
 
-      if( i != 0)
-      {
+      if (i != 0) {
         std::cout << " ";
       }
 

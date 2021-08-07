@@ -99,6 +99,9 @@ QualityEstimator::LogisticRegressor QualityEstimator::fromAlignedMemory(const Al
 
   for (int i = 0; i < header.lrParametersDims; ++i) {
     scale.stds[i] = *(stds + i);
+
+    ABORT_IF( scale.stds[i] == 0.0, "Invalid stds" );
+
     scale.means[i] = *(means + i);
     coefficientsMatrix.at(i, 0) = *(coefficients + i);
   }
@@ -299,12 +302,9 @@ std::vector<float> QualityEstimator::LogisticRegressor::vectorResult(const Intge
 QualityEstimator::IntgemmMatrix QualityEstimator::LogisticRegressor::transformFeatures(const Matrix& features) const {
   QualityEstimator::IntgemmMatrix resultFeatures(features.rows, features.cols, intgemm::Int16::tile_info.a_rows,
                                                  intgemm::Int16::tile_info.a_cols);
-
-  const auto getStds = [](const auto stds) { return stds != 0.0 ? stds : 1.0f; };
-
   for (int i = 0; i < features.rows; ++i) {
     for (int j = 0; j < features.cols; ++j) {
-      resultFeatures.at(i, j) = (features.at(i, j) - scale.means[j]) / getStds(scale.stds[j]);
+      resultFeatures.at(i, j) = (features.at(i, j) - scale.means[j]) / scale.stds[j];
     }
   }
 

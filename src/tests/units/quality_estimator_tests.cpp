@@ -44,7 +44,7 @@ SCENARIO("Quality Estimator Test ", "[QualityEstimator]") {
     const size_t parametersDims = stds.size();
     const std::vector<std::vector<float> > lrParameters = {stds, means, coefficients};
 
-    const QualityEstimator::Header header = {BINARY_QE_MODEL_MAGIC, parametersDims};
+    const LogisticRegressor::Header header = {BINARY_QE_MODEL_MAGIC, parametersDims};
 
     marian::bergamot::AlignedMemory memory(sizeof(header) + lrParameters.size() * parametersDims * sizeof(float) +
                                            sizeof(intercept));
@@ -62,12 +62,8 @@ SCENARIO("Quality Estimator Test ", "[QualityEstimator]") {
 
     memcpy(memory.begin() + index, &intercept, sizeof(intercept));
 
-    std::ofstream file("/home/felipe/quality_model.bin", std::ios::binary);
-    file.write(memory.begin(), memory.size());
-    file.close();
-
     AND_GIVEN("QualityEstimator") {
-      QualityEstimator qualityEstimator(memory);
+      QualityEstimator qualityEstimator = QualityEstimator::fromAlignedMemory(memory);
 
       WHEN("It's call computeQualityScores") {
         auto wordsQualityEstimate = qualityEstimator.computeQualityScores(logProbs, annotatedTarget, 0);

@@ -26,9 +26,9 @@ Service::Service(Ptr<Options> options, MemoryBundle memoryBundle)
 {
   if (!options->get<std::string>("quality", "").empty()) {
     if (memoryBundle.qualityEstimatorMemory.size() != 0) {
-      qualityEstimator_.emplace(std::move(memoryBundle.qualityEstimatorMemory));
+      qualityEstimator_.emplace(std::move(QualityEstimator::fromAlignedMemory(memoryBundle.qualityEstimatorMemory)));
     } else {
-      qualityEstimator_.emplace(std::move(getQualityEstimatorModel(options)));
+      qualityEstimator_.emplace(std::move(QualityEstimator::fromAlignedMemory(getQualityEstimatorModel(options))));
     }
   }
 #ifdef WASM_COMPATIBLE_SOURCE

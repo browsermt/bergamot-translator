@@ -2,15 +2,14 @@
 #ifndef SRC_BERGAMOT_THREADSAFE_BATCHER_H_
 #define SRC_BERGAMOT_THREADSAFE_BATCHER_H_
 
+#include <condition_variable>
+#include <mutex>
+
 #include "aggregate_batching_pool.h"
 #include "batching_pool.h"
 #include "common/options.h"
 #include "definitions.h"
 #include "translation_model.h"
-
-#ifndef WASM_COMPATIBLE_SOURCE
-#include <condition_variable>
-#include <mutex>
 
 namespace marian {
 namespace bergamot {
@@ -69,5 +68,4 @@ class GuardedBatchingPoolAccess {
 #include "threadsafe_batcher.cpp"
 #undef SRC_BERGAMOT_THREADSAFE_BATCHER_IMPL
 
-#endif  // WASM_COMPATIBLE_SOURCE
 #endif  // SRC_BERGAMOT_THREADSAFE_BATCHER_H_

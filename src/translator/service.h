@@ -1,6 +1,10 @@
 #ifndef SRC_BERGAMOT_SERVICE_H_
 #define SRC_BERGAMOT_SERVICE_H_
 
+#include <queue>
+#include <thread>
+#include <vector>
+
 #include "data/types.h"
 #include "response.h"
 #include "response_builder.h"
@@ -9,13 +13,6 @@
 #include "translation_model.h"
 #include "translator/parser.h"
 #include "vocabs.h"
-
-#ifndef WASM_COMPATIBLE_SOURCE
-#include <thread>
-#endif
-
-#include <queue>
-#include <vector>
 
 namespace marian {
 namespace bergamot {

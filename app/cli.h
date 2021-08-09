@@ -52,7 +52,6 @@ void wasm(Ptr<Options> options) {
   ResponseOptions responseOptions;
   std::vector<std::string> texts;
 
-#ifdef WASM_COMPATIBLE_SOURCE
   // Hide the translateMultiple operation
   for (std::string line; std::getline(std::cin, line);) {
     texts.emplace_back(line);
@@ -63,7 +62,6 @@ void wasm(Ptr<Options> options) {
   for (auto &result : results) {
     std::cout << result.getTranslatedText() << std::endl;
   }
-#endif
 }
 
 /// Application used to benchmark with marian-decoder from time-to-time. The implementation in this repository follows a

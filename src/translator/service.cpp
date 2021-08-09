@@ -28,9 +28,9 @@ Ptr<Request> makeRequest(size_t requestId, std::shared_ptr<TranslationModel> tra
 
 BlockingService::BlockingService(const Ptr<Options> &options) : requestId_(0), batchingPool_(options) {}
 
-std::vector<Response> BlockingService::translate(std::shared_ptr<TranslationModel> translationModel,
-                                                 std::vector<std::string> &&sources,
-                                                 const ResponseOptions &responseOptions) {
+std::vector<Response> BlockingService::translateMultiple(std::shared_ptr<TranslationModel> translationModel,
+                                                         std::vector<std::string> &&sources,
+                                                         const ResponseOptions &responseOptions) {
   std::vector<Response> responses;
   responses.resize(sources.size());
 

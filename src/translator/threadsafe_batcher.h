@@ -34,7 +34,8 @@ namespace bergamot {
 template <class BatchingPoolType>
 class GuardedBatchingPoolAccess {
  public:
-  GuardedBatchingPoolAccess(BatchingPoolType &backend);
+  template <class... Args>
+  GuardedBatchingPoolAccess(Args &&... args);
   ~GuardedBatchingPoolAccess();
 
   template <class... Args>
@@ -46,7 +47,7 @@ class GuardedBatchingPoolAccess {
   void shutdown();
 
  private:
-  BatchingPoolType &backend_;
+  BatchingPoolType backend_;
 
   // Number of sentences in backend_;
   size_t enqueued_;

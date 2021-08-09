@@ -9,8 +9,9 @@ namespace marian {
 namespace bergamot {
 
 template <class BatchingPoolType>
-GuardedBatchingPoolAccess<BatchingPoolType>::GuardedBatchingPoolAccess(BatchingPoolType &backend)
-    : backend_(backend), enqueued_(0), shutdown_(false) {}
+template <class... Args>
+GuardedBatchingPoolAccess<BatchingPoolType>::GuardedBatchingPoolAccess(Args &&... args)
+    : backend_(std::forward<Args>(args)...), enqueued_(0), shutdown_(false) {}
 
 template <class BatchingPoolType>
 GuardedBatchingPoolAccess<BatchingPoolType>::~GuardedBatchingPoolAccess() {

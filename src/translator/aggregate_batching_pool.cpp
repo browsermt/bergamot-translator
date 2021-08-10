@@ -16,9 +16,10 @@ size_t AggregateBatchingPool::enqueueRequest(Ptr<TranslationModel> model, Ptr<Re
 
 size_t AggregateBatchingPool::generateBatch(Ptr<TranslationModel>& model, Batch& batch) {
   while (model == nullptr && !aggregateQueue_.empty()) {
-    model = aggregateQueue_.front();
+    std::shared_ptr<TranslationModel> candidate = aggregateQueue_.front();
     size_t numSentences = model->generateBatch(batch);
     if (numSentences > 0) {
+      model = candidate;
       return numSentences;
     } else {
       // Try the next model's batching pool.

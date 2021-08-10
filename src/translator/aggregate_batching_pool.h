@@ -17,7 +17,7 @@ class AggregateBatchingPool {
   size_t generateBatch(Ptr<TranslationModel>& model, Batch& batch);
 
  private:
-  std::queue<std::weak_ptr<TranslationModel>> aggregateQueue_;
+  std::queue<std::shared_ptr<TranslationModel>> aggregateQueue_;
 };
 
 }  // namespace bergamot

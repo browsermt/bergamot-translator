@@ -21,7 +21,7 @@ std::vector<Response> BlockingService::translateMultiple(std::shared_ptr<Transla
     auto callback = [i, &responses](Response &&response) { responses[i] = std::move(response); };  //
     Ptr<Request> request =
         translationModel->makeRequest(requestId_++, std::move(sources[i]), callback, responseOptions);
-    batchingPool_.addRequest(translationModel, request);
+    batchingPool_.enqueueRequest(translationModel, request);
   }
 
   Batch batch;
@@ -45,7 +45,7 @@ void BlockingService::translate(std::shared_ptr<TranslationModel> translationMod
 
   // Push request onto the batching data-structure
   Ptr<Request> request = translationModel->makeRequest(requestId_++, std::move(source), callback, responseOptions);
-  batchingPool_.addRequest(translationModel, request);
+  batchingPool_.enqueueRequest(translationModel, request);
 
   // Pull batches compiled from existing requests from the batching-data structure.
   Batch batch;
@@ -83,7 +83,7 @@ AsyncService::~AsyncService() {
 void AsyncService::translate(std::shared_ptr<TranslationModel> translationModel, std::string &&source,
                              CallbackType callback, const ResponseOptions &responseOptions) {
   Ptr<Request> request = translationModel->makeRequest(requestId_++, std::move(source), callback, responseOptions);
-  safeBatchingPool_.addRequest(translationModel, request);
+  safeBatchingPool_.enqueueRequest(translationModel, request);
 }
 
 std::vector<Response> AsyncService::translateMultiple(std::shared_ptr<TranslationModel> translationModel,

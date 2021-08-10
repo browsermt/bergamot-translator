@@ -20,10 +20,10 @@ GuardedBatchingPoolAccess<BatchingPoolType>::~GuardedBatchingPoolAccess() {
 
 template <class BatchingPoolType>
 template <class... Args>
-void GuardedBatchingPoolAccess<BatchingPoolType>::addRequest(Args &&... args) {
+void GuardedBatchingPoolAccess<BatchingPoolType>::enqueueRequest(Args &&... args) {
   std::unique_lock<std::mutex> lock(mutex_);
   assert(!shutdown_);
-  enqueued_ += backend_.addRequest(std::forward<Args>(args)...);
+  enqueued_ += backend_.enqueueRequest(std::forward<Args>(args)...);
   work_.notify_all();
 }
 

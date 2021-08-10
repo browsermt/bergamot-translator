@@ -55,7 +55,7 @@ class TranslationModel {
 
   /// Relays a request to the batching-pool specific to this translation model.
   /// @param [in] request: Request constructed through makeRequest
-  void addRequest(Ptr<Request> request) { batchingPool_.addRequest(request); };
+  void enqueueRequest(Ptr<Request> request) { batchingPool_.enqueueRequest(request); };
 
   /// Generates a batch from the batching-pool for this translation model, compiling from several active requests.
   ///

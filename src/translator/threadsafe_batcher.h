@@ -27,7 +27,7 @@ namespace bergamot {
 ///
 /// Requires BatchingPoolType to implement:
 ///
-/// * size_t addRequest(...)
+/// * size_t enqueueRequest(...)
 /// * size_t generateBatch(...)
 
 template <class BatchingPoolType>
@@ -38,7 +38,7 @@ class GuardedBatchingPoolAccess {
   ~GuardedBatchingPoolAccess();
 
   template <class... Args>
-  void addRequest(Args &&... args);
+  void enqueueRequest(Args &&... args);
 
   template <class... Args>
   size_t generateBatch(Args &&... args);

@@ -43,7 +43,7 @@ size_t BatchingPool::generateBatch(Batch &batch) {
   return batch.size();
 }
 
-size_t BatchingPool::addRequest(Ptr<Request> request) {
+size_t BatchingPool::enqueueRequest(Ptr<Request> request) {
   for (size_t i = 0; i < request->numSegments(); i++) {
     RequestSentence sentence(i, request);
     size_t bucket_id = sentence.numTokens();

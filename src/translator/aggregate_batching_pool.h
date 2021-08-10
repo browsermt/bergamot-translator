@@ -13,7 +13,7 @@ namespace bergamot {
 class AggregateBatchingPool {
  public:
   AggregateBatchingPool(Ptr<Options> options);
-  size_t addRequest(Ptr<TranslationModel> model, Ptr<Request> request);
+  size_t enqueueRequest(Ptr<TranslationModel> model, Ptr<Request> request);
   size_t generateBatch(Ptr<TranslationModel>& model, Batch& batch);
 
  private:

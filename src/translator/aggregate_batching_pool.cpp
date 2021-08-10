@@ -8,8 +8,8 @@ AggregateBatchingPool::AggregateBatchingPool(Ptr<Options> options) {
   // TODO(@jerinphilip): Set aggregate limits
 }
 
-size_t AggregateBatchingPool::addRequest(Ptr<TranslationModel> model, Ptr<Request> request) {
-  model->addRequest(request);
+size_t AggregateBatchingPool::enqueueRequest(Ptr<TranslationModel> model, Ptr<Request> request) {
+  model->enqueueRequest(request);
   aggregateQueue_.push(model);
   return request->numSegments();
 }

@@ -36,14 +36,14 @@ namespace bergamot {
 /// }
 /// ```
 ///
-/// Thread-safety is not handled here, but the methods are in-place to be used in threaded async workflow for
-/// translation.
+/// Thread-safety is not handled here, but the methods are available at granularity enough to be used in threaded async
+/// workflow for translation.
 
 class TranslationModel {
  public:
-  /// Equivalent to `TranslationModel(Ptr<Options> options, MemoryBundle &&memory, replicas=1)`, where `options` is
-  /// parsed from string configuration. Configuration can be JSON or YAML. Keys expected correspond to those of
-  /// `marian-decoder`, available at https://marian-nmt.github.io/docs/cmd/marian-decoder/
+  /// Equivalent to options based constructor, where `options` is parsed from string configuration. Configuration can be
+  /// JSON or YAML. Keys expected correspond to those of `marian-decoder`, available at
+  /// https://marian-nmt.github.io/docs/cmd/marian-decoder/
   TranslationModel(const std::string& config, MemoryBundle&& memory)
       : TranslationModel(parseOptions(config, /*validate=*/false), std::move(memory), /*replicas=*/1){};
 
@@ -54,7 +54,7 @@ class TranslationModel {
   /// @param [in] options: Marian options object.
   /// @param [in] memory: MemoryBundle object holding memory buffers containing parameters to build MarianBackend,
   /// ShortlistGenerator, Vocabs and SentenceSplitter.
-  TranslationModel(Ptr<Options> options, MemoryBundle&& memory, size_t replicas = 1);
+  TranslationModel(const std::shared_ptr<Options>& options, MemoryBundle&& memory, size_t replicas = 1);
 
   /// Make a Request to be translated by this TranslationModel instance.
   /// @param [in] requestId: Unique identifier associated with this request, available from Service.

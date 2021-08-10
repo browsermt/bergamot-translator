@@ -34,6 +34,7 @@ class BlockingService {
 
   /// Delegation to options based constructor, for use with WASM.
   BlockingService(const std::string &config) : BlockingService(parseOptions(config, /*validate=*/false)){};
+
   /// Translate multiple text-blobs in a single *blocking* API call, providing ResponseOptions which applies across all
   /// text-blobs dictating how to construct Response. ResponseOptions can be used to enable/disable additional
   /// information like quality-scores, alignments etc.

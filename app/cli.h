@@ -47,7 +47,7 @@ void wasm(Ptr<Options> options) {
   std::string config = options->asYamlString();
   MemoryBundle memoryBundle = getMemoryBundleFromConfig(options);
   Ptr<TranslationModel> translationModel = New<TranslationModel>(config, std::move(memoryBundle));
-  BlockingService service(config);
+  BlockingService service;
 
   ResponseOptions responseOptions;
   std::vector<std::string> texts;

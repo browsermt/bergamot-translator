@@ -34,7 +34,8 @@ std::vector<Response> BlockingService::translateMultiple(std::shared_ptr<Transla
 }
 
 AsyncService::AsyncService(const Ptr<Options> &options)
-    : requestId_(0), numWorkers_(std::max<int>(1, options->get<int>("cpu-threads"))), safeBatchingPool_(options) {
+    : requestId_(0), numWorkers_(options->get<size_t>("cpu-threads")), safeBatchingPool_(options) {
+  ABORT_IF(numWorkers_ == 0, "Number of workers should be at least 1 in a threaded workflow");
   workers_.reserve(numWorkers_);
   for (size_t cpuId = 0; cpuId < numWorkers_; cpuId++) {
     workers_.emplace_back([cpuId, this] {

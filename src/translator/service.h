@@ -17,30 +17,23 @@
 namespace marian {
 namespace bergamot {
 
-///  This is intended to be similar to the ones  provided for training or decoding in ML pipelines with the following
-///  additional capabilities:
-///
-///  1. Provision of a request -> response based translation flow unlike the usual a line based translation or decoding
-///  provided in most ML frameworks.
-///  2. Internal handling of normalization etc which changes source text to provide to client translation
-///  meta-information like alignments consistent with the unnormalized input text.
-///  3. The API splits each text entry into sentences internally, which are then translated independent of each other.
-///  The translated sentences are then joined back together and returned in Response.
-///
-/// Service exposes methods to instantiate from a string configuration (which can cover most translators) and to
-/// translate an incoming blob of text.
-///
-/// Optionally Service can be initialized by also passing bytearray memories for purposes of efficiency (which defaults
-/// to empty and then reads from file supplied through config).
-
 class BlockingService;
 class AsyncService;
 
+/// See AsyncService.
+///
+/// BlockingService is a not-threaded counterpart of AsyncService which can operate only in a blocking workflow (queue a
+/// bunch of texts and optional args to translate, wait till the translation finishes).
+///
+/// Pending decommission following https://github.com/mozilla/bergamot-translator/issues/15#issue-828300150.
 class BlockingService {
  public:
+  /// Construct a BlockingService with configuration loaded from an Options object. Does not require any keys, values to
+  /// be set.
   BlockingService(const std::shared_ptr<Options> &options);
-  BlockingService(const std::string &config) : BlockingService(parseOptions(config, /*validate=*/false)){};
 
+  /// Delegation to options based constructor, for use with WASM.
+  BlockingService(const std::string &config) : BlockingService(parseOptions(config, /*validate=*/false)){};
   /// Translate multiple text-blobs in a single *blocking* API call, providing ResponseOptions which applies across all
   /// text-blobs dictating how to construct Response. ResponseOptions can be used to enable/disable additional
   /// information like quality-scores, alignments etc.
@@ -66,19 +59,26 @@ class BlockingService {
   AggregateBatchingPool batchingPool_;
 };
 
+/// Effectively a threadpool, providing an API to take a translation request of a source-text, paramaterized by
+/// TranslationModel to be used for translation. Configurability on optional items for the Response corresponding to a
+/// request is provisioned through ResponseOptions.
 class AsyncService {
  public:
+  /// Construct an AsyncService with configuration loaded from Options. Expects positive integer value for
+  /// `cpu-threads`. Additionally requires options which configure AggregateBatchingPool.
   AsyncService(const std::shared_ptr<Options> &options);
+
+  /// Delegation to options based constructor, for use with WASM.
   AsyncService(const std::string &config) : AsyncService(parseOptions(config, /*validate=*/false)){};
 
-  /// Translate an input, providing Options to construct Response. This is useful when one has to set/unset alignments
-  /// or quality in the Response to save compute spent in constructing these objects. Concurrent-calls to this function
-  /// are safe and possible.
+  /// With the supplied TranslationModel, translate an input. A Response is constructed with optional items set/unset
+  /// indicated via ResponseOptions. Upon completion translation of the input, the client supplied callback is triggered
+  /// with the constructed Response. Concurrent-calls to this function are safe.
   ///
   /// @param [in] translationModel: TranslationModel to use for the request.
-  /// @param [in] source: rvalue reference of the string to be translated
-  /// @param [in] callback: A callback function provided by the client which accepts an rvalue of a Response. Called on
-  /// successful construction of a Response following completion of translation of source by worker threads.
+  /// @param [in] source: rvalue reference of the string to be translated. This is available as-is to the client later
+  /// in the Response corresponding to this call along with the translated-text and meta-data.
+  /// @param [in] callback: A callback function provided by the client which accepts an rvalue of a Response.
   /// @param [in] responseOptions: Options indicating whether or not to include some member in the Response, also
   /// specify any additional configurable parameters.
   void translate(std::shared_ptr<TranslationModel> translationModel, std::string &&source, CallbackType callback,

@@ -19,75 +19,82 @@
 namespace marian {
 namespace bergamot {
 
+/// A TranslationModel is associated with the translation of a single language direction. Holds the graph to run the
+/// forward pass of the neural network, along with preprocessing logic (TextProcessor) and a BatchingPool to create
+/// batches that are to be used in conjuction with an instance.
+///
+/// The BatchingPool is owned by the TranslationModel (if we no longer have the graph, we cannot be accepting any
+/// Requests nor Batching them).
+
 class TranslationModel {
  public:
-  using Graph = Ptr<ExpressionGraph>;
-  using ScorerEnsemble = std::vector<Ptr<Scorer>>;
-  using ShortlistGenerator = Ptr<data::ShortlistGenerator const>;
-
-  /// Construct TranslationModel from a string configuration. If memoryBundle is empty, TranslationModel is
-  /// initialized from file-based loading. Otherwise, TranslationModel is initialized from
-  /// the given bytearray memories.
-  /// @param [in] config string parsable as YAML expected to adhere with marian config
-  /// model, shortlist, vocabs and ssplitPrefixFile bytes. Optional.
-  /// @param [in] MemoryBundle object holding memory buffers containing model, shortlist, vocabs and ssplitPrefixFile
-  /// bytes. Optional.
+  /// Equivalent to `TranslationModel(Ptr<Options> options, MemoryBundle &&memory, replicas=1)`, where `options` is
+  /// parsed from string configuration. Configuration can be JSON or YAML. Keys expected correspond to those of
+  /// `marian-decoder`, available at https://marian-nmt.github.io/docs/cmd/marian-decoder/
   TranslationModel(const std::string& config, MemoryBundle&& memory)
       : TranslationModel(parseOptions(config, /*validate=*/false), std::move(memory), /*replicas=*/1){};
 
-  /// Construct TranslationModel from Marian options. If memoryBundle is empty, TranslationModel is
-  /// initialized from file-based loading. Otherwise, TranslationModel is initialized from
-  /// the given bytearray memories.
-  /// @param [in] options Marian options object
-  /// @param [in] memory: MemoryBundle object holding memory buffers containing model, shortlist, vocabs and
-  /// ssplitPrefixFile bytes. Optional.
+  /// Construct TranslationModel from marian-options. If memory is empty, TranslationModel is initialized from
+  /// paths available in the options object, backed by filesystem. Otherwise, TranslationModel is initialized from the
+  /// given MemoryBundle composed of AlignedMemory holding equivalent parameters.
+  ///
+  /// @param [in] options: Marian options object.
+  /// @param [in] memory: MemoryBundle object holding memory buffers containing parameters to build model, shortlist,
+  /// vocabs and prefix files for sentence-splitting.
   TranslationModel(Ptr<Options> options, MemoryBundle&& memory, size_t replicas = 1);
 
-  void addRequest(Ptr<Request> request) { batchingPool_.addRequest(request); };
-  bool generateBatch(Batch& batch) { return batchingPool_.generateBatch(batch); }
+  /// Make a Request to be translated by this TranslationModel instance.
+  /// @param [in] requestId: Unique identifier associated with this request, available from Service.
+  /// @param [in] source: Source text to be translated. Ownership is accepted and eventually returned to the client in
+  /// Response corresponding to the Request created here.
+  /// @param [in] callback: Callback (from client) to be issued upon completion of translation of all sentences in the
+  /// created Request.
+  /// @param [in] responseOptions: Configuration used to prepare the Response corresponding to the created request.
+  Ptr<Request> makeRequest(size_t requestId, std::string&& source, CallbackType callback,
+                           const ResponseOptions& responseOptions);
 
-  const Graph& graph(size_t id) const { return backend_[id].graph; }
-  const ScorerEnsemble& scorerEnsemble(size_t id) const { return backend_[id].scorerEnsemble; }
-  const ShortlistGenerator& shortlistGenerator(size_t id) const { return backend_[id].shortlistGenerator; }
-  const Ptr<Options> options() const { return options_; }
-  const Vocabs& vocabs() const { return vocabs_; }
-  const TextProcessor& textProcessor() const { return textProcessor_; }
+  /// Relays a request to the batching-pool specific to this translation model.
+  /// @param [in] request: Request constructed through makeRequest
+  void addRequest(Ptr<Request> request) { batchingPool_.addRequest(request); };
+
+  /// Generates a batch from the batching-pool for this translation model, compiling from several active requests.
+  ///
+  /// @param [out] batch: Batch to write a generated batch on to.
+  /// @returns number of sentences that constitute the Batch.
+  size_t generateBatch(Batch& batch) { return batchingPool_.generateBatch(batch); }
+
+  /// Translate a batch generated with generateBatch
+  ///
+  /// @param [in] deviceId: There are replicas of backend created for use in each worker thread. deviceId indicates
+  /// which replica to use.
+  /// @param [in] batch: A batch generated from generateBatch from the same TranslationModel instance.
+  void translateBatch(size_t deviceId, Batch& batch);
 
  private:
-  Ptr<Options> options_;  // This needn't be held?
+  Ptr<Options> options_;
   MemoryBundle memory_;
   Vocabs vocabs_;
-
   TextProcessor textProcessor_;
 
   /// Maintains sentences from multiple requests bucketed by length and sorted by priority in each bucket.
   BatchingPool batchingPool_;
 
+  /// A package of marian-entities which form a backend to translate.
   struct MarianBackend {
-    // 1. Construction:
-    //    https://github.com/marian-nmt/marian-dev/blob/42f0b8b74bba16fed646c8af7b2f75e02af7a85c/src/translator/translator.h#L90-L120
-    // 2. Inference:
-    //    https://github.com/marian-nmt/marian-dev/blob/42f0b8b74bba16fed646c8af7b2f75e02af7a85c/src/translator/translator.h#L181
-    //
-    // Therefore, believing the following needs to be replicated for each thread from the above example.
+    using Graph = Ptr<ExpressionGraph>;
+    using ScorerEnsemble = std::vector<Ptr<Scorer>>;
+    using ShortlistGenerator = Ptr<data::ShortlistGenerator const>;
 
     Graph graph;
-
-    // Marian has an ensemble of scorers in it's API. For most bergamot purposes this is a vector with a single element
-    // and is a pseudo-ensemble to fit the API.
     ScorerEnsemble scorerEnsemble;
-
     ShortlistGenerator shortlistGenerator;
   };
-
   // Hold replicas of the backend (graph, scorers, shortlist) for use in each thread.
   // Controlled and consistent external access via graph(id), scorerEnsemble(id),
   std::vector<MarianBackend> backend_;
 
   void loadBackend(size_t idx);
 };
-
-void translateBatch(size_t deviceId, Ptr<TranslationModel> model, Batch& batch);
 
 }  // namespace bergamot
 }  // namespace marian

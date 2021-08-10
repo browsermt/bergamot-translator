@@ -85,7 +85,22 @@ void TranslationModel::loadBackend(size_t idx) {
   graph_->forward();
 }
 
-void translateBatch(size_t deviceId, Ptr<TranslationModel> model, Batch &batch) {
+// Make request process is shared between Async and Blocking workflow of translating.
+Ptr<Request> TranslationModel::makeRequest(size_t requestId, std::string &&source, CallbackType callback,
+                                           const ResponseOptions &responseOptions) {
+  Segments segments;
+  AnnotatedText annotatedSource;
+
+  textProcessor_.process(std::move(source), annotatedSource, segments);
+  ResponseBuilder responseBuilder(responseOptions, std::move(annotatedSource), vocabs_, callback);
+
+  Ptr<Request> request = New<Request>(requestId, std::move(segments), std::move(responseBuilder));
+  return request;
+}
+
+void TranslationModel::translateBatch(size_t deviceId, Batch &batch) {
+  auto &backend = backend_[deviceId];
+
   std::vector<data::SentenceTuple> batchVector;
 
   auto &sentences = batch.sentences();
@@ -115,7 +130,7 @@ void translateBatch(size_t deviceId, Ptr<TranslationModel> model, Batch &batch) 
 
   std::vector<Ptr<SubBatch>> subBatches;
   for (size_t j = 0; j < maxDims.size(); ++j) {
-    subBatches.emplace_back(New<SubBatch>(batchSize, maxDims[j], model->vocabs().sources().at(j)));
+    subBatches.emplace_back(New<SubBatch>(batchSize, maxDims[j], vocabs_.sources().at(j)));
   }
 
   std::vector<size_t> words(maxDims.size(), 0);
@@ -134,8 +149,8 @@ void translateBatch(size_t deviceId, Ptr<TranslationModel> model, Batch &batch) 
   auto corpus_batch = New<CorpusBatch>(subBatches);
   corpus_batch->setSentenceIds(sentenceIds);
 
-  auto search = New<BeamSearch>(model->options(), model->scorerEnsemble(deviceId), model->vocabs().target());
-  auto histories = search->search(model->graph(deviceId), corpus_batch);
+  auto search = New<BeamSearch>(options_, backend.scorerEnsemble, vocabs_.target());
+  auto histories = search->search(backend.graph, corpus_batch);
   batch.completeBatch(histories);
 }
 

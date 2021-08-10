@@ -39,6 +39,9 @@ struct ByteRange {
   const size_t size() const { return end - begin; }
 };
 
+class Response;
+using CallbackType = std::function<void(Response&&)>;
+
 }  // namespace bergamot
 }  // namespace marian
 

@@ -35,7 +35,6 @@ namespace bergamot {
 
 class BlockingService;
 class AsyncService;
-using CallbackType = std::function<void(Response &&)>;
 
 class BlockingService {
  public:

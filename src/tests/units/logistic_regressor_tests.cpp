@@ -48,7 +48,7 @@ SCENARIO("Logistic Regressor test", "[LogisticRegressor]") {
         const std::vector<float> prediction = logisticRegressor.predict(featureMatrix);
 
         THEN("return the prediction") { CHECK(prediction == std::vector<float>{0.883, 0.988, 0.988, 0.606, 0.952}); }
-      }
     }
+      }
   }
 }

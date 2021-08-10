@@ -43,18 +43,6 @@ class LogisticRegressor {
   IntgemmMatrix coefficients_;
   size_t numCoefficients_;
   float intercept_;
-
-  /// Calculates the scores through a linear model
-  /// @param [in] features: the matrix of feature scaled values
-  std::vector<float> vectorResult(const IntgemmMatrix &features) const;
-
-  /// It scale the values from feature matrix such that all columns have std 1 and mean 0
-  /// @param [in] features: a struct matrix with the features values
-  IntgemmMatrix transformFeatures(const Matrix &features) const;
-
-  /// Applies a sigmoid function to each element of a vector and returns the mean of the result vector
-  /// @param [in] linearPredictedValues: the vector of real values returned by a linear regression
-  void resultToProbabilities(std::vector<float> &linearPredictedValues) const;
 };
 
 }  // namespace marian::bergamot

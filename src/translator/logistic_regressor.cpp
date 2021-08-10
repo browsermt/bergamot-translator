@@ -104,39 +104,26 @@ AlignedMemory LogisticRegressor::toAlignedMemory() const {
 }
 
 std::vector<float> LogisticRegressor::predict(const Matrix& features) const {
-  std::vector<float> scores = vectorResult(transformFeatures(features));
-  resultToProbabilities(scores);
-  return scores;
-}
 
-IntgemmMatrix LogisticRegressor::transformFeatures(const Matrix& features) const {
-  IntgemmMatrix resultFeatures(features.rows, features.cols, intgemm::Int16::tile_info.a_rows,
+  /// Scale the values from feature matrix such that all columns have std 1 and mean 0
+  IntgemmMatrix transformedFeatures(features.rows, features.cols, intgemm::Int16::tile_info.a_rows,
                                intgemm::Int16::tile_info.a_cols);
   for (int i = 0; i < features.rows; ++i) {
     for (int j = 0; j < features.cols; ++j) {
-      resultFeatures.at(i, j) = (features.at(i, j) - scale_.means[j]) / scale_.stds[j];
+      transformedFeatures.at(i, j) = (features.at(i, j) - scale_.means[j]) / scale_.stds[j];
     }
   }
 
-  return resultFeatures;
-}
+  // Calculates the scores through a linear model
+  const Matrix modelScores = transformedFeatures * coefficients_;
 
-std::vector<float> LogisticRegressor::vectorResult(const IntgemmMatrix& features) const {
-  const Matrix modelScores = features * coefficients_;
-
+  /// Applies a sigmoid function to each element of a vector and returns the mean of the result vector
   std::vector<float> scores(features.rows);
 
-  for (int i = 0; i < modelScores.rows; ++i) {
-    scores[i] = modelScores.at(i, 0) + intercept_;
+  for (int i = 0; i < features.rows; ++i) {
+    scores[i] = 1 / (1 + std::exp(-(modelScores.at(i, 0) + intercept_)));
   }
 
   return scores;
 }
-
-void LogisticRegressor::resultToProbabilities(std::vector<float>& linearPredictedValues) const {
-  for (float& value : linearPredictedValues) {
-    value = 1 / (1 + std::exp(-value));
-  }
-}
-
 }  // namespace marian::bergamot

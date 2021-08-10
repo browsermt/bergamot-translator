@@ -62,8 +62,9 @@ AsyncService::AsyncService(const Ptr<Options> &options)
   workers_.reserve(numWorkers_);
   for (size_t cpuId = 0; cpuId < numWorkers_; cpuId++) {
     workers_.emplace_back([cpuId, this] {
+      // Consumer thread main-loop. Note that this is an infinite-loop unless the monitor is explicitly told to
+      // shutdown, which happens in the destructor for this class.
       Batch batch;
-      // Run thread mainloop
       Ptr<TranslationModel> translationModel{nullptr};
       while (safeBatchingPool_.generateBatch(translationModel, batch)) {
         translationModel->translateBatch(cpuId, batch);
@@ -82,6 +83,7 @@ AsyncService::~AsyncService() {
 
 void AsyncService::translate(std::shared_ptr<TranslationModel> translationModel, std::string &&source,
                              CallbackType callback, const ResponseOptions &responseOptions) {
+  // Producer thread, a call to this function adds new work items. If batches are available, notifies workers waiting.
   Ptr<Request> request = translationModel->makeRequest(requestId_++, std::move(source), callback, responseOptions);
   safeBatchingPool_.enqueueRequest(translationModel, request);
 }

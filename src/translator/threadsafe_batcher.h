@@ -18,17 +18,17 @@ namespace bergamot {
 /// keeping sentences bucketed by length and sorted by priority.
 ///
 /// This is a wrap of a producer-consumer queue implemented as a monitor, where there is a mutex guarding the
-/// underlying data structure and (worker/consumer) threads waiting on a condition variable and the queuing thread
-/// producing and notifying waiting threads (consumers) through the same condition variable.
+/// underlying data structure (BatchingPoolType) and (worker/consumer) threads waiting on a condition variable and the
+/// queuing thread producing and notifying waiting threads (consumers) through the same condition variable.
 ///
 /// Originally written by for a single model (where items are produce: Request, consume: Batch), converted to
 /// also work for multiple models where items are produce: (TranslationModel, Request), consume: (TranlsationModel,
 /// Batch). This is accomplished by template parameter packs.
 ///
-/// Requires BatchingPoolType to implement:
+/// Requires BatchingPoolType to implement the following:
 ///
-/// * size_t enqueueRequest(...)
-/// * size_t generateBatch(...)
+/// * produce: `size_t enqueueRequest(...)` (returns number elements produced)
+/// * consume: `size_t generateBatch(...)` (returns number of elements available to be consumed)
 
 template <class BatchingPoolType>
 class GuardedBatchingPoolAccess {

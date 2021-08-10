@@ -78,7 +78,8 @@ class AsyncService {
   AsyncService(const std::string &config) : AsyncService(parseOptions(config, /*validate=*/false)){};
 
   /// Translate an input, providing Options to construct Response. This is useful when one has to set/unset alignments
-  /// or quality in the Response to save compute spent in constructing these objects.
+  /// or quality in the Response to save compute spent in constructing these objects. Concurrent-calls to this function
+  /// are safe and possible.
   ///
   /// @param [in] translationModel: TranslationModel to use for the request.
   /// @param [in] source: rvalue reference of the string to be translated

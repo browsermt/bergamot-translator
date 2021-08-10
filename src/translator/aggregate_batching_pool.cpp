@@ -16,8 +16,8 @@ size_t AggregateBatchingPool::enqueueRequest(Ptr<TranslationModel> model, Ptr<Re
 
 size_t AggregateBatchingPool::generateBatch(Ptr<TranslationModel>& model, Batch& batch) {
   while (model == nullptr && !aggregateQueue_.empty()) {
-    std::shared_ptr<TranslationModel> candidate = aggregateQueue_.front();
-    size_t numSentences = model->generateBatch(batch);
+    Ptr<TranslationModel> candidate = aggregateQueue_.front();
+    size_t numSentences = candidate->generateBatch(batch);
     if (numSentences > 0) {
       model = candidate;
       return numSentences;
@@ -26,7 +26,7 @@ size_t AggregateBatchingPool::generateBatch(Ptr<TranslationModel>& model, Batch&
       aggregateQueue_.pop();
     }
   }
-  return 0;
+  return /*numSentences=*/0;
 }
 
 }  // namespace bergamot

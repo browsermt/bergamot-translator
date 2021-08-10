@@ -9,7 +9,7 @@
 
 using namespace marian::bergamot;
 
-SCENARIO("Quality Estimator Test ", "[QualityEstimator]") {
+SCENARIO("Quality Estimator Test", "[QualityEstimator]") {
   GIVEN("A quality, features and target") {
     // AnnotatedText Target
     std::string input = "This is an example.";
@@ -83,7 +83,6 @@ SCENARIO("Quality Estimator Test ", "[QualityEstimator]") {
 bool operator==(const std::vector<float>& value1, const std::vector<float>& value2) {
   return std::equal(value1.begin(), value1.end(), value2.begin(), value2.end(), [](const auto& a, const auto& b) {
     auto value = Approx(b).epsilon(0.005);
-    // value.setEpsilon(0.005);
     return a == value;
   });
 }

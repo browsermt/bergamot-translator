@@ -1,6 +1,7 @@
 # Unit tests
 set(UNIT_TESTS
     annotation_tests
+    logistic_regressor_tests
     quality_estimator_tests
 )
 

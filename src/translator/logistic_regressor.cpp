@@ -7,7 +7,10 @@ LogisticRegressor::LogisticRegressor(Scale&& scale, IntgemmMatrix&& coefficients
     : scale_(std::move(scale)),
       coefficients_(std::move(coefficients)),
       numCoefficients_(numCoefficients),
-      intercept_(intercept) {}
+      intercept_(intercept) {
+  ABORT_IF(scale_.means.size() != scale_.stds.size(), "Number of means is not equal to number of stds");
+  ABORT_IF(scale_.means.size() != numCoefficients, "Number of means is not equal to number of coefficients");
+}
 
 LogisticRegressor::LogisticRegressor(LogisticRegressor&& other)
     : scale_(std::move(other.scale_)),

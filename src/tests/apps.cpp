@@ -15,7 +15,7 @@ Response translateFromStdin(Ptr<Options> options, ResponseOptions responseOption
   }
 
   Ptr<TranslationModel> translationModel = New<TranslationModel>(options, std::move(memoryBundle));
-  Service service(options);
+  AsyncService service(options);
 
   // Read a large input text blob from stdin
   std::ostringstream inputStream;

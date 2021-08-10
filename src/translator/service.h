@@ -45,10 +45,9 @@ class BlockingService {
   /// text-blobs dictating how to construct Response. ResponseOptions can be used to enable/disable additional
   /// information like quality-scores, alignments etc.
 
-  /// All texts are combined to efficiently construct batches together providing speedups compared to calling
-  /// translate() independently on individual text-blob. Note that there will be minor differences in output when
-  /// text-blobs are individually translated due to approximations but similar quality nonetheless. If you have
-  /// async/multithread capabilities, it is recommended to work with AsyncService.
+  /// If you have async/multithread capabilities, it is recommended to work with AsyncService instead of this class.
+  /// Note that due to batching differences and consequent floating-point rounding differences, this is not guaranteed
+  /// to have the same output as AsyncService.
 
   /// @param [in] translationModel: TranslationModel to use for the request.
   /// @param [in] source: rvalue reference of the string to be translated
@@ -56,11 +55,6 @@ class BlockingService {
   /// also specify any additional configurable parameters.
   std::vector<Response> translateMultiple(std::shared_ptr<TranslationModel> translationModel,
                                           std::vector<std::string> &&source, const ResponseOptions &responseOptions);
-
-  /// This is not supported on BlockingService. The simplest way to not make a mess of ifdef WASM_COMPATIBLE_SOURCE
-  /// propogating to source is to have an equivalent for this function.
-  void translate(std::shared_ptr<TranslationModel> translationModel, std::string &&source, CallbackType callback,
-                 const ResponseOptions &options = ResponseOptions());
 
  private:
   ///  Numbering requests processed through this instance. Used to keep account of arrival times of the request. This
@@ -90,9 +84,6 @@ class AsyncService {
   void translate(std::shared_ptr<TranslationModel> translationModel, std::string &&source, CallbackType callback,
                  const ResponseOptions &options = ResponseOptions());
 
-  /// UNSUPPORTED. For parity.
-  std::vector<Response> translateMultiple(std::shared_ptr<TranslationModel> translationModel,
-                                          std::vector<std::string> &&source, const ResponseOptions &responseOptions);
   /// Thread joins and proper shutdown are required to be handled explicitly.
   ~AsyncService();
 

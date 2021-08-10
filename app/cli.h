@@ -40,14 +40,14 @@ void wasm(Ptr<Options> options) {
   // std::string isn't marian internal unlike Ptr<Options>. Since this std::string path needs to be tested for mozilla
   // and since this class/CLI is intended at testing mozilla's path, we go from:
   //
-  // cmdline -> Ptr<Options> -> std::string -> Service(std::string)
+  // cmdline -> Ptr<Options> -> std::string -> TranslationModel(std::string)
   //
   // Overkill, yes.
 
   std::string config = options->asYamlString();
   MemoryBundle memoryBundle = getMemoryBundleFromConfig(options);
   Ptr<TranslationModel> translationModel = New<TranslationModel>(config, std::move(memoryBundle));
-  Service service(config);
+  BlockingService service(config);
 
   ResponseOptions responseOptions;
   std::vector<std::string> texts;
@@ -84,7 +84,7 @@ void wasm(Ptr<Options> options) {
 /// @param [in] options: constructed from command-line supplied arguments
 void decoder(Ptr<Options> options) {
   marian::timer::Timer decoderTimer;
-  Service service(options);
+  AsyncService service(options);
   size_t numWorkers = options->get<size_t>("cpu-threads");
   MemoryBundle memoryBundle;
   Ptr<TranslationModel> translationModel =
@@ -131,7 +131,7 @@ void native(Ptr<Options> options) {
   Ptr<TranslationModel> translationModel =
       New<TranslationModel>(options, std::move(memoryBundle), /*replicas=*/numWorkers);
 
-  Service service(options);
+  AsyncService service(options);
 
   // Read a large input text blob from stdin
   std::ostringstream std_input;

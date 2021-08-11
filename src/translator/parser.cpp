@@ -14,9 +14,9 @@ std::istringstream &operator>>(std::istringstream &in, OpMode &mode) {
   std::string modeString;
   in >> modeString;
   std::unordered_map<std::string, OpMode> table = {
-      {"wasm", OpMode::WASM},
-      {"native", OpMode::NATIVE},
-      {"decoder", OpMode::DECODER},
+      {"wasm", OpMode::APP_WASM},
+      {"native", OpMode::APP_NATIVE},
+      {"decoder", OpMode::APP_DECODER},
       {"test-response-source-sentences", OpMode::TEST_SOURCE_SENTENCES},
       {"test-response-target-sentences", OpMode::TEST_TARGET_SENTENCES},
       {"test-response-source-words", OpMode::TEST_SOURCE_WORDS},

@@ -15,9 +15,9 @@ namespace marian {
 namespace bergamot {
 
 enum OpMode {
-  WASM,
-  NATIVE,
-  DECODER,
+  APP_WASM,
+  APP_NATIVE,
+  APP_DECODER,
   TEST_SOURCE_SENTENCES,
   TEST_TARGET_SENTENCES,
   TEST_SOURCE_WORDS,

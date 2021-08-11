@@ -6,13 +6,13 @@ int main(int argc, char *argv[]) {
   auto &config = configParser.getConfig();
   using namespace marian::bergamot;
   switch (config.opMode) {
-    case OpMode::WASM:
+    case OpMode::APP_WASM:
       app::wasm(config);
       break;
-    case OpMode::NATIVE:
+    case OpMode::APP_NATIVE:
       app::native(config);
       break;
-    case OpMode::DECODER:
+    case OpMode::APP_DECODER:
       app::decoder(config);
       break;
     default:

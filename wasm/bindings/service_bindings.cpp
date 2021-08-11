@@ -61,9 +61,15 @@ std::shared_ptr<TranslationModel> proxyCreateCompatibleModel(BlockingService& se
   return self.createCompatibleModel(config, std::move(memoryBundle));
 }
 
+std::shared_ptr<TranslationModel> TranslationModelFactory(const std::string& config, size_t replicas,
+                                                          AlignedMemory* model, AlignedMemory* shortlist,
+                                                          std::vector<AlignedMemory*> vocabs) {
+  MemoryBundle memoryBundle = prepareMemoryBundle(model, shortlist, vocabs);
+  return std::make_shared<TranslationModel>(config, replicas, std::move(memoryBundle));
+}
+
 EMSCRIPTEN_BINDINGS(translation_model) {
-  class_<TranslationModel>("TranslationModel")
-      .smart_ptr_constructor("TranslationModel", &std::make_shared<TranslationModel>);
+  class_<TranslationModel>("TranslationModel").smart_ptr_constructor("TranslationModel", &TranslationModelFactory);
 }
 
 EMSCRIPTEN_BINDINGS(blocking_service) {

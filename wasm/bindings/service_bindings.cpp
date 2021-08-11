@@ -69,7 +69,8 @@ std::shared_ptr<TranslationModel> TranslationModelFactory(const std::string& con
 }
 
 EMSCRIPTEN_BINDINGS(translation_model) {
-  class_<TranslationModel>("TranslationModel").smart_ptr_constructor("TranslationModel", &TranslationModelFactory);
+  class_<TranslationModel>("TranslationModel")
+      .smart_ptr_constructor("TranslationModel", &TranslationModelFactory, allow_raw_pointers());
 }
 
 EMSCRIPTEN_BINDINGS(blocking_service) {

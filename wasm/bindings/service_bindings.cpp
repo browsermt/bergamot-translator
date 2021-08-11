@@ -54,12 +54,6 @@ MemoryBundle prepareMemoryBundle(AlignedMemory* modelMemory, AlignedMemory* shor
   return memoryBundle;
 }
 
-TranslationModel* TranslationModelFactory(const std::string& config, size_t replicas, AlignedMemory* model,
-                                          AlignedMemory* shortlist, std::vector<AlignedMemory*> vocabs) {
-  MemoryBundle memoryBundle = prepareMemoryBundle(model, shortlist, vocabs);
-  return new TranslationModel(config, replicas, std::move(memoryBundle));
-}
-
 std::shared_ptr<TranslationModel> proxyCreateCompatibleModel(BlockingService& self, const std::string& config,
                                                              AlignedMemory* model, AlignedMemory* shortlist,
                                                              std::vector<AlignedMemory*> vocabs) {
@@ -69,8 +63,7 @@ std::shared_ptr<TranslationModel> proxyCreateCompatibleModel(BlockingService& se
 
 EMSCRIPTEN_BINDINGS(translation_model) {
   class_<TranslationModel>("TranslationModel")
-      .constructor(&TranslationModelFactory, allow_raw_pointers())
-      .smart_ptr<std::shared_ptr<TranslationModel>>("TranslationModel");
+      .smart_ptr_constructor("TranslationModel", &std::make_shared<TranslationModel>);
 }
 
 EMSCRIPTEN_BINDINGS(blocking_service) {

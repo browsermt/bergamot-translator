@@ -69,7 +69,7 @@ EMSCRIPTEN_BINDINGS(translation_model) {
 EMSCRIPTEN_BINDINGS(blocking_service) {
   class_<BlockingService>("BlockingService")
       .constructor()
-      .function("createCompatibleModel", &proxyCreateCompatibleModel)
+      .function("createCompatibleModel", &proxyCreateCompatibleModel, allow_raw_pointers())
       .function("translate", &BlockingService::translateMultiple);
 
   register_vector<std::string>("VectorString");

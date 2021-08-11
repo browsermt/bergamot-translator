@@ -54,10 +54,10 @@ MemoryBundle prepareMemoryBundle(AlignedMemory* modelMemory, AlignedMemory* shor
   return memoryBundle;
 }
 
-TranslationModel* TranslationModelFactory(const std::string& config, size_t replicas, AlignedMemory* model,
-                                          AlignedMemory* shortlist, std::vector<AlignedMemory*> vocabs) {
+TranslationModel* TranslationModelFactory(const std::string& config, AlignedMemory* model, AlignedMemory* shortlist,
+                                          std::vector<AlignedMemory*> vocabs) {
   MemoryBundle memoryBundle = prepareMemoryBundle(model, shortlist, vocabs);
-  return new TranslationModel(config, replicas, std::move(memoryBundle));
+  return new TranslationModel(config, /*replicas=*/1, std::move(memoryBundle));
 }
 
 EMSCRIPTEN_BINDINGS(translation_model) {
@@ -69,12 +69,7 @@ EMSCRIPTEN_BINDINGS(translation_model) {
 EMSCRIPTEN_BINDINGS(blocking_service) {
   class_<BlockingService>("BlockingService")
       .constructor()
-      .function("createCompatibleModel",
-                [](BlockingService& self, const std::string& config, AlignedMemory* modelMemory,
-                   AlignedMemory* shortlistMemory, std::vector<AlignedMemory*> uniqueVocabsMemories) {
-                  MemoryBundle memoryBundle = prepareMemoryBundle(modelMemory, shortlistMemory, uniqueVocabsMemories);
-                  return self.createCompatibleModel(config, std::move(memoryBundle));
-                })
+      .function("createCompatibleModel", &TranslationModelFactory)
       .function("translate", &BlockingService::translateMultiple);
 
   register_vector<std::string>("VectorString");

@@ -2,14 +2,18 @@
 
 namespace marian::bergamot {
 
-LogisticRegressor::LogisticRegressor(Scale&& scale, IntgemmMatrix&& coefficients, const size_t numCoefficients,
-                                     const float intercept)
+LogisticRegressor::LogisticRegressor(Scale&& scale, const std::vector<float>& coefficients, const float intercept)
     : scale_(std::move(scale)),
-      coefficients_(std::move(coefficients)),
-      numCoefficients_(numCoefficients),
+      coefficients_(coefficients.size(), /*coefficientsColumns=*/1, intgemm::Int16::tile_info.b_rows,
+                    intgemm::Int16::tile_info.b_cols),
+      numCoefficients_(coefficients.size()),
       intercept_(intercept) {
   ABORT_IF(scale_.means.size() != scale_.stds.size(), "Number of means is not equal to number of stds");
-  ABORT_IF(scale_.means.size() != numCoefficients, "Number of means is not equal to number of coefficients");
+  ABORT_IF(scale_.means.size() != coefficients.size(), "Number of means is not equal to number of coefficients");
+
+  for (int i = 0; i < coefficients.size(); ++i) {
+    coefficients_.at(i, 0) = coefficients[i];
+  }
 }
 
 LogisticRegressor::LogisticRegressor(LogisticRegressor&& other)
@@ -43,17 +47,14 @@ LogisticRegressor LogisticRegressor::fromAlignedMemory(const AlignedMemory& qual
 
   const float* stds = memoryIndex;
   const float* means = memoryIndex += header.lrParametersDims;
-  const float* coefficients = memoryIndex += header.lrParametersDims;
+  const float* coefficientsMemory = memoryIndex += header.lrParametersDims;
   const float intercept = *(memoryIndex += header.lrParametersDims);
 
   Scale scale;
   scale.means.resize(header.lrParametersDims);
   scale.stds.resize(header.lrParametersDims);
 
-  const size_t coefficientsColumnSize = 1;
-
-  IntgemmMatrix coefficientsMatrix(header.lrParametersDims, coefficientsColumnSize, intgemm::Int16::tile_info.b_rows,
-                                   intgemm::Int16::tile_info.b_cols);
+  std::vector<float> coefficients(header.lrParametersDims);
 
   for (int i = 0; i < header.lrParametersDims; ++i) {
     scale.stds[i] = *(stds + i);
@@ -61,10 +62,10 @@ LogisticRegressor LogisticRegressor::fromAlignedMemory(const AlignedMemory& qual
     ABORT_IF(scale.stds[i] == 0.0, "Invalid stds");
 
     scale.means[i] = *(means + i);
-    coefficientsMatrix.at(i, 0) = *(coefficients + i);
+    coefficients[i] = *(coefficientsMemory + i);
   }
 
-  return LogisticRegressor(std::move(scale), std::move(coefficientsMatrix), header.lrParametersDims, intercept);
+  return LogisticRegressor(std::move(scale), coefficients, intercept);
 }
 
 AlignedMemory LogisticRegressor::toAlignedMemory() const {
@@ -104,10 +105,9 @@ AlignedMemory LogisticRegressor::toAlignedMemory() const {
 }
 
 std::vector<float> LogisticRegressor::predict(const Matrix& features) const {
-
   /// Scale the values from feature matrix such that all columns have std 1 and mean 0
   IntgemmMatrix transformedFeatures(features.rows, features.cols, intgemm::Int16::tile_info.a_rows,
-                               intgemm::Int16::tile_info.a_cols);
+                                    intgemm::Int16::tile_info.a_cols);
   for (int i = 0; i < features.rows; ++i) {
     for (int j = 0; j < features.cols; ++j) {
       transformedFeatures.at(i, j) = (features.at(i, j) - scale_.means[j]) / scale_.stds[j];

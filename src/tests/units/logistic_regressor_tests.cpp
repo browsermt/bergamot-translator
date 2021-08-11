@@ -34,21 +34,13 @@ SCENARIO("Logistic Regressor test", "[LogisticRegressor]") {
       scale.stds = {0.200000003, 0.300000012, 2.5, 0.100000001};
       scale.means = {-0.100000001, -0.769999981, 5, -0.5};
 
-      IntgemmMatrix coeffiecientMatrix(coefficients.size(), 1, intgemm::Int16::tile_info.b_rows,
-                                       intgemm::Int16::tile_info.b_cols);
-
-      for (int i = 0; i < coefficients.size(); ++i) {
-        coeffiecientMatrix.at(i, 0) = coefficients[i];
-      }
-
-      LogisticRegressor logisticRegressor(std::move(scale), std::move(coeffiecientMatrix), coefficients.size(),
-                                          intercept);
+      LogisticRegressor logisticRegressor(std::move(scale), coefficients, intercept);
 
       WHEN("It's call predict") {
         const std::vector<float> prediction = logisticRegressor.predict(featureMatrix);
 
         THEN("return the prediction") { CHECK(prediction == std::vector<float>{0.883, 0.988, 0.988, 0.606, 0.952}); }
-    }
       }
+    }
   }
 }

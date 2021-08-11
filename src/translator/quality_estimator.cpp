@@ -85,7 +85,7 @@ std::pair<std::vector<ByteRange>, Matrix> QualityEstimator::mapBPEToWords(const 
 
   std::vector<ByteRange> wordByteRanges;
 
-  Matrix features(numWords, /*numFeatures =*/ 4);
+  Matrix features(numWords, /*numFeatures =*/4);
 
   // The first subword it's always a beginning of a word
   float subwordScore = logProbs[0];

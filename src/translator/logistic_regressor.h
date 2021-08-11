@@ -28,7 +28,7 @@ class LogisticRegressor {
     std::vector<float> means;
   };
 
-  LogisticRegressor(Scale &&scale, IntgemmMatrix &&coefficients, const size_t numCoefficients, const float intercept);
+  LogisticRegressor(Scale &&scale, const std::vector<float> &coefficients, const float intercept);
 
   LogisticRegressor(LogisticRegressor &&other);
 

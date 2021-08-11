@@ -72,9 +72,8 @@ EMSCRIPTEN_BINDINGS(blocking_service) {
       .function("createCompatibleModel",
                 [](BlockingService& self, const std::string& config, AlignedMemory* model, AlignedMemory* shortlist,
                    std::vector<AlignedMemory*> vocabs) {
-                  TranslationModel* translationModel =
-                      TranslationModelFactory(config, /*replicas=*/1, model, shortlist, vocabs);
-                  return make_shared<TranslationModel>(translationModel);
+                  MemoryBundle memoryBundle = prepareMemoryBundle(model, shortlist, vocabs);
+                  return std::make_shared<TranslationModel>(config, /*replicas=*/1, std::move(memoryBundle));
                 })
       .function("translate", &BlockingService::translateMultiple);
 

@@ -60,10 +60,11 @@ TranslationModel* TranslationModelFactory(const std::string& config, size_t repl
   return new TranslationModel(config, replicas, std::move(memoryBundle));
 }
 
-Ptr<TranslationModel> proxyCreateCompatibleModel(BlockingService& self, const std::string& config, AlignedMemory* model,
-                                                 AlignedMemory* shortlist, std::vector<AlignedMemory*> vocabs) {
+std::shared_ptr<TranslationModel> proxyCreateCompatibleModel(BlockingService& self, const std::string& config,
+                                                             AlignedMemory* model, AlignedMemory* shortlist,
+                                                             std::vector<AlignedMemory*> vocabs) {
   MemoryBundle memoryBundle = prepareMemoryBundle(model, shortlist, vocabs);
-  return std::make_shared<TranslationModel>(config, /*replicas=*/1, std::move(memoryBundle));
+  return self.createCompatibleModel(config, std::move(memoryBundle));
 }
 
 EMSCRIPTEN_BINDINGS(translation_model) {

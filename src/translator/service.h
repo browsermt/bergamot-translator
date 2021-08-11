@@ -114,12 +114,6 @@ class AsyncService {
   GuardedBatchingPoolAccess<AggregateBatchingPool> safeBatchingPool_;
 };
 
-#ifndef WASM_COMPATIBLE_SOURCE
-typedef AsyncService Service;
-#else   // WASM_COMPATIBLE_SOURCE
-typedef BlockingService Service;
-#endif  // WASM_COMPATIBLE_SOURCE
-
 }  // namespace bergamot
 }  // namespace marian
 

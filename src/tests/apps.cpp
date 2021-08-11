@@ -7,7 +7,7 @@ namespace testapp {
 // Utility function, common for all testapps.
 Response translateFromStdin(AsyncService &service, const TranslationModel::Config &modelConfig,
                             ResponseOptions responseOptions) {
-  Ptr<TranslationModel> translationModel = New<TranslationModel>(modelConfig, service.numWorkers());
+  Ptr<TranslationModel> translationModel = service.createCompatibleModel(modelConfig);
   // Read a large input text blob from stdin
   std::ostringstream inputStream;
   inputStream << std::cin.rdbuf();

@@ -49,10 +49,10 @@ void wasm(const CLIConfig &config) {
   Ptr<Options> options = parseOptionsFromFilePath(modelConfigPath);
   MemoryBundle memoryBundle = getMemoryBundleFromConfig(options);
 
-  Ptr<TranslationModel> translationModel =
-      New<TranslationModel>(options->asYamlString(), /*replicas=*/1, std::move(memoryBundle));
-
   BlockingService service;
+
+  Ptr<TranslationModel> translationModel =
+      service.createCompatibleModel(options->asYamlString(), std::move(memoryBundle));
 
   ResponseOptions responseOptions;
   std::vector<std::string> texts;
@@ -90,11 +90,9 @@ void wasm(const CLIConfig &config) {
 void decoder(const CLIConfig &config) {
   marian::timer::Timer decoderTimer;
   AsyncService service(config.numWorkers);
-  size_t numWorkers = config.numWorkers;
   auto options = parseOptionsFromFilePath(config.modelConfigPaths.front());
   MemoryBundle memoryBundle;
-  Ptr<TranslationModel> translationModel =
-      New<TranslationModel>(options, /*replicas=*/numWorkers, std::move(memoryBundle));
+  Ptr<TranslationModel> translationModel = service.createCompatibleModel(options, std::move(memoryBundle));
   // Read a large input text blob from stdin
   std::ostringstream std_input;
   std_input << std::cin.rdbuf();
@@ -125,21 +123,17 @@ void decoder(const CLIConfig &config) {
 ///
 /// @param [in] options: options to build translator
 void native(const CLIConfig &config) {
-  // Prepare memories for bytearrays (including model, shortlist and vocabs)
-  MemoryBundle memoryBundle;
+  AsyncService service(config.numWorkers);
 
   auto options = parseOptionsFromFilePath(config.modelConfigPaths.front());
-
+  // Prepare memories for bytearrays (including model, shortlist and vocabs)
+  MemoryBundle memoryBundle;
   if (config.byteArray) {
     // Load legit values into bytearrays.
     memoryBundle = getMemoryBundleFromConfig(options);
   }
 
-  size_t numWorkers = config.numWorkers;
-  Ptr<TranslationModel> translationModel =
-      New<TranslationModel>(options, /*replicas=*/numWorkers, std::move(memoryBundle));
-
-  AsyncService service(config.numWorkers);
+  Ptr<TranslationModel> translationModel = service.createCompatibleModel(options, std::move(memoryBundle));
 
   // Read a large input text blob from stdin
   std::ostringstream std_input;

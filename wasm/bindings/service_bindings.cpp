@@ -8,8 +8,8 @@
 
 using namespace emscripten;
 
-typedef marian::bergamot::Service Service;
-typedef marian::bergamot::AlignedMemory AlignedMemory;
+using BlockingService = marian::bergamot::BlockingService;
+using AlignedMemory = marian::bergamot::AlignedMemory;
 
 val getByteArrayView(AlignedMemory& alignedMemory) {
   return val(typed_memory_view(alignedMemory.size(), alignedMemory.as<char>()));
@@ -52,18 +52,20 @@ marian::bergamot::MemoryBundle prepareMemoryBundle(AlignedMemory* modelMemory, A
   return memoryBundle;
 }
 
-Service* ServiceFactory(const std::string& config, AlignedMemory* modelMemory, AlignedMemory* shortlistMemory,
-                        std::vector<AlignedMemory*> uniqueVocabsMemories) {
-  return new Service(config, std::move(prepareMemoryBundle(modelMemory, shortlistMemory, uniqueVocabsMemories)));
+EMSCRIPTEN_BINDINGS(translation_model) {
+  class_<TranslationModel>("TranslationModel", &std::make_shared<TranslationModel>);
 }
 
-EMSCRIPTEN_BINDINGS(translation_service) {
-  class_<Service>("Service")
-      .constructor(&ServiceFactory, allow_raw_pointers())
-      .function("translate", &Service::translateMultiple)
-      .function("isAlignmentSupported", &Service::isAlignmentSupported);
-  // ^ We redirect Service::translateMultiple to WASMBound::translate instead. Sane API is
-  // translate. If and when async comes, we can be done with this inconsistency.
+EMSCRIPTEN_BINDINGS(blocking_service) {
+  class_<BlockingService>("BlockingService")
+      .constructor()
+      .function("createCompatibleModel",
+                [](BlockingService& self, AlignedMemory* modelMemory, AlignedMemory* shortlistMemory,
+                   std::vector<AlignedMemory*> uniqueVocabsMemories) {
+                  MemoryBundle memoryBundle = prepareMemoryBundle(modelMemory, shortlistMemory, uniqueVocabsMemories);
+                  return self.createCompatibleModel(config, std::move(memoryBundle));
+                })
+      .function("translate", &BlockingService::translateMultiple);
 
   register_vector<std::string>("VectorString");
 }

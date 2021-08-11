@@ -5,18 +5,9 @@ namespace bergamot {
 namespace testapp {
 
 // Utility function, common for all testapps.
-Response translateFromStdin(Ptr<Options> options, ResponseOptions responseOptions) {
-  // Prepare memories for bytearrays (including model, shortlist and vocabs)
-  MemoryBundle memoryBundle;
-
-  if (options->get<bool>("bytearray")) {
-    // Load legit values into bytearrays.
-    memoryBundle = getMemoryBundleFromConfig(options);
-  }
-
-  Ptr<TranslationModel> translationModel = New<TranslationModel>(options, std::move(memoryBundle));
-  AsyncService service(options);
-
+Response translateFromStdin(AsyncService &service, const TranslationModel::Config &modelConfig,
+                            ResponseOptions responseOptions) {
+  Ptr<TranslationModel> translationModel = New<TranslationModel>(modelConfig);
   // Read a large input text blob from stdin
   std::ostringstream inputStream;
   inputStream << std::cin.rdbuf();
@@ -34,9 +25,9 @@ Response translateFromStdin(Ptr<Options> options, ResponseOptions responseOption
   return response;
 }
 
-void annotatedTextWords(Ptr<Options> options, bool source) {
+void annotatedTextWords(AsyncService &service, const TranslationModel::Config &modelConfig, bool source) {
   ResponseOptions responseOptions;
-  Response response = translateFromStdin(options, responseOptions);
+  Response response = translateFromStdin(service, modelConfig, responseOptions);
   AnnotatedText &annotatedText = source ? response.source : response.target;
   for (size_t s = 0; s < annotatedText.numSentences(); s++) {
     for (size_t w = 0; w < annotatedText.numWords(s); w++) {
@@ -47,9 +38,9 @@ void annotatedTextWords(Ptr<Options> options, bool source) {
   }
 }
 
-void annotatedTextSentences(Ptr<Options> options, bool source) {
+void annotatedTextSentences(AsyncService &service, const TranslationModel::Config &modelConfig, bool source) {
   ResponseOptions responseOptions;
-  Response response = translateFromStdin(options, responseOptions);
+  Response response = translateFromStdin(service, modelConfig, responseOptions);
   AnnotatedText &annotatedText = source ? response.source : response.target;
   for (size_t s = 0; s < annotatedText.numSentences(); s++) {
     std::cout << annotatedText.sentence(s) << "\n";

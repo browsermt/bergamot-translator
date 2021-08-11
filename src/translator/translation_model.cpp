@@ -11,7 +11,7 @@
 namespace marian {
 namespace bergamot {
 
-TranslationModel::TranslationModel(const std::shared_ptr<Options> &options, MemoryBundle &&memory,
+TranslationModel::TranslationModel(const Config &options, MemoryBundle &&memory /*=MemoryBundle{}*/,
                                    size_t replicas /*=1*/)
     : options_(options),
       memory_(std::move(memory)),

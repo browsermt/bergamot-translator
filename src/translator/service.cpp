@@ -9,7 +9,7 @@
 namespace marian {
 namespace bergamot {
 
-BlockingService::BlockingService(const Ptr<Options> &options) : requestId_(0), batchingPool_(options) {}
+BlockingService::BlockingService(const CLIConfig &config) : requestId_(0), batchingPool_(config) {}
 
 std::vector<Response> BlockingService::translateMultiple(std::shared_ptr<TranslationModel> translationModel,
                                                          std::vector<std::string> &&sources,
@@ -33,8 +33,8 @@ std::vector<Response> BlockingService::translateMultiple(std::shared_ptr<Transla
   return responses;
 }
 
-AsyncService::AsyncService(const Ptr<Options> &options)
-    : requestId_(0), numWorkers_(options->get<size_t>("cpu-threads")), safeBatchingPool_(options) {
+AsyncService::AsyncService(const CLIConfig &config)
+    : requestId_(0), numWorkers_(config.numWorkers), safeBatchingPool_(config) {
   ABORT_IF(numWorkers_ == 0, "Number of workers should be at least 1 in a threaded workflow");
   workers_.reserve(numWorkers_);
   for (size_t cpuId = 0; cpuId < numWorkers_; cpuId++) {

@@ -4,7 +4,7 @@
 namespace marian {
 namespace bergamot {
 
-AggregateBatchingPool::AggregateBatchingPool(Ptr<Options> options) {
+AggregateBatchingPool::AggregateBatchingPool(const CLIConfig& config) {
   // TODO(@jerinphilip): Set aggregate limits
 }
 

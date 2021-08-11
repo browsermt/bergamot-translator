@@ -23,15 +23,16 @@ namespace testapp {
 
 // Utility function, common for all testapps. Reads content from stdin, builds a Service based on options and constructs
 // a response containing translation data according responseOptions.
-Response translateFromStdin(Ptr<Options> options, ResponseOptions responseOptions);
+Response translateFromStdin(AsyncService &service, const TranslationModel::Config &options,
+                            ResponseOptions responseOptions);
 
 // Reads from stdin and translates.  Prints the tokens separated by space for each sentence. Prints words from source
 // side text annotation if source=true, target annotation otherwise.
-void annotatedTextWords(Ptr<Options> options, bool source = true);
+void annotatedTextWords(AsyncService &service, const TranslationModel::Config &options, bool source = true);
 
 // Reads from stdin and translates the read content. Prints the sentences in source or target in constructed response
 // in each line, depending on source = true or false respectively.
-void annotatedTextSentences(Ptr<Options> options, bool source = true);
+void annotatedTextSentences(AsyncService &service, const TranslationModel::Config &options, bool source = true);
 
 }  // namespace testapp
 }  // namespace bergamot

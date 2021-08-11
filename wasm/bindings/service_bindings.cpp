@@ -62,8 +62,8 @@ EMSCRIPTEN_BINDINGS(blocking_service) {
   class_<BlockingService>("BlockingService")
       .constructor()
       .function("createCompatibleModel",
-                [](BlockingService& self, AlignedMemory* modelMemory, AlignedMemory* shortlistMemory,
-                   std::vector<AlignedMemory*> uniqueVocabsMemories) {
+                [](BlockingService& self, const std::string& config, AlignedMemory* modelMemory,
+                   AlignedMemory* shortlistMemory, std::vector<AlignedMemory*> uniqueVocabsMemories) {
                   MemoryBundle memoryBundle = prepareMemoryBundle(modelMemory, shortlistMemory, uniqueVocabsMemories);
                   return self.createCompatibleModel(config, std::move(memoryBundle));
                 })

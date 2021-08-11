@@ -10,6 +10,7 @@ using namespace emscripten;
 
 using BlockingService = marian::bergamot::BlockingService;
 using AlignedMemory = marian::bergamot::AlignedMemory;
+using MemoryBundle = marian::bergamot::MemoryBundle;
 
 val getByteArrayView(AlignedMemory& alignedMemory) {
   return val(typed_memory_view(alignedMemory.size(), alignedMemory.as<char>()));
@@ -42,9 +43,9 @@ std::vector<std::shared_ptr<AlignedMemory>> prepareVocabsSmartMemories(std::vect
   return vocabsSmartMemories;
 }
 
-marian::bergamot::MemoryBundle prepareMemoryBundle(AlignedMemory* modelMemory, AlignedMemory* shortlistMemory,
-                                                   std::vector<AlignedMemory*> uniqueVocabsMemories) {
-  marian::bergamot::MemoryBundle memoryBundle;
+MemoryBundle prepareMemoryBundle(AlignedMemory* modelMemory, AlignedMemory* shortlistMemory,
+                                 std::vector<AlignedMemory*> uniqueVocabsMemories) {
+  MemoryBundle memoryBundle;
   memoryBundle.model = std::move(*modelMemory);
   memoryBundle.shortlist = std::move(*shortlistMemory);
   memoryBundle.vocabs = std::move(prepareVocabsSmartMemories(uniqueVocabsMemories));

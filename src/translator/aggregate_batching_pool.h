@@ -27,7 +27,7 @@ class AggregateBatchingPool {
  public:
   /// Create an AggregateBatchingPool with (tentatively) global (across all BatchingPools) limits
   /// imposed here.
-  AggregateBatchingPool(Ptr<Options> options);
+  AggregateBatchingPool();
 
   /// Enqueue an existing request onto model, also keep account of that this model and request are now pending.
   ///

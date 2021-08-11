@@ -1,21 +1,29 @@
-
 #include "apps.h"
 
 int main(int argc, char *argv[]) {
-  auto cp = marian::bergamot::createConfigParser();
-  auto options = cp.parseOptions(argc, argv, true);
-  const std::string mode = options->get<std::string>("bergamot-mode");
   using namespace marian::bergamot;
-  if (mode == "test-response-source-sentences") {
-    testapp::annotatedTextSentences(options, /*source=*/true);
-  } else if (mode == "test-response-target-sentences") {
-    testapp::annotatedTextSentences(options, /*source=*/false);
-  } else if (mode == "test-response-source-words") {
-    testapp::annotatedTextWords(options, /*source=*/true);
-  } else if (mode == "test-response-target-words") {
-    testapp::annotatedTextWords(options, /*source=*/false);
-  } else {
-    ABORT("Unknown --mode {}. Please run a valid test", mode);
+  marian::bergamot::ConfigParser configParser;
+  configParser.parseArgs(argc, argv);
+  auto &config = configParser.getConfig();
+  AsyncService service(config.numWorkers);
+  auto modelConfig = parseOptionsFromFilePath(config.modelConfigPaths.front());
+
+  switch (config.opMode) {
+    case OpMode::TEST_SOURCE_SENTENCES:
+      testapp::annotatedTextSentences(service, modelConfig, /*source=*/true);
+      break;
+    case OpMode::TEST_TARGET_SENTENCES:
+      testapp::annotatedTextSentences(service, modelConfig, /*source=*/false);
+      break;
+    case OpMode::TEST_SOURCE_WORDS:
+      testapp::annotatedTextWords(service, modelConfig, /*source=*/true);
+      break;
+    case OpMode::TEST_TARGET_WORDS:
+      testapp::annotatedTextWords(service, modelConfig, /*source=*/false);
+      break;
+    default:
+      ABORT("Incompatible op-mode. Choose one of the test modes.");
+      break;
   }
   return 0;
 }

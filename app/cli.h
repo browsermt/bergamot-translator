@@ -34,7 +34,7 @@ namespace app {
 /// * Output: written to stdout as translations for the sentences supplied in corresponding lines
 ///
 /// @param [options]: Options to translate passed down to marian through Options.
-void wasm(Ptr<Options> options) {
+void wasm(const CLIConfig &config) {
   // Here, we take the command-line interface which is uniform across all apps. This is parsed into Ptr<Options> by
   // marian. However, mozilla does not allow a Ptr<Options> constructor and demands an std::string constructor since
   // std::string isn't marian internal unlike Ptr<Options>. Since this std::string path needs to be tested for mozilla
@@ -44,10 +44,15 @@ void wasm(Ptr<Options> options) {
   //
   // Overkill, yes.
 
-  std::string config = options->asYamlString();
+  const std::string &modelConfigPath = config.modelConfigPaths.front();
+
+  Ptr<Options> options = parseOptionsFromFilePath(modelConfigPath);
   MemoryBundle memoryBundle = getMemoryBundleFromConfig(options);
-  Ptr<TranslationModel> translationModel = New<TranslationModel>(config, std::move(memoryBundle));
-  BlockingService service(config);
+
+  Ptr<TranslationModel> translationModel =
+      New<TranslationModel>(options->asYamlString(), /*replicas=*/1, std::move(memoryBundle));
+
+  BlockingService service;
 
   ResponseOptions responseOptions;
   std::vector<std::string> texts;
@@ -82,13 +87,14 @@ void wasm(Ptr<Options> options) {
 /// * Output: to stdout, translations of the sentences supplied via stdin in corresponding lines
 ///
 /// @param [in] options: constructed from command-line supplied arguments
-void decoder(Ptr<Options> options) {
+void decoder(const CLIConfig &config) {
   marian::timer::Timer decoderTimer;
-  AsyncService service(options);
-  size_t numWorkers = options->get<size_t>("cpu-threads");
+  AsyncService service(config.numWorkers);
+  size_t numWorkers = config.numWorkers;
+  auto options = parseOptionsFromFilePath(config.modelConfigPaths.front());
   MemoryBundle memoryBundle;
   Ptr<TranslationModel> translationModel =
-      New<TranslationModel>(options, std::move(memoryBundle), /*replicas=*/numWorkers);
+      New<TranslationModel>(options, /*replicas=*/numWorkers, std::move(memoryBundle));
   // Read a large input text blob from stdin
   std::ostringstream std_input;
   std_input << std::cin.rdbuf();
@@ -118,20 +124,22 @@ void decoder(Ptr<Options> options) {
 /// * Output: to stdout, translation of the source text faithful to source structure.
 ///
 /// @param [in] options: options to build translator
-void native(Ptr<Options> options) {
+void native(const CLIConfig &config) {
   // Prepare memories for bytearrays (including model, shortlist and vocabs)
   MemoryBundle memoryBundle;
 
-  if (options->get<bool>("bytearray")) {
+  auto options = parseOptionsFromFilePath(config.modelConfigPaths.front());
+
+  if (config.byteArray) {
     // Load legit values into bytearrays.
     memoryBundle = getMemoryBundleFromConfig(options);
   }
 
-  size_t numWorkers = options->get<size_t>("cpu-threads");
+  size_t numWorkers = config.numWorkers;
   Ptr<TranslationModel> translationModel =
-      New<TranslationModel>(options, std::move(memoryBundle), /*replicas=*/numWorkers);
+      New<TranslationModel>(options, /*replicas=*/numWorkers, std::move(memoryBundle));
 
-  AsyncService service(options);
+  AsyncService service(config.numWorkers);
 
   // Read a large input text blob from stdin
   std::ostringstream std_input;

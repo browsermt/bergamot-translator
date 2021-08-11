@@ -11,8 +11,7 @@
 namespace marian {
 namespace bergamot {
 
-TranslationModel::TranslationModel(const std::shared_ptr<Options> &options, MemoryBundle &&memory,
-                                   size_t replicas /*=1*/)
+TranslationModel::TranslationModel(const Config &options, size_t replicas, MemoryBundle &&memory /*=MemoryBundle{}*/)
     : options_(options),
       memory_(std::move(memory)),
       vocabs_(options, std::move(memory_.vocabs)),
@@ -41,9 +40,10 @@ void TranslationModel::loadBackend(size_t idx) {
         vocabs_.sources().front() ==
         vocabs_.target();  // vocabs_->sources().front() is invoked as we currently only support one source vocab
     if (memory_.shortlist.size() > 0 && memory_.shortlist.begin() != nullptr) {
+      bool check = options_->get<bool>("check-bytearray", false);
       slgen_ = New<data::BinaryShortlistGenerator>(memory_.shortlist.begin(), memory_.shortlist.size(),
                                                    vocabs_.sources().front(), vocabs_.target(), srcIdx, trgIdx,
-                                                   shared_vcb, options_->get<bool>("check-bytearray"));
+                                                   shared_vcb, check);
     } else {
       // Changed to BinaryShortlistGenerator to enable loading binary shortlist file
       // This class also supports text shortlist file
@@ -66,7 +66,7 @@ void TranslationModel::loadBackend(size_t idx) {
                       // model from there, as opposed to from reading in the config file
     ABORT_IF((uintptr_t)memory_.model.begin() % 256 != 0,
              "The provided memory is not aligned to 256 bytes and will crash when vector instructions are used on it.");
-    if (options_->get<bool>("check-bytearray")) {
+    if (options_->get<bool>("check-bytearray", false)) {
       ABORT_IF(!validateBinaryModel(memory_.model, memory_.model.size()),
                "The binary file is invalid. Incomplete or corrupted download?");
     }

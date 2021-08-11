@@ -30,10 +30,7 @@ class BlockingService {
  public:
   /// Construct a BlockingService with configuration loaded from an Options object. Does not require any keys, values to
   /// be set.
-  BlockingService(const std::shared_ptr<Options> &options);
-
-  /// Delegation to options based constructor, for use with WASM.
-  BlockingService(const std::string &config) : BlockingService(parseOptions(config, /*validate=*/false)){};
+  BlockingService();
 
   /// Translate multiple text-blobs in a single *blocking* API call, providing ResponseOptions which applies across all
   /// text-blobs dictating how to construct Response. ResponseOptions can be used to enable/disable additional
@@ -67,10 +64,7 @@ class AsyncService {
  public:
   /// Construct an AsyncService with configuration loaded from Options. Expects positive integer value for
   /// `cpu-threads`. Additionally requires options which configure AggregateBatchingPool.
-  AsyncService(const std::shared_ptr<Options> &options);
-
-  /// Delegation to options based constructor, for use with WASM.
-  AsyncService(const std::string &config) : AsyncService(parseOptions(config, /*validate=*/false)){};
+  AsyncService(size_t numWorkers);
 
   /// With the supplied TranslationModel, translate an input. A Response is constructed with optional items set/unset
   /// indicated via ResponseOptions. Upon completion translation of the input, the client supplied callback is triggered
@@ -87,6 +81,8 @@ class AsyncService {
 
   /// Thread joins and proper shutdown are required to be handled explicitly.
   ~AsyncService();
+
+  const size_t numWorkers() { return numWorkers_; }
 
  private:
   /// Count of workers used for to run translation.

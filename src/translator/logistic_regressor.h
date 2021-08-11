@@ -28,7 +28,7 @@ class LogisticRegressor {
     std::vector<float> means;
   };
 
-  LogisticRegressor(Scale &&scale, const std::vector<float> &coefficients, const float intercept);
+  LogisticRegressor(Scale &&scale, std::vector<float> &&coefficients, const float intercept);
 
   LogisticRegressor(LogisticRegressor &&other);
 
@@ -40,9 +40,9 @@ class LogisticRegressor {
 
  private:
   Scale scale_;
-  IntgemmMatrix coefficients_;
-  size_t numCoefficients_;
+  std::vector<float> coefficients_;
   float intercept_;
+  float constantFactor_ = 0.0;
 };
 
 }  // namespace marian::bergamot

@@ -40,10 +40,11 @@ SCENARIO("Quality Estimator Test", "[QualityEstimator]") {
     scale.stds = {0.200000003, 0.300000012, 2.5, 0.100000001};
     scale.means = {-0.100000001, -0.769999981, 5, -0.5};
 
-    const std::vector<float> coefficients = {0.99000001, 0.899999976, -0.200000003, 0.5};
+    std::vector<float> coefficients = {0.99000001, 0.899999976, -0.200000003, 0.5};
     const float intercept = {-0.300000012};
 
-    const AlignedMemory memory = LogisticRegressor(std::move(scale), coefficients, intercept).toAlignedMemory();
+    const AlignedMemory memory =
+        LogisticRegressor(std::move(scale), std::move(coefficients), intercept).toAlignedMemory();
 
     AND_GIVEN("QualityEstimator") {
       QualityEstimator qualityEstimator = QualityEstimator::fromAlignedMemory(memory);
@@ -56,7 +57,7 @@ SCENARIO("Quality Estimator Test", "[QualityEstimator]") {
                 std::vector<ByteRange>({{0, 1}, {2, 6}, {7, 9}, {10, 12}, {13, 21}}));
 
           CHECK(wordsQualityEstimate.wordQualityScores == std::vector<float>({0.883, 0.988, 0.988, 0.606, 0.952}));
-          CHECK(wordsQualityEstimate.sentenceScore == Approx(0.88341f));
+          CHECK(wordsQualityEstimate.sentenceScore == Approx(0.88341f).epsilon(0.0001));
         }
       }
     }
@@ -65,7 +66,7 @@ SCENARIO("Quality Estimator Test", "[QualityEstimator]") {
 
 bool operator==(const std::vector<float>& value1, const std::vector<float>& value2) {
   return std::equal(value1.begin(), value1.end(), value2.begin(), value2.end(), [](const auto& a, const auto& b) {
-    auto value = Approx(b).epsilon(0.005);
+    auto value = Approx(b).epsilon(0.001);
     return a == value;
   });
 }

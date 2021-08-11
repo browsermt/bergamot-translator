@@ -1,26 +1,25 @@
 #include "logistic_regressor.h"
 
+#include <algorithm>
+#include <numeric>
+
 namespace marian::bergamot {
 
-LogisticRegressor::LogisticRegressor(Scale&& scale, const std::vector<float>& coefficients, const float intercept)
-    : scale_(std::move(scale)),
-      coefficients_(coefficients.size(), /*coefficientsColumns=*/1, intgemm::Int16::tile_info.b_rows,
-                    intgemm::Int16::tile_info.b_cols),
-      numCoefficients_(coefficients.size()),
-      intercept_(intercept) {
+LogisticRegressor::LogisticRegressor(Scale&& scale, std::vector<float>&& coefficients, const float intercept)
+    : scale_(std::move(scale)), coefficients_(std::move(coefficients)), intercept_(intercept) {
   ABORT_IF(scale_.means.size() != scale_.stds.size(), "Number of means is not equal to number of stds");
-  ABORT_IF(scale_.means.size() != coefficients.size(), "Number of means is not equal to number of coefficients");
+  ABORT_IF(scale_.means.size() != coefficients_.size(), "Number of means is not equal to number of coefficients");
 
-  for (int i = 0; i < coefficients.size(); ++i) {
-    coefficients_.at(i, 0) = coefficients[i];
+  for (int i = 0; i < coefficients_.size(); ++i) {
+    constantFactor_ += (coefficients_[i] * scale_.means[i]) / scale_.stds[i];
   }
 }
 
 LogisticRegressor::LogisticRegressor(LogisticRegressor&& other)
     : scale_(std::move(other.scale_)),
       coefficients_(std::move(other.coefficients_)),
-      numCoefficients_(std::move(other.numCoefficients_)),
-      intercept_(std::move(other.intercept_)) {}
+      intercept_(std::move(other.intercept_)),
+      constantFactor_(std::move(other.constantFactor_)) {}
 
 LogisticRegressor LogisticRegressor::fromAlignedMemory(const AlignedMemory& qualityEstimatorMemory) {
   LOG(info, "[data] Loading Quality Estimator model from buffer");
@@ -65,14 +64,14 @@ LogisticRegressor LogisticRegressor::fromAlignedMemory(const AlignedMemory& qual
     coefficients[i] = *(coefficientsMemory + i);
   }
 
-  return LogisticRegressor(std::move(scale), coefficients, intercept);
+  return LogisticRegressor(std::move(scale), std::move(coefficients), intercept);
 }
 
 AlignedMemory LogisticRegressor::toAlignedMemory() const {
   const size_t lrParametersDims = scale_.means.size();
 
   const size_t lrSize =
-      (scale_.means.size() + scale_.stds.size() + numCoefficients_) * sizeof(float) + sizeof(intercept_);
+      (scale_.means.size() + scale_.stds.size() + coefficients_.size()) * sizeof(float) + sizeof(intercept_);
 
   Header header = {BINARY_QE_MODEL_MAGIC, lrParametersDims};
   marian::bergamot::AlignedMemory memory(sizeof(header) + lrSize);
@@ -93,7 +92,7 @@ AlignedMemory LogisticRegressor::toAlignedMemory() const {
   }
 
   for (size_t i = 0; i < lrParametersDims; ++i) {
-    const float coefficient = coefficients_.at(i, 0);
+    const float coefficient = coefficients_[i];
     memcpy(buffer, &coefficient, sizeof(coefficient));
     buffer += sizeof(coefficient);
   }
@@ -108,20 +107,19 @@ std::vector<float> LogisticRegressor::predict(const Matrix& features) const {
   /// Scale the values from feature matrix such that all columns have std 1 and mean 0
   IntgemmMatrix transformedFeatures(features.rows, features.cols, intgemm::Int16::tile_info.a_rows,
                                     intgemm::Int16::tile_info.a_cols);
-  for (int i = 0; i < features.rows; ++i) {
-    for (int j = 0; j < features.cols; ++j) {
-      transformedFeatures.at(i, j) = (features.at(i, j) - scale_.means[j]) / scale_.stds[j];
-    }
-  }
 
-  // Calculates the scores through a linear model
-  const Matrix modelScores = transformedFeatures * coefficients_;
-
-  /// Applies a sigmoid function to each element of a vector and returns the mean of the result vector
   std::vector<float> scores(features.rows);
 
   for (int i = 0; i < features.rows; ++i) {
-    scores[i] = 1 / (1 + std::exp(-(modelScores.at(i, 0) + intercept_)));
+    for (int j = 0; j < features.cols; ++j) {
+      scores[i] += features.at(i, j) * coefficients_[j] / scale_.stds[j];
+    }
+  }
+
+  /// Applies a sigmoid function to each element of a vector and returns the mean of the result vector
+
+  for (int i = 0; i < features.rows; ++i) {
+    scores[i] = 1 / (1 + std::exp(-(scores[i] - constantFactor_ + intercept_)));
   }
 
   return scores;

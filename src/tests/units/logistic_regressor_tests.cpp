@@ -27,14 +27,14 @@ SCENARIO("Logistic Regressor test", "[LogisticRegressor]") {
     }
 
     AND_GIVEN("A LogistRegressor") {
-      const std::vector<float> coefficients = {0.99000001, 0.899999976, -0.200000003, 0.5};
+      std::vector<float> coefficients = {0.99000001, 0.899999976, -0.200000003, 0.5};
       const float intercept = {-0.300000012};
 
       LogisticRegressor::Scale scale;
       scale.stds = {0.200000003, 0.300000012, 2.5, 0.100000001};
       scale.means = {-0.100000001, -0.769999981, 5, -0.5};
 
-      LogisticRegressor logisticRegressor(std::move(scale), coefficients, intercept);
+      LogisticRegressor logisticRegressor(std::move(scale), std::move(coefficients), intercept);
 
       WHEN("It's call predict") {
         const std::vector<float> prediction = logisticRegressor.predict(featureMatrix);

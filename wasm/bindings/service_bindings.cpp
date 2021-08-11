@@ -9,6 +9,7 @@
 using namespace emscripten;
 
 using BlockingService = marian::bergamot::BlockingService;
+using TranslationModel = marian::bergamot::TranslationModel;
 using AlignedMemory = marian::bergamot::AlignedMemory;
 using MemoryBundle = marian::bergamot::MemoryBundle;
 

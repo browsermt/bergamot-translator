@@ -60,25 +60,22 @@ TranslationModel* TranslationModelFactory(const std::string& config, size_t repl
   return new TranslationModel(config, replicas, std::move(memoryBundle));
 }
 
+Ptr<TranslationModel> proxyCreateCompatibleModel(BlockingService& self, const std::string& config, AlignedMemory* model,
+                                                 AlignedMemory* shortlist, std::vector<AlignedMemory*> vocabs) {
+  MemoryBundle memoryBundle = prepareMemoryBundle(model, shortlist, vocabs);
+  return std::make_shared<TranslationModel>(config, /*replicas=*/1, std::move(memoryBundle));
+}
+
 EMSCRIPTEN_BINDINGS(translation_model) {
   class_<TranslationModel>("TranslationModel")
       .constructor(&TranslationModelFactory, allow_raw_pointers())
       .smart_ptr<std::shared_ptr<TranslationModel>>("TranslationModel");
 }
 
-using WASMCreateCompatibleModelSignature = std::function<std::shared_ptr<TranslationModel>(
-    BlockingService&, const std::string&, AlignedMemory*, AlignedMemory*, AlignedMemory*)>;
-
 EMSCRIPTEN_BINDINGS(blocking_service) {
   class_<BlockingService>("BlockingService")
       .constructor()
-      .function(
-          "createCompatibleModel",
-          WASMCreateCompatibleModelSignature([](BlockingService& self, const std::string& config, AlignedMemory* model,
-                                                AlignedMemory* shortlist, std::vector<AlignedMemory*> vocabs) {
-            MemoryBundle memoryBundle = prepareMemoryBundle(model, shortlist, vocabs);
-            return self.createCompatibleModel(config, std::move(memoryBundle));
-          }))
+      .function("createCompatibleModel", &proxyCreateCompatibleModel)
       .function("translate", &BlockingService::translateMultiple);
 
   register_vector<std::string>("VectorString");

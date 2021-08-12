@@ -2,6 +2,7 @@
 
 namespace marian {
 namespace bergamot {
+
 namespace {
 
 std::string readFromStdin() {

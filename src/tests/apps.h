@@ -21,11 +21,6 @@ namespace bergamot {
 
 namespace testapp {
 
-// Utility function, common for all testapps. Reads content from stdin, builds a Service based on options and constructs
-// a response containing translation data according responseOptions.
-Response translateFromStdin(AsyncService &service, const TranslationModel::Config &options,
-                            ResponseOptions responseOptions);
-
 // Reads from stdin and translates.  Prints the tokens separated by space for each sentence. Prints words from source
 // side text annotation if source=true, target annotation otherwise.
 void annotatedTextWords(AsyncService &service, Ptr<TranslationModel> model, bool source = true);

@@ -21,6 +21,7 @@ std::istringstream &operator>>(std::istringstream &in, OpMode &mode) {
       {"test-response-target-sentences", OpMode::TEST_TARGET_SENTENCES},
       {"test-response-source-words", OpMode::TEST_SOURCE_WORDS},
       {"test-response-target-words", OpMode::TEST_TARGET_WORDS},
+      {"test-forward-backward", OpMode::TEST_FORWARD_BACKWARD_FOR_OUTBOUND},
   };
 
   auto query = table.find(modeString);

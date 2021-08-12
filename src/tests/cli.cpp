@@ -6,20 +6,30 @@ int main(int argc, char *argv[]) {
   configParser.parseArgs(argc, argv);
   auto &config = configParser.getConfig();
   AsyncService service(config.numWorkers);
-  auto modelConfig = parseOptionsFromFilePath(config.modelConfigPaths.front());
+  std::vector<std::shared_ptr<TranslationModel>> models;
+
+  for (auto &modelConfigPath : config.modelConfigPaths) {
+    TranslationModel::Config modelConfig = parseOptionsFromFilePath(modelConfigPath);
+    std::shared_ptr<TranslationModel> model = service.createCompatibleModel(modelConfig);
+    models.push_back(model);
+  }
 
   switch (config.opMode) {
     case OpMode::TEST_SOURCE_SENTENCES:
-      testapp::annotatedTextSentences(service, modelConfig, /*source=*/true);
+      testapp::annotatedTextSentences(service, models.front(), /*source=*/true);
       break;
     case OpMode::TEST_TARGET_SENTENCES:
-      testapp::annotatedTextSentences(service, modelConfig, /*source=*/false);
+      testapp::annotatedTextSentences(service, models.front(), /*source=*/false);
       break;
     case OpMode::TEST_SOURCE_WORDS:
-      testapp::annotatedTextWords(service, modelConfig, /*source=*/true);
+      testapp::annotatedTextWords(service, models.front(), /*source=*/true);
       break;
     case OpMode::TEST_TARGET_WORDS:
-      testapp::annotatedTextWords(service, modelConfig, /*source=*/false);
+      testapp::annotatedTextWords(service, models.front(), /*source=*/false);
+      break;
+
+    case OpMode::TEST_FORWARD_BACKWARD_FOR_OUTBOUND:
+      testapp::forwardAndBackward(service, models);
       break;
     default:
       ABORT("Incompatible op-mode. Choose one of the test modes.");

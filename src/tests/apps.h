@@ -28,11 +28,13 @@ Response translateFromStdin(AsyncService &service, const TranslationModel::Confi
 
 // Reads from stdin and translates.  Prints the tokens separated by space for each sentence. Prints words from source
 // side text annotation if source=true, target annotation otherwise.
-void annotatedTextWords(AsyncService &service, const TranslationModel::Config &options, bool source = true);
+void annotatedTextWords(AsyncService &service, Ptr<TranslationModel> model, bool source = true);
 
 // Reads from stdin and translates the read content. Prints the sentences in source or target in constructed response
 // in each line, depending on source = true or false respectively.
-void annotatedTextSentences(AsyncService &service, const TranslationModel::Config &options, bool source = true);
+void annotatedTextSentences(AsyncService &service, Ptr<TranslationModel> model, bool source = true);
+
+void forwardAndBackward(AsyncService &service, std::vector<Ptr<TranslationModel>> &models);
 
 }  // namespace testapp
 }  // namespace bergamot

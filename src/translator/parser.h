@@ -22,6 +22,7 @@ enum OpMode {
   TEST_TARGET_SENTENCES,
   TEST_SOURCE_WORDS,
   TEST_TARGET_WORDS,
+  TEST_FORWARD_BACKWARD_FOR_OUTBOUND,
 };
 
 std::istringstream &operator>>(std::istringstream &in, OpMode &mode);

@@ -1,0 +1,32 @@
+Checks: >
+  .*,
+  bugprone-*,  
+  concurrency-*,
+  google-*,
+  portability-*,
+  performance-*,
+  clang-analyzer-*,
+  readability-*,
+  -readability-implicit-bool-conversion,
+  -readability-isolate-declaration,
+  -readability-uppercase-literal-suffix,
+  misc-*,
+  -misc-noexcept*,
+  modernize-*,
+  -modernize-deprecated-headers,
+  -modernize-use-nodiscard,
+  -modernize-raw-string-literal,
+  -modernize-return-braced-init-list,
+  -modernize-use-equals-delete,
+  -modernize-use-trailing-return-type,
+
+
+
+CheckOptions:
+  - { key: readability-identifier-naming.ClassCase,     value: CamelCase  }
+  - { key: readability-identifier-naming.ClassMethodCase, value: camelBack  }
+  - { key: readability-identifier-naming.VariableCase,  value: camelBack  }
+  - { key: readability-identifier-naming.FunctionCase,  value: camelBack  }
+  - { key: readability-identifier-naming.PrivateMemberSuffix,  value: _   }
+  - { key: readability-identifier-naming.ParameterCase, value: camelBack  }
+

@@ -25,6 +25,7 @@ enum OpMode {
   TEST_FORWARD_BACKWARD_FOR_OUTBOUND,
 };
 
+/// Overload for CL11, convert a read from a stringstream into opmode.
 std::istringstream &operator>>(std::istringstream &in, OpMode &mode);
 
 struct CLIConfig {
@@ -36,6 +37,14 @@ struct CLIConfig {
   OpMode opMode;
 };
 
+/// ConfigParser for bergamot. Internally stores config options with CLIConfig. CLI11 parsing binds the parsing code to
+/// write to the members of the CLIConfig instance owned by this class. Usage:
+///
+/// ```cpp
+/// ConfigParser configParser;
+/// configParser.parseArgs(argc, argv);
+/// auto &config = configParser.getConfig();
+/// ```
 class ConfigParser {
  public:
   ConfigParser();
@@ -43,9 +52,12 @@ class ConfigParser {
   const CLIConfig &getConfig() { return config_; }
 
  private:
-  void addOptionsBoundToConfig(CLI::App &app, CLIConfig &config);
+  // Special Options: build-info and version. These are not taken down further, the respective logic executed and
+  // program exits after.
   void addSpecialOptions(CLI::App &app);
   void handleSpecialOptions();
+
+  void addOptionsBoundToConfig(CLI::App &app, CLIConfig &config);
 
   CLIConfig config_;
   CLI::App app_;

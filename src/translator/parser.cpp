@@ -46,11 +46,6 @@ void ConfigParser::parseArgs(int argc, char *argv[]) {
   } catch (const CLI::ParseError &e) {
     exit(app_.exit(e));
   }
-
-  if (version_) {
-    std::cerr << buildVersion() << std::endl;
-    exit(0);
-  }
 }
 
 void ConfigParser::addSpecialOptions(CLI::App &app) {
@@ -66,6 +61,11 @@ void ConfigParser::handleSpecialOptions() {
 #else   // _MSC_VER
     ABORT("build-info is not available on MSVC based build.");
 #endif  // _MSC_VER
+  }
+
+  if (version_) {
+    std::cerr << buildVersion() << std::endl;
+    exit(0);
   }
 }
 

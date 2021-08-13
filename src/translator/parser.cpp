@@ -92,7 +92,7 @@ std::shared_ptr<marian::Options> parseOptionsFromFilePath(const std::string &con
   return parseOptionsFromString(buffer.str(), validate, /*pathsInSameDirAs=*/configPath);
 };
 
-std::shared_ptr<marian::Options> parseOptionsFromString(const std::string &config, bool validate /*= true*/,
+std::shared_ptr<marian::Options> parseOptionsFromString(const std::string &configAsString, bool validate /*= true*/,
                                                         std::string pathsInSameDirAs /*=""*/) {
   marian::Options options;
 
@@ -103,7 +103,7 @@ std::shared_ptr<marian::Options> parseOptionsFromString(const std::string &confi
   configParser.addOption<size_t>("--max-length-break", "Bergamot Options",
                                  "Maximum input tokens to be processed in a single sentence.", 128);
 
-  // This is a complete hijack of an existing option, so no need to add explicitly.
+  // The following is a complete hijack of an existing option, so no need to add explicitly.
   // configParser.addOption<size_t>("--mini-batch-words", "Bergamot Options",
   //                                "Maximum input tokens to be processed in a single sentence.", 1024);
 
@@ -112,15 +112,15 @@ std::shared_ptr<marian::Options> parseOptionsFromString(const std::string &confi
 
   configParser.addOption<std::string>("--ssplit-mode", "Bergamot Options", "[paragraph, sentence, wrapped_text]");
 
+  // Parse configs onto defaultConfig. The preliminary merge sets the YAML internal representation with legal values.
   const YAML::Node &defaultConfig = configParser.getConfig();
-
   options.merge(defaultConfig);
+  options.parse(configAsString);
 
-  // Parse configs onto defaultConfig.
-  options.parse(config);
-  YAML::Node configCopy = options.cloneToYamlNode();
+  // This is in a marian `.cpp` as of now, and requires explicit copy-here.
+  // https://github.com/marian-nmt/marian-dev/blob/9fa166be885b025711f27b35453e0f2c00c9933e/src/common/config_parser.cpp#L28
 
-  // This is in a marian cpp
+  // clang-format off
   const std::set<std::string> PATHS = {
       "model",
       "models",
@@ -140,17 +140,20 @@ std::shared_ptr<marian::Options> parseOptionsFromString(const std::string &confi
       "sqlite",     // except: 'temporary', handled in the processPaths function
       "shortlist",  // except: only the first element in the sequence is a path, handled in the
                     //  processPaths function
-      "ssplit-prefix-file",
+      "ssplit-prefix-file", // added for bergamot
   };
+  // clang-format on
 
-  marian::cli::makeAbsolutePaths(configCopy, pathsInSameDirAs, PATHS);
-  options.merge(configCopy, /*overwrite=*/true);
+  if (!pathsInSameDirAs.empty()) {
+    YAML::Node configYAML = options.cloneToYamlNode();
+    marian::cli::makeAbsolutePaths(configYAML, pathsInSameDirAs, PATHS);
+    options.merge(configYAML, /*overwrite=*/true);
+  }
 
-  configCopy = options.cloneToYamlNode();
-
+  // Perform validation on parsed options only when requested
   if (validate) {
-    // Perform validation on parsed options only when requested
-    marian::ConfigValidator validator(configCopy);
+    YAML::Node configYAML = options.cloneToYamlNode();
+    marian::ConfigValidator validator(configYAML);
     validator.validateOptions(marian::cli::mode::translation);
   }
 

@@ -81,7 +81,7 @@ void qualityEstimatorScores(const Ptr<Options> &options) {
         std::cout << " ";
       }
 
-      std::cout << word << "(" << wordScore << ")";
+      std::cout << word << "(" << std::fixed << std::setprecision( 3 ) << wordScore << ")";
     }
     std::cout << "\n\n";
   }

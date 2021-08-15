@@ -6,20 +6,8 @@ namespace marian {
 namespace bergamot {
 
 void ResponseBuilder::buildQualityScores(Histories &histories, Response &response) {
-  size_t index = 0;
-  for (auto &history : histories) {
-    Result result = history->top();  // Expecting only one result;
-    Words words = std::get<0>(result);
-    auto hyp = std::get<1>(result);
 
-    auto normalizedPathScore = std::get<2>(result);
-    auto logProbs = hyp->tracebackWordScores();  // logprobs of bpe translated tokens
-
-    auto qualityScores = qualityEstimator_->computeQualityScores(logProbs, response.target, index);
-    response.qualityScores.push_back(qualityScores);
-
-    ++index;
-  }
+  (*qualityEstimator_)(histories, response);
 }
 
 void ResponseBuilder::buildAlignments(Histories &histories, Response &response) {

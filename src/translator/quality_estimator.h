@@ -6,11 +6,12 @@
 
 #include "annotation.h"
 #include "definitions.h"
-#include "intgemm/intgemm.h"
 #include "logistic_regressor.h"
+#include "marian.h"
+#include "response.h"
+#include "translator/history.h"
 
-namespace marian {
-namespace bergamot {
+namespace marian::bergamot {
 /// QualityEstimator (QE) is responsible for measuring the quality of a translation model.
 /// It returns the probability of each translated term being a valid one.
 /// It's worthwhile mentioning that a word is made of one or more byte pair encoding (BPE) tokens.
@@ -33,21 +34,13 @@ namespace bergamot {
 // there is a non-linear sigmoid transformation that converts the final scores into probabilities.
 class QualityEstimator {
  public:
-  /// WordsQualityEstimate contains the quality data of a given translated sentence.
-  /// It includes the confidence (proxied by a probability) of each decoded word
-  /// (higher probabilities imply better-translated words), the ByteRanges of each term,
-  /// and the probability of the whole sentence, represented as the mean word scores.
-  struct WordsQualityEstimate {
-    std::vector<float> wordQualityScores;
-    std::vector<ByteRange> wordByteRanges;
-    float sentenceScore = 0.0;
-  };
-
   /// Construct a QualityEstimator
   /// @param [in] logisticRegressor:
   explicit QualityEstimator(LogisticRegressor &&logisticRegressor);
 
   QualityEstimator(QualityEstimator &&other);
+
+  void operator()(const Histories &histories, Response &response) const;
 
   static QualityEstimator fromAlignedMemory(const AlignedMemory &qualityEstimatorMemory);
   AlignedMemory toAlignedMemory() const;
@@ -56,21 +49,21 @@ class QualityEstimator {
   /// @param [in] logProbs: the log probabilities given by an translation model
   /// @param [in] target: AnnotatedText target value
   /// @param [in] sentenceIdx: the id of a candidate sentence
-  WordsQualityEstimate computeQualityScores(const std::vector<float> &logProbs, const AnnotatedText &target,
-                                            const size_t sentenceIdx) const;
+  Response::WordsQualityEstimate computeQualityScores(const std::vector<float> &logProbs, const AnnotatedText &target,
+                                                      const size_t sentenceIdx) const;
 
  private:
   /// Builds the words byte ranges and defines the WordFeature values
   /// @param [in] logProbs: the log probabilities given by an translation model
   /// @param [in] target: AnnotatedText target value
   /// @param [in] sentenceIdx: the id of a candidate sentence
-  static std::pair<std::vector<ByteRange>, Matrix> mapBPEToWords(const std::vector<float> &logProbs,
-                                                                 const AnnotatedText &target, const size_t sentenceIdx);
+  static std::pair<std::vector<ByteRange>, Matrix> remapWordsAndExtractFeatures(const std::vector<float> &logProbs,
+                                                                                const AnnotatedText &target,
+                                                                                const size_t sentenceIdx);
 
   LogisticRegressor logisticRegressor_;
 };
 
-}  // namespace bergamot
-}  // namespace marian
+}  // namespace marian::bergamot
 
 #endif  // SRC_BERGAMOT_QUALITY_ESTIMATOR_H_

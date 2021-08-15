@@ -5,8 +5,7 @@
 
 #include "byte_array_util.h"
 
-namespace marian {
-namespace bergamot {
+namespace marian::bergamot {
 
 QualityEstimator::QualityEstimator(LogisticRegressor&& logisticRegressor)
     : logisticRegressor_(std::move(logisticRegressor)) {}
@@ -19,6 +18,16 @@ QualityEstimator::QualityEstimator(QualityEstimator&& other)
     : logisticRegressor_(std::move(other.logisticRegressor_)) {}
 
 AlignedMemory QualityEstimator::toAlignedMemory() const { return logisticRegressor_.toAlignedMemory(); }
+
+void QualityEstimator::operator()(const Histories& histories, Response& response) const {
+  for (const auto& history : histories) {
+    const auto logProbs = std::get<1>(history->top())->tracebackWordScores();
+
+    for (size_t s = 0; s < response.target.numSentences(); ++s) {
+      response.qualityScores.push_back(computeQualityScores(logProbs, response.target, s));
+    }
+  }
+}
 
 // mapBPEToWords takes the following arguments:
 // - the log probabilities (logProbs) of byte pair encodings (BPE)
@@ -69,23 +78,19 @@ AlignedMemory QualityEstimator::toAlignedMemory() const { return logisticRegress
 // - numSubWords = 1
 // - overallMean = 0.207
 //
-std::pair<std::vector<ByteRange>, Matrix> QualityEstimator::mapBPEToWords(const std::vector<float>& logProbs,
-                                                                          const AnnotatedText& target,
-                                                                          const size_t sentenceIdx) {
+std::pair<std::vector<ByteRange>, Matrix> QualityEstimator::remapWordsAndExtractFeatures(
+    const std::vector<float>& logProbs, const AnnotatedText& target, const size_t sentenceIdx) {
   // Ignore empty target
   if ((logProbs.size() < 2) || (target.numWords(sentenceIdx) == 0)) {
     return {{}, Matrix(0, 0)};
   }
 
-  enum Features { MeanScore = 0, MinScore = 1, NumSubWords = 2, OverallMean = 3 };
-
   const string_view sentence = target.sentence(sentenceIdx);
-
   const size_t numWords = std::count(std::begin(sentence), std::end(sentence), ' ') + 1;
+  Matrix features(numWords, /*numFeatures =*/4);
+  const size_t I_MEAN{0}, I_MIN{1}, I_NUM_SUBWORDS{2}, I_OVERALL_MEAN{3};
 
   std::vector<ByteRange> wordByteRanges;
-
-  Matrix features(numWords, /*numFeatures =*/4);
 
   // The first subword it's always a beginning of a word
   float subwordScore = logProbs[0];
@@ -95,9 +100,9 @@ std::pair<std::vector<ByteRange>, Matrix> QualityEstimator::mapBPEToWords(const 
 
   size_t featureRow = 0;
 
-  features.at(featureRow, MeanScore) = subwordScore;
-  features.at(featureRow, MinScore) = subwordScore;
-  features.at(featureRow, NumSubWords) = 1;
+  features.at(featureRow, I_MEAN) = subwordScore;
+  features.at(featureRow, I_MIN) = subwordScore;
+  features.at(featureRow, I_NUM_SUBWORDS) = 1;
 
   wordByteRanges.push_back(subword);
 
@@ -117,9 +122,9 @@ std::pair<std::vector<ByteRange>, Matrix> QualityEstimator::mapBPEToWords(const 
     if (isspace(firstLetter)) {
       ++subword.begin;
       ++featureRow;
-      features.at(featureRow, MeanScore) = subwordScore;
-      features.at(featureRow, MinScore) = subwordScore;
-      features.at(featureRow, NumSubWords) = 1;
+      features.at(featureRow, I_MEAN) = subwordScore;
+      features.at(featureRow, I_MIN) = subwordScore;
+      features.at(featureRow, I_NUM_SUBWORDS) = 1;
 
       wordByteRanges.push_back(subword);
     } else {
@@ -127,9 +132,9 @@ std::pair<std::vector<ByteRange>, Matrix> QualityEstimator::mapBPEToWords(const 
 
       ByteRange& currentWord = wordByteRanges.back();
 
-      float& meanScore = features.at(featureRow, MeanScore);
-      float& minScore = features.at(featureRow, MinScore);
-      float& numSubWords = features.at(featureRow, NumSubWords);
+      float& meanScore = features.at(featureRow, I_MEAN);
+      float& minScore = features.at(featureRow, I_MIN);
+      float& numSubWords = features.at(featureRow, I_NUM_SUBWORDS);
 
       currentWord.end = subword.end;
       ++numSubWords;
@@ -145,16 +150,16 @@ std::pair<std::vector<ByteRange>, Matrix> QualityEstimator::mapBPEToWords(const 
   const float overallMean = sequence / subwordIdx;
 
   for (int i = 0; i < features.rows; ++i) {
-    features.at(i, OverallMean) = overallMean;
+    features.at(i, I_OVERALL_MEAN) = overallMean;
   }
 
   return {wordByteRanges, std::move(features)};
 }
 
-QualityEstimator::WordsQualityEstimate QualityEstimator::computeQualityScores(const std::vector<float>& logProbs,
-                                                                              const AnnotatedText& target,
-                                                                              const size_t sentenceIdx) const {
-  const auto [wordByteRanges, features] = mapBPEToWords(logProbs, target, sentenceIdx);
+Response::WordsQualityEstimate QualityEstimator::computeQualityScores(const std::vector<float>& logProbs,
+                                                                      const AnnotatedText& target,
+                                                                      const size_t sentenceIdx) const {
+  const auto [wordByteRanges, features] = remapWordsAndExtractFeatures(logProbs, target, sentenceIdx);
 
   const auto wordQualityScores = logisticRegressor_.predict(features);
 
@@ -163,5 +168,4 @@ QualityEstimator::WordsQualityEstimate QualityEstimator::computeQualityScores(co
 
   return {wordQualityScores, wordByteRanges, sentenceScore};
 }
-}  // namespace bergamot
-}  // namespace marian
+}  // namespace marian::bergamot

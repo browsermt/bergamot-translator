@@ -123,6 +123,14 @@ void native(Ptr<Options> options) {
     memoryBundle = getMemoryBundleFromConfig(options);
   }
 
+  const auto qualityType = options->get<int>( "quality_type", QualityScoreType::SIMPLE );
+
+  ABORT_IF( ( qualityType < BEGIN_VALID_TYPE && qualityType > END_VALID_TYPE ), "Invalid quality-score type" );
+
+  const auto qualityFile = options->get<std::string>( "quality_file", "" );
+
+  ABORT_IF( ( qualityType == QualityScoreType::LR && qualityFile.empty() ), "No quality file pass for LR quality estimator" );
+
   Service service(options, std::move(memoryBundle));
 
   // Read a large input text blob from stdin
@@ -132,13 +140,6 @@ void native(Ptr<Options> options) {
 
   ResponseOptions responseOptions;
 
-  const auto qualityType = options->get<int>( "quality_type", QualityScoreType::SIMPLE );
-
-  ABORT_IF( ( qualityType < BEGIN_VALID_TYPE && qualityType > END_VALID_TYPE ), "Invalid quality-score type" );
-
-  const auto qualityFile = options->get<std::string>( "quality_file", "" );
-
-  ABORT_IF( ( qualityType == QualityScoreType::LR && qualityFile.empty() ), "No quality file pass for LR quality estimator" );
 
   responseOptions.qualityScoreType = static_cast< QualityScoreType >( qualityType );
   responseOptions.qualityScores = true;

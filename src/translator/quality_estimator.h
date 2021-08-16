@@ -1,12 +1,13 @@
-#ifndef SRC_BERGAMOT_QUALITY_ESTIMATOR_H_
-#define SRC_BERGAMOT_QUALITY_ESTIMATOR_H_
+#pragma once
+
 #include <iostream>
 #include <string>
 #include <vector>
+#include <memory>
 
 #include "annotation.h"
 #include "definitions.h"
-#include "logistic_regressor.h"
+#include "iquality_model.h"
 #include "marian.h"
 #include "response.h"
 #include "translator/history.h"
@@ -36,14 +37,11 @@ class QualityEstimator {
  public:
   /// Construct a QualityEstimator
   /// @param [in] logisticRegressor:
-  explicit QualityEstimator(LogisticRegressor &&logisticRegressor);
+  explicit QualityEstimator(const std::shared_ptr< IQualityModel >& model);
 
   QualityEstimator(QualityEstimator &&other);
 
   void operator()(const Histories &histories, Response &response) const;
-
-  static QualityEstimator fromAlignedMemory(const AlignedMemory &qualityEstimatorMemory);
-  AlignedMemory toAlignedMemory() const;
 
   /// construct the struct WordsQualityEstimate
   /// @param [in] logProbs: the log probabilities given by an translation model
@@ -61,9 +59,7 @@ class QualityEstimator {
                                                                                 const AnnotatedText &target,
                                                                                 const size_t sentenceIdx);
 
-  LogisticRegressor logisticRegressor_;
+  std::shared_ptr< IQualityModel > model_;
 };
 
 }  // namespace marian::bergamot
-
-#endif  // SRC_BERGAMOT_QUALITY_ESTIMATOR_H_

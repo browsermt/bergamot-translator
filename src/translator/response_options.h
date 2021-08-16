@@ -16,10 +16,10 @@ enum ConcatStrategy {
 enum QualityScoreType {
   /// Provide a simple quality-score that comes with the machine-translation model
   /// itself.
-  SIMPLE = 1,
+  SIMPLE = 0,
 
   /// Provide a LogisticRegressor quality-score
-  LR = 2,
+  LR = 1,
 
   BEGIN_VALID_TYPE =  SIMPLE,
   END_VALID_TYPE =  LR

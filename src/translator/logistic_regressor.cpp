@@ -6,7 +6,7 @@
 namespace marian::bergamot {
 
 LogisticRegressor::LogisticRegressor(Scale&& scale, std::vector<float>&& coefficients, const float intercept)
-    : scale_(std::move(scale)), coefficients_(std::move(coefficients)), intercept_(intercept) {
+    : IQualityModel(), scale_(std::move(scale)), coefficients_(std::move(coefficients)), intercept_(intercept) {
   ABORT_IF(scale_.means.size() != scale_.stds.size(), "Number of means is not equal to number of stds");
   ABORT_IF(scale_.means.size() != coefficients_.size(), "Number of means is not equal to number of coefficients");
 
@@ -16,7 +16,8 @@ LogisticRegressor::LogisticRegressor(Scale&& scale, std::vector<float>&& coeffic
 }
 
 LogisticRegressor::LogisticRegressor(LogisticRegressor&& other)
-    : scale_(std::move(other.scale_)),
+    : IQualityModel(),
+      scale_(std::move(other.scale_)),
       coefficients_(std::move(other.coefficients_)),
       intercept_(std::move(other.intercept_)),
       constantFactor_(std::move(other.constantFactor_)) {}

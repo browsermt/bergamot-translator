@@ -5,6 +5,8 @@
 #include "definitions.h"
 #include "matrix.h"
 
+#include "iquality_model.h"
+
 namespace marian::bergamot {
 // ASCII and Unicode text files never start with the following 64 bits
 constexpr std::size_t BINARY_QE_MODEL_MAGIC = 0x78cc336f1d54b180;
@@ -16,7 +18,7 @@ constexpr std::size_t BINARY_QE_MODEL_MAGIC = 0x78cc336f1d54b180;
 ///
 /// These variables are firstly initialized by parsing a file (which comes from memory),
 /// and then they are used to build a model representation
-class LogisticRegressor {
+class LogisticRegressor : public IQualityModel {
  public:
   struct Header {
     uint64_t magic;             // BINARY_QE_MODEL_MAGIC
@@ -36,7 +38,7 @@ class LogisticRegressor {
   static LogisticRegressor fromAlignedMemory(const AlignedMemory &qualityEstimatorMemory);
   AlignedMemory toAlignedMemory() const;
 
-  std::vector<float> predict(const Matrix &features) const;
+  std::vector<float> predict(const Matrix &features) const override;
 
  private:
   Scale scale_;

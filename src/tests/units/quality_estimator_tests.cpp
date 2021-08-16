@@ -5,6 +5,7 @@
 #include <ostream>
 
 #include "catch.hpp"
+#include "translator/logistic_regressor.h"
 #include "translator/quality_estimator.h"
 
 using namespace marian::bergamot;
@@ -43,11 +44,10 @@ SCENARIO("Quality Estimator Test", "[QualityEstimator]") {
     std::vector<float> coefficients = {0.99000001, 0.899999976, -0.200000003, 0.5};
     const float intercept = {-0.300000012};
 
-    const AlignedMemory memory =
-        LogisticRegressor(std::move(scale), std::move(coefficients), intercept).toAlignedMemory();
+    const auto logisticRegressor = std::make_shared< LogisticRegressor >(std::move(scale), std::move(coefficients), intercept);
 
     AND_GIVEN("QualityEstimator") {
-      QualityEstimator qualityEstimator = QualityEstimator::fromAlignedMemory(memory);
+      QualityEstimator qualityEstimator( logisticRegressor );
 
       WHEN("It's call computeQualityScores") {
         auto wordsQualityEstimate = qualityEstimator.computeQualityScores(logProbs, annotatedTarget, 0);

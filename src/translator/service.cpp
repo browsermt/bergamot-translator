@@ -6,6 +6,7 @@
 #include "batch.h"
 #include "byte_array_util.h"
 #include "definitions.h"
+#include "quality_model_factory.h"
 
 namespace marian {
 namespace bergamot {
@@ -18,19 +19,13 @@ Service::Service(Ptr<Options> options, MemoryBundle memoryBundle)
       batcher_(options),
       numWorkers_(std::max<int>(1, options->get<int>("cpu-threads"))),
       modelMemory_(std::move(memoryBundle.model)),
-      shortlistMemory_(std::move(memoryBundle.shortlist))
+      shortlistMemory_(std::move(memoryBundle.shortlist)),
+      qualityEstimator_( QualityModelFactory::Make( options, memoryBundle ))
 #ifdef WASM_COMPATIBLE_SOURCE
       ,
       blocking_translator_(DeviceId(0, DeviceType::cpu), vocabs_, options_, &modelMemory_, &shortlistMemory_)
 #endif
 {
-  if (!options->get<std::string>("quality_file", "").empty()) {
-    if (memoryBundle.qualityEstimatorMemory.size() != 0) {
-      qualityEstimator_.emplace(std::move(QualityEstimator::fromAlignedMemory(memoryBundle.qualityEstimatorMemory)));
-    } else {
-      qualityEstimator_.emplace(std::move(QualityEstimator::fromAlignedMemory(getQualityEstimatorModel(options))));
-    }
-  }
 #ifdef WASM_COMPATIBLE_SOURCE
   blocking_translator_.initialize();
 #else

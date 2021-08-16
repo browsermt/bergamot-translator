@@ -7,25 +7,19 @@
 
 namespace marian::bergamot {
 
-QualityEstimator::QualityEstimator(LogisticRegressor&& logisticRegressor)
-    : logisticRegressor_(std::move(logisticRegressor)) {}
-
-QualityEstimator QualityEstimator::fromAlignedMemory(const AlignedMemory& qualityEstimatorMemory) {
-  return QualityEstimator(LogisticRegressor::fromAlignedMemory(qualityEstimatorMemory));
-}
+QualityEstimator::QualityEstimator(const std::shared_ptr< IQualityModel >& model)
+    : model_(model) {}
 
 QualityEstimator::QualityEstimator(QualityEstimator&& other)
-    : logisticRegressor_(std::move(other.logisticRegressor_)) {}
-
-AlignedMemory QualityEstimator::toAlignedMemory() const { return logisticRegressor_.toAlignedMemory(); }
+    : model_(std::move(other.model_)) {}
 
 void QualityEstimator::operator()(const Histories& histories, Response& response) const {
+
+  size_t sentenceIndex = 0;
+
   for (const auto& history : histories) {
     const auto logProbs = std::get<1>(history->top())->tracebackWordScores();
-
-    for (size_t s = 0; s < response.target.numSentences(); ++s) {
-      response.qualityScores.push_back(computeQualityScores(logProbs, response.target, s));
-    }
+    response.qualityScores.push_back(computeQualityScores(logProbs, response.target, sentenceIndex++));
   }
 }
 
@@ -161,7 +155,7 @@ Response::WordsQualityEstimate QualityEstimator::computeQualityScores(const std:
                                                                       const size_t sentenceIdx) const {
   const auto [wordByteRanges, features] = remapWordsAndExtractFeatures(logProbs, target, sentenceIdx);
 
-  const auto wordQualityScores = logisticRegressor_.predict(features);
+  const auto wordQualityScores = model_->predict(features);
 
   const auto sentenceScore = std::accumulate(std::begin(wordQualityScores), std::end(wordQualityScores), float(0.0)) /
                              wordQualityScores.size();

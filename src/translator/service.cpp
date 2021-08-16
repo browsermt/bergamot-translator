@@ -24,7 +24,7 @@ Service::Service(Ptr<Options> options, MemoryBundle memoryBundle)
       blocking_translator_(DeviceId(0, DeviceType::cpu), vocabs_, options_, &modelMemory_, &shortlistMemory_)
 #endif
 {
-  if (!options->get<std::string>("quality", "").empty()) {
+  if (!options->get<std::string>("quality_file", "").empty()) {
     if (memoryBundle.qualityEstimatorMemory.size() != 0) {
       qualityEstimator_.emplace(std::move(QualityEstimator::fromAlignedMemory(memoryBundle.qualityEstimatorMemory)));
     } else {

@@ -131,7 +131,17 @@ void native(Ptr<Options> options) {
   std::string input = std_input.str();
 
   ResponseOptions responseOptions;
-  responseOptions.qualityScores = !( options->get<std::string>("quality", "").empty() );
+
+  const auto qualityType = options->get<int>( "quality_type", QualityScoreType::SIMPLE );
+
+  ABORT_IF( ( qualityType < BEGIN_VALID_TYPE && qualityType > END_VALID_TYPE ), "Invalid quality-score type" );
+
+  const auto qualityFile = options->get<std::string>( "quality_file", "" );
+
+  ABORT_IF( ( qualityType == QualityScoreType::LR && qualityFile.empty() ), "No quality file pass for LR quality estimator" );
+
+  responseOptions.qualityScoreType = static_cast< QualityScoreType >( qualityType );
+  responseOptions.qualityScores = true;
 
   // Wait on future until Response is complete
   std::promise<Response> responsePromise;

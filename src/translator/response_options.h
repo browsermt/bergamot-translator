@@ -14,13 +14,15 @@ enum ConcatStrategy {
 };
 
 enum QualityScoreType {
-  /// Provide a free quality-score that comes with the machine-translation model
+  /// Provide a simple quality-score that comes with the machine-translation model
   /// itself.
-  FREE,
+  SIMPLE = 1,
 
-  /// An expensive quality-score that runs additional computations to determine
-  /// quality of an output.
-  EXPENSIVE
+  /// Provide a LogisticRegressor quality-score
+  LR = 2,
+
+  BEGIN_VALID_TYPE =  SIMPLE,
+  END_VALID_TYPE =  LR
 };
 
 /// ResponseOptions dictate how to construct a Response for an input string of
@@ -40,7 +42,7 @@ struct ResponseOptions {
   /// matrix).
   float alignmentThreshold{0.2f};
 
-  QualityScoreType qualityScoreType{QualityScoreType::FREE};
+  QualityScoreType qualityScoreType{QualityScoreType::SIMPLE};
   ConcatStrategy concatStrategy{ConcatStrategy::FAITHFUL};
 };
 

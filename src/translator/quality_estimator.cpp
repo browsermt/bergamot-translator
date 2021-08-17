@@ -77,8 +77,9 @@ std::pair<std::vector<ByteRange>, Matrix> QualityEstimator::remapWordsAndExtract
   }
 
   const string_view sentence = target.sentence(sentenceIdx);
-  const size_t numWords = std::count(std::begin(sentence), std::end(sentence), ' ') + 1;
-  Matrix features(numWords, /*numFeatures =*/4);
+
+  // numWords starts with 1
+  Matrix features( /*numWords=*/1 , /*numFeatures =*/4);
   const size_t I_MEAN{0}, I_MIN{1}, I_NUM_SUBWORDS{2}, I_OVERALL_MEAN{3};
 
   std::vector<ByteRange> wordByteRanges;
@@ -113,6 +114,8 @@ std::pair<std::vector<ByteRange>, Matrix> QualityEstimator::remapWordsAndExtract
     if (isspace(firstLetter)) {
       ++subword.begin;
       ++featureRow;
+
+      features.addRow();
       features.at(featureRow, I_MEAN) = subwordScore;
       features.at(featureRow, I_MIN) = subwordScore;
       features.at(featureRow, I_NUM_SUBWORDS) = 1;

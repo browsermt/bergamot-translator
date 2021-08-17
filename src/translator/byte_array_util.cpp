@@ -125,7 +125,7 @@ void getVocabsMemoryFromConfig(marian::Ptr<marian::Options> options,
 }
 
 AlignedMemory getQualityEstimatorModel(const marian::Ptr<marian::Options>& options) {
-  const auto qualityEstimatorPath = options->get<std::string>("quality-file", "");
+  const auto qualityEstimatorPath = options->get<std::string>("quality", "");
   if (qualityEstimatorPath.empty()) {
     return {};
   }

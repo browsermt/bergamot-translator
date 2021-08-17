@@ -106,8 +106,7 @@ AlignedMemory LogisticRegressor::toAlignedMemory() const {
 
 std::vector<float> LogisticRegressor::predict(const Matrix& features) const {
   /// Scale the values from feature matrix such that all columns have std 1 and mean 0
-  IntgemmMatrix transformedFeatures(features.rows, features.cols, intgemm::Int16::tile_info.a_rows,
-                                    intgemm::Int16::tile_info.a_cols);
+  Matrix transformedFeatures(features.rows, features.cols);
 
   std::vector<float> scores(features.rows);
 

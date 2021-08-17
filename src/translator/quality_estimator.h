@@ -1,9 +1,9 @@
 #pragma once
 
 #include <iostream>
+#include <memory>
 #include <string>
 #include <vector>
-#include <memory>
 
 #include "annotation.h"
 #include "definitions.h"
@@ -37,7 +37,7 @@ class QualityEstimator {
  public:
   /// Construct a QualityEstimator
   /// @param [in] logisticRegressor:
-  explicit QualityEstimator(const std::shared_ptr< IQualityModel >& model);
+  explicit QualityEstimator(const std::shared_ptr<IQualityModel> &model);
 
   QualityEstimator(QualityEstimator &&other);
 
@@ -59,7 +59,7 @@ class QualityEstimator {
                                                                                 const AnnotatedText &target,
                                                                                 const size_t sentenceIdx);
 
-  std::shared_ptr< IQualityModel > model_;
+  std::shared_ptr<IQualityModel> model_;
 };
 
 }  // namespace marian::bergamot

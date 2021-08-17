@@ -19,10 +19,7 @@ enum QualityScoreType {
   SIMPLE = 0,
 
   /// Provide a LogisticRegressor quality-score
-  LR = 1,
-
-  BEGIN_VALID_TYPE =  SIMPLE,
-  END_VALID_TYPE =  LR
+  LR = 1
 };
 
 /// ResponseOptions dictate how to construct a Response for an input string of

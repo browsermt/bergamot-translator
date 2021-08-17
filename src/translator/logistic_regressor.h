@@ -3,9 +3,8 @@
 #include <vector>
 
 #include "definitions.h"
-#include "matrix.h"
-
 #include "iquality_model.h"
+#include "matrix.h"
 
 namespace marian::bergamot {
 // ASCII and Unicode text files never start with the following 64 bits

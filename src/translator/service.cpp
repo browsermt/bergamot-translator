@@ -20,7 +20,7 @@ Service::Service(Ptr<Options> options, MemoryBundle memoryBundle)
       numWorkers_(std::max<int>(1, options->get<int>("cpu-threads"))),
       modelMemory_(std::move(memoryBundle.model)),
       shortlistMemory_(std::move(memoryBundle.shortlist)),
-      qualityEstimator_( QualityModelFactory::Make( options, memoryBundle ))
+      qualityEstimator_(QualityModelFactory::Make(getQualityEstimatorModel(memoryBundle, options)))
 #ifdef WASM_COMPATIBLE_SOURCE
       ,
       blocking_translator_(DeviceId(0, DeviceType::cpu), vocabs_, options_, &modelMemory_, &shortlistMemory_)

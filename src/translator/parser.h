@@ -29,8 +29,7 @@ inline marian::ConfigParser createConfigParser() {
   cp.addOption<std::string>("--bergamot-mode", "Bergamot Options",
                             "Operating mode for bergamot: [wasm, native, decoder]", "native");
 
-  cp.addOption<std::string>("--quality-file", "Bergamot Options", "File considering Quality Estimation model");
-  cp.addOption<std::string>("--quality-type", "Bergamot Options", "Quality Estimation model type. 0 - Simple, 1 - LR");
+  cp.addOption<std::string>("--quality", "Bergamot Options", "File considering Quality Estimation model");
 
   return cp;
 }

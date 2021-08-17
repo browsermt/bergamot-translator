@@ -11,6 +11,7 @@ add_library(bergamot-translator STATIC
     response_builder.cpp
     quality_estimator.cpp
     quality_model_factory.cpp
+    simple_quality_model.cpp
     batch.cpp
     annotation.cpp
     service.cpp

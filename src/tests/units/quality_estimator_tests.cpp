@@ -44,10 +44,11 @@ SCENARIO("Quality Estimator Test", "[QualityEstimator]") {
     std::vector<float> coefficients = {0.99000001, 0.899999976, -0.200000003, 0.5};
     const float intercept = {-0.300000012};
 
-    const auto logisticRegressor = std::make_shared< LogisticRegressor >(std::move(scale), std::move(coefficients), intercept);
+    const auto logisticRegressor =
+        std::make_shared<LogisticRegressor>(std::move(scale), std::move(coefficients), intercept);
 
     AND_GIVEN("QualityEstimator") {
-      QualityEstimator qualityEstimator( logisticRegressor );
+      QualityEstimator qualityEstimator(logisticRegressor);
 
       WHEN("It's call computeQualityScores") {
         auto wordsQualityEstimate = qualityEstimator.computeQualityScores(logProbs, annotatedTarget, 0);

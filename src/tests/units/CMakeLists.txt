@@ -3,7 +3,8 @@ set(UNIT_TESTS
     annotation_tests
     logistic_regressor_tests
     quality_estimator_tests
-)
+    quality_model_factory_tests
+    simple_quality_model_tests)
 
 foreach(test ${UNIT_TESTS})
   add_executable("run_${test}" run_tests.cpp "${test}.cpp")

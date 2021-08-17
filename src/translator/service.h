@@ -118,7 +118,7 @@ class Service {
   /// Shortlist memory passed as bytes.
   AlignedMemory shortlistMemory_;  // ORDER DEPENDENCY (translators_)
 
-  std::optional<QualityEstimator> qualityEstimator_;
+  QualityEstimator qualityEstimator_;
 
   /// Stores requestId of active request. Used to establish
   /// ordering among requests and logging/book-keeping.

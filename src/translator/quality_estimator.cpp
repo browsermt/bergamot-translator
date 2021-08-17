@@ -7,14 +7,11 @@
 
 namespace marian::bergamot {
 
-QualityEstimator::QualityEstimator(const std::shared_ptr< IQualityModel >& model)
-    : model_(model) {}
+QualityEstimator::QualityEstimator(const std::shared_ptr<IQualityModel>& model) : model_(model) {}
 
-QualityEstimator::QualityEstimator(QualityEstimator&& other)
-    : model_(std::move(other.model_)) {}
+QualityEstimator::QualityEstimator(QualityEstimator&& other) : model_(std::move(other.model_)) {}
 
 void QualityEstimator::operator()(const Histories& histories, Response& response) const {
-
   size_t sentenceIndex = 0;
 
   for (const auto& history : histories) {

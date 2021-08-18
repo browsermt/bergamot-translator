@@ -6,4 +6,4 @@
 	url = https://github.com/browsermt/ssplit-cpp
 [submodule "bergamot-translator-tests"]
 	path = bergamot-translator-tests
-	url = https://github.com/browsermt/bergamot-translator-tests
+	url = https://github.com/felipesantosk/bergamot-translator-tests

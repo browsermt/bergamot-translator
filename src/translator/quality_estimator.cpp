@@ -7,18 +7,11 @@
 
 namespace marian::bergamot {
 
-QualityEstimator::QualityEstimator(const std::shared_ptr<IQualityModel>& model) : model_(model) {}
+QualityEstimator::QualityEstimator(const std::shared_ptr<IQualityModel>& model) : model_(model) {
+  ABORT_IF(model_ == nullptr, "Invalid quality model");
+}
 
 QualityEstimator::QualityEstimator(QualityEstimator&& other) : model_(std::move(other.model_)) {}
-
-void QualityEstimator::operator()(const Histories& histories, Response& response) const {
-  size_t sentenceIndex = 0;
-
-  for (const auto& history : histories) {
-    const auto logProbs = std::get<1>(history->top())->tracebackWordScores();
-    response.qualityScores.push_back(computeQualityScores(logProbs, response.target, sentenceIndex++));
-  }
-}
 
 // mapBPEToWords takes the following arguments:
 // - the log probabilities (logProbs) of byte pair encodings (BPE)
@@ -79,7 +72,7 @@ std::pair<std::vector<ByteRange>, Matrix> QualityEstimator::remapWordsAndExtract
   const string_view sentence = target.sentence(sentenceIdx);
 
   // numWords starts with 1
-  Matrix features( /*numWords=*/1 , /*numFeatures =*/4);
+  Matrix features(/*numWords=*/1, /*numFeatures =*/4);
   const size_t I_MEAN{0}, I_MIN{1}, I_NUM_SUBWORDS{2}, I_OVERALL_MEAN{3};
 
   std::vector<ByteRange> wordByteRanges;

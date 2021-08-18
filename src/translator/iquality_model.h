@@ -6,6 +6,7 @@
 
 namespace marian::bergamot {
 
+/// Interface for quality model
 class IQualityModel {
  public:
   IQualityModel() = default;

@@ -6,7 +6,13 @@ namespace marian {
 namespace bergamot {
 
 void ResponseBuilder::buildQualityScores(Histories &histories, Response &response) {
-  qualityEstimator_(histories, response);
+  size_t sentenceIndex = 0;
+
+  for (const auto &history : histories) {
+    const auto logProbs = std::get<1>(history->top())->tracebackWordScores();
+    response.qualityScores.push_back(
+        qualityEstimator_.computeQualityScores(logProbs, response.target, sentenceIndex++));
+  }
 }
 
 void ResponseBuilder::buildAlignments(Histories &histories, Response &response) {

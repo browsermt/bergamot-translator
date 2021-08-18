@@ -10,6 +10,7 @@ LogisticRegressor::LogisticRegressor(Scale&& scale, std::vector<float>&& coeffic
   ABORT_IF(scale_.means.size() != scale_.stds.size(), "Number of means is not equal to number of stds");
   ABORT_IF(scale_.means.size() != coefficients_.size(), "Number of means is not equal to number of coefficients");
 
+  // Pre-compute the scale operations for the linear model
   for (int i = 0; i < coefficients_.size(); ++i) {
     constantFactor_ += (coefficients_[i] * scale_.means[i]) / scale_.stds[i];
   }
@@ -22,11 +23,11 @@ LogisticRegressor::LogisticRegressor(LogisticRegressor&& other)
       intercept_(std::move(other.intercept_)),
       constantFactor_(std::move(other.constantFactor_)) {}
 
-LogisticRegressor LogisticRegressor::fromAlignedMemory(const AlignedMemory& qualityEstimatorMemory) {
+LogisticRegressor LogisticRegressor::fromAlignedMemory(const AlignedMemory& alignedMemory) {
   LOG(info, "[data] Loading Quality Estimator model from buffer");
 
-  const char* ptr = qualityEstimatorMemory.begin();
-  const size_t blobSize = qualityEstimatorMemory.size();
+  const char* ptr = alignedMemory.begin();
+  const size_t blobSize = alignedMemory.size();
 
   ABORT_IF(blobSize < sizeof(Header), "Quality estimation file too small");
   const Header& header = *reinterpret_cast<const Header*>(ptr);
@@ -105,9 +106,6 @@ AlignedMemory LogisticRegressor::toAlignedMemory() const {
 }
 
 std::vector<float> LogisticRegressor::predict(const Matrix& features) const {
-  /// Scale the values from feature matrix such that all columns have std 1 and mean 0
-  Matrix transformedFeatures(features.rows, features.cols);
-
   std::vector<float> scores(features.rows);
 
   for (int i = 0; i < features.rows; ++i) {
@@ -116,7 +114,7 @@ std::vector<float> LogisticRegressor::predict(const Matrix& features) const {
     }
   }
 
-  /// Applies a sigmoid function to each element of a vector and returns the mean of the result vector
+  /// Applies the linear model followed by a sigmoid function to each element
 
   for (int i = 0; i < features.rows; ++i) {
     scores[i] = 1 / (1 + std::exp(-(scores[i] - constantFactor_ + intercept_)));

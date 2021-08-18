@@ -17,6 +17,7 @@ constexpr std::size_t BINARY_QE_MODEL_MAGIC = 0x78cc336f1d54b180;
 ///
 /// These variables are firstly initialized by parsing a file (which comes from memory),
 /// and then they are used to build a model representation
+///
 class LogisticRegressor : public IQualityModel {
  public:
   struct Header {
@@ -33,8 +34,14 @@ class LogisticRegressor : public IQualityModel {
 
   LogisticRegressor(LogisticRegressor &&other);
 
-  /// binary file parser which came from AlignedMemory
-  static LogisticRegressor fromAlignedMemory(const AlignedMemory &qualityEstimatorMemory);
+  /// Binary file parser which came from AlignedMemory
+  /// It's expected from AlignedMemory the following structure:
+  /// - a header with the number of parameters dimensions
+  /// - a vector of standard deviations of features
+  /// - a vector of means of features
+  /// - a vector of coefficients
+  /// - a intercept value
+  static LogisticRegressor fromAlignedMemory(const AlignedMemory &alignedMemory);
   AlignedMemory toAlignedMemory() const;
 
   std::vector<float> predict(const Matrix &features) const override;

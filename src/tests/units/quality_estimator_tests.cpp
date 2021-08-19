@@ -14,7 +14,7 @@ SCENARIO("Quality Estimator Test", "[QualityEstimator]") {
   GIVEN("A quality, features and target") {
     // AnnotatedText Target
     std::string input = "This is an example.";
-    marian::string_view preffix(input.data(), 0);
+    marian::string_view prefix(input.data(), 0);
 
     std::string target = "- Este es un ejemplo.";
 
@@ -29,7 +29,7 @@ SCENARIO("Quality Estimator Test", "[QualityEstimator]") {
     };
 
     marian::bergamot::AnnotatedText annotatedTarget(std::move(std::string()));
-    annotatedTarget.appendSentence(preffix, sentencesView.begin(), sentencesView.end());
+    annotatedTarget.appendSentence(prefix, sentencesView.begin(), sentencesView.end());
 
     // LogProbs
 

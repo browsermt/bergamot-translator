@@ -10,6 +10,7 @@
 #include "3rd_party/L4/inc/L4/LocalMemory/HashTableService.h"
 #endif
 
+#include "common/hash.h"
 #include "processed_request_sentence.h"
 #include "translator/beam_search.h"
 
@@ -22,7 +23,7 @@ namespace cache_util {
 std::string wordsToString(const marian::Words &words);
 
 struct HashWords {
-  size_t operator()(const Words &words) const { return std::hash<std::string>{}(wordsToString(words)); }
+  size_t operator()(const Words &words) const;
 };
 
 }  // namespace cache_util

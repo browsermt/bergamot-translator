@@ -18,6 +18,14 @@ std::string wordsToString(const marian::Words &words) {
   return repr;
 }
 
+size_t HashWords::operator()(const Words &words) const {
+  size_t seed = 42;
+  for (auto &word : words) {
+    util::hash_combine<marian::WordIndex>(seed, word.toWordIndex());
+  }
+  return seed;
+}
+
 }  // namespace cache_util
 
 #ifndef WASM_COMPATIBLE_SOURCE

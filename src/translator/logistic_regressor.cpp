@@ -106,17 +106,17 @@ AlignedMemory LogisticRegressor::toAlignedMemory() const {
 }
 
 std::vector<float> LogisticRegressor::predict(const Matrix& features) const {
-  std::vector<float> scores(features.rows);
+  std::vector<float> scores(features.rows());
 
-  for (int i = 0; i < features.rows; ++i) {
-    for (int j = 0; j < features.cols; ++j) {
+  for (int i = 0; i < features.rows(); ++i) {
+    for (int j = 0; j < features.cols(); ++j) {
       scores[i] += features.at(i, j) * coefficients_[j] / scale_.stds[j];
     }
   }
 
   /// Applies the linear model followed by a sigmoid function to each element
 
-  for (int i = 0; i < features.rows; ++i) {
+  for (int i = 0; i < features.rows(); ++i) {
     scores[i] = 1 / (1 + std::exp(-(scores[i] - constantFactor_ + intercept_)));
   }
 

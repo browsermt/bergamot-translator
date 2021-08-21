@@ -135,7 +135,7 @@ std::pair<std::vector<ByteRange>, Matrix> QualityEstimator::remapWordsAndExtract
 
   const float overallMean = sequence / (logProbs.size() - 1);
 
-  for (int i = 0; i < features.rows; ++i) {
+  for (int i = 0; i < features.rows(); ++i) {
     features.at(i, I_OVERALL_MEAN) = overallMean;
   }
 

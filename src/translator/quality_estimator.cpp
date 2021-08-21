@@ -66,7 +66,7 @@ std::pair<std::vector<ByteRange>, Matrix> QualityEstimator::remapWordsAndExtract
     const std::vector<float>& logProbs, const AnnotatedText& target, const size_t sentenceIdx) {
   // Ignore empty target
   if ((logProbs.size() < 2) || (target.numWords(sentenceIdx) == 0)) {
-    return {{}, Matrix(0, 0)};
+    return {{}, std::move(Matrix(0, 0))};
   }
 
   const string_view sentence = target.sentence(sentenceIdx);
@@ -91,11 +91,10 @@ std::pair<std::vector<ByteRange>, Matrix> QualityEstimator::remapWordsAndExtract
 
   wordByteRanges.push_back(subword);
 
-  size_t subwordIdx = 1;
   /// A word is composed of multiple subtokens. The definition of an "entire"
   /// word is the presence of whitespace. The QE model ignores the presence
   /// of the EOS token, and hence we only need to iterate n-1 positions.
-  for (; subwordIdx < (logProbs.size() - 1); ++subwordIdx) {
+  for (size_t subwordIdx = 1; subwordIdx < (logProbs.size() - 1); ++subwordIdx) {
     const float subwordScore = logProbs[subwordIdx];
     sequence += subwordScore;
 
@@ -134,7 +133,7 @@ std::pair<std::vector<ByteRange>, Matrix> QualityEstimator::remapWordsAndExtract
     }
   }
 
-  const float overallMean = sequence / subwordIdx;
+  const float overallMean = sequence / (logProbs.size() - 1);
 
   for (int i = 0; i < features.rows; ++i) {
     features.at(i, I_OVERALL_MEAN) = overallMean;

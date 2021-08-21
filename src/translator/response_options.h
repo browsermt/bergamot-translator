@@ -13,20 +13,10 @@ enum ConcatStrategy {
   SPACE
 };
 
-enum QualityScoreType {
-  /// Provide a simple quality-score that comes with the machine-translation model
-  /// itself.
-  SIMPLE = 0,
-
-  /// Provide a LogisticRegressor quality-score
-  LR = 1
-};
-
 /// ResponseOptions dictate how to construct a Response for an input string of
 /// text to be translated.
 struct ResponseOptions {
-  bool qualityScores{false};  ///< Include quality-scores or not.
-  bool alignment{false};      ///< Include alignments or not.
+  bool alignment{false};  ///< Include alignments or not.
 
   /// Whether to include sentenceMappings or not. Alignments require
   /// sentenceMappings and are available irrespective of this option if
@@ -39,7 +29,6 @@ struct ResponseOptions {
   /// matrix).
   float alignmentThreshold{0.2f};
 
-  QualityScoreType qualityScoreType{QualityScoreType::SIMPLE};
   ConcatStrategy concatStrategy{ConcatStrategy::FAITHFUL};
 };
 

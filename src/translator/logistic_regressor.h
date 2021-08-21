@@ -50,6 +50,7 @@ class LogisticRegressor : public IQualityModel {
   Scale scale_;
   std::vector<float> coefficients_;
   float intercept_;
+  std::vector<float> coefficientsByStds_;
   float constantFactor_ = 0.0;
 };
 

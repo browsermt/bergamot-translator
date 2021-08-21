@@ -6,13 +6,18 @@
 namespace marian::bergamot {
 
 LogisticRegressor::LogisticRegressor(Scale&& scale, std::vector<float>&& coefficients, const float intercept)
-    : IQualityModel(), scale_(std::move(scale)), coefficients_(std::move(coefficients)), intercept_(intercept) {
+    : IQualityModel(),
+      scale_(std::move(scale)),
+      coefficients_(std::move(coefficients)),
+      intercept_(intercept),
+      coefficientsByStds_(coefficients_.size()) {
   ABORT_IF(scale_.means.size() != scale_.stds.size(), "Number of means is not equal to number of stds");
   ABORT_IF(scale_.means.size() != coefficients_.size(), "Number of means is not equal to number of coefficients");
 
   // Pre-compute the scale operations for the linear model
   for (int i = 0; i < coefficients_.size(); ++i) {
-    constantFactor_ += (coefficients_[i] * scale_.means[i]) / scale_.stds[i];
+    coefficientsByStds_[i] = coefficients_[i] / scale_.stds[i];
+    constantFactor_ += coefficientsByStds_[i] * scale_.means[i];
   }
 }
 
@@ -21,6 +26,7 @@ LogisticRegressor::LogisticRegressor(LogisticRegressor&& other)
       scale_(std::move(other.scale_)),
       coefficients_(std::move(other.coefficients_)),
       intercept_(std::move(other.intercept_)),
+      coefficientsByStds_(std::move(other.coefficientsByStds_)),
       constantFactor_(std::move(other.constantFactor_)) {}
 
 LogisticRegressor LogisticRegressor::fromAlignedMemory(const AlignedMemory& alignedMemory) {
@@ -110,7 +116,7 @@ std::vector<float> LogisticRegressor::predict(const Matrix& features) const {
 
   for (int i = 0; i < features.rows(); ++i) {
     for (int j = 0; j < features.cols(); ++j) {
-      scores[i] += features.at(i, j) * coefficients_[j] / scale_.stds[j];
+      scores[i] += features.at(i, j) * coefficientsByStds_[j];
     }
   }
 

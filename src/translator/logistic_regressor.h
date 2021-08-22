@@ -3,7 +3,7 @@
 #include <vector>
 
 #include "definitions.h"
-#include "iquality_model.h"
+#include "iquality_estimator.h"
 #include "matrix.h"
 
 namespace marian::bergamot {
@@ -18,7 +18,7 @@ constexpr std::size_t BINARY_QE_MODEL_MAGIC = 0x78cc336f1d54b180;
 /// These variables are firstly initialized by parsing a file (which comes from memory),
 /// and then they are used to build a model representation
 ///
-class LogisticRegressor : public IQualityModel {
+class LogisticRegressor : public IQualityEstimator {
  public:
   struct Header {
     uint64_t magic;             // BINARY_QE_MODEL_MAGIC
@@ -44,7 +44,16 @@ class LogisticRegressor : public IQualityModel {
   static LogisticRegressor fromAlignedMemory(const AlignedMemory &alignedMemory);
   AlignedMemory toAlignedMemory() const;
 
-  std::vector<float> predict(const Matrix &features) const override;
+  void computeQualityScores(Response &response, const Histories &histories) const override;
+
+  /// construct the struct WordsQualityEstimate
+  /// @param [in] logProbs: the log probabilities given by an translation model
+  /// @param [in] target: AnnotatedText target value
+  /// @param [in] sentenceIdx: the id of a candidate sentence
+  Response::WordsQualityEstimate computeQualityScores(const std::vector<float> &logProbs, const AnnotatedText &target,
+                                                      const size_t sentenceIdx) const;
+
+  std::vector<float> predict(const Matrix &features) const;
 
  private:
   Scale scale_;
@@ -52,6 +61,8 @@ class LogisticRegressor : public IQualityModel {
   float intercept_;
   std::vector<float> coefficientsByStds_;
   float constantFactor_ = 0.0;
+
+  static Matrix extractFeatures( const std::vector< std::vector< float > >& wordLogProbs );
 };
 
 }  // namespace marian::bergamot

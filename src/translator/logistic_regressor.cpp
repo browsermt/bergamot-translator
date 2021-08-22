@@ -6,7 +6,7 @@
 namespace marian::bergamot {
 
 LogisticRegressor::LogisticRegressor(Scale&& scale, std::vector<float>&& coefficients, const float intercept)
-    : IQualityModel(),
+    : IQualityEstimator(),
       scale_(std::move(scale)),
       coefficients_(std::move(coefficients)),
       intercept_(intercept),
@@ -22,7 +22,7 @@ LogisticRegressor::LogisticRegressor(Scale&& scale, std::vector<float>&& coeffic
 }
 
 LogisticRegressor::LogisticRegressor(LogisticRegressor&& other)
-    : IQualityModel(),
+    : IQualityEstimator(),
       scale_(std::move(other.scale_)),
       coefficients_(std::move(other.coefficients_)),
       intercept_(std::move(other.intercept_)),
@@ -111,6 +111,32 @@ AlignedMemory LogisticRegressor::toAlignedMemory() const {
   return memory;
 }
 
+void LogisticRegressor::computeQualityScores(Response& response, const Histories& histories) const {
+  size_t sentenceIndex = 0;
+
+  for (const auto& history : histories) {
+    const auto logProbs = std::get<1>(history->top())->tracebackWordScores();
+    response.qualityScores.push_back(computeQualityScores(logProbs, response.target, sentenceIndex));
+
+    ++sentenceIndex;
+  }
+}
+
+Response::WordsQualityEstimate LogisticRegressor::computeQualityScores(const std::vector<float>& logProbs,
+                                                                       const AnnotatedText& target,
+                                                                       const size_t sentenceIdx) const
+
+{
+  const auto [wordBytesRanges, wordslogProbs] = remapWords(logProbs, target, sentenceIdx);
+
+  const auto wordQualityScores = predict(extractFeatures(wordslogProbs));
+
+  const float sentenceScore = std::accumulate(std::begin(wordQualityScores), std::end(wordQualityScores), float(0.0)) /
+                              wordQualityScores.size();
+
+  return {wordQualityScores, wordBytesRanges, sentenceScore};
+}
+
 std::vector<float> LogisticRegressor::predict(const Matrix& features) const {
   std::vector<float> scores(features.rows());
 
@@ -128,4 +154,58 @@ std::vector<float> LogisticRegressor::predict(const Matrix& features) const {
 
   return scores;
 }
+
+Matrix LogisticRegressor::extractFeatures(const std::vector<std::vector<float> >& wordsLogProbs) {
+
+  if( wordsLogProbs.empty() )
+  {
+    return std::move(Matrix(0,0 ));
+  }
+
+  Matrix features(wordsLogProbs.size(), /*numFeatures =*/4);
+  size_t featureRow = 0;
+  const size_t I_MEAN{0}, I_MIN{1}, I_NUM_SUBWORDS{2}, I_OVERALL_MEAN{3};
+
+  float overallMean = 0.0;
+  size_t numlogProbs = 0;
+
+  for (const auto& wordLogProbs : wordsLogProbs) {
+    if (wordLogProbs.size() == 0) {
+      ++featureRow;
+      continue;
+    }
+
+    float minScore = std::numeric_limits<float>::max();
+
+    for (const auto& logProb : wordLogProbs) {
+      ++numlogProbs;
+      overallMean += logProb;
+      features.at(featureRow, I_MEAN) += logProb;
+
+      if (logProb < minScore) {
+        minScore = logProb;
+      }
+    }
+
+    features.at(featureRow, I_MEAN) /= static_cast<float>(wordLogProbs.size());
+    features.at(featureRow, I_MIN) = minScore;
+    features.at(featureRow, I_NUM_SUBWORDS) = wordLogProbs.size();
+
+    ++featureRow;
+  }
+
+  if( numlogProbs == 0 )
+  {
+    return std::move(Matrix(0,0 ));
+  }
+
+  overallMean /= numlogProbs;
+
+  for (int i = 0; i < features.rows(); ++i) {
+    features.at(i, I_OVERALL_MEAN) = overallMean;
+  }
+
+  return std::move(features);
+}
+
 }  // namespace marian::bergamot

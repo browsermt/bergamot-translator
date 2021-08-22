@@ -6,7 +6,7 @@
 #include "batch.h"
 #include "byte_array_util.h"
 #include "definitions.h"
-#include "quality_model_factory.h"
+#include "quality_estimator_factory.h"
 
 namespace marian {
 namespace bergamot {
@@ -20,7 +20,7 @@ Service::Service(Ptr<Options> options, MemoryBundle memoryBundle)
       numWorkers_(std::max<int>(1, options->get<int>("cpu-threads"))),
       modelMemory_(std::move(memoryBundle.model)),
       shortlistMemory_(std::move(memoryBundle.shortlist)),
-      qualityEstimator_(QualityModelFactory::Make(getQualityEstimatorModel(memoryBundle, options)))
+      qualityEstimator_(QualityEstimatorFactory::Make(getQualityEstimatorModel(memoryBundle, options)))
 #ifdef WASM_COMPATIBLE_SOURCE
       ,
       blocking_translator_(DeviceId(0, DeviceType::cpu), vocabs_, options_, &modelMemory_, &shortlistMemory_)
@@ -74,7 +74,7 @@ void Service::queueRequest(std::string &&input, std::function<void(Response &&)>
 
   text_processor_.process(std::move(input), source, segments);
 
-  ResponseBuilder responseBuilder(responseOptions, std::move(source), vocabs_, std::move(callback), qualityEstimator_);
+  ResponseBuilder responseBuilder(responseOptions, std::move(source), vocabs_, std::move(callback), *qualityEstimator_);
   Ptr<Request> request = New<Request>(requestId_++, std::move(segments), std::move(responseBuilder));
 
   batcher_.addWholeRequest(request);

@@ -55,35 +55,34 @@ void annotatedTextSentences(Ptr<Options> options, bool source) {
   }
 }
 
+void qualityEstimatorWords(const Ptr<Options> &options) {
+  ResponseOptions responseOptions;
+  const Response response = translateFromStdin(options, responseOptions);
+
+  for (const auto &wordsQualityEstimate : response.qualityScores ) {
+
+    std::cout << "[SentenceBegin]\n";
+
+    for( const auto& wordByteRange : wordsQualityEstimate.wordByteRanges ) {
+      const string_view word(response.target.text.data() + wordByteRange.begin, wordByteRange.size());
+      std::cout << word << "\n";
+    }
+    std::cout << "[SentenceEnd]\n\n";
+  }
+}
+
 void qualityEstimatorScores(const Ptr<Options> &options) {
   ResponseOptions responseOptions;
   const Response response = translateFromStdin(options, responseOptions);
 
-  for (size_t s = 0; s < response.target.numSentences(); ++s) {
-    std::cout << "[src Sentence]:" << response.source.sentence(s) << "\n";
-    std::cout << "[tgt Sentence]:" << response.target.sentence(s) << "\n";
+  for (const auto &wordsQualityEstimate : response.qualityScores ) {
 
-    if (response.qualityScores.size() <= s) {
-      continue;
+    std::cout << std::fixed << std::setprecision(3) << wordsQualityEstimate.sentenceScore << "\n";
+
+    for (const auto& wordScore : wordsQualityEstimate.wordQualityScores ) {
+      std::cout << std::fixed << std::setprecision(3) << wordScore << "\n";
     }
-
-    const auto &wordsQualityEstimate = response.qualityScores[s];
-
-    std::cout << "[score Sentence]:" << wordsQualityEstimate.sentenceScore << "\n";
-    std::cout << "[words Scores]:";
-
-    for (size_t i = 0; i < wordsQualityEstimate.wordQualityScores.size(); ++i) {
-      const ByteRange wordByteRange = wordsQualityEstimate.wordByteRanges[i];
-      const float wordScore = wordsQualityEstimate.wordQualityScores[i];
-      const string_view word(response.target.text.data() + wordByteRange.begin, wordByteRange.size());
-
-      if (i != 0) {
-        std::cout << " ";
-      }
-
-      std::cout << word << "(" << std::fixed << std::setprecision(3) << wordScore << ")";
-    }
-    std::cout << "\n\n";
+    std::cout << "\n";
   }
 }
 

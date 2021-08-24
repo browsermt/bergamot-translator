@@ -138,17 +138,17 @@ Response::WordsQualityEstimate LogisticRegressor::computeSentenceScores(const st
 }
 
 std::vector<float> LogisticRegressor::predict(const Matrix& features) const {
-  std::vector<float> scores(features.rows());
+  std::vector<float> scores(features.rows);
 
-  for (int i = 0; i < features.rows(); ++i) {
-    for (int j = 0; j < features.cols(); ++j) {
+  for (int i = 0; i < features.rows; ++i) {
+    for (int j = 0; j < features.cols; ++j) {
       scores[i] += features.at(i, j) * coefficientsByStds_[j];
     }
   }
 
   /// Applies the linear model followed by a sigmoid function to each element
 
-  for (int i = 0; i < features.rows(); ++i) {
+  for (int i = 0; i < features.rows; ++i) {
     scores[i] = 1 / (1 + std::exp(-(scores[i] - constantFactor_ + intercept_)));
   }
 
@@ -198,7 +198,7 @@ Matrix LogisticRegressor::extractFeatures(const std::vector<std::vector<float> >
 
   overallMean /= numlogProbs;
 
-  for (int i = 0; i < features.rows(); ++i) {
+  for (int i = 0; i < features.rows; ++i) {
     features.at(i, I_OVERALL_MEAN) = overallMean;
   }
 

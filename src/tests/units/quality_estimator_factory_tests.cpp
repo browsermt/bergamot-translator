@@ -1,5 +1,5 @@
 #include "catch.hpp"
-#include "translator/logistic_regressor.h"
+#include "translator/logistic_regressor_qe.h"
 #include "translator/quality_estimator_factory.h"
 #include "translator/simple_quality_estimator.h"
 
@@ -18,14 +18,14 @@ SCENARIO("Quality Estimator Factory test", "[QualityEstimatorFactory]") {
     std::vector<float> coefficients = {0.99000001, 0.899999976, -0.200000003, 0.5};
     const float intercept = {-0.300000012};
 
-    LogisticRegressor::Scale scale;
+    LogisticRegressorQE::Scale scale;
     scale.stds = {0.200000003, 0.300000012, 2.5, 0.100000001};
     scale.means = {-0.100000001, -0.769999981, 5, -0.5};
 
-    LogisticRegressor logisticRegressor(std::move(scale), std::move(coefficients), intercept);
+    LogisticRegressorQE logisticRegressor(std::move(scale), std::move(coefficients), intercept);
 
     const auto model = QualityEstimatorFactory::Make(logisticRegressor.toAlignedMemory());
 
-    THEN("It's created a LogistcRegressor") { CHECK(dynamic_cast<const LogisticRegressor*>(model.get()) != nullptr); }
+    THEN("It's created a LogistcRegressor") { CHECK(dynamic_cast<const LogisticRegressorQE*>(model.get()) != nullptr); }
   }
 }

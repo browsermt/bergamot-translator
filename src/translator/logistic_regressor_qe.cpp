@@ -1,11 +1,11 @@
-#include "logistic_regressor.h"
+#include "logistic_regressor_qe.h"
 
 #include <algorithm>
 #include <numeric>
 
 namespace marian::bergamot {
 
-LogisticRegressor::LogisticRegressor(Scale&& scale, std::vector<float>&& coefficients, const float intercept)
+LogisticRegressorQE::LogisticRegressorQE(Scale&& scale, std::vector<float>&& coefficients, const float intercept)
     : IQualityEstimator(),
       scale_(std::move(scale)),
       coefficients_(std::move(coefficients)),
@@ -21,7 +21,7 @@ LogisticRegressor::LogisticRegressor(Scale&& scale, std::vector<float>&& coeffic
   }
 }
 
-LogisticRegressor::LogisticRegressor(LogisticRegressor&& other)
+LogisticRegressorQE::LogisticRegressorQE(LogisticRegressorQE&& other)
     : IQualityEstimator(),
       scale_(std::move(other.scale_)),
       coefficients_(std::move(other.coefficients_)),
@@ -29,7 +29,7 @@ LogisticRegressor::LogisticRegressor(LogisticRegressor&& other)
       coefficientsByStds_(std::move(other.coefficientsByStds_)),
       constantFactor_(std::move(other.constantFactor_)) {}
 
-LogisticRegressor LogisticRegressor::fromAlignedMemory(const AlignedMemory& alignedMemory) {
+LogisticRegressorQE LogisticRegressorQE::fromAlignedMemory(const AlignedMemory& alignedMemory) {
   LOG(info, "[data] Loading Quality Estimator model from buffer");
 
   const char* ptr = alignedMemory.begin();
@@ -72,10 +72,10 @@ LogisticRegressor LogisticRegressor::fromAlignedMemory(const AlignedMemory& alig
     coefficients[i] = *(coefficientsMemory + i);
   }
 
-  return LogisticRegressor(std::move(scale), std::move(coefficients), intercept);
+  return LogisticRegressorQE(std::move(scale), std::move(coefficients), intercept);
 }
 
-AlignedMemory LogisticRegressor::toAlignedMemory() const {
+AlignedMemory LogisticRegressorQE::toAlignedMemory() const {
   const size_t lrParametersDims = scale_.means.size();
 
   const size_t lrSize =
@@ -111,7 +111,7 @@ AlignedMemory LogisticRegressor::toAlignedMemory() const {
   return memory;
 }
 
-void LogisticRegressor::computeQualityScores(Response& response, const Histories& histories) const {
+void LogisticRegressorQE::computeQualityScores(Response& response, const Histories& histories) const {
   size_t sentenceIndex = 0;
 
   for (const auto& history : histories) {
@@ -122,7 +122,7 @@ void LogisticRegressor::computeQualityScores(Response& response, const Histories
   }
 }
 
-Response::WordsQualityEstimate LogisticRegressor::computeSentenceScores(const std::vector<float>& logProbs,
+Response::WordsQualityEstimate LogisticRegressorQE::computeSentenceScores(const std::vector<float>& logProbs,
                                                                         const AnnotatedText& target,
                                                                         const size_t sentenceIdx) const
 
@@ -137,7 +137,7 @@ Response::WordsQualityEstimate LogisticRegressor::computeSentenceScores(const st
   return {wordQualityScores, wordBytesRanges, sentenceScore};
 }
 
-std::vector<float> LogisticRegressor::predict(const Matrix& features) const {
+std::vector<float> LogisticRegressorQE::predict(const Matrix& features) const {
   std::vector<float> scores(features.rows);
 
   for (int i = 0; i < features.rows; ++i) {
@@ -155,7 +155,7 @@ std::vector<float> LogisticRegressor::predict(const Matrix& features) const {
   return scores;
 }
 
-Matrix LogisticRegressor::extractFeatures(const std::vector<std::vector<float> >& wordsLogProbs) {
+Matrix LogisticRegressorQE::extractFeatures(const std::vector<std::vector<float> >& wordsLogProbs) {
   if (wordsLogProbs.empty()) {
     return std::move(Matrix(0, 0));
   }

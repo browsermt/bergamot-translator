@@ -16,7 +16,7 @@ add_library(bergamot-translator STATIC
     annotation.cpp
     service.cpp
     threadsafe_batcher.cpp
-    logistic_regressor.cpp
+    logistic_regressor_qe.cpp
     matrix.cpp
 )
 if (USE_WASM_COMPATIBLE_SOURCE)

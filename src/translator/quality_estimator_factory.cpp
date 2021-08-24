@@ -2,7 +2,7 @@
 #include "quality_estimator_factory.h"
 
 #include "byte_array_util.h"
-#include "logistic_regressor.h"
+#include "logistic_regressor_qe.h"
 #include "response_options.h"
 #include "simple_quality_estimator.h"
 
@@ -14,6 +14,6 @@ std::shared_ptr<IQualityEstimator> QualityEstimatorFactory::Make(const AlignedMe
     return std::make_shared<SimpleQualityEstimator>();
   }
 
-  return std::make_shared<LogisticRegressor>(LogisticRegressor::fromAlignedMemory(qualityFileMemory));
+  return std::make_shared<LogisticRegressorQE>(LogisticRegressorQE::fromAlignedMemory(qualityFileMemory));
 }
 }  // namespace marian::bergamot

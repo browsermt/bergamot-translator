@@ -18,7 +18,9 @@ constexpr std::size_t BINARY_QE_MODEL_MAGIC = 0x78cc336f1d54b180;
 /// These variables are firstly initialized by parsing a file (which comes from memory),
 /// and then they are used to build a model representation
 ///
-class LogisticRegressor : public IQualityEstimator {
+class LogisticRegressorQE : public IQualityEstimator {
+  friend class LogisticRegressorQETest;
+
  public:
   struct Header {
     uint64_t magic;             // BINARY_QE_MODEL_MAGIC
@@ -30,9 +32,9 @@ class LogisticRegressor : public IQualityEstimator {
     std::vector<float> means;
   };
 
-  LogisticRegressor(Scale &&scale, std::vector<float> &&coefficients, const float intercept);
+  LogisticRegressorQE(Scale &&scale, std::vector<float> &&coefficients, const float intercept);
 
-  LogisticRegressor(LogisticRegressor &&other);
+  LogisticRegressorQE(LogisticRegressorQE &&other);
 
   /// Binary file parser which came from AlignedMemory
   /// It's expected from AlignedMemory the following structure:
@@ -41,19 +43,10 @@ class LogisticRegressor : public IQualityEstimator {
   /// - a vector of means of features
   /// - a vector of coefficients
   /// - a intercept value
-  static LogisticRegressor fromAlignedMemory(const AlignedMemory &alignedMemory);
+  static LogisticRegressorQE fromAlignedMemory(const AlignedMemory &alignedMemory);
   AlignedMemory toAlignedMemory() const;
 
   void computeQualityScores(Response &response, const Histories &histories) const override;
-
-  /// construct the struct WordsQualityEstimate
-  /// @param [in] logProbs: the log probabilities given by an translation model
-  /// @param [in] target: AnnotatedText target value
-  /// @param [in] sentenceIdx: the id of a candidate sentence
-  Response::WordsQualityEstimate computeSentenceScores(const std::vector<float> &logProbs, const AnnotatedText &target,
-                                                       const size_t sentenceIdx) const;
-
-  std::vector<float> predict(const Matrix &features) const;
 
  private:
   Scale scale_;
@@ -61,6 +54,15 @@ class LogisticRegressor : public IQualityEstimator {
   float intercept_;
   std::vector<float> coefficientsByStds_;
   float constantFactor_ = 0.0;
+
+  std::vector<float> predict(const Matrix &features) const;
+
+  /// construct the struct WordsQualityEstimate
+  /// @param [in] logProbs: the log probabilities given by an translation model
+  /// @param [in] target: AnnotatedText target value
+  /// @param [in] sentenceIdx: the id of a candidate sentence
+  Response::WordsQualityEstimate computeSentenceScores(const std::vector<float> &logProbs, const AnnotatedText &target,
+                                                       const size_t sentenceIdx) const;
 
   static Matrix extractFeatures(const std::vector<std::vector<float> > &wordLogProbs);
 };

@@ -50,8 +50,8 @@ class LogisticRegressor : public IQualityEstimator {
   /// @param [in] logProbs: the log probabilities given by an translation model
   /// @param [in] target: AnnotatedText target value
   /// @param [in] sentenceIdx: the id of a candidate sentence
-  Response::WordsQualityEstimate computeQualityScores(const std::vector<float> &logProbs, const AnnotatedText &target,
-                                                      const size_t sentenceIdx) const;
+  Response::WordsQualityEstimate computeSentenceScores(const std::vector<float> &logProbs, const AnnotatedText &target,
+                                                       const size_t sentenceIdx) const;
 
   std::vector<float> predict(const Matrix &features) const;
 
@@ -62,7 +62,7 @@ class LogisticRegressor : public IQualityEstimator {
   std::vector<float> coefficientsByStds_;
   float constantFactor_ = 0.0;
 
-  static Matrix extractFeatures( const std::vector< std::vector< float > >& wordLogProbs );
+  static Matrix extractFeatures(const std::vector<std::vector<float> > &wordLogProbs);
 };
 
 }  // namespace marian::bergamot

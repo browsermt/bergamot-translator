@@ -78,7 +78,7 @@ SCENARIO("Logistic Regressor Test", "[QualityEstimator]") {
       LogisticRegressor logisticRegressor(std::move(scale), std::move(coefficients), intercept);
 
       WHEN("It's call computeQualityScores") {
-        auto wordsQualityEstimate = logisticRegressor.computeQualityScores(logProbs, annotatedTarget, 0);
+        auto wordsQualityEstimate = logisticRegressor.computeSentenceScores(logProbs, annotatedTarget, 0);
 
         THEN("It's returned WordsQualityEstimate") {
           CHECK(wordsQualityEstimate.wordByteRanges ==

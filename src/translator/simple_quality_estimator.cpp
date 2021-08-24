@@ -9,14 +9,14 @@ void SimpleQualityEstimator::computeQualityScores(Response &response, const Hist
 
   for (const auto &history : histories) {
     const auto logProbs = std::get<1>(history->top())->tracebackWordScores();
-    response.qualityScores.push_back(computeQualityScores(logProbs, response.target, sentenceIndex));
+    response.qualityScores.push_back(computeSentenceScores(logProbs, response.target, sentenceIndex));
     ++sentenceIndex;
   }
 }
 
-Response::WordsQualityEstimate SimpleQualityEstimator::computeQualityScores(const std::vector<float> &logProbs,
-                                                                            const AnnotatedText &target,
-                                                                            const size_t sentenceIdx) {
+Response::WordsQualityEstimate SimpleQualityEstimator::computeSentenceScores(const std::vector<float> &logProbs,
+                                                                             const AnnotatedText &target,
+                                                                             const size_t sentenceIdx) {
   const auto [wordBytesRanges, wordslogProbs] = remapWords(logProbs, target, sentenceIdx);
 
   std::vector<float> wordQualityScores;

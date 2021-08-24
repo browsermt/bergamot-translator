@@ -31,8 +31,8 @@ SCENARIO("Simple Quality Estimator test", "[SimpleQualityEstimator]") {
 
     AND_GIVEN("Simple Quality Estimator") {
       SimpleQualityEstimator simpleQE;
-      WHEN("It's call computeQualityScores") {
-        auto wordsQualityEstimate = simpleQE.computeQualityScores(logProbs, annotatedTarget, 0);
+      WHEN("It's call computeSentenceScores") {
+        auto wordsQualityEstimate = simpleQE.computeSentenceScores(logProbs, annotatedTarget, 0);
 
         THEN("It's returned WordsQualityEstimate") {
           CHECK(wordsQualityEstimate.wordByteRanges ==

@@ -15,9 +15,8 @@ class SimpleQualityEstimator : public IQualityEstimator {
 
   void computeQualityScores(Response &response, const Histories &histories) const override;
 
-  static Response::WordsQualityEstimate computeQualityScores(const std::vector<float> &logProbs,
-                                                             const AnnotatedText &target,
-                                                             const size_t sentenceIdx);
+  static Response::WordsQualityEstimate computeSentenceScores(const std::vector<float> &logProbs,
+                                                              const AnnotatedText &target, const size_t sentenceIdx);
 };
 
 }  // namespace marian::bergamot

@@ -8,7 +8,7 @@
 
 namespace marian::bergamot {
 
-/// Interface for quality model
+/// Interface for quality estimator
 class IQualityEstimator {
  public:
   // Computes quality-scores using values from History and precomputed

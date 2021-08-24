@@ -116,15 +116,15 @@ void LogisticRegressor::computeQualityScores(Response& response, const Histories
 
   for (const auto& history : histories) {
     const auto logProbs = std::get<1>(history->top())->tracebackWordScores();
-    response.qualityScores.push_back(computeQualityScores(logProbs, response.target, sentenceIndex));
+    response.qualityScores.push_back(computeSentenceScores(logProbs, response.target, sentenceIndex));
 
     ++sentenceIndex;
   }
 }
 
-Response::WordsQualityEstimate LogisticRegressor::computeQualityScores(const std::vector<float>& logProbs,
-                                                                       const AnnotatedText& target,
-                                                                       const size_t sentenceIdx) const
+Response::WordsQualityEstimate LogisticRegressor::computeSentenceScores(const std::vector<float>& logProbs,
+                                                                        const AnnotatedText& target,
+                                                                        const size_t sentenceIdx) const
 
 {
   const auto [wordBytesRanges, wordslogProbs] = remapWords(logProbs, target, sentenceIdx);
@@ -156,10 +156,8 @@ std::vector<float> LogisticRegressor::predict(const Matrix& features) const {
 }
 
 Matrix LogisticRegressor::extractFeatures(const std::vector<std::vector<float> >& wordsLogProbs) {
-
-  if( wordsLogProbs.empty() )
-  {
-    return std::move(Matrix(0,0 ));
+  if (wordsLogProbs.empty()) {
+    return std::move(Matrix(0, 0));
   }
 
   Matrix features(wordsLogProbs.size(), /*numFeatures =*/4);
@@ -194,9 +192,8 @@ Matrix LogisticRegressor::extractFeatures(const std::vector<std::vector<float> >
     ++featureRow;
   }
 
-  if( numlogProbs == 0 )
-  {
-    return std::move(Matrix(0,0 ));
+  if (numlogProbs == 0) {
+    return std::move(Matrix(0, 0));
   }
 
   overallMean /= numlogProbs;

@@ -8,11 +8,11 @@ namespace marian::bergamot {
 
 /// "Unsupervised" approach quality model
 /// It's only return the mean of BPE tokens of a given word already compute by marian
-class SimpleQualityEstimator : public IQualityEstimator {
-   friend class SimpleQualityEstimatorTest;
+class UnsupervisedQE : public IQualityEstimator {
+   friend class UnsupervisedQETest;
  public:
-  SimpleQualityEstimator() = default;
-  ~SimpleQualityEstimator() = default;
+  UnsupervisedQE() = default;
+  ~UnsupervisedQE() = default;
 
   void computeQualityScores(Response &response, const Histories &histories) const override;
 

@@ -1,10 +1,10 @@
-#include "simple_quality_estimator.h"
+#include "unsupervised_qe.h"
 
 #include <numeric>
 
 namespace marian::bergamot {
 
-void SimpleQualityEstimator::computeQualityScores(Response &response, const Histories &histories) const {
+void UnsupervisedQE::computeQualityScores(Response &response, const Histories &histories) const {
   size_t sentenceIndex = 0;
 
   for (const auto &history : histories) {
@@ -14,7 +14,7 @@ void SimpleQualityEstimator::computeQualityScores(Response &response, const Hist
   }
 }
 
-Response::WordsQualityEstimate SimpleQualityEstimator::computeSentenceScores(const std::vector<float> &logProbs,
+Response::WordsQualityEstimate UnsupervisedQE::computeSentenceScores(const std::vector<float> &logProbs,
                                                                              const AnnotatedText &target,
                                                                              const size_t sentenceIdx) {
   const auto [wordBytesRanges, wordslogProbs] = remapWords(logProbs, target, sentenceIdx);

@@ -1,10 +1,11 @@
 #pragma once
 
 #include <vector>
+#include <boost/numeric/ublas/matrix.hpp>
 
 #include "definitions.h"
 #include "iquality_estimator.h"
-#include "matrix.h"
+// #include "matrix.h"
 
 namespace marian::bergamot {
 // ASCII and Unicode text files never start with the following 64 bits
@@ -22,6 +23,8 @@ class LogisticRegressorQE : public IQualityEstimator {
   friend class LogisticRegressorQETest;
 
  public:
+
+  using Matrix = boost::numeric::ublas::matrix< float >;
   struct Header {
     uint64_t magic;             // BINARY_QE_MODEL_MAGIC
     uint64_t lrParametersDims;  // Length of lr parameters stds, means and coefficients .
@@ -64,7 +67,7 @@ class LogisticRegressorQE : public IQualityEstimator {
   Response::WordsQualityEstimate computeSentenceScores(const std::vector<float> &logProbs, const AnnotatedText &target,
                                                        const size_t sentenceIdx) const;
 
-  static Matrix extractFeatures(const std::vector<std::vector<float> > &wordLogProbs);
+  static boost::numeric::ublas::matrix< float > extractFeatures(const std::vector<std::vector<float> > &wordLogProbs);
 };
 
 }  // namespace marian::bergamot

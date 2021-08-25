@@ -138,24 +138,24 @@ Response::WordsQualityEstimate LogisticRegressorQE::computeSentenceScores(const 
 }
 
 std::vector<float> LogisticRegressorQE::predict(const Matrix& features) const {
-  std::vector<float> scores(features.rows);
+  std::vector<float> scores(features.size1());
 
-  for (int i = 0; i < features.rows; ++i) {
-    for (int j = 0; j < features.cols; ++j) {
-      scores[i] += features.at(i, j) * coefficientsByStds_[j];
+  for (int i = 0; i < features.size1(); ++i) {
+    for (int j = 0; j < features.size2(); ++j) {
+      scores[i] += features(i, j) * coefficientsByStds_[j];
     }
   }
 
   /// Applies the linear model followed by a sigmoid function to each element
 
-  for (int i = 0; i < features.rows; ++i) {
+  for (int i = 0; i < features.size1(); ++i) {
     scores[i] = 1 / (1 + std::exp(-(scores[i] - constantFactor_ + intercept_)));
   }
 
   return scores;
 }
 
-Matrix LogisticRegressorQE::extractFeatures(const std::vector<std::vector<float> >& wordsLogProbs) {
+LogisticRegressorQE::Matrix LogisticRegressorQE::extractFeatures(const std::vector<std::vector<float> >& wordsLogProbs) {
   if (wordsLogProbs.empty()) {
     return std::move(Matrix(0, 0));
   }
@@ -175,19 +175,21 @@ Matrix LogisticRegressorQE::extractFeatures(const std::vector<std::vector<float>
 
     float minScore = std::numeric_limits<float>::max();
 
+    features(featureRow, I_MEAN) = 0;
+
     for (const auto& logProb : wordLogProbs) {
       ++numlogProbs;
       overallMean += logProb;
-      features.at(featureRow, I_MEAN) += logProb;
+      features(featureRow, I_MEAN) += logProb;
 
       if (logProb < minScore) {
         minScore = logProb;
       }
     }
 
-    features.at(featureRow, I_MEAN) /= static_cast<float>(wordLogProbs.size());
-    features.at(featureRow, I_MIN) = minScore;
-    features.at(featureRow, I_NUM_SUBWORDS) = wordLogProbs.size();
+    features(featureRow, I_MEAN) /= static_cast<float>(wordLogProbs.size());
+    features(featureRow, I_MIN) = minScore;
+    features(featureRow, I_NUM_SUBWORDS) = wordLogProbs.size();
 
     ++featureRow;
   }
@@ -198,8 +200,8 @@ Matrix LogisticRegressorQE::extractFeatures(const std::vector<std::vector<float>
 
   overallMean /= numlogProbs;
 
-  for (int i = 0; i < features.rows; ++i) {
-    features.at(i, I_OVERALL_MEAN) = overallMean;
+  for (size_t i = 0; i < features.size1(); ++i) {
+    features(i, I_OVERALL_MEAN) = overallMean;
   }
 
   return std::move(features);

@@ -123,8 +123,8 @@ void LogisticRegressorQE::computeQualityScores(Response& response, const Histori
 }
 
 Response::WordsQualityEstimate LogisticRegressorQE::computeSentenceScores(const std::vector<float>& logProbs,
-                                                                        const AnnotatedText& target,
-                                                                        const size_t sentenceIdx) const
+                                                                          const AnnotatedText& target,
+                                                                          const size_t sentenceIdx) const
 
 {
   const auto [wordBytesRanges, wordslogProbs] = remapWords(logProbs, target, sentenceIdx);
@@ -155,7 +155,8 @@ std::vector<float> LogisticRegressorQE::predict(const Matrix& features) const {
   return scores;
 }
 
-LogisticRegressorQE::Matrix LogisticRegressorQE::extractFeatures(const std::vector<std::vector<float> >& wordsLogProbs) {
+LogisticRegressorQE::Matrix LogisticRegressorQE::extractFeatures(
+    const std::vector<std::vector<float> >& wordsLogProbs) {
   if (wordsLogProbs.empty()) {
     return std::move(Matrix(0, 0));
   }

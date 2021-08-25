@@ -9,7 +9,8 @@ namespace marian::bergamot {
 /// "Unsupervised" approach quality model
 /// It's only return the mean of BPE tokens of a given word already compute by marian
 class UnsupervisedQE : public IQualityEstimator {
-   friend class UnsupervisedQETest;
+  friend class UnsupervisedQETest;
+
  public:
   UnsupervisedQE() = default;
   ~UnsupervisedQE() = default;

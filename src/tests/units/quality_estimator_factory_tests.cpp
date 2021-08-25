@@ -10,9 +10,7 @@ SCENARIO("Quality Estimator Factory test", "[QualityEstimatorFactory]") {
     AlignedMemory emptyMemory;
     const auto model = QualityEstimatorFactory::Make(emptyMemory);
 
-    THEN("It's created a UnsupervisedQE") {
-      CHECK(dynamic_cast<const UnsupervisedQE*>(model.get()) != nullptr);
-    }
+    THEN("It's created a UnsupervisedQE") { CHECK(dynamic_cast<const UnsupervisedQE*>(model.get()) != nullptr); }
   }
   WHEN("It's call Make with a LR AlignedMemory") {
     std::vector<float> coefficients = {0.99000001, 0.899999976, -0.200000003, 0.5};
@@ -26,6 +24,8 @@ SCENARIO("Quality Estimator Factory test", "[QualityEstimatorFactory]") {
 
     const auto model = QualityEstimatorFactory::Make(logisticRegressor.toAlignedMemory());
 
-    THEN("It's created a LogisticRegressor") { CHECK(dynamic_cast<const LogisticRegressorQE*>(model.get()) != nullptr); }
+    THEN("It's created a LogisticRegressor") {
+      CHECK(dynamic_cast<const LogisticRegressorQE*>(model.get()) != nullptr);
+    }
   }
 }

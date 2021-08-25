@@ -12,7 +12,6 @@ class UnsupervisedQETest {
 };
 }  // namespace marian::bergamot
 
-
 using namespace marian::bergamot;
 
 SCENARIO("Unsupervised Quality Estimator test", "[UnsupervisedQE]") {

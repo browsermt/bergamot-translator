@@ -15,8 +15,8 @@ void UnsupervisedQE::computeQualityScores(Response &response, const Histories &h
 }
 
 Response::WordsQualityEstimate UnsupervisedQE::computeSentenceScores(const std::vector<float> &logProbs,
-                                                                             const AnnotatedText &target,
-                                                                             const size_t sentenceIdx) {
+                                                                     const AnnotatedText &target,
+                                                                     const size_t sentenceIdx) {
   const auto [wordBytesRanges, wordslogProbs] = remapWords(logProbs, target, sentenceIdx);
 
   std::vector<float> wordQualityScores;

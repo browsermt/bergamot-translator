@@ -12,7 +12,8 @@ bool operator==(const std::vector<float>& value1, const std::vector<float>& valu
   });
 }
 
-bool operator==(const std::vector<marian::bergamot::ByteRange>& value1, const std::vector<marian::bergamot::ByteRange>& value2) {
+bool operator==(const std::vector<marian::bergamot::ByteRange>& value1,
+                const std::vector<marian::bergamot::ByteRange>& value2) {
   return std::equal(value1.begin(), value1.end(), value2.begin(), value2.end(),
                     [](const auto& a, const auto& b) { return (a.begin == b.begin) && (a.end == b.end); });
 }

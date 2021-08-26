@@ -12,6 +12,6 @@ namespace marian::bergamot {
 /// the unsupervised learning approach (SimpleQualityModel).
 class QualityEstimatorFactory {
  public:
-  static std::shared_ptr<IQualityEstimator> Make(const AlignedMemory& qualityFileMemory);
+  static std::shared_ptr<IQualityEstimator> make(const AlignedMemory& qualityFileMemory);
 };
 }  // namespace marian::bergamot

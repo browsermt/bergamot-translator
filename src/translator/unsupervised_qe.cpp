@@ -21,9 +21,9 @@ Response::WordsQualityEstimate UnsupervisedQE::computeSentenceScores(const std::
 
   std::vector<float> wordQualityScores;
 
-  for (const auto &wordlogProbs : wordslogProbs) {
-    wordQualityScores.push_back(std::accumulate(std::begin(wordlogProbs), std::end(wordlogProbs), float(0.0)) /
-                                wordlogProbs.size());
+  for (const auto &wordlogProb : wordslogProbs) {
+    wordQualityScores.push_back(std::accumulate(std::begin(wordlogProb), std::end(wordlogProb), float(0.0)) /
+                                wordlogProb.size());
   }
 
   const float sentenceScore = std::accumulate(std::begin(wordQualityScores), std::end(wordQualityScores), float(0.0)) /

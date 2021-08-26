@@ -8,7 +8,7 @@ using namespace marian::bergamot;
 SCENARIO("Quality Estimator Factory test", "[QualityEstimatorFactory]") {
   WHEN("It's call Make with a empty AlignedMemory") {
     AlignedMemory emptyMemory;
-    const auto model = QualityEstimatorFactory::Make(emptyMemory);
+    const auto model = QualityEstimatorFactory::make(emptyMemory);
 
     THEN("It's created a UnsupervisedQE") { CHECK(dynamic_cast<const UnsupervisedQE*>(model.get()) != nullptr); }
   }
@@ -22,7 +22,7 @@ SCENARIO("Quality Estimator Factory test", "[QualityEstimatorFactory]") {
 
     LogisticRegressorQE logisticRegressor(std::move(scale), std::move(coefficients), intercept);
 
-    const auto model = QualityEstimatorFactory::Make(logisticRegressor.toAlignedMemory());
+    const auto model = QualityEstimatorFactory::make(logisticRegressor.toAlignedMemory());
 
     THEN("It's created a LogisticRegressor") {
       CHECK(dynamic_cast<const LogisticRegressorQE*>(model.get()) != nullptr);

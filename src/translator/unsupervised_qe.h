@@ -6,15 +6,14 @@
 
 namespace marian::bergamot {
 
-/// "Unsupervised" approach quality model
-/// It's only return the mean of BPE tokens of a given word already compute by marian
+/// The UnsurpervisedQE stands for Unsurpervised Quality Estimator model. It basically uses the negative log
+/// probabilities (logprobs) of the translator model as proxy for quality scores. Then, for a given word, it's quality
+/// score is computed by taking the mean of the negative logprobs of the tokens that make up it. The sentence score is
+/// the mean of all word's neg. logprob.
 class UnsupervisedQE : public IQualityEstimator {
   friend class UnsupervisedQETest;
 
  public:
-  UnsupervisedQE() = default;
-  ~UnsupervisedQE() = default;
-
   void computeQualityScores(Response &response, const Histories &histories) const override;
 
  private:

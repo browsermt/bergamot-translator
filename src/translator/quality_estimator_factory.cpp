@@ -8,7 +8,7 @@
 
 namespace marian::bergamot {
 
-std::shared_ptr<IQualityEstimator> QualityEstimatorFactory::Make(const AlignedMemory& qualityFileMemory) {
+std::shared_ptr<IQualityEstimator> QualityEstimatorFactory::make(const AlignedMemory& qualityFileMemory) {
   // If no quality file return simple model
   if (qualityFileMemory.size() == 0) {
     return std::make_shared<UnsupervisedQE>();

@@ -17,11 +17,11 @@ void UnsupervisedQE::computeQualityScores(Response &response, const Histories &h
 Response::WordsQualityEstimate UnsupervisedQE::computeSentenceScores(const std::vector<float> &logProbs,
                                                                      const AnnotatedText &target,
                                                                      const size_t sentenceIdx) {
-  const auto [wordBytesRanges, wordslogProbs] = remapWords(logProbs, target, sentenceIdx);
+  const auto [wordBytesRanges, wordlogProbs] = remapWordsAndLogProbs(logProbs, target, sentenceIdx);
 
   std::vector<float> wordQualityScores;
 
-  for (const auto &wordlogProb : wordslogProbs) {
+  for (const auto &wordlogProb : wordlogProbs) {
     wordQualityScores.push_back(std::accumulate(std::begin(wordlogProb), std::end(wordlogProb), float(0.0)) /
                                 wordlogProb.size());
   }

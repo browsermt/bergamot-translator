@@ -19,9 +19,8 @@ class IQualityEstimator {
   // for source and target. The quality-scores for each sentence obtained from source-text blob
   // are written out as WordsQualityEstimate into response.
   virtual void computeQualityScores(Response &response, const Histories &histories) const = 0;
-
- protected:
-  static std::pair<std::vector<ByteRange>, std::vector<std::vector<float> > > remapWords(
-      const std::vector<float> &logProbs, const AnnotatedText &target, const size_t sentenceIdx);
 };
+
+std::pair<std::vector<ByteRange>, std::vector<std::vector<float> > > remapWordsAndLogProbs(
+    const std::vector<float> &logProbs, const AnnotatedText &target, const size_t sentenceIdx);
 }  // namespace marian::bergamot

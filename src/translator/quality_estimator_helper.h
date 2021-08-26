@@ -11,5 +11,4 @@ namespace marian::bergamot {
 /// By default, if the qualityFileMemory is empty it will use
 /// the unsupervised learning approach (UnsupervisedQE).
 std::shared_ptr<IQualityEstimator> createQualityEstimator(const AlignedMemory& qualityFileMemory);
-
 }  // namespace marian::bergamot

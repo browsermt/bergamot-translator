@@ -2,7 +2,7 @@
 
 namespace marian::bergamot {
 
-std::pair<std::vector<ByteRange>, std::vector<std::vector<float>>> IQualityEstimator::remapWords(
+std::pair<std::vector<ByteRange>, std::vector<std::vector<float>>> remapWordsAndLogProbs(
     const std::vector<float>& logProbs, const AnnotatedText& target, const size_t sentenceIdx) {
   // Ignore empty target
   if ((logProbs.size() < 2) || (target.numWords(sentenceIdx) == 0)) {

@@ -151,7 +151,7 @@ Response::WordsQualityEstimate LogisticRegressorQE::computeSentenceScores(const 
                                                                           const size_t sentenceIdx) const
 
 {
-  const auto [wordBytesRanges, wordslogProbs] = remapWords(logProbs, target, sentenceIdx);
+  const auto [wordBytesRanges, wordslogProbs] = remapWordsAndLogProbs(logProbs, target, sentenceIdx);
 
   const auto wordQualityScores = predict(extractFeatures(wordslogProbs));
 

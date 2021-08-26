@@ -11,8 +11,7 @@ class LogisticRegressorQETest {
     return lr.computeSentenceScores(logProbs, target, sentenceIdx);
   }
 
-  std::vector<float> predict(const LogisticRegressorQE &lr, const Matrix &features) const
-  {
+  std::vector<float> predict(const LogisticRegressorQE &lr, const Matrix &features) const {
     return lr.predict(features);
   }
 };

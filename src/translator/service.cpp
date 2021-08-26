@@ -6,7 +6,7 @@
 #include "batch.h"
 #include "byte_array_util.h"
 #include "definitions.h"
-#include "quality_estimator_factory.h"
+#include "quality_estimator_helper.h"
 
 namespace marian {
 namespace bergamot {
@@ -20,7 +20,7 @@ Service::Service(Ptr<Options> options, MemoryBundle memoryBundle)
       numWorkers_(std::max<int>(1, options->get<int>("cpu-threads"))),
       modelMemory_(std::move(memoryBundle.model)),
       shortlistMemory_(std::move(memoryBundle.shortlist)),
-      qualityEstimator_(QualityEstimatorFactory::make(getQualityEstimatorModel(memoryBundle, options)))
+      qualityEstimator_(createQualityEstimator(getQualityEstimatorModel(memoryBundle, options)))
 #ifdef WASM_COMPATIBLE_SOURCE
       ,
       blocking_translator_(DeviceId(0, DeviceType::cpu), vocabs_, options_, &modelMemory_, &shortlistMemory_)

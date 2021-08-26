@@ -2,7 +2,8 @@
 
 namespace marian::bergamot {
 
-Matrix::Matrix(const size_t rowsParam, const size_t colsParam) : rows(rowsParam), cols(colsParam), data_(rowsParam * colsParam) {}
+Matrix::Matrix(const size_t rowsParam, const size_t colsParam)
+    : rows(rowsParam), cols(colsParam), data_(rowsParam * colsParam) {}
 
 Matrix::Matrix(Matrix&& other) : rows(other.rows), cols(other.cols), data_(std::move(other.data_)) {}
 

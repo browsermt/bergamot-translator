@@ -10,7 +10,7 @@ add_library(bergamot-translator STATIC
     batcher.cpp
     response_builder.cpp
     iquality_estimator.cpp
-    quality_estimator_factory.cpp
+    quality_estimator_helper.cpp
     unsupervised_qe.cpp
     batch.cpp
     annotation.cpp

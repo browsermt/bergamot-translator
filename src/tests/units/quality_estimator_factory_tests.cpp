@@ -1,14 +1,14 @@
 #include "catch.hpp"
 #include "translator/logistic_regressor_qe.h"
-#include "translator/quality_estimator_factory.h"
+#include "translator/quality_estimator_helper.h"
 #include "translator/unsupervised_qe.h"
 
 using namespace marian::bergamot;
 
-SCENARIO("Quality Estimator Factory test", "[QualityEstimatorFactory]") {
+SCENARIO("Create Quality Estimator test", "[QualityEstimatorHelper]") {
   WHEN("It's call Make with a empty AlignedMemory") {
     AlignedMemory emptyMemory;
-    const auto model = QualityEstimatorFactory::make(emptyMemory);
+    const auto model = createQualityEstimator(emptyMemory);
 
     THEN("It's created a UnsupervisedQE") { CHECK(dynamic_cast<const UnsupervisedQE*>(model.get()) != nullptr); }
   }
@@ -22,7 +22,7 @@ SCENARIO("Quality Estimator Factory test", "[QualityEstimatorFactory]") {
 
     LogisticRegressorQE logisticRegressor(std::move(scale), std::move(coefficients), intercept);
 
-    const auto model = QualityEstimatorFactory::make(logisticRegressor.toAlignedMemory());
+    const auto model = createQualityEstimator(logisticRegressor.toAlignedMemory());
 
     THEN("It's created a LogisticRegressor") {
       CHECK(dynamic_cast<const LogisticRegressorQE*>(model.get()) != nullptr);

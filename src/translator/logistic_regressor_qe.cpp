@@ -173,7 +173,7 @@ std::vector<float> LogisticRegressorQE::predict(const Matrix& features) const {
   /// Applies the linear model followed by a sigmoid function to each element
 
   for (int i = 0; i < features.rows; ++i) {
-    scores[i] = 1 / (1 + std::exp(-(scores[i] - constantFactor_ + intercept_)));
+    scores[i] = std::log(1 - (1 / (1 + std::exp(-(scores[i] - constantFactor_ + intercept_)))));
   }
 
   return scores;

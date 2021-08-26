@@ -50,7 +50,9 @@ SCENARIO("Logistic Regressor test", "[LogisticRegressorQE]") {
       WHEN("It's call predict") {
         const std::vector<float> prediction = lrTest.predict(logisticRegressorQE, featureMatrix);
 
-        THEN("return the prediction") { CHECK(prediction == std::vector<float>{0.883, 0.988, 0.988, 0.606, 0.952}); }
+        THEN("return the prediction") {
+          CHECK(prediction == std::vector<float>{-2.14596, -4.41793, -4.403, -0.93204, -3.03343});
+        }
       }
     }
   }
@@ -102,8 +104,9 @@ SCENARIO("Logistic Regressor Test", "[QualityEstimator]") {
           CHECK(wordsQualityEstimate.wordByteRanges ==
                 std::vector<ByteRange>({{0, 1}, {2, 6}, {7, 9}, {10, 12}, {13, 21}}));
 
-          CHECK(wordsQualityEstimate.wordQualityScores == std::vector<float>({0.883, 0.988, 0.988, 0.606, 0.952}));
-          CHECK(wordsQualityEstimate.sentenceScore == Approx(0.88341f).epsilon(0.0001));
+          CHECK(wordsQualityEstimate.wordQualityScores ==
+                std::vector<float>({-2.14596, -4.41793, -4.403, -0.93204, -3.03343}));
+          CHECK(wordsQualityEstimate.sentenceScore == Approx(-2.98647).epsilon(0.0001));
         }
       }
     }

@@ -11,7 +11,8 @@ class LogisticRegressorQETest {
     return lr.computeSentenceScores(logProbs, target, sentenceIdx);
   }
 
-  std::vector<float> predict(const LogisticRegressorQE &lr, const LogisticRegressorQE::Matrix &features) const {
+  std::vector<float> predict(const LogisticRegressorQE &lr, const Matrix &features) const
+  {
     return lr.predict(features);
   }
 };
@@ -27,11 +28,11 @@ SCENARIO("Logistic Regressor test", "[LogisticRegressorQE]") {
                                                        {-0.5, -0.5, 1.0, -0.183683336},
                                                        {-0.15, -0.2, 2.0, -0.183683336}};
 
-    LogisticRegressorQE::Matrix featureMatrix(features.size(), features.begin()->size());
+    Matrix featureMatrix(features.size(), features.begin()->size());
 
     for (int i = 0; i < features.size(); ++i) {
       for (int j = 0; j < features.begin()->size(); ++j) {
-        featureMatrix(i, j) = features[i][j];
+        featureMatrix.at(i, j) = features[i][j];
       }
     }
 

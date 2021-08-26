@@ -99,12 +99,10 @@ Ptr<Request> TranslationModel::makeRequest(size_t requestId, std::string &&sourc
   return request;
 }
 
-void TranslationModel::translateBatch(size_t deviceId, Batch &batch) {
-  auto &backend = backend_[deviceId];
-
+Ptr<marian::data::CorpusBatch> TranslationModel::convertToMarianBatch(Batch &batch) {
   std::vector<data::SentenceTuple> batchVector;
-
   auto &sentences = batch.sentences();
+
   size_t batchSequenceNumber{0};
   for (auto &sentence : sentences) {
     data::SentenceTuple sentence_tuple(batchSequenceNumber);
@@ -115,20 +113,31 @@ void TranslationModel::translateBatch(size_t deviceId, Batch &batch) {
     ++batchSequenceNumber;
   }
 
+  // Usually one would expect inputs to be [B x T], where B = batch-size and T = max seq-len among the sentences in the
+  // batch. However, marian's library supports multi-source and ensembling through different source-vocabulary but same
+  // target vocabulary. This means the inputs are 3 dimensional when converted into marian's library formatted batches.
+  //
+  // Consequently B x T projects to N x B x T, where N = ensemble size. This adaptation does not fully force the idea of
+  // N = 1 (the code remains general, but N iterates only from 0-1 in the nested loop).
+
   size_t batchSize = batchVector.size();
+
   std::vector<size_t> sentenceIds;
   std::vector<int> maxDims;
-  for (auto &ex : batchVector) {
-    if (maxDims.size() < ex.size()) maxDims.resize(ex.size(), 0);
-    for (size_t i = 0; i < ex.size(); ++i) {
-      if (ex[i].size() > (size_t)maxDims[i]) maxDims[i] = (int)ex[i].size();
+
+  for (auto &example : batchVector) {
+    if (maxDims.size() < example.size()) {
+      maxDims.resize(example.size(), 0);
     }
-    sentenceIds.push_back(ex.getId());
+    for (size_t i = 0; i < example.size(); ++i) {
+      if (example[i].size() > static_cast<size_t>(maxDims[i])) {
+        maxDims[i] = static_cast<int>(example[i].size());
+      }
+    }
+    sentenceIds.push_back(example.getId());
   }
 
-  typedef marian::data::SubBatch SubBatch;
-  typedef marian::data::CorpusBatch CorpusBatch;
-
+  using SubBatch = marian::data::SubBatch;
   std::vector<Ptr<SubBatch>> subBatches;
   for (size_t j = 0; j < maxDims.size(); ++j) {
     subBatches.emplace_back(New<SubBatch>(batchSize, maxDims[j], vocabs_.sources().at(j)));
@@ -145,13 +154,20 @@ void TranslationModel::translateBatch(size_t deviceId, Batch &batch) {
     }
   }
 
-  for (size_t j = 0; j < maxDims.size(); ++j) subBatches[j]->setWords(words[j]);
+  for (size_t j = 0; j < maxDims.size(); ++j) {
+    subBatches[j]->setWords(words[j]);
+  }
 
-  auto corpus_batch = New<CorpusBatch>(subBatches);
-  corpus_batch->setSentenceIds(sentenceIds);
+  using CorpusBatch = marian::data::CorpusBatch;
+  Ptr<CorpusBatch> corpusBatch = New<CorpusBatch>(subBatches);
+  corpusBatch->setSentenceIds(sentenceIds);
+  return corpusBatch;
+}
 
+void TranslationModel::translateBatch(size_t deviceId, Batch &batch) {
+  auto &backend = backend_[deviceId];
   auto search = New<BeamSearch>(options_, backend.scorerEnsemble, vocabs_.target());
-  auto histories = search->search(backend.graph, corpus_batch);
+  auto histories = search->search(backend.graph, convertToMarianBatch(batch));
   batch.completeBatch(histories);
 }
 

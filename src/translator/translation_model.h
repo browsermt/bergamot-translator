@@ -42,6 +42,7 @@ namespace bergamot {
 class TranslationModel {
  public:
   using Config = Ptr<Options>;
+
   /// Equivalent to options based constructor, where `options` is parsed from string configuration. Configuration can be
   /// JSON or YAML. Keys expected correspond to those of `marian-decoder`, available at
   /// https://marian-nmt.github.io/docs/cmd/marian-decoder/
@@ -111,6 +112,7 @@ class TranslationModel {
   std::vector<MarianBackend> backend_;
 
   void loadBackend(size_t idx);
+  Ptr<marian::data::CorpusBatch> convertToMarianBatch(Batch& batch);
 };
 
 }  // namespace bergamot

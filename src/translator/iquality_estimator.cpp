@@ -15,7 +15,7 @@ std::pair<std::vector<ByteRange>, std::vector<std::vector<float>>> remapWordsAnd
   // The first subword it's always a beginning of a word
   ByteRange subword = target.wordAsByteRange(sentenceIdx, 0);
 
-  wordlogProbs.push_back({logProbs[0]});
+  wordlogProbs.emplace_back(std::vector<float>({logProbs[0]}));
   wordByteRanges.push_back(subword);
 
   /// A word is composed of multiple subtokens. The definition of an "entire"
@@ -28,7 +28,7 @@ std::pair<std::vector<ByteRange>, std::vector<std::vector<float>>> remapWordsAnd
 
     // if the first character is whitespace, it's a beginning of a new word
     if (isspace(firstLetter)) {
-      wordlogProbs.push_back({logProbs[subwordIdx]});
+      wordlogProbs.emplace_back(std::vector<float>({logProbs[subwordIdx]}));
       ++subword.begin;
       wordByteRanges.push_back(subword);
     } else {

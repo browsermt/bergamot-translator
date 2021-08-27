@@ -46,7 +46,7 @@ class LogisticRegressorQualityEstimator : public IQualityEstimator {
   static LogisticRegressorQualityEstimator fromAlignedMemory(const AlignedMemory &alignedMemory);
   AlignedMemory toAlignedMemory() const;
 
-  void computeQualityScores(Response &response, const Histories &histories) const override;
+  void computeQualityScores(const Histories &histories, Response &response) const override;
 
  private:
   Scale scale_;

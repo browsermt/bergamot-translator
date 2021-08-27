@@ -4,7 +4,7 @@
 
 namespace marian::bergamot {
 
-void UnsupervisedQualityEstimator::computeQualityScores(Response &response, const Histories &histories) const {
+void UnsupervisedQualityEstimator::computeQualityScores(const Histories &histories, Response &response) const {
   size_t sentenceIndex = 0;
 
   for (const auto &history : histories) {

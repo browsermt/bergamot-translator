@@ -14,7 +14,7 @@ class UnsupervisedQualityEstimator : public IQualityEstimator {
   friend class UnsupervisedQualityEstimatorTest;
 
  public:
-  void computeQualityScores(Response &response, const Histories &histories) const override;
+  void computeQualityScores(const Histories &histories, Response &response) const override;
 
  private:
   static Response::WordsQualityEstimate computeSentenceScores(const std::vector<float> &logProbs,

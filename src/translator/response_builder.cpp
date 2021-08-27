@@ -6,7 +6,7 @@ namespace marian {
 namespace bergamot {
 
 void ResponseBuilder::buildQualityScores(Histories &histories, Response &response) {
-  qualityEstimator_.computeQualityScores(response, histories);
+  qualityEstimator_.computeQualityScores(histories, response);
 }
 
 void ResponseBuilder::buildAlignments(Histories &histories, Response &response) {

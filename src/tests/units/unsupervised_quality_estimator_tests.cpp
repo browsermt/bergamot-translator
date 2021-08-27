@@ -1,20 +1,20 @@
 #include "catch.hpp"
 #include "test_helper.h"
-#include "translator/unsupervised_qe.h"
+#include "translator/unsupervised_quality_estimator.h"
 
 namespace marian::bergamot {
-class UnsupervisedQETest {
+class UnsupervisedQualityEstimatorTest {
  public:
   Response::WordsQualityEstimate computeSentenceScores(const std::vector<float> &logProbs, const AnnotatedText &target,
                                                        const size_t sentenceIdx) const {
-    return UnsupervisedQE::computeSentenceScores(logProbs, target, sentenceIdx);
+    return UnsupervisedQualityEstimator::computeSentenceScores(logProbs, target, sentenceIdx);
   }
 };
 }  // namespace marian::bergamot
 
 using namespace marian::bergamot;
 
-SCENARIO("Unsupervised Quality Estimator test", "[UnsupervisedQE]") {
+SCENARIO("Unsupervised Quality Estimator test", "[UnsupervisedQualityEstimator]") {
   GIVEN("A quality, features and target") {
     // AnnotatedText Target
     std::string input = "This is an example.";
@@ -40,7 +40,7 @@ SCENARIO("Unsupervised Quality Estimator test", "[UnsupervisedQE]") {
     const std::vector<float> logProbs = {-0.3, -0.0001, -0.002, -0.5, -0.2, -0.1, -0.001};
 
     AND_GIVEN("Simple Quality Estimator") {
-      UnsupervisedQETest simpleQETest;
+      UnsupervisedQualityEstimatorTest simpleQETest;
       WHEN("It's call computeSentenceScores") {
         auto wordsQualityEstimate = simpleQETest.computeSentenceScores(logProbs, annotatedTarget, 0);
 

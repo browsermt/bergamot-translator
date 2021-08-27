@@ -1,9 +1,9 @@
 # Unit tests
 set(UNIT_TESTS
     annotation_tests
-    logistic_regressor_qe_tests
+    logistic_regressor_quality_estimator_tests
     quality_estimator_factory_tests
-    unsupervised_qe_tests)
+    unsupervised_quality_estimator_tests)
 
 foreach(test ${UNIT_TESTS})
   add_executable("run_${test}" run_tests.cpp "${test}.cpp")

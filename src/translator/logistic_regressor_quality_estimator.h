@@ -18,8 +18,8 @@ constexpr std::size_t BINARY_QE_MODEL_MAGIC = 0x78cc336f1d54b180;
 /// These variables are firstly initialized by parsing a file (which comes from memory),
 /// and then they are used to build a model representation
 ///
-class LogisticRegressorQE : public IQualityEstimator {
-  friend class LogisticRegressorQETest;
+class LogisticRegressorQualityEstimator : public IQualityEstimator {
+  friend class LogisticRegressorQualityEstimatorTest;
 
  public:
   struct Header {
@@ -32,9 +32,9 @@ class LogisticRegressorQE : public IQualityEstimator {
     std::vector<float> means;
   };
 
-  LogisticRegressorQE(Scale &&scale, std::vector<float> &&coefficients, const float intercept);
+  LogisticRegressorQualityEstimator(Scale &&scale, std::vector<float> &&coefficients, const float intercept);
 
-  LogisticRegressorQE(LogisticRegressorQE &&other);
+  LogisticRegressorQualityEstimator(LogisticRegressorQualityEstimator &&other);
 
   /// Binary file parser which came from AlignedMemory
   /// It's expected from AlignedMemory the following structure:
@@ -43,7 +43,7 @@ class LogisticRegressorQE : public IQualityEstimator {
   /// - a vector of means of features
   /// - a vector of coefficients
   /// - a intercept value
-  static LogisticRegressorQE fromAlignedMemory(const AlignedMemory &alignedMemory);
+  static LogisticRegressorQualityEstimator fromAlignedMemory(const AlignedMemory &alignedMemory);
   AlignedMemory toAlignedMemory() const;
 
   void computeQualityScores(Response &response, const Histories &histories) const override;

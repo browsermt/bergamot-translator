@@ -10,8 +10,8 @@ namespace marian::bergamot {
 /// probabilities (logprobs) of the translator model as proxy for quality scores. Then, for a given word, it's quality
 /// score is computed by taking the mean of the negative logprobs of the tokens that make up it. The sentence score is
 /// the mean of all word's neg. logprob.
-class UnsupervisedQE : public IQualityEstimator {
-  friend class UnsupervisedQETest;
+class UnsupervisedQualityEstimator : public IQualityEstimator {
+  friend class UnsupervisedQualityEstimatorTest;
 
  public:
   void computeQualityScores(Response &response, const Histories &histories) const override;

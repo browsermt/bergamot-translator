@@ -1,17 +1,17 @@
 #include "catch.hpp"
 #include "test_helper.h"
-#include "translator/logistic_regressor_qe.h"
+#include "translator/logistic_regressor_quality_estimator.h"
 
 namespace marian::bergamot {
-class LogisticRegressorQETest {
+class LogisticRegressorQualityEstimatorTest {
  public:
-  Response::WordsQualityEstimate computeSentenceScores(const LogisticRegressorQE &lr,
+  Response::WordsQualityEstimate computeSentenceScores(const LogisticRegressorQualityEstimator &lr,
                                                        const std::vector<float> &logProbs, const AnnotatedText &target,
                                                        const size_t sentenceIdx) const {
     return lr.computeSentenceScores(logProbs, target, sentenceIdx);
   }
 
-  std::vector<float> predict(const LogisticRegressorQE &lr, const Matrix &features) const {
+  std::vector<float> predict(const LogisticRegressorQualityEstimator &lr, const Matrix &features) const {
     return lr.predict(features);
   }
 };
@@ -19,7 +19,7 @@ class LogisticRegressorQETest {
 
 using namespace marian::bergamot;
 
-SCENARIO("Logistic Regressor test", "[LogisticRegressorQE]") {
+SCENARIO("Logistic Regressor test", "[LogisticRegressorQualityEstimator]") {
   GIVEN("A feature matrix") {
     const std::vector<std::vector<float> > features = {{-0.3, -0.3, 1.0, -0.183683336},
                                                        {-0.0001, -0.0001, 1.0, -0.183683336},
@@ -39,13 +39,13 @@ SCENARIO("Logistic Regressor test", "[LogisticRegressorQE]") {
       std::vector<float> coefficients = {0.99000001, 0.899999976, -0.200000003, 0.5};
       const float intercept = {-0.300000012};
 
-      LogisticRegressorQE::Scale scale;
+      LogisticRegressorQualityEstimator::Scale scale;
       scale.stds = {0.200000003, 0.300000012, 2.5, 0.100000001};
       scale.means = {-0.100000001, -0.769999981, 5, -0.5};
 
-      LogisticRegressorQE logisticRegressorQE(std::move(scale), std::move(coefficients), intercept);
+      LogisticRegressorQualityEstimator logisticRegressorQE(std::move(scale), std::move(coefficients), intercept);
 
-      LogisticRegressorQETest lrTest;
+      LogisticRegressorQualityEstimatorTest lrTest;
 
       WHEN("It's call predict") {
         const std::vector<float> prediction = lrTest.predict(logisticRegressorQE, featureMatrix);
@@ -85,18 +85,18 @@ SCENARIO("Logistic Regressor Test", "[QualityEstimator]") {
 
     // Memory / Features
 
-    LogisticRegressorQE::Scale scale;
+    LogisticRegressorQualityEstimator::Scale scale;
     scale.stds = {0.200000003, 0.300000012, 2.5, 0.100000001};
     scale.means = {-0.100000001, -0.769999981, 5, -0.5};
 
     std::vector<float> coefficients = {0.99000001, 0.899999976, -0.200000003, 0.5};
     const float intercept = {-0.300000012};
 
-    AND_GIVEN("LogisticRegressorQE Quality Estimator") {
-      LogisticRegressorQE logisticRegressorQE(std::move(scale), std::move(coefficients), intercept);
+    AND_GIVEN("LogisticRegressorQualityEstimator Quality Estimator") {
+      LogisticRegressorQualityEstimator logisticRegressorQE(std::move(scale), std::move(coefficients), intercept);
 
       WHEN("It's call computeQualityScores") {
-        LogisticRegressorQETest lrTest;
+        LogisticRegressorQualityEstimatorTest lrTest;
 
         auto wordsQualityEstimate = lrTest.computeSentenceScores(logisticRegressorQE, logProbs, annotatedTarget, 0);
 

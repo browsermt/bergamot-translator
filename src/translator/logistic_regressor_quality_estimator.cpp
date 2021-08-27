@@ -1,4 +1,4 @@
-#include "logistic_regressor_qe.h"
+#include "logistic_regressor_quality_estimator.h"
 
 #include <algorithm>
 #include <numeric>
@@ -29,7 +29,8 @@ namespace marian::bergamot {
 //
 // For a better reading please refer to: http://mathb.in/63082
 
-LogisticRegressorQE::LogisticRegressorQE(Scale&& scale, std::vector<float>&& coefficients, const float intercept)
+LogisticRegressorQualityEstimator::LogisticRegressorQualityEstimator(Scale&& scale, std::vector<float>&& coefficients,
+                                                                     const float intercept)
     : IQualityEstimator(),
       scale_(std::move(scale)),
       coefficients_(std::move(coefficients)),
@@ -45,7 +46,7 @@ LogisticRegressorQE::LogisticRegressorQE(Scale&& scale, std::vector<float>&& coe
   }
 }
 
-LogisticRegressorQE::LogisticRegressorQE(LogisticRegressorQE&& other)
+LogisticRegressorQualityEstimator::LogisticRegressorQualityEstimator(LogisticRegressorQualityEstimator&& other)
     : IQualityEstimator(),
       scale_(std::move(other.scale_)),
       coefficients_(std::move(other.coefficients_)),
@@ -53,7 +54,8 @@ LogisticRegressorQE::LogisticRegressorQE(LogisticRegressorQE&& other)
       coefficientsByStds_(std::move(other.coefficientsByStds_)),
       constantFactor_(std::move(other.constantFactor_)) {}
 
-LogisticRegressorQE LogisticRegressorQE::fromAlignedMemory(const AlignedMemory& alignedMemory) {
+LogisticRegressorQualityEstimator LogisticRegressorQualityEstimator::fromAlignedMemory(
+    const AlignedMemory& alignedMemory) {
   LOG(info, "[data] Loading Quality Estimator model from buffer");
 
   const char* ptr = alignedMemory.begin();
@@ -96,10 +98,10 @@ LogisticRegressorQE LogisticRegressorQE::fromAlignedMemory(const AlignedMemory& 
     coefficients[i] = *(coefficientsMemory + i);
   }
 
-  return LogisticRegressorQE(std::move(scale), std::move(coefficients), intercept);
+  return LogisticRegressorQualityEstimator(std::move(scale), std::move(coefficients), intercept);
 }
 
-AlignedMemory LogisticRegressorQE::toAlignedMemory() const {
+AlignedMemory LogisticRegressorQualityEstimator::toAlignedMemory() const {
   const size_t lrParametersDims = scale_.means.size();
 
   const size_t lrSize =
@@ -135,7 +137,7 @@ AlignedMemory LogisticRegressorQE::toAlignedMemory() const {
   return memory;
 }
 
-void LogisticRegressorQE::computeQualityScores(Response& response, const Histories& histories) const {
+void LogisticRegressorQualityEstimator::computeQualityScores(Response& response, const Histories& histories) const {
   size_t sentenceIndex = 0;
 
   for (const auto& history : histories) {
@@ -146,9 +148,8 @@ void LogisticRegressorQE::computeQualityScores(Response& response, const Histori
   }
 }
 
-Response::WordsQualityEstimate LogisticRegressorQE::computeSentenceScores(const std::vector<float>& logProbs,
-                                                                          const AnnotatedText& target,
-                                                                          const size_t sentenceIdx) const
+Response::WordsQualityEstimate LogisticRegressorQualityEstimator::computeSentenceScores(
+    const std::vector<float>& logProbs, const AnnotatedText& target, const size_t sentenceIdx) const
 
 {
   const auto [wordBytesRanges, wordslogProbs] = remapWordsAndLogProbs(logProbs, target, sentenceIdx);
@@ -161,7 +162,7 @@ Response::WordsQualityEstimate LogisticRegressorQE::computeSentenceScores(const 
   return {wordQualityScores, wordBytesRanges, sentenceScore};
 }
 
-std::vector<float> LogisticRegressorQE::predict(const Matrix& features) const {
+std::vector<float> LogisticRegressorQualityEstimator::predict(const Matrix& features) const {
   std::vector<float> scores(features.rows);
 
   for (int i = 0; i < features.rows; ++i) {
@@ -179,7 +180,7 @@ std::vector<float> LogisticRegressorQE::predict(const Matrix& features) const {
   return scores;
 }
 
-Matrix LogisticRegressorQE::extractFeatures(const std::vector<std::vector<float> >& wordsLogProbs) {
+Matrix LogisticRegressorQualityEstimator::extractFeatures(const std::vector<std::vector<float> >& wordsLogProbs) {
   if (wordsLogProbs.empty()) {
     return std::move(Matrix(0, 0));
   }

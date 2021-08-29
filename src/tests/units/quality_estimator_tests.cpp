@@ -148,6 +148,10 @@ bool operator==(const std::vector<float>& value1, const std::vector<float>& valu
   });
 }
 
+bool operator==(const marian::bergamot::ByteRange& value1, const marian::bergamot::ByteRange& value2) {
+  return (value1.begin == value2.begin) && (value1.end == value2.end);
+}
+
 bool operator==(const std::vector<marian::bergamot::ByteRange>& value1,
                 const std::vector<marian::bergamot::ByteRange>& value2) {
   return std::equal(value1.begin(), value1.end(), value2.begin(), value2.end(),

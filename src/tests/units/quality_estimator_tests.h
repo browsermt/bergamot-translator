@@ -7,6 +7,7 @@
 #include "translator/history.h"
 
 bool operator==(const std::vector<float>& value1, const std::vector<float>& value2);
+bool operator==(const marian::bergamot::ByteRange& value1, const marian::bergamot::ByteRange& value2);
 bool operator==(const std::vector<marian::bergamot::ByteRange>& value1,
                 const std::vector<marian::bergamot::ByteRange>& value2);
 

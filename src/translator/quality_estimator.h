@@ -109,4 +109,6 @@ inline std::shared_ptr<QualityEstimator> createQualityEstimator(const AlignedMem
 std::pair<std::vector<std::vector<ByteRange>>, std::vector<std::vector<float>>> remapWordsAndLogProbs(
     const std::vector<float> &logProbs, const AnnotatedText &target, const size_t sentenceIdx);
 
+std::vector<ByteRange> subwordToWords(const std::vector<std::vector<ByteRange>> &subwords);
+
 }  // namespace marian::bergamot

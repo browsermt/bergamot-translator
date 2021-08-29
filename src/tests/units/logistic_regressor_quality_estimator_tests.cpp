@@ -2,61 +2,7 @@
 #include "test_helper.h"
 #include "translator/logistic_regressor_quality_estimator.h"
 
-namespace marian::bergamot {
-class LogisticRegressorQualityEstimatorTest {
- public:
-  Response::WordsQualityEstimate computeSentenceScores(const LogisticRegressorQualityEstimator &lr,
-                                                       const std::vector<float> &logProbs, const AnnotatedText &target,
-                                                       const size_t sentenceIdx) const {
-    return lr.computeSentenceScores(logProbs, target, sentenceIdx);
-  }
-
-  std::vector<float> predict(const LogisticRegressorQualityEstimator &lr, const Matrix &features) const {
-    return lr.predict(features);
-  }
-};
-}  // namespace marian::bergamot
-
 using namespace marian::bergamot;
-
-SCENARIO("Logistic Regressor test", "[LogisticRegressorQualityEstimator]") {
-  GIVEN("A feature matrix") {
-    const std::vector<std::vector<float> > features = {{-0.3, -0.3, 1.0, -0.183683336},
-                                                       {-0.0001, -0.0001, 1.0, -0.183683336},
-                                                       {-0.002, -0.002, 1.0, -0.183683336},
-                                                       {-0.5, -0.5, 1.0, -0.183683336},
-                                                       {-0.15, -0.2, 2.0, -0.183683336}};
-
-    Matrix featureMatrix(features.size(), features.begin()->size());
-
-    for (int i = 0; i < features.size(); ++i) {
-      for (int j = 0; j < features.begin()->size(); ++j) {
-        featureMatrix.at(i, j) = features[i][j];
-      }
-    }
-
-    AND_GIVEN("A LogistRegressor") {
-      std::vector<float> coefficients = {0.99000001, 0.899999976, -0.200000003, 0.5};
-      const float intercept = {-0.300000012};
-
-      LogisticRegressorQualityEstimator::Scale scale;
-      scale.stds = {0.200000003, 0.300000012, 2.5, 0.100000001};
-      scale.means = {-0.100000001, -0.769999981, 5, -0.5};
-
-      LogisticRegressorQualityEstimator logisticRegressorQE(std::move(scale), std::move(coefficients), intercept);
-
-      LogisticRegressorQualityEstimatorTest lrTest;
-
-      WHEN("It's call predict") {
-        const std::vector<float> prediction = lrTest.predict(logisticRegressorQE, featureMatrix);
-
-        THEN("return the prediction") {
-          CHECK(prediction == std::vector<float>{-2.14596, -4.41793, -4.403, -0.93204, -3.03343});
-        }
-      }
-    }
-  }
-}
 
 SCENARIO("Logistic Regressor Test", "[QualityEstimator]") {
   GIVEN("A quality, features and target") {
@@ -76,12 +22,15 @@ SCENARIO("Logistic Regressor Test", "[QualityEstimator]") {
         marian::string_view(target.data() + 21, 0),  // "",
     };
 
-    marian::bergamot::AnnotatedText annotatedTarget(std::move(std::string()));
-    annotatedTarget.appendSentence(prefix, sentencesView.begin(), sentencesView.end());
+    Response response;
 
-    // LogProbs
+    response.target.appendSentence(prefix, sentencesView.begin(), sentencesView.end());
+
+    // Histories - LogProbs
 
     const std::vector<float> logProbs = {-0.3, -0.0001, -0.002, -0.5, -0.2, -0.1, -0.001};
+
+    auto histories = logProbsToHistories(logProbs);
 
     // Memory / Features
 
@@ -96,11 +45,13 @@ SCENARIO("Logistic Regressor Test", "[QualityEstimator]") {
       LogisticRegressorQualityEstimator logisticRegressorQE(std::move(scale), std::move(coefficients), intercept);
 
       WHEN("It's call computeQualityScores") {
-        LogisticRegressorQualityEstimatorTest lrTest;
+        logisticRegressorQE.computeQualityScores(histories, response);
 
-        auto wordsQualityEstimate = lrTest.computeSentenceScores(logisticRegressorQE, logProbs, annotatedTarget, 0);
+        THEN("It's add WordsQualityEstimate on response") {
+          REQUIRE(response.qualityScores.size() == 1);
 
-        THEN("It's returned WordsQualityEstimate") {
+          const auto& wordsQualityEstimate = response.qualityScores[0];
+
           CHECK(wordsQualityEstimate.wordByteRanges ==
                 std::vector<ByteRange>({{0, 1}, {2, 6}, {7, 9}, {10, 12}, {13, 21}}));
 

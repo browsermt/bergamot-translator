@@ -11,8 +11,6 @@ namespace marian::bergamot {
 /// score is computed by taking the mean of the negative logprobs of the tokens that make up it. The sentence score is
 /// the mean of all word's neg. logprob.
 class UnsupervisedQualityEstimator : public IQualityEstimator {
-  friend class UnsupervisedQualityEstimatorTest;
-
  public:
   void computeQualityScores(const Histories &histories, Response &response) const override;
 

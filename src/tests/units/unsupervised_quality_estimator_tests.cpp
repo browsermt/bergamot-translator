@@ -2,16 +2,6 @@
 #include "test_helper.h"
 #include "translator/unsupervised_quality_estimator.h"
 
-namespace marian::bergamot {
-class UnsupervisedQualityEstimatorTest {
- public:
-  Response::WordsQualityEstimate computeSentenceScores(const std::vector<float> &logProbs, const AnnotatedText &target,
-                                                       const size_t sentenceIdx) const {
-    return UnsupervisedQualityEstimator::computeSentenceScores(logProbs, target, sentenceIdx);
-  }
-};
-}  // namespace marian::bergamot
-
 using namespace marian::bergamot;
 
 SCENARIO("Unsupervised Quality Estimator test", "[UnsupervisedQualityEstimator]") {
@@ -32,19 +22,26 @@ SCENARIO("Unsupervised Quality Estimator test", "[UnsupervisedQualityEstimator]"
         marian::string_view(target.data() + 21, 0),  // "",
     };
 
-    marian::bergamot::AnnotatedText annotatedTarget(std::move(std::string()));
-    annotatedTarget.appendSentence(prefix, sentencesView.begin(), sentencesView.end());
+    Response response;
 
-    // LogProbs
+    response.target.appendSentence(prefix, sentencesView.begin(), sentencesView.end());
+
+    // Histories - LogProbs
 
     const std::vector<float> logProbs = {-0.3, -0.0001, -0.002, -0.5, -0.2, -0.1, -0.001};
 
-    AND_GIVEN("Simple Quality Estimator") {
-      UnsupervisedQualityEstimatorTest simpleQETest;
-      WHEN("It's call computeSentenceScores") {
-        auto wordsQualityEstimate = simpleQETest.computeSentenceScores(logProbs, annotatedTarget, 0);
+    auto histories = logProbsToHistories(logProbs);
+
+    AND_GIVEN("Unsupervised Quality Estimator") {
+      WHEN("It's call computeQualityScores") {
+        UnsupervisedQualityEstimator unsupervisedQE;
+        unsupervisedQE.computeQualityScores(histories, response);
 
         THEN("It's returned WordsQualityEstimate") {
+          REQUIRE(response.qualityScores.size() == 1);
+
+          const auto& wordsQualityEstimate = response.qualityScores[0];
+
           CHECK(wordsQualityEstimate.wordByteRanges ==
                 std::vector<ByteRange>({{0, 1}, {2, 6}, {7, 9}, {10, 12}, {13, 21}}));
 

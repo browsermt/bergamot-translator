@@ -19,8 +19,6 @@ constexpr std::size_t BINARY_QE_MODEL_MAGIC = 0x78cc336f1d54b180;
 /// and then they are used to build a model representation
 ///
 class LogisticRegressorQualityEstimator : public IQualityEstimator {
-  friend class LogisticRegressorQualityEstimatorTest;
-
  public:
   struct Header {
     uint64_t magic;             // BINARY_QE_MODEL_MAGIC

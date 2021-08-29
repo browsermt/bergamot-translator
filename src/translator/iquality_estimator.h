@@ -21,6 +21,6 @@ class IQualityEstimator {
   virtual void computeQualityScores(const Histories &histories, Response &response) const = 0;
 };
 
-std::pair<std::vector<ByteRange>, std::vector<std::vector<float> > > remapWordsAndLogProbs(
+std::pair<std::vector<std::vector<ByteRange>>, std::vector<std::vector<float>>> remapWordsAndLogProbs(
     const std::vector<float> &logProbs, const AnnotatedText &target, const size_t sentenceIdx);
 }  // namespace marian::bergamot

@@ -152,12 +152,20 @@ Response::WordsQualityEstimate LogisticRegressorQualityEstimator::computeSentenc
     const std::vector<float>& logProbs, const AnnotatedText& target, const size_t sentenceIdx) const
 
 {
-  const auto [wordBytesRanges, wordslogProbs] = remapWordsAndLogProbs(logProbs, target, sentenceIdx);
+  const auto [subwordByWordBytesRanges, wordslogProbs] = remapWordsAndLogProbs(logProbs, target, sentenceIdx);
 
   const auto wordQualityScores = predict(extractFeatures(wordslogProbs));
 
   const float sentenceScore = std::accumulate(std::begin(wordQualityScores), std::end(wordQualityScores), float(0.0)) /
                               wordQualityScores.size();
+
+  std::vector<ByteRange> wordBytesRanges;
+
+  for (const auto& subwords : subwordByWordBytesRanges) {
+    if (!subwords.empty()) {
+      wordBytesRanges.emplace_back(ByteRange{subwords.begin()->begin, subwords.rbegin()->end});
+    }
+  }
 
   return {wordQualityScores, wordBytesRanges, sentenceScore};
 }

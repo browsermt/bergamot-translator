@@ -4,7 +4,7 @@
 #include <optional>
 
 #include "data/types.h"
-#include "iquality_estimator.h"
+#include "quality_estimator.h"
 #include "response.h"
 #include "response_options.h"
 #include "vocabs.h"
@@ -30,7 +30,7 @@ class ResponseBuilder {
   /// @param [in] qualityEstimator: the QualityEstimator model that can be used
   /// to provide translation quality probability.
   ResponseBuilder(ResponseOptions responseOptions, AnnotatedText &&source, Vocabs &vocabs,
-                  std::function<void(Response &&)> callback, const IQualityEstimator &qualityEstimator)
+                  std::function<void(Response &&)> callback, const QualityEstimator &qualityEstimator)
       : responseOptions_(responseOptions),
         source_(std::move(source)),
         vocabs_(vocabs),
@@ -91,7 +91,7 @@ class ResponseBuilder {
                                                //  after Response constructed.
   AnnotatedText source_;
 
-  const IQualityEstimator &qualityEstimator_;
+  const QualityEstimator &qualityEstimator_;
 };
 }  // namespace bergamot
 }  // namespace marian

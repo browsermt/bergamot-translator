@@ -1,9 +1,42 @@
-#include "logistic_regressor_quality_estimator.h"
-
-#include <algorithm>
-#include <numeric>
+#include "quality_estimator.h"
 
 namespace marian::bergamot {
+
+void UnsupervisedQualityEstimator::computeQualityScores(const Histories& histories, Response& response) const {
+  size_t sentenceIndex = 0;
+
+  for (const auto& history : histories) {
+    const auto logProbs = std::get<1>(history->top())->tracebackWordScores();
+    response.qualityScores.push_back(computeSentenceScores(logProbs, response.target, sentenceIndex));
+    ++sentenceIndex;
+  }
+}
+
+Response::WordsQualityEstimate UnsupervisedQualityEstimator::computeSentenceScores(const std::vector<float>& logProbs,
+                                                                                   const AnnotatedText& target,
+                                                                                   const size_t sentenceIdx) const {
+  const auto [subwordByWordBytesRanges, wordlogProbs] = remapWordsAndLogProbs(logProbs, target, sentenceIdx);
+
+  std::vector<float> wordQualityScores;
+
+  for (const auto& wordlogProb : wordlogProbs) {
+    wordQualityScores.push_back(std::accumulate(std::begin(wordlogProb), std::end(wordlogProb), float(0.0)) /
+                                wordlogProb.size());
+  }
+
+  const float sentenceScore = std::accumulate(std::begin(wordQualityScores), std::end(wordQualityScores), float(0.0)) /
+                              wordQualityScores.size();
+
+  std::vector<ByteRange> wordBytesRanges;
+
+  for (const auto& subwords : subwordByWordBytesRanges) {
+    if (!subwords.empty()) {
+      wordBytesRanges.emplace_back(ByteRange{subwords.begin()->begin, subwords.rbegin()->end});
+    }
+  }
+
+  return {wordQualityScores, wordBytesRanges, sentenceScore};
+}
 
 // Given an input matrix $\mathbf{X}$, the usual Logistic Regression calculus can be seen as the following:
 //
@@ -31,8 +64,7 @@ namespace marian::bergamot {
 
 LogisticRegressorQualityEstimator::LogisticRegressorQualityEstimator(Scale&& scale, std::vector<float>&& coefficients,
                                                                      const float intercept)
-    : IQualityEstimator(),
-      scale_(std::move(scale)),
+    : scale_(std::move(scale)),
       coefficients_(std::move(coefficients)),
       intercept_(intercept),
       coefficientsByStds_(coefficients_.size()) {
@@ -47,8 +79,7 @@ LogisticRegressorQualityEstimator::LogisticRegressorQualityEstimator(Scale&& sca
 }
 
 LogisticRegressorQualityEstimator::LogisticRegressorQualityEstimator(LogisticRegressorQualityEstimator&& other)
-    : IQualityEstimator(),
-      scale_(std::move(other.scale_)),
+    : scale_(std::move(other.scale_)),
       coefficients_(std::move(other.coefficients_)),
       intercept_(std::move(other.intercept_)),
       coefficientsByStds_(std::move(other.coefficientsByStds_)),
@@ -188,7 +219,7 @@ std::vector<float> LogisticRegressorQualityEstimator::predict(const Matrix& feat
   return scores;
 }
 
-Matrix LogisticRegressorQualityEstimator::extractFeatures(const std::vector<std::vector<float> >& wordsLogProbs) {
+Matrix LogisticRegressorQualityEstimator::extractFeatures(const std::vector<std::vector<float>>& wordsLogProbs) {
   if (wordsLogProbs.empty()) {
     return std::move(Matrix(0, 0));
   }
@@ -238,4 +269,36 @@ Matrix LogisticRegressorQualityEstimator::extractFeatures(const std::vector<std:
   return std::move(features);
 }
 
+std::pair<std::vector<std::vector<ByteRange>>, std::vector<std::vector<float>>> remapWordsAndLogProbs(
+    const std::vector<float>& logProbs, const AnnotatedText& target, const size_t sentenceIdx) {
+  // Ignore empty target
+  if ((logProbs.size() < 2) || (target.numWords(sentenceIdx) == 0)) {
+    return {{}, {}};
+  }
+
+  std::vector<std::vector<ByteRange>> wordByteRanges(/*numWords=*/1);
+  std::vector<std::vector<float>> wordlogProbs(/*numWords=*/1);
+
+  /// A word is composed of multiple subtokens. The definition of an "entire"
+  /// word is the presence of whitespace. The QE model ignores the presence
+  /// of the EOS token, and hence we only need to iterate n-1 positions.
+  for (size_t subwordIdx = 0; subwordIdx < (logProbs.size() - 1); ++subwordIdx) {
+    ByteRange subword = target.wordAsByteRange(sentenceIdx, subwordIdx);
+
+    const char firstLetter = target.text.at(subword.begin);
+
+    // if the first character is whitespace, it's a beginning of a new word
+    if (isspace(firstLetter)) {
+      wordlogProbs.emplace_back();
+      wordByteRanges.emplace_back();
+      ++subword.begin;
+    }
+
+    // update last word byte range and word features
+    wordlogProbs.back().push_back(logProbs[subwordIdx]);
+    wordByteRanges.back().push_back(subword);
+  }
+
+  return {wordByteRanges, wordlogProbs};
+}
 }  // namespace marian::bergamot

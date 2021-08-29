@@ -6,7 +6,6 @@
 #include "batch.h"
 #include "byte_array_util.h"
 #include "definitions.h"
-#include "quality_estimator_helper.h"
 
 namespace marian {
 namespace bergamot {

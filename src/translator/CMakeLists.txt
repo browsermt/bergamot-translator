@@ -9,14 +9,11 @@ add_library(bergamot-translator STATIC
     request.cpp 
     batcher.cpp
     response_builder.cpp
-    iquality_estimator.cpp
-    quality_estimator_helper.cpp
-    unsupervised_quality_estimator.cpp
+    quality_estimator.cpp
     batch.cpp
     annotation.cpp
     service.cpp
     threadsafe_batcher.cpp
-    logistic_regressor_quality_estimator.cpp
     matrix.cpp
 )
 if (USE_WASM_COMPATIBLE_SOURCE)

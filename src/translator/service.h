@@ -3,7 +3,7 @@
 
 #include "batch_translator.h"
 #include "data/types.h"
-#include "iquality_estimator.h"
+#include "quality_estimator.h"
 #include "response.h"
 #include "response_builder.h"
 #include "text_processor.h"
@@ -118,7 +118,7 @@ class Service {
   /// Shortlist memory passed as bytes.
   AlignedMemory shortlistMemory_;  // ORDER DEPENDENCY (translators_)
 
-  std::shared_ptr<IQualityEstimator> qualityEstimator_;
+  std::shared_ptr<QualityEstimator> qualityEstimator_;
 
   /// Stores requestId of active request. Used to establish
   /// ordering among requests and logging/book-keeping.

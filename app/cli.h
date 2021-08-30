@@ -49,10 +49,11 @@ void wasm(const CLIConfig &config) {
   Ptr<Options> options = parseOptionsFromFilePath(modelConfigPath);
   MemoryBundle memoryBundle = getMemoryBundleFromConfig(options);
 
-  BlockingService service;
+  BlockingService::Config serviceConfig;
+  BlockingService service(serviceConfig);
 
-  Ptr<TranslationModel> translationModel =
-      service.createCompatibleModel(options->asYamlString(), std::move(memoryBundle));
+  std::shared_ptr<TranslationModel> translationModel =
+      std::make_shared<TranslationModel>(options->asYamlString(), std::move(memoryBundle));
 
   ResponseOptions responseOptions;
   std::vector<std::string> texts;
@@ -89,7 +90,8 @@ void wasm(const CLIConfig &config) {
 /// @param [in] options: constructed from command-line supplied arguments
 void decoder(const CLIConfig &config) {
   marian::timer::Timer decoderTimer;
-  AsyncService service(config.numWorkers);
+  AsyncService::Config asyncConfig{config.numWorkers};
+  AsyncService service(asyncConfig);
   auto options = parseOptionsFromFilePath(config.modelConfigPaths.front());
   MemoryBundle memoryBundle;
   Ptr<TranslationModel> translationModel = service.createCompatibleModel(options, std::move(memoryBundle));
@@ -123,7 +125,8 @@ void decoder(const CLIConfig &config) {
 ///
 /// @param [in] options: options to build translator
 void native(const CLIConfig &config) {
-  AsyncService service(config.numWorkers);
+  AsyncService::Config asyncConfig{config.numWorkers};
+  AsyncService service(asyncConfig);
 
   auto options = parseOptionsFromFilePath(config.modelConfigPaths.front());
   // Prepare memories for bytearrays (including model, shortlist and vocabs)

@@ -24,20 +24,12 @@ class AsyncService;
 ///
 /// BlockingService is a not-threaded counterpart of AsyncService which can operate only in a blocking workflow (queue a
 /// bunch of texts and optional args to translate, wait till the translation finishes).
-///
-/// Pending decommission following https://github.com/mozilla/bergamot-translator/issues/15#issue-828300150.
 class BlockingService {
  public:
+  struct Config {};
   /// Construct a BlockingService with configuration loaded from an Options object. Does not require any keys, values to
   /// be set.
-  BlockingService();
-
-  /// Create a TranslationModel compatible with this instance of Service. Internally assigns how many replicas of
-  /// backend needed based on worker threads set. See TranslationModel for documentation on other params.
-  template <class ConfigType>
-  Ptr<TranslationModel> createCompatibleModel(const ConfigType &config, MemoryBundle &&memory) {
-    return New<TranslationModel>(config, /*replicas=*/1, std::move(memory));
-  }
+  BlockingService(const BlockingService::Config &config);
 
   /// Translate multiple text-blobs in a single *blocking* API call, providing ResponseOptions which applies across all
   /// text-blobs dictating how to construct Response. ResponseOptions can be used to enable/disable additional
@@ -62,6 +54,8 @@ class BlockingService {
   /// An aggregate batching pool associated with an async translating instance, which maintains an aggregate queue of
   /// requests compiled from  batching-pools of multiple translation models. Not thread-safe.
   AggregateBatchingPool batchingPool_;
+
+  Config config_;
 };
 
 /// Effectively a threadpool, providing an API to take a translation request of a source-text, paramaterized by
@@ -69,15 +63,19 @@ class BlockingService {
 /// request is provisioned through ResponseOptions.
 class AsyncService {
  public:
+  struct Config {
+    size_t numWorkers;
+  };
   /// Construct an AsyncService with configuration loaded from Options. Expects positive integer value for
   /// `cpu-threads`. Additionally requires options which configure AggregateBatchingPool.
-  AsyncService(size_t numWorkers);
+  AsyncService(const AsyncService::Config &config);
 
   /// Create a TranslationModel compatible with this instance of Service. Internally assigns how many replicas of
   /// backend needed based on worker threads set. See TranslationModel for documentation on other params.
   template <class ConfigType>
   Ptr<TranslationModel> createCompatibleModel(const ConfigType &config, MemoryBundle &&memory = MemoryBundle{}) {
-    return New<TranslationModel>(config, /*replicas=*/numWorkers_, std::move(memory));
+    // @TODO: Remove this remove this dependency/coupling.
+    return New<TranslationModel>(config, std::move(memory), /*replicas=*/config_.numWorkers);
   }
 
   /// With the supplied TranslationModel, translate an input. A Response is constructed with optional items set/unset
@@ -96,11 +94,8 @@ class AsyncService {
   /// Thread joins and proper shutdown are required to be handled explicitly.
   ~AsyncService();
 
-  const size_t numWorkers() { return numWorkers_; }
-
  private:
-  /// Count of workers used for to run translation.
-  size_t numWorkers_;
+  AsyncService::Config config_;
 
   std::vector<std::thread> workers_;
 

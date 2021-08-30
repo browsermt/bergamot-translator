@@ -9,7 +9,7 @@
 namespace marian {
 namespace bergamot {
 
-BlockingService::BlockingService() : requestId_(0), batchingPool_() {}
+BlockingService::BlockingService(const BlockingService::Config &config) : requestId_(0), batchingPool_() {}
 
 std::vector<Response> BlockingService::translateMultiple(std::shared_ptr<TranslationModel> translationModel,
                                                          std::vector<std::string> &&sources,
@@ -33,10 +33,10 @@ std::vector<Response> BlockingService::translateMultiple(std::shared_ptr<Transla
   return responses;
 }
 
-AsyncService::AsyncService(size_t numWorkers) : requestId_(0), numWorkers_(numWorkers), safeBatchingPool_() {
-  ABORT_IF(numWorkers_ == 0, "Number of workers should be at least 1 in a threaded workflow");
-  workers_.reserve(numWorkers_);
-  for (size_t cpuId = 0; cpuId < numWorkers_; cpuId++) {
+AsyncService::AsyncService(const AsyncService::Config &config) : requestId_(0), config_(config), safeBatchingPool_() {
+  ABORT_IF(config_.numWorkers == 0, "Number of workers should be at least 1 in a threaded workflow");
+  workers_.reserve(config_.numWorkers);
+  for (size_t cpuId = 0; cpuId < config_.numWorkers; cpuId++) {
     workers_.emplace_back([cpuId, this] {
       // Consumer thread main-loop. Note that this is an infinite-loop unless the monitor is explicitly told to
       // shutdown, which happens in the destructor for this class.

@@ -46,8 +46,8 @@ class TranslationModel {
   /// Equivalent to options based constructor, where `options` is parsed from string configuration. Configuration can be
   /// JSON or YAML. Keys expected correspond to those of `marian-decoder`, available at
   /// https://marian-nmt.github.io/docs/cmd/marian-decoder/
-  TranslationModel(const std::string& config, size_t replicas, MemoryBundle&& memory)
-      : TranslationModel(parseOptionsFromString(config, /*validate=*/false), replicas, std::move(memory)){};
+  TranslationModel(const std::string& config, MemoryBundle&& memory, size_t replicas = 1)
+      : TranslationModel(parseOptionsFromString(config, /*validate=*/false), std::move(memory), replicas){};
 
   /// Construct TranslationModel from marian-options. If memory is empty, TranslationModel is initialized from
   /// paths available in the options object, backed by filesystem. Otherwise, TranslationModel is initialized from the
@@ -56,7 +56,7 @@ class TranslationModel {
   /// @param [in] options: Marian options object.
   /// @param [in] memory: MemoryBundle object holding memory buffers containing parameters to build MarianBackend,
   /// ShortlistGenerator, Vocabs and SentenceSplitter.
-  TranslationModel(const Config& options, size_t replicas, MemoryBundle&& memory = MemoryBundle{});
+  TranslationModel(const Config& options, MemoryBundle&& memory = MemoryBundle{}, size_t replicas = 1);
 
   /// Make a Request to be translated by this TranslationModel instance.
   /// @param [in] requestId: Unique identifier associated with this request, available from Service.

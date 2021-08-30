@@ -54,11 +54,13 @@ MemoryBundle prepareMemoryBundle(AlignedMemory* modelMemory, AlignedMemory* shor
   return memoryBundle;
 }
 
-std::shared_ptr<TranslationModel> TranslationModelFactory(const std::string& config, size_t replicas,
-                                                          AlignedMemory* model, AlignedMemory* shortlist,
+// This allows only shared_ptrs to be operational in JavaScript, according to emscripten.
+// https://emscripten.org/docs/porting/connecting_cpp_and_javascript/embind.html#smart-pointers
+std::shared_ptr<TranslationModel> TranslationModelFactory(const std::string& config, AlignedMemory* model,
+                                                          AlignedMemory* shortlist,
                                                           std::vector<AlignedMemory*> vocabs) {
   MemoryBundle memoryBundle = prepareMemoryBundle(model, shortlist, vocabs);
-  return std::make_shared<TranslationModel>(config, replicas, std::move(memoryBundle));
+  return std::make_shared<TranslationModel>(config, std::move(memoryBundle));
 }
 
 EMSCRIPTEN_BINDINGS(translation_model) {
@@ -66,17 +68,16 @@ EMSCRIPTEN_BINDINGS(translation_model) {
       .smart_ptr_constructor("TranslationModel", &TranslationModelFactory, allow_raw_pointers());
 }
 
-std::shared_ptr<TranslationModel> proxyCreateCompatibleModel(BlockingService& self, const std::string& config,
-                                                             AlignedMemory* model, AlignedMemory* shortlist,
-                                                             std::vector<AlignedMemory*> vocabs) {
-  MemoryBundle memoryBundle = prepareMemoryBundle(model, shortlist, vocabs);
-  return self.createCompatibleModel(config, std::move(memoryBundle));
+EMSCRIPTEN_BINDINGS(blocking_service_config) {
+  value_object<BlockingService::Config>("BlockingServiceConfig");
+  // .field("name", &BlockingService::Config::name")
+  // The above is a future hook. Note that more will come - for cache, for workspace-size or graph details  limits on
+  // aggregate-batching etc.
 }
 
 EMSCRIPTEN_BINDINGS(blocking_service) {
   class_<BlockingService>("BlockingService")
-      .constructor()
-      .function("createCompatibleModel", &proxyCreateCompatibleModel, allow_raw_pointers())
+      .constructor<BlockingService::Config>()
       .function("translate", &BlockingService::translateMultiple);
 
   register_vector<std::string>("VectorString");

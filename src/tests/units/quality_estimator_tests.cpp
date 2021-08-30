@@ -33,10 +33,11 @@ SCENARIO("Unsupervised Quality Estimator test", "[QualityEstimator]") {
 
     auto histories = logProbsToHistories(logProbs);
 
-    AND_GIVEN("Unsupervised Quality Estimator") {
+    AND_GIVEN("Quality Estimator without aligned memory") {
+      auto qualityEstimator = createQualityEstimator({});
+
       WHEN("It's call computeQualityScores") {
-        UnsupervisedQualityEstimator unsupervisedQE;
-        unsupervisedQE.computeQualityScores(histories, response);
+        qualityEstimator->computeQualityScores(histories, response);
 
         THEN("It's returned WordsQualityEstimate") {
           REQUIRE(response.qualityScores.size() == 1);
@@ -91,11 +92,11 @@ SCENARIO("Logistic Regressor Test", "[QualityEstimator]") {
     std::vector<float> coefficients = {0.99000001, 0.899999976, -0.200000003, 0.5};
     const float intercept = {-0.300000012};
 
-    AND_GIVEN("LogisticRegressorQualityEstimator Quality Estimator") {
-      LogisticRegressorQualityEstimator logisticRegressorQE(std::move(scale), std::move(coefficients), intercept);
-
+    AND_GIVEN("QualityEstimator with LogisticRegressor Aligned Memory") {
+      auto qualityEstimator = createQualityEstimator(
+          LogisticRegressorQualityEstimator(std::move(scale), std::move(coefficients), intercept).toAlignedMemory());
       WHEN("It's call computeQualityScores") {
-        logisticRegressorQE.computeQualityScores(histories, response);
+        qualityEstimator->computeQualityScores(histories, response);
 
         THEN("It's add WordsQualityEstimate on response") {
           REQUIRE(response.qualityScores.size() == 1);
@@ -110,33 +111,6 @@ SCENARIO("Logistic Regressor Test", "[QualityEstimator]") {
           CHECK(wordsQualityEstimate.sentenceScore == Approx(-2.98647).epsilon(0.0001));
         }
       }
-    }
-  }
-}
-
-SCENARIO("Create Quality Estimator test", "[QualityEstimatorHelper]") {
-  WHEN("It's call Make with a empty AlignedMemory") {
-    AlignedMemory emptyMemory;
-    const auto model = createQualityEstimator(emptyMemory);
-
-    THEN("It's created a UnsupervisedQualityEstimator") {
-      CHECK(dynamic_cast<const UnsupervisedQualityEstimator*>(model.get()) != nullptr);
-    }
-  }
-  WHEN("It's call Make with a LR AlignedMemory") {
-    std::vector<float> coefficients = {0.99000001, 0.899999976, -0.200000003, 0.5};
-    const float intercept = {-0.300000012};
-
-    LogisticRegressorQualityEstimator::Scale scale;
-    scale.stds = {0.200000003, 0.300000012, 2.5, 0.100000001};
-    scale.means = {-0.100000001, -0.769999981, 5, -0.5};
-
-    LogisticRegressorQualityEstimator logisticRegressor(std::move(scale), std::move(coefficients), intercept);
-
-    const auto model = createQualityEstimator(logisticRegressor.toAlignedMemory());
-
-    THEN("It's created a LogisticRegressor") {
-      CHECK(dynamic_cast<const LogisticRegressorQualityEstimator*>(model.get()) != nullptr);
     }
   }
 }

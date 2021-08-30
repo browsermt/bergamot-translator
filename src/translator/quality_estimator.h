@@ -3,7 +3,6 @@
 #include <vector>
 
 #include "annotation.h"
-#include "matrix.h"
 #include "response.h"
 #include "translator/history.h"
 
@@ -56,6 +55,21 @@ class LogisticRegressorQualityEstimator : public QualityEstimator {
   struct Scale {
     std::vector<float> stds;
     std::vector<float> means;
+  };
+
+  class Matrix {
+   public:
+    const size_t rows;
+    const size_t cols;
+
+    Matrix(Matrix &&other);
+    Matrix(const size_t rowsParam, const size_t colsParam);
+
+    const float &at(const size_t row, const size_t col) const;
+    float &at(const size_t row, const size_t col);
+
+   private:
+    std::vector<float> data_;
   };
 
   LogisticRegressorQualityEstimator(Scale &&scale, std::vector<float> &&coefficients, const float intercept);

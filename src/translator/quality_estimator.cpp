@@ -30,6 +30,20 @@ Response::WordsQualityEstimate UnsupervisedQualityEstimator::computeSentenceScor
   return {wordQualityScores, subwordToWords(subwordByWordBR), sentenceScore};
 }
 
+LogisticRegressorQualityEstimator::Matrix::Matrix(const size_t rowsParam, const size_t colsParam)
+    : rows(rowsParam), cols(colsParam), data_(rowsParam * colsParam) {}
+
+LogisticRegressorQualityEstimator::Matrix::Matrix(Matrix&& other)
+    : rows(other.rows), cols(other.cols), data_(std::move(other.data_)) {}
+
+const float& LogisticRegressorQualityEstimator::Matrix::at(const size_t row, const size_t col) const {
+  return data_[row * cols + col];
+}
+
+float& LogisticRegressorQualityEstimator::Matrix::at(const size_t row, const size_t col) {
+  return data_[row * cols + col];
+}
+
 // Given an input matrix $\mathbf{X}$, the usual Logistic Regression calculus can be seen as the following:
 //
 // 1) Standardize it, returning in $\mathbf{Z} = \frac{(\mathbf{X}-\mu)}{\sigma}$, where $\mu$ stands for the mean
@@ -204,7 +218,8 @@ std::vector<float> LogisticRegressorQualityEstimator::predict(const Matrix& feat
   return scores;
 }
 
-Matrix LogisticRegressorQualityEstimator::extractFeatures(const std::vector<std::vector<float>>& wordsLogProbs) {
+LogisticRegressorQualityEstimator::Matrix LogisticRegressorQualityEstimator::extractFeatures(
+    const std::vector<std::vector<float>>& wordsLogProbs) {
   if (wordsLogProbs.empty()) {
     return std::move(Matrix(0, 0));
   }

@@ -14,19 +14,20 @@ void UnsupervisedQualityEstimator::computeQualityScores(const Histories& histori
 
 Response::SentenceQualityEstimate UnsupervisedQualityEstimator::computeSentenceScores(
     const std::vector<float>& logProbs, const AnnotatedText& target, const size_t sentenceIdx) const {
-  const auto [subwordByWordBR, wordlogProbs] = remapWordsAndLogProbs(logProbs, target, sentenceIdx);
+  const auto wordIndexes = mapWords(logProbs, target, sentenceIdx);
 
-  std::vector<float> wordQualityScores;
+  std::vector<float> wordScores;
 
-  for (const auto& wordlogProb : wordlogProbs) {
-    wordQualityScores.push_back(std::accumulate(std::begin(wordlogProb), std::end(wordlogProb), float(0.0)) /
-                                wordlogProb.size());
+  for (const auto& wordIndex : wordIndexes) {
+    wordScores.push_back(
+        std::accumulate(logProbs.begin() + wordIndex.begin, logProbs.begin() + wordIndex.end, float(0.0)) /
+        wordIndex.size());
   }
 
-  const float sentenceScore = std::accumulate(std::begin(wordQualityScores), std::end(wordQualityScores), float(0.0)) /
-                              wordQualityScores.size();
+  const float sentenceScore =
+      std::accumulate(std::begin(wordScores), std::end(wordScores), float(0.0)) / wordScores.size();
 
-  return {wordQualityScores, subwordToWords(subwordByWordBR), sentenceScore};
+  return {wordScores, subwordToWords(wordIndexes, target, sentenceIdx), sentenceScore};
 }
 
 LogisticRegressorQualityEstimator::Matrix::Matrix(const size_t rowsParam, const size_t colsParam)
@@ -188,15 +189,14 @@ Response::SentenceQualityEstimate LogisticRegressorQualityEstimator::computeSent
     const std::vector<float>& logProbs, const AnnotatedText& target, const size_t sentenceIdx) const
 
 {
-  // @TODO: comment code below
-  const auto [subwordByWordBR, wordslogProbs] = remapWordsAndLogProbs(logProbs, target, sentenceIdx);
+  const auto wordIndexes = mapWords(logProbs, target, sentenceIdx);
 
-  const auto wordQualityScores = predict(extractFeatures(wordslogProbs));
+  const auto wordScores = predict(extractFeatures(wordIndexes, logProbs));
 
-  const float sentenceScore = std::accumulate(std::begin(wordQualityScores), std::end(wordQualityScores), float(0.0)) /
-                              wordQualityScores.size();
+  const float sentenceScore =
+      std::accumulate(std::begin(wordScores), std::end(wordScores), float(0.0)) / wordScores.size();
 
-  return {wordQualityScores, subwordToWords(subwordByWordBR), sentenceScore};
+  return {wordScores, subwordToWords(wordIndexes, target, sentenceIdx), sentenceScore};
 }
 
 std::vector<float> LogisticRegressorQualityEstimator::predict(const Matrix& features) const {
@@ -218,39 +218,39 @@ std::vector<float> LogisticRegressorQualityEstimator::predict(const Matrix& feat
 }
 
 LogisticRegressorQualityEstimator::Matrix LogisticRegressorQualityEstimator::extractFeatures(
-    const std::vector<std::vector<float>>& wordsLogProbs) {
-  if (wordsLogProbs.empty()) {
+    const std::vector<WordIndex>& wordIndexes, const std::vector<float>& logProbs) const {
+  if (wordIndexes.empty()) {
     return std::move(Matrix(0, 0));
   }
 
-  Matrix features(wordsLogProbs.size(), /*numFeatures =*/4);
+  Matrix features(wordIndexes.size(), /*numFeatures =*/4);
   size_t featureRow = 0;
   const size_t I_MEAN{0}, I_MIN{1}, I_NUM_SUBWORDS{2}, I_OVERALL_MEAN{3};
 
   float overallMean = 0.0;
   size_t numlogProbs = 0;
 
-  for (const auto& wordLogProbs : wordsLogProbs) {
-    if (wordLogProbs.size() == 0) {
+  for (const auto& wordIndex : wordIndexes) {
+    if (wordIndex.begin == wordIndex.end) {
       ++featureRow;
       continue;
     }
 
     float minScore = std::numeric_limits<float>::max();
 
-    for (const auto& logProb : wordLogProbs) {
+    for (size_t i = wordIndex.begin; i < wordIndex.end; ++i) {
       ++numlogProbs;
-      overallMean += logProb;
-      features.at(featureRow, I_MEAN) += logProb;
+      overallMean += logProbs[i];
+      features.at(featureRow, I_MEAN) += logProbs[i];
 
-      if (logProb < minScore) {
-        minScore = logProb;
+      if (logProbs[i] < minScore) {
+        minScore = logProbs[i];
       }
     }
 
-    features.at(featureRow, I_MEAN) /= static_cast<float>(wordLogProbs.size());
+    features.at(featureRow, I_MEAN) /= static_cast<float>(wordIndex.size());
     features.at(featureRow, I_MIN) = minScore;
-    features.at(featureRow, I_NUM_SUBWORDS) = wordLogProbs.size();
+    features.at(featureRow, I_NUM_SUBWORDS) = wordIndex.size();
 
     ++featureRow;
   }
@@ -259,7 +259,7 @@ LogisticRegressorQualityEstimator::Matrix LogisticRegressorQualityEstimator::ext
     return std::move(Matrix(0, 0));
   }
 
-  overallMean /= numlogProbs;
+  overallMean /= wordIndexes.rbegin()->end;
 
   for (int i = 0; i < features.rows; ++i) {
     features.at(i, I_OVERALL_MEAN) = overallMean;
@@ -268,15 +268,14 @@ LogisticRegressorQualityEstimator::Matrix LogisticRegressorQualityEstimator::ext
   return std::move(features);
 }
 
-std::pair<std::vector<std::vector<ByteRange>>, std::vector<std::vector<float>>> remapWordsAndLogProbs(
-    const std::vector<float>& logProbs, const AnnotatedText& target, const size_t sentenceIdx) {
+std::vector<WordIndex> mapWords(const std::vector<float>& logProbs, const AnnotatedText& target,
+                                const size_t sentenceIdx) {
   // Ignore empty target
   if ((logProbs.size() < 2) || (target.numWords(sentenceIdx) == 0)) {
-    return {{}, {}};
+    return {};
   }
 
-  std::vector<std::vector<ByteRange>> wordByteRanges(/*numWords=*/1);
-  std::vector<std::vector<float>> wordlogProbs(/*numWords=*/1);
+  std::vector<WordIndex> wordIndexes(/*numWords=*/1);
 
   /// A word is composed of multiple subtokens. The definition of an "entire"
   /// word is the presence of whitespace. The QE model ignores the presence
@@ -288,26 +287,30 @@ std::pair<std::vector<std::vector<ByteRange>>, std::vector<std::vector<float>>> 
 
     // if the first character is whitespace, it's a beginning of a new word
     if (isspace(firstLetter)) {
-      wordlogProbs.emplace_back();
-      wordByteRanges.emplace_back();
-      ++subword.begin;
+      wordIndexes.back().end = subwordIdx;
+      wordIndexes.emplace_back();
+      wordIndexes.back().begin = subwordIdx;
     }
-
-    // update last word byte range and word features
-    wordlogProbs.back().push_back(logProbs[subwordIdx]);
-    wordByteRanges.back().push_back(subword);
   }
 
-  return {wordByteRanges, wordlogProbs};
+  wordIndexes.back().end = logProbs.size() - 1;
+
+  return wordIndexes;
 }
 
-std::vector<ByteRange> subwordToWords(const std::vector<std::vector<ByteRange>>& subwords) {
+std::vector<ByteRange> subwordToWords(const std::vector<WordIndex>& wordIndexes, const AnnotatedText& target,
+                                      const size_t sentenceIdx) {
   std::vector<ByteRange> words;
 
-  for (const auto& subwords : subwords) {
-    if (!subwords.empty()) {
-      words.emplace_back(ByteRange{subwords.begin()->begin, subwords.rbegin()->end});
+  for (const auto& wordIndex : wordIndexes) {
+    auto wordBegin = target.wordAsByteRange(sentenceIdx, wordIndex.begin).begin;
+    auto wordEnd = target.wordAsByteRange(sentenceIdx, wordIndex.end).begin;
+
+    if (isspace(target.text.at(wordBegin))) {
+      ++wordBegin;
     }
+
+    words.emplace_back(ByteRange{wordBegin, wordEnd});
   }
 
   return words;

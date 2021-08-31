@@ -34,6 +34,12 @@ class UnsupervisedQualityEstimator : public QualityEstimator {
                                                           const AnnotatedText &target, const size_t sentenceIdx) const;
 };
 
+struct WordIndex {
+  size_t begin = 0;
+  size_t end = 0;
+  const size_t size() const { return end - begin; }
+};
+
 // ASCII and Unicode text files never start with the following 64 bits
 constexpr std::size_t BINARY_QE_MODEL_MAGIC = 0x78cc336f1d54b180;
 /// The current Quality Estimator model is a Logistic Model implemented through
@@ -104,7 +110,7 @@ class LogisticRegressorQualityEstimator : public QualityEstimator {
   Response::SentenceQualityEstimate computeSentenceScores(const std::vector<float> &logProbs,
                                                           const AnnotatedText &target, const size_t sentenceIdx) const;
 
-  static Matrix extractFeatures(const std::vector<std::vector<float>> &wordLogProbs);
+  Matrix extractFeatures(const std::vector<WordIndex> &wordIndexes, const std::vector<float> &logProbs) const;
 };
 
 /// The createQualityEstimator method create a quality estimator
@@ -120,9 +126,10 @@ inline std::shared_ptr<QualityEstimator> createQualityEstimator(const AlignedMem
       LogisticRegressorQualityEstimator::fromAlignedMemory(qualityFileMemory));
 }
 
-std::pair<std::vector<std::vector<ByteRange>>, std::vector<std::vector<float>>> remapWordsAndLogProbs(
-    const std::vector<float> &logProbs, const AnnotatedText &target, const size_t sentenceIdx);
+std::vector<WordIndex> mapWords(const std::vector<float> &logProbs, const AnnotatedText &target,
+                                const size_t sentenceIdx);
 
-std::vector<ByteRange> subwordToWords(const std::vector<std::vector<ByteRange>> &subwords);
+std::vector<ByteRange> subwordToWords(const std::vector<WordIndex> &wordIndexes, const AnnotatedText &target,
+                                      const size_t sentenceIdx);
 
 }  // namespace marian::bergamot

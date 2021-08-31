@@ -57,12 +57,13 @@ void annotatedTextSentences(Ptr<Options> options, bool source) {
 
 void qualityEstimatorWords(const Ptr<Options> &options) {
   ResponseOptions responseOptions;
+  responseOptions.qualityScores = true;
   const Response response = translateFromStdin(options, responseOptions);
 
-  for (const auto &wordsQualityEstimate : response.qualityScores) {
+  for (const auto &sentenceQualityEstimate : response.qualityScores) {
     std::cout << "[SentenceBegin]\n";
 
-    for (const auto &wordByteRange : wordsQualityEstimate.wordByteRanges) {
+    for (const auto &wordByteRange : sentenceQualityEstimate.wordByteRanges) {
       const string_view word(response.target.text.data() + wordByteRange.begin, wordByteRange.size());
       std::cout << word << "\n";
     }
@@ -72,12 +73,13 @@ void qualityEstimatorWords(const Ptr<Options> &options) {
 
 void qualityEstimatorScores(const Ptr<Options> &options) {
   ResponseOptions responseOptions;
+  responseOptions.qualityScores = true;
   const Response response = translateFromStdin(options, responseOptions);
 
-  for (const auto &wordsQualityEstimate : response.qualityScores) {
-    std::cout << std::fixed << std::setprecision(3) << wordsQualityEstimate.sentenceScore << "\n";
+  for (const auto &sentenceQualityEstimate : response.qualityScores) {
+    std::cout << std::fixed << std::setprecision(3) << sentenceQualityEstimate.sentenceScore << "\n";
 
-    for (const auto &wordScore : wordsQualityEstimate.wordQualityScores) {
+    for (const auto &wordScore : sentenceQualityEstimate.wordScores) {
       std::cout << std::fixed << std::setprecision(3) << wordScore << "\n";
     }
     std::cout << "\n";

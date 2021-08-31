@@ -55,7 +55,9 @@ class ResponseBuilder {
     buildTranslatedText(histories, response);
 
     // Should always be after buildTranslatedText
-    buildQualityScores(histories, response);
+    if (responseOptions_.qualityScores) {
+      buildQualityScores(histories, response);
+    }
 
     if (responseOptions_.alignment) {
       buildAlignments(histories, response);

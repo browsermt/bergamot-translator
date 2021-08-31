@@ -17,7 +17,7 @@ class QualityEstimator {
   // @param [in] histories: Histories obtained from translating a blob of source-text
   // @param [inout] response: Partially constructed response, holding tokenization info
   // for source and target. The quality-scores for each sentence obtained from source-text blob
-  // are written out as WordsQualityEstimate into response.
+  // are written out as SentenceQualityEstimate into response.
   virtual void computeQualityScores(const Histories &histories, Response &response) const = 0;
 };
 
@@ -30,8 +30,8 @@ class UnsupervisedQualityEstimator : public QualityEstimator {
   void computeQualityScores(const Histories &histories, Response &response) const override;
 
  private:
-  Response::WordsQualityEstimate computeSentenceScores(const std::vector<float> &logProbs, const AnnotatedText &target,
-                                                       const size_t sentenceIdx) const;
+  Response::SentenceQualityEstimate computeSentenceScores(const std::vector<float> &logProbs,
+                                                          const AnnotatedText &target, const size_t sentenceIdx) const;
 };
 
 // ASCII and Unicode text files never start with the following 64 bits
@@ -97,12 +97,12 @@ class LogisticRegressorQualityEstimator : public QualityEstimator {
 
   std::vector<float> predict(const Matrix &features) const;
 
-  /// construct the struct WordsQualityEstimate
+  /// construct the struct SentenceQualityEstimate
   /// @param [in] logProbs: the log probabilities given by an translation model
   /// @param [in] target: AnnotatedText target value
   /// @param [in] sentenceIdx: the id of a candidate sentence
-  Response::WordsQualityEstimate computeSentenceScores(const std::vector<float> &logProbs, const AnnotatedText &target,
-                                                       const size_t sentenceIdx) const;
+  Response::SentenceQualityEstimate computeSentenceScores(const std::vector<float> &logProbs,
+                                                          const AnnotatedText &target, const size_t sentenceIdx) const;
 
   static Matrix extractFeatures(const std::vector<std::vector<float>> &wordLogProbs);
 };

@@ -33,12 +33,12 @@ typedef std::vector<Point> Alignment;
 /// sentences boundaries, which are required to interpret Quality and
 /// Alignment (s) at the moment.
 struct Response {
-  /// WordsQualityEstimate contains the quality data of a given translated sentence.
+  /// SentenceQualityEstimate  contains the quality data of a given translated sentence.
   /// It includes the confidence (proxied by a probability) of each decoded word
   /// (higher probabilities imply better-translated words), the ByteRanges of each term,
   /// and the probability of the whole sentence, represented as the mean word scores.
-  struct WordsQualityEstimate {
-    std::vector<float> wordQualityScores;
+  struct SentenceQualityEstimate {
+    std::vector<float> wordScores;
     std::vector<ByteRange> wordByteRanges;
     float sentenceScore = 0.0;
   };
@@ -60,7 +60,7 @@ struct Response {
   /// normalized by length, for each sentence processed by the translator.
   /// Indices correspond to ranges accessible through respective Annotation on
   /// source or target.
-  std::vector<WordsQualityEstimate> qualityScores;
+  std::vector<SentenceQualityEstimate> qualityScores;
 
   /// Alignments between source and target. Each Alignment is a
   /// sparse matrix representation with indices corresponding

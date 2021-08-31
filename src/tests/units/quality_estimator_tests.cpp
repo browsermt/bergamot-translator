@@ -42,13 +42,13 @@ SCENARIO("Unsupervised Quality Estimator test", "[QualityEstimator]") {
         THEN("It's returned WordsQualityEstimate") {
           REQUIRE(response.qualityScores.size() == 1);
 
-          const auto& wordsQualityEstimate = response.qualityScores[0];
+          const auto& sentenceQualityEstimate = response.qualityScores[0];
 
-          CHECK(wordsQualityEstimate.wordByteRanges ==
+          CHECK(sentenceQualityEstimate.wordByteRanges ==
                 std::vector<ByteRange>({{0, 1}, {2, 6}, {7, 9}, {10, 12}, {13, 21}}));
 
-          CHECK(wordsQualityEstimate.wordQualityScores == std::vector<float>{-0.3, -0.0001, -0.002, -0.5, -0.15});
-          CHECK(wordsQualityEstimate.sentenceScore == Approx(-0.19042f).epsilon(0.0001));
+          CHECK(sentenceQualityEstimate.wordScores == std::vector<float>{-0.3, -0.0001, -0.002, -0.5, -0.15});
+          CHECK(sentenceQualityEstimate.sentenceScore == Approx(-0.19042f).epsilon(0.0001));
         }
       }
     }
@@ -101,14 +101,14 @@ SCENARIO("Logistic Regressor Test", "[QualityEstimator]") {
         THEN("It's add WordsQualityEstimate on response") {
           REQUIRE(response.qualityScores.size() == 1);
 
-          const auto& wordsQualityEstimate = response.qualityScores[0];
+          const auto& sentenceQualityEstimate = response.qualityScores[0];
 
-          CHECK(wordsQualityEstimate.wordByteRanges ==
+          CHECK(sentenceQualityEstimate.wordByteRanges ==
                 std::vector<ByteRange>({{0, 1}, {2, 6}, {7, 9}, {10, 12}, {13, 21}}));
 
-          CHECK(wordsQualityEstimate.wordQualityScores ==
+          CHECK(sentenceQualityEstimate.wordScores ==
                 std::vector<float>({-2.14596, -4.41793, -4.403, -0.93204, -3.03343}));
-          CHECK(wordsQualityEstimate.sentenceScore == Approx(-2.98647).epsilon(0.0001));
+          CHECK(sentenceQualityEstimate.sentenceScore == Approx(-2.98647).epsilon(0.0001));
         }
       }
     }

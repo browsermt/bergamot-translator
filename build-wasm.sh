@@ -1,14 +1,37 @@
 #!/usr/bin/env bash
-
-# Usage: ./build-wasm.sh
-
 set -e
 set -x
 
+# Usage
+Usage="Build translator to wasm (with/without wormhole).
+
+Usage: $(basename "$0") [WORMHOLE]
+
+    where:
+    WORMHOLE      An optional string argument
+                  - when specified on command line, builds wasm artifacts with wormhole
+                  - when not specified (the default behaviour), builds wasm artifacts without wormhole."
+
+if [ "$#" -gt 1 ]; then
+  echo "Illegal number of parameters passed"
+  echo "$Usage"
+  exit
+fi
+
+WORMHOLE=false
+
+if [ "$#" -eq 1 ]; then
+  if [ "$1" = "WORMHOLE" ]; then
+    WORMHOLE=true
+  else
+    echo "Illegal parameter passed"
+    echo "$Usage"
+    exit
+  fi
+fi
+
 # Run script from the context of the script-containing directory
 cd "$(dirname $0)"
-
-# This file replicates the instructions found in ./README.md under "Build WASM"
 
 # Prerequisite: Download and Install Emscripten using following instructions (unless the EMSDK env var is already set)
 if [ "$EMSDK" == "" ]; then
@@ -36,17 +59,24 @@ if [ "$EMSDK" == "" ]; then
 fi
 
 # Compile
-#    1. Create a folder where you want to build all the artifacts (`build-wasm` in this case) and compile
-if [ ! -d "build-wasm" ]; then
-  mkdir build-wasm
+#    1. Create a folder where you want to build all the artifacts and compile
+BUILD_DIRECTORY="build-wasm"
+if [ ! -d ${BUILD_DIRECTORY} ]; then
+  mkdir ${BUILD_DIRECTORY}
 fi
-cd build-wasm
-emcmake cmake -DCOMPILE_WASM=on ../
+cd ${BUILD_DIRECTORY}
+
+if [ "$WORMHOLE" = true ]; then
+  emcmake cmake -DCOMPILE_WASM=on ../
+else
+  emcmake cmake -DCOMPILE_WASM=on -DWORMHOLE=off ../
+fi
 emmake make -j2
 
 #     2. Enable SIMD Wormhole via Wasm instantiation API in generated artifacts
-bash ../wasm/patch-artifacts-enable-wormhole.sh
+if [ "$WORMHOLE" = true ]; then
+  bash ../wasm/patch-artifacts-enable-wormhole.sh
+fi
 
-# The artifacts (.js and .wasm files) will be available in the build directory ("build-wasm" in this case).
-
+# The artifacts (.js and .wasm files) will be available in the build directory
 exit 0

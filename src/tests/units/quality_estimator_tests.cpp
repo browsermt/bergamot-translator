@@ -22,7 +22,7 @@ SCENARIO("Logistic Regressor test", "[QualityEstimator]") {
     }
 
     AND_GIVEN("A LogistRegressor") {
-      std::vector<float> coefficients = {0.99000001, 0.899999976, -0.200000003, 0.5};
+      LogisticRegressorQualityEstimator::Array coefficients = {0.99000001, 0.899999976, -0.200000003, 0.5};
       const float intercept = {-0.300000012};
 
       LogisticRegressorQualityEstimator::Scale scale;

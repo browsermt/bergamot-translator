@@ -46,15 +46,9 @@ float& LogisticRegressorQualityEstimator::Matrix::at(const size_t row, const siz
   return data_[row * cols + col];
 }
 
-LogisticRegressorQualityEstimator::LogisticRegressorQualityEstimator(Scale&& scale, std::vector<float>&& coefficients,
+LogisticRegressorQualityEstimator::LogisticRegressorQualityEstimator(Scale&& scale, Array&& coefficients,
                                                                      const float intercept)
-    : scale_(std::move(scale)),
-      coefficients_(std::move(coefficients)),
-      intercept_(intercept),
-      coefficientsByStds_(coefficients_.size()) {
-  ABORT_IF(scale_.means.size() != scale_.stds.size(), "Number of means is not equal to number of stds");
-  ABORT_IF(scale_.means.size() != coefficients_.size(), "Number of means is not equal to number of coefficients");
-
+    : scale_(std::move(scale)), coefficients_(std::move(coefficients)), intercept_(intercept), coefficientsByStds_() {
   // Pre-compute the scale operations for the linear model
   for (int i = 0; i < coefficients_.size(); ++i) {
     coefficientsByStds_[i] = coefficients_[i] / scale_.stds[i];
@@ -99,10 +93,8 @@ LogisticRegressorQualityEstimator LogisticRegressorQualityEstimator::fromAligned
   const float intercept = *(memoryIndex += header.lrParametersDims);
 
   Scale scale;
-  scale.means.resize(header.lrParametersDims);
-  scale.stds.resize(header.lrParametersDims);
 
-  std::vector<float> coefficients(header.lrParametersDims);
+  Array coefficients;
 
   for (int i = 0; i < header.lrParametersDims; ++i) {
     scale.stds[i] = *(stds + i);

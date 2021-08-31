@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <vector>
 
 #include "annotation.h"
@@ -45,6 +46,8 @@ constexpr std::size_t BINARY_QE_MODEL_MAGIC = 0x78cc336f1d54b180;
 /// `fromAlignedMemory`), and then they are used to build a model representation
 class LogisticRegressorQualityEstimator : public QualityEstimator {
  public:
+  using Array = std::array<float, /*LRParamsDims = */ 4>;
+
   struct Header {
     /// Binary QE File magic number
     uint64_t magic;
@@ -54,9 +57,9 @@ class LogisticRegressorQualityEstimator : public QualityEstimator {
   /// Struct that contains information for applying standard scaling
   struct Scale {
     /// Array of standard deviations of feature values. Its length will be equals as featureDims
-    std::vector<float> stds;
+    Array stds;
     /// Array of mean of feature values. Its length will be equals as featureDims
-    std::vector<float> means;
+    Array means;
   };
   /// Matrix is an internal data structure that was created only to be used in LogisticRegressorQualityEstimator
   /// methods. It intends to represent a matrix, so it receives row and column values as a constructor. Furthermore, the
@@ -89,7 +92,7 @@ class LogisticRegressorQualityEstimator : public QualityEstimator {
   /// @param [in] scale: Array of stds and means that can be used to apply standard scaling in the features
   /// @param [in] coefficients: coefficient values of linear part of LR model
   /// @param [in] intercept: intercept value of the linear part of LR model
-  LogisticRegressorQualityEstimator(Scale &&scale, std::vector<float> &&coefficients, const float intercept);
+  LogisticRegressorQualityEstimator(Scale &&scale, Array &&coefficients, const float intercept);
 
   /// Move constructor
   LogisticRegressorQualityEstimator(LogisticRegressorQualityEstimator &&other);
@@ -137,9 +140,9 @@ class LogisticRegressorQualityEstimator : public QualityEstimator {
 
  private:
   Scale scale_;
-  std::vector<float> coefficients_;
+  Array coefficients_;
   float intercept_;
-  std::vector<float> coefficientsByStds_;
+  Array coefficientsByStds_;
   float constantFactor_ = 0.0;
 
   /// construct the struct SentenceQualityEstimate

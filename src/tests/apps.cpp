@@ -79,7 +79,7 @@ void qualityEstimatorScores(const Ptr<Options> &options) {
   for (const auto &sentenceQualityEstimate : response.qualityScores) {
     std::cout << std::fixed << std::setprecision(3) << sentenceQualityEstimate.sentenceScore << "\n";
 
-    for (const auto &wordScore : sentenceQualityEstimate.wordScores) {
+    for (const float &wordScore : sentenceQualityEstimate.wordScores) {
       std::cout << std::fixed << std::setprecision(3) << wordScore << "\n";
     }
     std::cout << "\n";

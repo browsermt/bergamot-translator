@@ -94,14 +94,14 @@ class LogisticRegressorQualityEstimator : public QualityEstimator {
 
   void computeQualityScores(const Histories &histories, Response &response) const override;
 
+  std::vector<float> predict(const Matrix &features) const;
+
  private:
   Scale scale_;
   std::vector<float> coefficients_;
   float intercept_;
   std::vector<float> coefficientsByStds_;
   float constantFactor_ = 0.0;
-
-  std::vector<float> predict(const Matrix &features) const;
 
   /// construct the struct SentenceQualityEstimate
   /// @param [in] logProbs: the log probabilities given by an translation model

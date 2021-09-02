@@ -34,7 +34,7 @@ typedef std::vector<Point> Alignment;
 /// Alignment (s) at the moment.
 struct Response {
   /// SentenceQualityEstimate  contains the quality data of a given translated sentence.
-  /// It includes the confidence (proxied by log probabilitites) of each decoded word
+  /// It includes the confidence (proxied by log probabilities) of each decoded word
   /// (higher logprobs imply better-translated words), the ByteRanges of each term,
   /// and logprobs of the whole sentence, represented as the mean word scores.
   struct SentenceQualityEstimate {

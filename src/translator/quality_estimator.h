@@ -86,7 +86,7 @@ class LogisticRegressorQualityEstimator : public QualityEstimator {
   /// Logistic Regressor constructor. It creates a LR model that fits proper for the QualityEstimator use.
   ///
   ///
-  /// @param [in] scale: Array of stds and meands that can be used to apply standard scaling in the features
+  /// @param [in] scale: Array of stds and means that can be used to apply standard scaling in the features
   /// @param [in] coefficients: coefficient values of linear part of LR model
   /// @param [in] intercept: intercept value of the linear part of LR model
   LogisticRegressorQualityEstimator(Scale &&scale, std::vector<float> &&coefficients, const float intercept);
@@ -168,7 +168,7 @@ inline std::shared_ptr<QualityEstimator> createQualityEstimator(const AlignedMem
 
 /// A word is composed of multiple subtokens. Entire words are tokens splitted by whitespace.
 /// This method takes a sequence of sublevel tokens (given by AnnotatedText) as well aligned with their log
-/// probabilitites and conflate them to their respective words
+/// probabilities and conflate them to their respective words
 /// The return of this function is a SubwordRange (an alias of ByteRange) vector where each value corresponds to a word
 /// id and its content represent the range of subword value that compose a given word
 ///

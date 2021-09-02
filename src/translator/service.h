@@ -15,7 +15,6 @@
 #include <thread>
 #endif
 
-#include <optional>
 #include <queue>
 #include <vector>
 

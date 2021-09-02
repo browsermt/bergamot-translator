@@ -6,8 +6,10 @@ void UnsupervisedQualityEstimator::computeQualityScores(const Histories& histori
   size_t sentenceIndex = 0;
 
   for (const auto& history : histories) {
-    const std::vector<float> logProbs = std::get<1>(history->top())->tracebackWordScores();
-    response.qualityScores.push_back(computeSentenceScores(logProbs, response.target, sentenceIndex));
+    const Result result = history->top();
+    const Hypothesis::PtrType& hypothesis = std::get<1>(result);
+    const std::vector<float> logProbs = hypothesis->tracebackWordScores();
+    response.qualityScores.push_back(std::move(computeSentenceScores(logProbs, response.target, sentenceIndex)));
     ++sentenceIndex;
   }
 }
@@ -154,8 +156,11 @@ void LogisticRegressorQualityEstimator::computeQualityScores(const Histories& hi
   size_t sentenceIndex = 0;
 
   for (const auto& history : histories) {
-    const std::vector<float> logProbs = std::get<1>(history->top())->tracebackWordScores();
-    response.qualityScores.push_back(computeSentenceScores(logProbs, response.target, sentenceIndex));
+    const Result result = history->top();
+    const Hypothesis::PtrType& hypothesis = std::get<1>(result);
+    const std::vector<float> logProbs = hypothesis->tracebackWordScores();
+
+    response.qualityScores.push_back(std::move(computeSentenceScores(logProbs, response.target, sentenceIndex)));
 
     ++sentenceIndex;
   }
@@ -219,9 +224,7 @@ LogisticRegressorQualityEstimator::Matrix LogisticRegressorQualityEstimator::ext
       overallMean += logProbs[i];
       features.at(featureRow, I_MEAN) += logProbs[i];
 
-      if (logProbs[i] < minScore) {
-        minScore = logProbs[i];
-      }
+      minScore = std::min<float>(logProbs[i], minScore);
     }
 
     features.at(featureRow, I_MEAN) /= static_cast<float>(wordIndex.size());

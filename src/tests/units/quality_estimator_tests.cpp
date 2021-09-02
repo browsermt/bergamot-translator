@@ -39,8 +39,7 @@ SCENARIO("Logistic Regressor test", "[QualityEstimator]") {
         }
       }
 
-      WHEN( "LR is construct by aligned memory")
-      {
+      WHEN("LR is construct by aligned memory") {
         const auto lrQEAlignedMemory = LogisticRegressorQualityEstimator::fromAlignedMemory(lrQE.toAlignedMemory());
 
         WHEN("It's call predict") {
@@ -61,4 +60,3 @@ bool operator==(const std::vector<float>& value1, const std::vector<float>& valu
     return a == value;
   });
 }
-

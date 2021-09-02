@@ -245,7 +245,7 @@ LogisticRegressorQualityEstimator::Matrix LogisticRegressorQualityEstimator::ext
 }
 
 std::vector<SubwordRange> mapWords(const std::vector<float>& logProbs, const AnnotatedText& target,
-                                const size_t sentenceIdx) {
+                                   const size_t sentenceIdx) {
   // Ignore empty target
   if ((logProbs.size() < 2) || (target.numWords(sentenceIdx) == 0)) {
     return {};

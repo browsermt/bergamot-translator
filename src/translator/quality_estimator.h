@@ -194,7 +194,7 @@ inline std::shared_ptr<QualityEstimator> createQualityEstimator(const AlignedMem
 /// @param [in] target: AnnotatedText target value
 /// @param [in] sentenceIdx: the id of a candidate sentence
 std::vector<SubwordRange> mapWords(const std::vector<float> &logProbs, const AnnotatedText &target,
-                                const size_t sentenceIdx);
+                                   const size_t sentenceIdx);
 
 /// Given a vector of subwordRanges, it maps the elements to be real words rather than sublevel tokens. The words are
 /// represented through ByteRanges.

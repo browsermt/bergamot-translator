@@ -20,6 +20,8 @@ class QualityEstimator {
   virtual void computeQualityScores(const Histories &histories, Response &response) const = 0;
 };
 
+using SubwordRange = ByteRange;
+
 /// Unsupervised Quality Estimator model. It uses the translator model's log probabilities (log probs) as a proxy for
 /// quality scores. Then, for a given word, its quality score is computed by taking the mean of the log probs of the
 /// tokens that make it up. The sentence score is the mean of all word's log probs.
@@ -30,12 +32,6 @@ class UnsupervisedQualityEstimator : public QualityEstimator {
  private:
   Response::SentenceQualityEstimate computeSentenceScores(const std::vector<float> &logProbs,
                                                           const AnnotatedText &target, const size_t sentenceIdx) const;
-};
-
-struct WordIndex {
-  size_t begin = 0;
-  size_t end = 0;
-  const size_t size() const { return end - begin; }
 };
 
 // ASCII and Unicode text files never start with the following 64 bits
@@ -153,7 +149,7 @@ class LogisticRegressorQualityEstimator : public QualityEstimator {
   Response::SentenceQualityEstimate computeSentenceScores(const std::vector<float> &logProbs,
                                                           const AnnotatedText &target, const size_t sentenceIdx) const;
 
-  Matrix extractFeatures(const std::vector<WordIndex> &wordIndexes, const std::vector<float> &logProbs) const;
+  Matrix extractFeatures(const std::vector<SubwordRange> &wordIndexes, const std::vector<float> &logProbs) const;
 };
 
 /// The createQualityEstimator method create a quality estimator
@@ -197,7 +193,7 @@ inline std::shared_ptr<QualityEstimator> createQualityEstimator(const AlignedMem
 /// method (which belongs to hypothesis.h in Marian)
 /// @param [in] target: AnnotatedText target value
 /// @param [in] sentenceIdx: the id of a candidate sentence
-std::vector<WordIndex> mapWords(const std::vector<float> &logProbs, const AnnotatedText &target,
+std::vector<SubwordRange> mapWords(const std::vector<float> &logProbs, const AnnotatedText &target,
                                 const size_t sentenceIdx);
 
 /// Given a vector of subwordRanges, it maps the elements to be real words rather than sublevel tokens. The words are
@@ -207,7 +203,7 @@ std::vector<WordIndex> mapWords(const std::vector<float> &logProbs, const Annota
 /// represented by the SubwordRanges (which are aliases of ByteRanges) which represents sublevel token positions
 /// @param [in] target: AnnotatedText target value
 /// @param [in] sentenceIdx: the id of a candidate sentence
-std::vector<ByteRange> subwordToWords(const std::vector<WordIndex> &wordIndexes, const AnnotatedText &target,
+std::vector<ByteRange> subwordToWords(const std::vector<SubwordRange> &wordIndexes, const AnnotatedText &target,
                                       const size_t sentenceIdx);
 
 }  // namespace marian::bergamot

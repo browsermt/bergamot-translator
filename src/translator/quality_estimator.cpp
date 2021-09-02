@@ -14,11 +14,11 @@ void UnsupervisedQualityEstimator::computeQualityScores(const Histories& histori
 
 Response::SentenceQualityEstimate UnsupervisedQualityEstimator::computeSentenceScores(
     const std::vector<float>& logProbs, const AnnotatedText& target, const size_t sentenceIdx) const {
-  const auto wordIndexes = mapWords(logProbs, target, sentenceIdx);
+  const std::vector<SubwordRange> wordIndexes = mapWords(logProbs, target, sentenceIdx);
 
   std::vector<float> wordScores;
 
-  for (const auto& wordIndex : wordIndexes) {
+  for (const SubwordRange& wordIndex : wordIndexes) {
     wordScores.push_back(
         std::accumulate(logProbs.begin() + wordIndex.begin, logProbs.begin() + wordIndex.end, float(0.0)) /
         wordIndex.size());
@@ -165,9 +165,9 @@ Response::SentenceQualityEstimate LogisticRegressorQualityEstimator::computeSent
     const std::vector<float>& logProbs, const AnnotatedText& target, const size_t sentenceIdx) const
 
 {
-  const auto wordIndexes = mapWords(logProbs, target, sentenceIdx);
+  const std::vector<SubwordRange> wordIndexes = mapWords(logProbs, target, sentenceIdx);
 
-  const auto wordScores = predict(extractFeatures(wordIndexes, logProbs));
+  const std::vector<float> wordScores = predict(extractFeatures(wordIndexes, logProbs));
 
   const float sentenceScore =
       std::accumulate(std::begin(wordScores), std::end(wordScores), float(0.0)) / wordScores.size();
@@ -194,7 +194,7 @@ std::vector<float> LogisticRegressorQualityEstimator::predict(const Matrix& feat
 }
 
 LogisticRegressorQualityEstimator::Matrix LogisticRegressorQualityEstimator::extractFeatures(
-    const std::vector<WordIndex>& wordIndexes, const std::vector<float>& logProbs) const {
+    const std::vector<SubwordRange>& wordIndexes, const std::vector<float>& logProbs) const {
   if (wordIndexes.empty()) {
     return std::move(Matrix(0, 0));
   }
@@ -206,7 +206,7 @@ LogisticRegressorQualityEstimator::Matrix LogisticRegressorQualityEstimator::ext
   float overallMean = 0.0;
   size_t numlogProbs = 0;
 
-  for (const auto& wordIndex : wordIndexes) {
+  for (const SubwordRange& wordIndex : wordIndexes) {
     if (wordIndex.begin == wordIndex.end) {
       ++featureRow;
       continue;
@@ -244,14 +244,14 @@ LogisticRegressorQualityEstimator::Matrix LogisticRegressorQualityEstimator::ext
   return std::move(features);
 }
 
-std::vector<WordIndex> mapWords(const std::vector<float>& logProbs, const AnnotatedText& target,
+std::vector<SubwordRange> mapWords(const std::vector<float>& logProbs, const AnnotatedText& target,
                                 const size_t sentenceIdx) {
   // Ignore empty target
   if ((logProbs.size() < 2) || (target.numWords(sentenceIdx) == 0)) {
     return {};
   }
   // It is expected that translated words will have at least one word
-  std::vector<WordIndex> wordIndexes(/*numWords=*/1);
+  std::vector<SubwordRange> wordIndexes(/*numWords=*/1);
 
   /// The LogisticRegressorQualityEstimator model ignores the presence of the EOS token, and hence we only need to
   /// iterate n-1 positions.
@@ -273,11 +273,11 @@ std::vector<WordIndex> mapWords(const std::vector<float>& logProbs, const Annota
   return wordIndexes;
 }
 
-std::vector<ByteRange> subwordToWords(const std::vector<WordIndex>& wordIndexes, const AnnotatedText& target,
+std::vector<ByteRange> subwordToWords(const std::vector<SubwordRange>& wordIndexes, const AnnotatedText& target,
                                       const size_t sentenceIdx) {
   std::vector<ByteRange> words;
 
-  for (const auto& wordIndex : wordIndexes) {
+  for (const SubwordRange& wordIndex : wordIndexes) {
     size_t wordBegin = target.wordAsByteRange(sentenceIdx, wordIndex.begin).begin;
     size_t wordEnd = target.wordAsByteRange(sentenceIdx, wordIndex.end).begin;
 

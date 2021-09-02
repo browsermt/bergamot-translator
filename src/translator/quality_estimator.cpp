@@ -44,30 +44,6 @@ float& LogisticRegressorQualityEstimator::Matrix::at(const size_t row, const siz
   return data_[row * cols + col];
 }
 
-// Given an input matrix $\mathbf{X}$, the usual Logistic Regression calculus can be seen as the following:
-//
-// 1) Standardize it, returning in $\mathbf{Z} = \frac{(\mathbf{X}-\mu)}{\sigma}$, where $\mu$ stands for the mean
-// vector and $\sigma$ represents the standard deviation
-//
-// 2) Then, we apply $\sum_{i=1}^{D}{ w_i z_i}$, where $D$ is the dimension (i.e. the number of features) and $w$ is the
-// model vector with learnt weights
-//
-// 3) We apply the sigmoid function to the result
-//
-// Notice, however, that for the first two steps we can do the following:
-//
-// \begin{align*}
-// \sum_{i=1}^{D}{ w_i z_i} &= \mathbf{w^T}\left(\mathbf{\sigma^{-1}} \odot (\mathbf{x} - \mathbf{\mu})\right) \text{ //
-// we are just vectoring step 1}\\
-//      &= \sum_{i=1}^{D}{\sigma_i^{-1} w_i (x_i - \mu_i)} \\
-//      &= \sum_{i=1}^{D}{\sigma_i^{-1} w_ix_i - \sigma_i^{-1} w_i \mu_i} \\
-//      &= \sum_{i=1}^{D}{\left(\sigma_i^{-1} w_i\right)x_i - \left(\sigma_i^{-1} w_i \mu_i\right)}
-// \end{align*}
-// Then, $(\sigma_i^{-1} w_i \mu_i)$ can be precomputed without any dependence on inference data. This is done by the
-// variable $\textit{constantFactor_}$ and $\textit{intercept_}$ in the code.
-//
-// For a better reading please refer to: http://mathb.in/63082
-
 LogisticRegressorQualityEstimator::LogisticRegressorQualityEstimator(Scale&& scale, std::vector<float>&& coefficients,
                                                                      const float intercept)
     : scale_(std::move(scale)),
@@ -274,12 +250,11 @@ std::vector<WordIndex> mapWords(const std::vector<float>& logProbs, const Annota
   if ((logProbs.size() < 2) || (target.numWords(sentenceIdx) == 0)) {
     return {};
   }
-
+  // It is expected that translated words will have at least one word
   std::vector<WordIndex> wordIndexes(/*numWords=*/1);
 
-  /// A word is composed of multiple subtokens. The definition of an "entire"
-  /// word is the presence of whitespace. The QE model ignores the presence
-  /// of the EOS token, and hence we only need to iterate n-1 positions.
+  /// The LogisticRegressorQualityEstimator model ignores the presence of the EOS token, and hence we only need to
+  /// iterate n-1 positions.
   for (size_t subwordIdx = 0; subwordIdx < (logProbs.size() - 1); ++subwordIdx) {
     ByteRange subword = target.wordAsByteRange(sentenceIdx, subwordIdx);
 

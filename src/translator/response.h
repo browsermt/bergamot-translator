@@ -34,12 +34,15 @@ typedef std::vector<Point> Alignment;
 /// Alignment (s) at the moment.
 struct Response {
   /// SentenceQualityEstimate  contains the quality data of a given translated sentence.
-  /// It includes the confidence (proxied by a probability) of each decoded word
-  /// (higher probabilities imply better-translated words), the ByteRanges of each term,
-  /// and the probability of the whole sentence, represented as the mean word scores.
+  /// It includes the confidence (proxied by log probabilitites) of each decoded word
+  /// (higher logprobs imply better-translated words), the ByteRanges of each term,
+  /// and logprobs of the whole sentence, represented as the mean word scores.
   struct SentenceQualityEstimate {
+    /// Quality score of each translated word
     std::vector<float> wordScores;
+    /// Each word position in the translated text
     std::vector<ByteRange> wordByteRanges;
+    /// Whole sentence quality score (it is composed by the mean of its words)
     float sentenceScore = 0.0;
   };
 
@@ -56,7 +59,7 @@ struct Response {
   /// translated text and annotations of (sub-)words and sentences.
   AnnotatedText target;
 
-  /// -logprob of each word and negative log likelihood of sequence (sentence)
+  /// logprob of each word and  the total sequence (sentence)
   /// normalized by length, for each sentence processed by the translator.
   /// Indices correspond to ranges accessible through respective Annotation on
   /// source or target.

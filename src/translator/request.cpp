@@ -33,9 +33,7 @@ Request::Request(size_t Id, Segments &&segments, ResponseBuilder &&responseBuild
       // complete (non-empty ProcessedRequestSentence). Also update accounting used elsewhere (counter_) to reflect one
       // less segment to translate.
       for (size_t idx = 0; idx < segments_.size(); idx++) {
-        ProcessedRequestSentence processedRequestSentence;
-        if (cache_->fetch(getSegment(idx), processedRequestSentence)) {
-          processedRequestSentences_[idx] = processedRequestSentence;
+        if (cache_->fetch(getSegment(idx), processedRequestSentences_[idx])) {
           --counter_;
         }
       }
@@ -64,7 +62,7 @@ void Request::processHistory(size_t index, Ptr<History> history) {
 
   // Fill in placeholder from History obtained by freshly translating. Since this was a cache-miss to have got through,
   // update cache if available to store the result.
-  processedRequestSentences_[index] = ProcessedRequestSentence(*history);
+  processedRequestSentences_[index] = std::move(ProcessedRequestSentence(*history));
   if (cache_ != nullptr) {
     cache_->insert(getSegment(index), processedRequestSentences_[index]);
   }

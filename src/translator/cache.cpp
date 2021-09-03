@@ -53,7 +53,7 @@ bool ThreadSafeL4Cache::fetch(const marian::Words &words, ProcessedRequestSenten
   if (fetchSuccess) {
     const char *data = reinterpret_cast<const char *>(valBytes.m_data);
     size_t size = valBytes.m_size;
-    processedRequestSentence = ProcessedRequestSentence::fromBytes(data, size);
+    processedRequestSentence = std::move(ProcessedRequestSentence::fromBytes(data, size));
   }
 
   debug("After Fetch");
@@ -74,7 +74,7 @@ void ThreadSafeL4Cache::insert(const marian::Words &words, const ProcessedReques
   keyBytes.m_size = 8;
 
   ValueBytes valBytes;
-  std::string serialized = processedRequestSentence.toBytes();
+  string_view serialized = processedRequestSentence.byteStorage();
 
   valBytes.m_data = reinterpret_cast<const std::uint8_t *>(serialized.data());
   valBytes.m_size = sizeof(std::string::value_type) * serialized.size();
@@ -139,7 +139,9 @@ bool ThreadUnsafeLRUCache::fetch(const marian::Words &words, ProcessedRequestSen
 
 void ThreadUnsafeLRUCache::insert(const marian::Words &words,
                                   const ProcessedRequestSentence &processedRequestSentence) {
-  Record candidate{words, processedRequestSentence.toBytes()};
+  Record candidate;
+  candidate.key = words;
+  candidate.value = std::move(std::string(processedRequestSentence.byteStorage()));
   auto removeCandidatePtr = storage_.begin();
 
   // Loop until not end and we have not found space to insert candidate adhering to configured storage limits.

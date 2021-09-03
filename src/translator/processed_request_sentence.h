@@ -26,7 +26,11 @@ class Storage {
     std::memcpy(data_, data, size);
   }
 
-  ~Storage() { free(data_); }
+  ~Storage() {
+    if (initialized()) {
+      free(data_);
+    }
+  }
 
   Storage(const Storage &storage) = delete;
   Storage &operator=(const Storage &storage) = delete;
@@ -81,6 +85,8 @@ class ConstRangeView {
 
     // End is simply begin + number of elements now
     end_ = begin_ + size_;
+
+    // Update pointer to void reading this again
     ptr = reinterpret_cast<void *>(    // pointer math below
         reinterpret_cast<char *>(ptr)  // begin
         + sizeof(std::size_t)          // The size variable read at the start.
@@ -178,7 +184,7 @@ class ProcessedRequestSentence {
   // All types are aliased within this class.
   Words words_;
 
-  // Nested variable lists are tricky, for now we go for easy implementation.
+  // Nested variable length lists are tricky, for now we go for easy implementation.
   SoftAlignment softAlignment_;
   size_t *softAlignmentSizePtr_;
 

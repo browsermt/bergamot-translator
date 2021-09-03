@@ -8,7 +8,7 @@ namespace bergamot {
 namespace {
 
 template <class T>
-void pointVarAndAdvance(T *&var, void *&ptr) {
+void readVarAndAdvance(T *&var, void *&ptr) {
   var = reinterpret_cast<T *>(ptr);
   ptr = reinterpret_cast<void *>(reinterpret_cast<char *>(ptr) + sizeof(T));
 }
@@ -27,7 +27,17 @@ void writeVarAndAdvance(const T &value, T *&var, void *&ptr) {
 }  // namespace
 
 ProcessedRequestSentence::ProcessedRequestSentence() {}
-ProcessedRequestSentence::ProcessedRequestSentence(const char *data, size_t size) : storage_(data, size) {}
+ProcessedRequestSentence::ProcessedRequestSentence(const char *data, size_t size) : storage_(data, size) {
+  void *readMarker = storage_.data();
+  words_ = Words(readMarker);
+  readVarAndAdvance<size_t>(softAlignmentSizePtr_, readMarker);
+  for (size_t i = 0; i < *(softAlignmentSizePtr_); i++) {
+    softAlignment_.emplace_back(readMarker);
+  }
+
+  wordScores_ = WordScores(readMarker);
+  readVarAndAdvance<float>(sentenceScorePtr_, readMarker);
+}
 
 /// Construct from History
 ProcessedRequestSentence::ProcessedRequestSentence(const History &history) {
@@ -57,7 +67,7 @@ ProcessedRequestSentence::ProcessedRequestSentence(const History &history) {
   void *writeMarker = storage_.data();
   words_ = Words(words, writeMarker);
   writeVarAndAdvance<size_t>(softAlignment.size(), softAlignmentSizePtr_, writeMarker);
-  for (size_t i = 0; i < *(softAlignmentSizePtr_); i++) {
+  for (size_t i = 0; i < softAlignment.size(); i++) {
     softAlignment_.emplace_back(softAlignment[i], writeMarker);
   }
 

@@ -73,7 +73,7 @@ class ConstRangeView {
   ConstRangeView() : size_(0), begin_{nullptr}, end_{nullptr} {}
 
   /// Builds a ConstRangeView provided a pointer and type.
-  explicit ConstRangeView(const void *ptr) {
+  explicit ConstRangeView(void *&ptr) {
     size_ = *(reinterpret_cast<const std::size_t *>(ptr));
 
     // Advance length of one std::size_t to get vector begin
@@ -81,6 +81,11 @@ class ConstRangeView {
 
     // End is simply begin + number of elements now
     end_ = begin_ + size_;
+    ptr = reinterpret_cast<void *>(    // pointer math below
+        reinterpret_cast<char *>(ptr)  // begin
+        + sizeof(std::size_t)          // The size variable read at the start.
+        + sizeof(T) * size_            // container elements
+    );
   }
 
   /// Writes starting at *ptr the vector<T> v in the layout expected by this class.

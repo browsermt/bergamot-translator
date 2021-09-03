@@ -27,6 +27,7 @@ void writeVarAndAdvance(const T &value, T *&var, void *&ptr) {
 }  // namespace
 
 ProcessedRequestSentence::ProcessedRequestSentence() {}
+
 ProcessedRequestSentence::ProcessedRequestSentence(const char *data, size_t size) : storage_(data, size) {
   void *readMarker = storage_.data();
   words_ = Words(readMarker);
@@ -64,6 +65,7 @@ ProcessedRequestSentence::ProcessedRequestSentence(const History &history) {
 
   storage_.delayedAllocate(requiredSize);
 
+  // Write onto the allocated space.
   void *writeMarker = storage_.data();
   words_ = Words(words, writeMarker);
   writeVarAndAdvance<size_t>(softAlignment.size(), softAlignmentSizePtr_, writeMarker);

@@ -57,6 +57,13 @@ struct CacheStats {
 #ifndef WASM_COMPATIBLE_SOURCE
 class ThreadSafeL4Cache {
  public:
+  // L4 has weird interfaces with Hungarian Notation (hence IWritableHashTable). All implementations take Key and Value
+  // defined in this implementation. Both Key and Value are of format: (uint8* mdata, size_t size). L4 doesn't own
+  // these - we point something that is alive for the duration, the original storage are memcpy'd into L4s internal
+  // storage.
+  //
+  // To hide the cryptic names, this class uses friendly "KeyBytes" and "ValueBytes", which is what they essentially
+  // are.
   using KeyBytes = L4::IWritableHashTable::Key;
   using ValueBytes = L4::IWritableHashTable::Value;
 

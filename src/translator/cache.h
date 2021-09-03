@@ -19,11 +19,16 @@ namespace bergamot {
 
 namespace cache_util {
 
-// Provides a unique representation of marian::Words as a string
-std::string wordsToString(const marian::Words &words);
-
+template <class HashWordType>
 struct HashWords {
-  size_t operator()(const Words &words) const;
+  HashWordType operator()(const Words &words) const {
+    size_t seed = 42;
+    for (auto &word : words) {
+      HashWordType hashWord = static_cast<HashWordType>(word.toWordIndex());
+      util::hash_combine<HashWordType>(seed, hashWord);
+    }
+    return seed;
+  }
 };
 
 }  // namespace cache_util
@@ -148,7 +153,7 @@ class ThreadUnsafeLRUCache {
   // storage is used for a naive LRU implementation.
   std::list<Record> storage_;
   typedef std::list<Record>::iterator RecordPtr;
-  std::unordered_map<marian::Words, RecordPtr, cache_util::HashWords> cache_;
+  std::unordered_map<marian::Words, RecordPtr, cache_util::HashWords<std::uint64_t>> cache_;
 
   /// Active sizes (in bytes) stored in storage_
   size_t storageSize_;

@@ -118,9 +118,6 @@ class RequestSentence {
   /// RequestSentence.
   void completeSentence(Ptr<History> history);
 
-  /// Check if this RequestSentence is already prefilled with a History from cache.
-  bool isCachePrefilled();
-
   friend bool operator<(const RequestSentence &a, const RequestSentence &b);
 
  private:

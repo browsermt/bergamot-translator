@@ -101,8 +101,6 @@ bool operator<(const RequestSentence &a, const RequestSentence &b) {
   return a.request_ < b.request_;
 }
 
-bool RequestSentence::isCachePrefilled() { return request_->isCachePrefilled(index_); }
-
 // ----------------------------------------------------------------------
 
 }  // namespace bergamot

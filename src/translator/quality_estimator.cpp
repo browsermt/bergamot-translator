@@ -76,11 +76,8 @@ LogisticRegressorQualityEstimator LogisticRegressorQualityEstimator::fromAligned
   ABORT_IF(header.magic != BINARY_QE_MODEL_MAGIC, "Incorrect magic bytes for quality estimation file");
   ABORT_IF(header.lrParametersDims <= 0, "The number of lr parameter dimension cannot be equal or less than zero");
 
-  const size_t numLrParamsWithDimension = 3;  // stds, means and coefficients
-  const size_t numIntercept = 1;
-
   const uint64_t expectedSize =
-      sizeof(Header) + (numLrParamsWithDimension * header.lrParametersDims + numIntercept) * sizeof(float);
+      sizeof(Header) + (numLrParamsWithDimension_ * header.lrParametersDims + numIntercept_) * sizeof(float);
   ABORT_IF(expectedSize != blobSize, "QE header claims file size should be {} bytes but file is {} bytes", expectedSize,
            blobSize);
 

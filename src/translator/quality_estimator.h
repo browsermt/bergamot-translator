@@ -145,6 +145,11 @@ class LogisticRegressorQualityEstimator : public QualityEstimator {
   Array coefficientsByStds_;
   float constantFactor_ = 0.0;
 
+  // Number of parameters with dimension - Scale(stds, means) and coefficients
+  static constexpr const size_t numLrParamsWithDimension_ = 3;
+  // Number of intercept values
+  static constexpr const size_t numIntercept_ = 1;
+
   /// construct the struct SentenceQualityEstimate
   /// @param [in] logProbs: the log probabilities given by an translation model
   /// @param [in] target: AnnotatedText target value

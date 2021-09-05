@@ -131,7 +131,8 @@ class LogisticRegressorQualityEstimator : public QualityEstimator {
   /// Then, \f$(\sigma_i^{-1} w_i \mu_i)\f$ can be precomputed without any dependence on inference data. This is done by
   /// the variable \f$\textit{constantFactor_}\f$ and \f$\textit{intercept_}\f$ in the code.
   ///
-  /// @param [in] features: A Matrix struct of features
+  /// @param [in] features: A Matrix struct of features. For a defintion what features currently means, please refer to
+  /// `extractFeatures` method in `quality_estimator.cpp`
   std::vector<float> predict(const Matrix &features) const;
 
  private:

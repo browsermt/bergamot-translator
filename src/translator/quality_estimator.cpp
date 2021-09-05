@@ -180,15 +180,23 @@ std::vector<float> LogisticRegressorQualityEstimator::predict(const Matrix& feat
 
   return scores;
 }
-
+// Preprocess input data to provide correct features for the LogisticRegression model. Currently, there are
+// four features: mean of the log probability for a given word (remember that a word is made of a few subword tokens);
+// the minimum log probability of the subword level tokens that a given word is made of; the number of subword level
+// tokens that a word is made of and the overall log probability mean of the entire sequence
 LogisticRegressorQualityEstimator::Matrix LogisticRegressorQualityEstimator::extractFeatures(
     const std::vector<SubwordRange>& wordIndexes, const std::vector<float>& logProbs) const {
   if (wordIndexes.empty()) {
     return std::move(Matrix(0, 0));
   }
-
+  // The number of features (numFeatures), which is currently 4, is obtained from the fileHeader
   Matrix features(wordIndexes.size(), /*numFeatures =*/4);
   size_t featureRow = 0;
+  // I_MEAN = index position in the feature vector hat represents the mean of log probability of a given word
+  // I_MIN = index position  in the feature vector that represents the minimum of log probability of a given word
+  // I_NUM_SUBWORDS = index position in the feature vector that represents the number of subwords that compose a given
+  // word I_NUM_SUBWORDS = index position in the feature vector that represents the overall log probability score in
+  // the entire seuquence
   const size_t I_MEAN{0}, I_MIN{1}, I_NUM_SUBWORDS{2}, I_OVERALL_MEAN{3};
 
   float overallMean = 0.0;

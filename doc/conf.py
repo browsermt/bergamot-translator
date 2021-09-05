@@ -37,7 +37,7 @@ release = version + ' ' + str(datetime.date.today())
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    'sphinx.ext.imgmath',
+    'sphinx.ext.mathjax',
     'sphinx.ext.todo',
     'breathe',
     'exhale',

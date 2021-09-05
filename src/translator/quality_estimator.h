@@ -108,32 +108,28 @@ class LogisticRegressorQualityEstimator : public QualityEstimator {
   AlignedMemory toAlignedMemory() const;
 
   void computeQualityScores(const Histories &histories, Response &response) const override;
-
-  /// Given an input matrix $\mathbf{X}$, the usual Logistic Regression calculus can be seen as the following:
+  /// Given an input matrix \f$\mathbf{X}\f$, the usual Logistic Regression calculus can be seen as the following:
   ///
-  /// 1) Standardize it, returning in $\mathbf{Z} = \frac{(\mathbf{X}-\mu)}{\sigma}$, where $\mu$ stands for the mean
-  /// vector and $\sigma$ represents the standard deviation
+  /// 1) Standardize it, returning in \f$\mathbf{Z} = \frac{(\mathbf{X}-\mu)}{\sigma}\f$, where \f$\mu\f$ stands for the
+  /// mean vector and \f$\sigma\f$ represents the standard deviation
   ///
-  /// 2) Then, we apply $\sum_{i=1}^{D}{ w_i z_i}$, where $D$ is the dimension (i.e. the number of features) and $w$ is
-  /// the model vector with learnt weights
+  /// 2) Then, we apply \f$\sum_{i=1}^{D}{ w_i z_i}\f$, where \f$D\f$ is the dimension (i.e. the number of features) and
+  /// \f$w\f$ is the model vector with learnt weights
   ///
   /// 3) We apply the sigmoid function to the result
   ///
   /// Notice, however, that for the first two steps we can do the following:
   ///
-  /// \begin{align*}
+  /// \f{align*}{
   /// \sum_{i=1}^{D}{ w_i z_i} &= \mathbf{w^T}\left(\mathbf{\sigma^{-1}} \odot (\mathbf{x} - \mathbf{\mu})\right) \text{
   /// //
   /// we are just vectoring step 1}\\
   ///      &= \sum_{i=1}^{D}{\sigma_i^{-1} w_i (x_i - \mu_i)} \\
   ///      &= \sum_{i=1}^{D}{\sigma_i^{-1} w_ix_i - \sigma_i^{-1} w_i \mu_i} \\
   ///      &= \sum_{i=1}^{D}{\left(\sigma_i^{-1} w_i\right)x_i - \left(\sigma_i^{-1} w_i \mu_i\right)}
-  /// \end{align*}
-  /// Then, $(\sigma_i^{-1} w_i \mu_i)$ can be precomputed without any dependence on inference data. This is done by the
-  /// variable $\textit{constantFactor_}$ and $\textit{intercept_}$ in the code.
-  ///
-  /// For a better reading please refer to: http://mathb.in/63082
-  ///
+  /// \f}
+  /// Then, \f$(\sigma_i^{-1} w_i \mu_i)\f$ can be precomputed without any dependence on inference data. This is done by
+  /// the variable \f$\textit{constantFactor_}\f$ and \f$\textit{intercept_}\f$ in the code.
   ///
   /// @param [in] features: A Matrix struct of features
   std::vector<float> predict(const Matrix &features) const;

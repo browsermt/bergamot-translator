@@ -3,14 +3,11 @@
 namespace marian::bergamot {
 
 void UnsupervisedQualityEstimator::computeQualityScores(const Histories& histories, Response& response) const {
-  size_t sentenceIndex = 0;
-
-  for (const auto& history : histories) {
-    const Result result = history->top();
+  for (size_t i = 0; i < histories.size(); ++i) {
+    const Result result = histories[i]->top();
     const Hypothesis::PtrType& hypothesis = std::get<1>(result);
     const std::vector<float> logProbs = hypothesis->tracebackWordScores();
-    response.qualityScores.push_back(std::move(computeSentenceScores(logProbs, response.target, sentenceIndex)));
-    ++sentenceIndex;
+    response.qualityScores.push_back(std::move(computeSentenceScores(logProbs, response.target, i)));
   }
 }
 
@@ -143,16 +140,12 @@ AlignedMemory LogisticRegressorQualityEstimator::toAlignedMemory() const {
 }
 
 void LogisticRegressorQualityEstimator::computeQualityScores(const Histories& histories, Response& response) const {
-  size_t sentenceIndex = 0;
-
-  for (const auto& history : histories) {
-    const Result result = history->top();
+  for (size_t i = 0; i < histories.size(); ++i) {
+    const Result result = histories[i]->top();
     const Hypothesis::PtrType& hypothesis = std::get<1>(result);
     const std::vector<float> logProbs = hypothesis->tracebackWordScores();
 
-    response.qualityScores.push_back(std::move(computeSentenceScores(logProbs, response.target, sentenceIndex)));
-
-    ++sentenceIndex;
+    response.qualityScores.push_back(std::move(computeSentenceScores(logProbs, response.target, i)));
   }
 }
 

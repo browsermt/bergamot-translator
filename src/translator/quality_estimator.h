@@ -31,8 +31,8 @@ class UnsupervisedQualityEstimator : public QualityEstimator {
   void computeQualityScores(const Histories &histories, Response &response) const override;
 
  private:
-  Response::SentenceQualityEstimate computeSentenceScores(const std::vector<float> &logProbs,
-                                                          const AnnotatedText &target, const size_t sentenceIdx) const;
+  Response::SentenceQualityScore computeSentenceScores(const std::vector<float> &logProbs, const AnnotatedText &target,
+                                                       const size_t sentenceIdx) const;
 };
 
 // ASCII and Unicode text files never start with the following 64 bits
@@ -154,8 +154,8 @@ class LogisticRegressorQualityEstimator : public QualityEstimator {
   /// @param [in] logProbs: the log probabilities given by an translation model
   /// @param [in] target: AnnotatedText target value
   /// @param [in] sentenceIdx: the id of a candidate sentence
-  Response::SentenceQualityEstimate computeSentenceScores(const std::vector<float> &logProbs,
-                                                          const AnnotatedText &target, const size_t sentenceIdx) const;
+  Response::SentenceQualityScore computeSentenceScores(const std::vector<float> &logProbs, const AnnotatedText &target,
+                                                       const size_t sentenceIdx) const;
 
   Matrix extractFeatures(const std::vector<SubwordRange> &wordIndexes, const std::vector<float> &logProbs) const;
 };

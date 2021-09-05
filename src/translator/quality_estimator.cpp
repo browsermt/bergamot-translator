@@ -14,8 +14,9 @@ void UnsupervisedQualityEstimator::computeQualityScores(const Histories& histori
   }
 }
 
-Response::SentenceQualityEstimate UnsupervisedQualityEstimator::computeSentenceScores(
-    const std::vector<float>& logProbs, const AnnotatedText& target, const size_t sentenceIdx) const {
+Response::SentenceQualityScore UnsupervisedQualityEstimator::computeSentenceScores(const std::vector<float>& logProbs,
+                                                                                   const AnnotatedText& target,
+                                                                                   const size_t sentenceIdx) const {
   const std::vector<SubwordRange> wordIndexes = mapWords(logProbs, target, sentenceIdx);
 
   std::vector<float> wordScores;
@@ -155,7 +156,7 @@ void LogisticRegressorQualityEstimator::computeQualityScores(const Histories& hi
   }
 }
 
-Response::SentenceQualityEstimate LogisticRegressorQualityEstimator::computeSentenceScores(
+Response::SentenceQualityScore LogisticRegressorQualityEstimator::computeSentenceScores(
     const std::vector<float>& logProbs, const AnnotatedText& target, const size_t sentenceIdx) const
 
 {

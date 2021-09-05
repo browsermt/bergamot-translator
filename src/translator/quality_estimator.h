@@ -37,7 +37,7 @@ class UnsupervisedQualityEstimator : public QualityEstimator {
 
 // ASCII and Unicode text files never start with the following 64 bits
 // It serves as a signature for quality estimator binary files
-constexpr std::size_t BINARY_QE_MODEL_MAGIC = 0x78cc336f1d54b180;
+constexpr std::uint64_t BINARY_QE_MODEL_MAGIC = 0x78cc336f1d54b180;
 
 /// LogisticRegressorQualityEstimator model implementation through a linear regressor + sigmoid function. Simply
 /// speaking, an LR model depends on features to be scaled, so it contains four elements of data: a vector of

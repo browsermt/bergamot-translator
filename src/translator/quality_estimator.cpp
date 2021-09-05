@@ -189,7 +189,7 @@ LogisticRegressorQualityEstimator::Matrix LogisticRegressorQualityEstimator::ext
   if (wordIndexes.empty()) {
     return std::move(Matrix(0, 0));
   }
-  // The number of features (numFeatures), which is currently 4, is obtained from the fileHeader
+  // The number of features (numFeatures), which is currently must be 4
   Matrix features(wordIndexes.size(), /*numFeatures =*/4);
   size_t featureRow = 0;
   // I_MEAN = index position in the feature vector hat represents the mean of log probability of a given word

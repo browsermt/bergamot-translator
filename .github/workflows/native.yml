@@ -25,7 +25,7 @@ jobs:
           os: ubuntu-18.04
           identifier: ubuntu_1804_full
           cmake: -DCOMPILE_TESTS=on
-          brt_tags: ''
+          brt_tags: "'#native'"
           unittests: 'true'
         - name: Ubuntu 18.04 minimal
           os: ubuntu-18.04
@@ -37,7 +37,7 @@ jobs:
           os: ubuntu-20.04
           identifier: ubuntu_2004_full
           cmake: -DCOMPILE_TESTS=on
-          brt_tags: ''
+          brt_tags: "'#native'"
           unittests: 'true'
         - name: Ubuntu 20.04 minimal
           os: ubuntu-20.04
@@ -140,7 +140,7 @@ jobs:
           os: macos-10.15
           identifier: mac_1015_full
           cmake: -DCOMPILE_TESTS=on -DUSE_APPLE_ACCELERATE=off -DUSE_FBGEMM=off -DUSE_STATIC_LIBS=off
-          brt_tags: ""
+          brt_tags: "'#native'"
           unittests: 'true'
         - name: MacOS 10.15 minimal
           os: macos-10.15

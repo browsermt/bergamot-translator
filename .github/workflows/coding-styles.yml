@@ -1,5 +1,7 @@
 name: "Coding Style"
 
+env:
+    clang_version: 10
 on: 
   push:
     branches: [ main, ci-sandbox ]
@@ -19,8 +21,24 @@ jobs:
         - name: Install dependencies
           run: |
             sudo apt-get update 
-            sudo apt-get install -y clang-format
+            sudo apt-get install -y build-essential cmake
+            sudo apt-get install -y clang-format clang-tidy-${{ env.clang_version }}
 
         - name: Run clang-format
           run:
               python3 run-clang-format.py --style file -r src wasm
+
+
+        - name: Prepare build, compilation database etc.
+          run: |
+              mkdir -p build
+              cd build 
+              cmake \
+                -DUSE_WASM_COMPATIBLE_SOURCE=off -DCMAKE_EXPORT_COMPILE_COMMANDS=on \
+                -DCMAKE_C_COMPILER=clang-${{ env.clang_version }} -DCMAKE_CXX_COMPILER=clang++-${{ env.clang_version }} \
+                ..
+
+        - name: Run clang-tidy
+          run: |
+              run-clang-tidy-${{ env.clang_version }} -p build "$PWD/src/.*"
+              run-clang-tidy-${{ env.clang_version }} -p build "$PWD/app/.*"

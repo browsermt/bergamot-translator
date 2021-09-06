@@ -37,7 +37,7 @@ bool ThreadSafeL4Cache::fetch(const marian::Words &words, ProcessedRequestSenten
   /// TODO(@jerinphilip): Empirical evaluation that this is okay.
 
   KeyBytes keyBytes;
-  auto key = cache_util::HashWords<uint64_t>()(words);
+  auto key = hashFn_(words);
 
   // L4 requires uint8_t byte-stream, so we treat 64 bits as a uint8 array, with 8 members.
   keyBytes.m_data = reinterpret_cast<const std::uint8_t *>(&key);
@@ -51,7 +51,7 @@ bool ThreadSafeL4Cache::fetch(const marian::Words &words, ProcessedRequestSenten
     processedRequestSentence = std::move(ProcessedRequestSentence::fromBytes(data, size));
   }
 
-  debug("After Fetch");
+  debug("After Fetch", stats());
   return fetchSuccess;
 }
 
@@ -61,7 +61,7 @@ void ThreadSafeL4Cache::insert(const marian::Words &words, const ProcessedReques
 
   KeyBytes keyBytes;
 
-  auto key = cache_util::HashWords<uint64_t>()(words);
+  auto key = hashFn_(words);
 
   // L4 requires uint8_t byte-stream, so we treat 64 bits as a uint8 array, with 8 members.
   keyBytes.m_data = reinterpret_cast<const std::uint8_t *>(&key);
@@ -73,9 +73,9 @@ void ThreadSafeL4Cache::insert(const marian::Words &words, const ProcessedReques
   valBytes.m_data = reinterpret_cast<const std::uint8_t *>(serialized.data());
   valBytes.m_size = sizeof(string_view::value_type) * serialized.size();
 
-  debug("Before Add");
+  debug("Before Add", stats());
   hashTable.Add(keyBytes, valBytes);
-  debug("After Add");
+  debug("After Add", stats());
 }
 
 CacheStats ThreadSafeL4Cache::stats() const {
@@ -83,30 +83,15 @@ CacheStats ThreadSafeL4Cache::stats() const {
   CacheStats stats;
   stats.hits = perfData.Get(L4::HashTablePerfCounter::CacheHitCount);
   stats.misses = perfData.Get(L4::HashTablePerfCounter::CacheMissCount);
+  stats.activeRecords = perfData.Get(L4::HashTablePerfCounter::RecordsCount);
+  stats.evictedRecords = perfData.Get(L4::HashTablePerfCounter::EvictedRecordsCount);
+  stats.totalSize = perfData.Get(L4::HashTablePerfCounter::TotalIndexSize);
+  stats.keySize = perfData.Get(L4::HashTablePerfCounter::TotalKeySize);
+  stats.valueSize = perfData.Get(L4::HashTablePerfCounter::TotalValueSize);
   return stats;
 }
 
-void ThreadSafeL4Cache::debug(const std::string &label) const {
-  if (std::getenv("BERGAMOT_L4_CACHE_DEBUG")) {
-    std::cerr << "--- L4: " << label << std::endl;
-    auto &perfData = context_[hashTableIndex_].GetPerfData();
-#define __l4inspect(key) std::cerr << #key << " " << perfData.Get(L4::HashTablePerfCounter::key) << std::endl;
-
-    __l4inspect(CacheHitCount);
-    __l4inspect(CacheMissCount);
-    __l4inspect(RecordsCount);
-    __l4inspect(EvictedRecordsCount);
-    __l4inspect(TotalIndexSize);
-    __l4inspect(TotalKeySize);
-    __l4inspect(TotalValueSize);
-
-    std::cerr << "---- " << std::endl;
-
-#undef __l4inspect
-  }
-};
-
-#endif
+#endif  // WASM_COMPATIBLE_SOURCE
 
 ThreadUnsafeLRUCache::ThreadUnsafeLRUCache(Ptr<Options> options)
     : storageSizeLimit_(options->get<size_t>("cache-size") * 1024 * 1024), storageSize_(0) {}
@@ -144,9 +129,15 @@ void ThreadUnsafeLRUCache::insert(const marian::Words &words,
   auto removeCandidatePtr = storage_.begin();
   while (storageSize_ + candidate.size() > storageSizeLimit_ && removeCandidatePtr != storage_.end()) {
     storageSize_ -= removeCandidatePtr->size();
+
+    // Update cache stats
+    ++stats_.evictedRecords;
+    stats_.totalSize = storageSize_;
+    stats_.keySize -= sizeof(Key);
+    stats_.valueSize -= (removeCandidatePtr->value).size();
+
     storage_.erase(removeCandidatePtr);
     ++removeCandidatePtr;
-    ++stats_.evictedRecords;
   }
 
   // Only insert new candidate if we have space after adhering to storage-limit
@@ -154,6 +145,12 @@ void ThreadUnsafeLRUCache::insert(const marian::Words &words,
     auto recordPtr = storage_.insert(storage_.end(), std::move(candidate));
     cache_.emplace(std::make_pair(candidate.key, recordPtr));
     storageSize_ += candidate.size();
+
+    // Update cache stats
+    ++stats_.activeRecords;
+    stats_.totalSize = storageSize_;
+    stats_.keySize += sizeof(Key);
+    stats_.valueSize += (removeCandidatePtr->value).size();
   }
 }
 

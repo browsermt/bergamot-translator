@@ -43,6 +43,22 @@ struct CacheStats {
   size_t totalSize{0};
 };
 
+namespace {
+void debug(const std::string &label, const CacheStats &stats) {
+  if (std::getenv("BERGAMOT_CACHE_DEBUG")) {
+#define cacheInspect__(var) std::cerr << #var << stats.var << "\n";
+    cacheInspect__(hits);
+    cacheInspect__(misses);
+    cacheInspect__(totalSize);
+    cacheInspect__(keySize);
+    cacheInspect__(valueSize);
+    cacheInspect__(evictedRecords);
+    cacheInspect__(activeRecords);
+#undef cacheInspect__
+  }
+}
+}  // namespace
+
 /// ThreadSafeL4Cache is an adapter built on top of L4 specialized for the use-case of bergamot-translator. L4 is a
 /// thread-safe cache implementation written in the "lock-free" paradigm using atomic constucts. There is locking when
 /// structures are deleted, which runs in the background using an epoch based memory reclamation (EBR) scheme. Eviction
@@ -98,8 +114,6 @@ class ThreadSafeL4Cache {
   CacheStats stats() const;
 
  private:
-  void debug(const std::string &label) const;
-
   /// cacheConfig {sizeInBytes, recordTimeToLive, removeExpired} determins the upper limit on cache storage, time for a
   /// record to live and whether or not to evict expired records.
   L4::HashTableConfig::Cache cacheConfig_;
@@ -121,6 +135,8 @@ class ThreadSafeL4Cache {
 
   /// context_[hashTableIndex_] gives the hashmap for Get(...) or Add(...) operations
   size_t hashTableIndex_;
+
+  cache_util::HashWords<uint64_t> hashFn_;
 };
 
 #endif

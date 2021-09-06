@@ -59,6 +59,33 @@ class TagTree {
   std::vector<TagTree> subtree_;  // holds the children nodes
 };
 
+class TagTreeBuilder {
+ public:
+  TagTreeBuilder(std::vector<ByteRange> brv) {
+    nTags = brv.size();
+    coverageMatrix.reserve(nTags * nTags);
+    for (size_t i = 0; i < nTags; i++) {
+      for (size_t j = 0; j < nTags; j++) {
+        coverageMatrix[i * nTags + j] = (i != j && brv[i].begin <= brv[j].begin && brv[i].end >= brv[j].end);
+      }
+    }
+  }
+
+  void showGraph() {
+    std::cout << "Graph size: " << nTags << std::endl;
+    for (size_t i = 0; i < nTags; i++) {
+      for (size_t j = 0; j < nTags; j++) {
+        std::cout << " " << coverageMatrix[i * nTags + j];
+      }
+      std::cout << std::endl;
+    }
+  }
+
+ private:
+  size_t nTags;
+  std::vector<bool> coverageMatrix;
+};
+
 class TagProcessor {
   TagTree sourceRoot_;  // holds the tree structure of the tag positions in the source sentence
   TagTree targetRoot_;  // holds the tree structure of the tag positions in the target sentence

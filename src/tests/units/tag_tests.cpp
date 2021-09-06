@@ -26,6 +26,17 @@ void testCase(const marian::data::SoftAlignment& softAlign, size_t srcLength, si
   }
 }
 
+TEST_CASE("From ByteRange vector") {
+  std::cout << "Graph build" << std::endl;
+  std::vector<ByteRange> brvec;
+  brvec.push_back(ByteRange{5, 6});
+  brvec.push_back(ByteRange{2, 5});
+  brvec.push_back(ByteRange{0, 10});
+  brvec.push_back(ByteRange{5, 7});
+  TagTreeBuilder ttb(brvec);
+  ttb.showGraph();
+}
+
 TEST_CASE("TagTree Construction") {
   TagTree t(ByteRange{0, 10});
   TagTree s0(ByteRange{2, 5});

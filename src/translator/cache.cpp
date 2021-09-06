@@ -115,7 +115,8 @@ bool ThreadUnsafeLRUCache::fetch(const marian::Words &words, ProcessedRequestSen
   auto p = cache_.find(hashFn_(words));
   if (p != cache_.end()) {
     auto recordPtr = p->second;
-    const ProcessedRequestSentence &processedRequestSentence = recordPtr->value;
+    const ProcessedRequestSentence &value = recordPtr->value;
+    processedRequestSentence = std::move(value.clone());
 
     // Refresh recently used
     auto record = std::move(*recordPtr);

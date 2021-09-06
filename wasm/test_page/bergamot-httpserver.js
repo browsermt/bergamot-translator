@@ -1,13 +1,15 @@
 require(__dirname  + '/helper.js');
 
-var http = require('http');
-var express = require('express');
-var app = express();
-var server = http.createServer(app);
-var fs = require('fs');
-var url = require('url');
+const http = require('http');
+const express = require('express');
+const app = express();
+const server = http.createServer(app);
+const fs = require('fs');
+const url = require('url');
 const nocache = require('nocache');
 const cors = require('cors');
+
+let port = 8000;
 
 app.use(cors())
 app.use(nocache());
@@ -26,10 +28,11 @@ function serveFile(res, pathName, mime) {
         }
         res.header('Cross-Origin-Embedder-Policy','require-corp');
         res.header('Cross-Origin-Opener-Policy','same-origin');
+        res.header('Cross-Origin-Resource-Policy','same-origin');
         res.writeHead(200, {"Content-Type": mime});
         res.end(data);
     });
 }
 
-server.listen(8000);
-console.log('HTTP and BinaryJS server started on port 8000');
+server.listen(port);
+console.log(`HTTP and BinaryJS server started on port ${port}`);

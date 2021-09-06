@@ -132,6 +132,7 @@ void ThreadUnsafeLRUCache::insert(const marian::Words &words,
 
     // Update cache stats
     ++stats_.evictedRecords;
+    --stats_.activeRecords;
     stats_.totalSize = storageSize_;
     stats_.keySize -= sizeof(Key);
     stats_.valueSize -= (removeCandidatePtr->value).size();

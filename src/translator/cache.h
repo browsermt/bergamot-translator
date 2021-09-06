@@ -36,6 +36,11 @@ struct HashWords {
 struct CacheStats {
   size_t hits{0};
   size_t misses{0};
+  size_t activeRecords{0};
+  size_t evictedRecords{0};
+  size_t keySize{0};
+  size_t valueSize{0};
+  size_t totalSize{0};
 };
 
 /// ThreadSafeL4Cache is an adapter built on top of L4 specialized for the use-case of bergamot-translator. L4 is a
@@ -93,7 +98,7 @@ class ThreadSafeL4Cache {
   CacheStats stats() const;
 
  private:
-  void debug(std::string) const;
+  void debug(const std::string &label) const;
 
   /// cacheConfig {sizeInBytes, recordTimeToLive, removeExpired} determins the upper limit on cache storage, time for a
   /// record to live and whether or not to evict expired records.
@@ -150,17 +155,22 @@ class ThreadUnsafeLRUCache {
   CacheStats stats() const;
 
  private:
+  using Key = std::uint64_t;
+  using Value = ProcessedRequestSentence;
+
   struct Record {
-    marian::Words key;
-    std::string value;  // serialized representation from ProcessedRequestSentence.toBytes()
-    size_t size() const { return key.size() * sizeof(marian::Word) + value.size() * sizeof(std::string::value_type); }
+    Key key;
+    Value value;
+    size_t size() const { return /*key=*/sizeof(size_t) + value.size(); }
   };
 
   // A list representing memory where the items are stored and a hashmap (unordered_map) with values pointing to this
   // storage is used for a naive LRU implementation.
-  std::list<Record> storage_;
-  typedef std::list<Record>::iterator RecordPtr;
-  std::unordered_map<marian::Words, RecordPtr, cache_util::HashWords<std::uint64_t>> cache_;
+  using RecordList = std::list<Record>;
+  using RecordPtr = RecordList::iterator;
+
+  RecordList storage_;
+  std::unordered_map<Key, RecordPtr> cache_;
 
   /// Active sizes (in bytes) stored in storage_
   size_t storageSize_;
@@ -168,6 +178,7 @@ class ThreadUnsafeLRUCache {
   // Limit of size (in bytes) of storage_
   size_t storageSizeLimit_;
 
+  cache_util::HashWords<Key> hashFn_;
   CacheStats stats_;
 };
 

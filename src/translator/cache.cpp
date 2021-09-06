@@ -86,7 +86,7 @@ CacheStats ThreadSafeL4Cache::stats() const {
   return stats;
 }
 
-void ThreadSafeL4Cache::debug(std::string label) const {
+void ThreadSafeL4Cache::debug(const std::string &label) const {
   if (std::getenv("BERGAMOT_L4_CACHE_DEBUG")) {
     std::cerr << "--- L4: " << label << std::endl;
     auto &perfData = context_[hashTableIndex_].GetPerfData();
@@ -112,14 +112,13 @@ ThreadUnsafeLRUCache::ThreadUnsafeLRUCache(Ptr<Options> options)
     : storageSizeLimit_(options->get<size_t>("cache-size") * 1024 * 1024), storageSize_(0) {}
 
 bool ThreadUnsafeLRUCache::fetch(const marian::Words &words, ProcessedRequestSentence &processedRequestSentence) {
-  auto p = cache_.find(words);
+  auto p = cache_.find(hashFn_(words));
   if (p != cache_.end()) {
     auto recordPtr = p->second;
-    const std::string &value = recordPtr->value;
-    processedRequestSentence = ProcessedRequestSentence::fromBytes(value.data(), value.size());
+    const ProcessedRequestSentence &processedRequestSentence = recordPtr->value;
 
     // Refresh recently used
-    auto record = *recordPtr;
+    auto record = std::move(*recordPtr);
     storage_.erase(recordPtr);
     storage_.insert(storage_.end(), std::move(record));
 
@@ -134,21 +133,25 @@ bool ThreadUnsafeLRUCache::fetch(const marian::Words &words, ProcessedRequestSen
 void ThreadUnsafeLRUCache::insert(const marian::Words &words,
                                   const ProcessedRequestSentence &processedRequestSentence) {
   Record candidate;
-  candidate.key = words;
-  candidate.value = std::move(std::string(processedRequestSentence.byteStorage()));
-  auto removeCandidatePtr = storage_.begin();
+  candidate.key = hashFn_(words);
+
+  // Unfortunately we have to keep ownership within cache (with a clone). The original is sometimes owned by the items
+  // that is forwarded for building response, std::move(...)  would invalidate this one.
+  candidate.value = std::move(processedRequestSentence.clone());
 
   // Loop until not end and we have not found space to insert candidate adhering to configured storage limits.
+  auto removeCandidatePtr = storage_.begin();
   while (storageSize_ + candidate.size() > storageSizeLimit_ && removeCandidatePtr != storage_.end()) {
     storageSize_ -= removeCandidatePtr->size();
     storage_.erase(removeCandidatePtr);
     ++removeCandidatePtr;
+    ++stats_.evictedRecords;
   }
 
   // Only insert new candidate if we have space after adhering to storage-limit
   if (storageSize_ + candidate.size() <= storageSizeLimit_) {
     auto recordPtr = storage_.insert(storage_.end(), std::move(candidate));
-    cache_.emplace(std::make_pair(words, recordPtr));
+    cache_.emplace(std::make_pair(candidate.key, recordPtr));
     storageSize_ += candidate.size();
   }
 }

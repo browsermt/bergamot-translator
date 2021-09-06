@@ -182,11 +182,18 @@ class ProcessedRequestSentence {
   /// development artifact and maybe removed in the future.
   void debug();
 
+  // Returns the size of the underlying storage.
+  size_t size() const { return storage_.size(); }
+
   // Const accessors for private members
   const Words &words() const { return words_; }
   const SoftAlignment &softAlignment() const { return softAlignment_; }
   const WordScores &wordScores() const { return wordScores_; }
   float sentenceScore() const { return *sentenceScorePtr_; }
+
+  ProcessedRequestSentence clone() const {
+    return ProcessedRequestSentence(reinterpret_cast<char *>(storage_.data()), storage_.size());
+  }
 
  private:
   ProcessedRequestSentence(const char *data, size_t size);

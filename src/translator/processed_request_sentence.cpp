@@ -7,6 +7,7 @@ namespace bergamot {
 
 namespace {
 
+// Read and seek pointer forward.
 template <class T>
 void readVarAndAdvance(T *&var, void *&ptr) {
   var = reinterpret_cast<T *>(ptr);
@@ -40,9 +41,7 @@ ProcessedRequestSentence::ProcessedRequestSentence(const char *data, size_t size
   readVarAndAdvance<float>(sentenceScorePtr_, readMarker);
 }
 
-/// Construct from History
 ProcessedRequestSentence::ProcessedRequestSentence(const History &history) {
-  // Create a copy of data for marking writes.
   Result result = history.top();
   auto [words, hypothesis, sentenceScore] = result;
 

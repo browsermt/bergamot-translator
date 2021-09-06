@@ -10,17 +10,22 @@
 namespace marian {
 namespace bergamot {
 
-// Underlying storage
+/// Underlying flat sequential binary storage for entities in a ProcessedRequestSentence. Views are provided onto this
+/// storage to mimick ranges. This class allows for optimizing storage for L4-caches continuous binary representation
+/// requirements.
 class Storage {
  public:
+  /// To be used in conjunction with delayedAllocate. A ProcessedRequestSentence is created uninitialized. Upon incoming
+  /// History, we compute the requireSize and allocate later with delayed allocate.
   Storage() : data_{nullptr}, size_(0) {}
 
   void delayedAllocate(size_t requiredSize) {
-    assert(data_ == nullptr);
+    assert(!initialized());
     size_ = requiredSize;
     data_ = malloc(sizeof(char) * size_);
   }
 
+  /// Copy contents of size bytes from data. To be used to copy from cache holding.
   Storage(const void *data, size_t size) : size_(size) {
     data_ = malloc(sizeof(char) * size);
     std::memcpy(data_, data, size);
@@ -32,7 +37,10 @@ class Storage {
     }
   }
 
+  /// Forbid copy assignment for performance optimizations.
   Storage(const Storage &storage) = delete;
+
+  /// Forbid copy assignment for performance optimizations.
   Storage &operator=(const Storage &storage) = delete;
 
   Storage(Storage &&other) : data_(other.data_), size_(other.size_) {
@@ -50,7 +58,7 @@ class Storage {
     return *this;
   }
 
-  bool initialized() const { return data_ != nullptr; }
+  inline bool initialized() const { return data_ != nullptr; }
 
   void *data() const { return data_; }
   size_t size() const { return size_; }
@@ -114,6 +122,7 @@ class ConstRangeView {
 
   const T *begin() const { return begin_; }
   const T *end() const { return end_; }
+
   size_t size() const { return size_; }
 
   static size_t storageSize(const std::vector<T> &v) {
@@ -155,11 +164,12 @@ class ProcessedRequestSentence {
 
   ProcessedRequestSentence(ProcessedRequestSentence &&) = default;
   ProcessedRequestSentence &operator=(ProcessedRequestSentence &&) = default;
+
   // The following: fromBytes(...) and toBytes(...) are helpers to work with blobs / bytearray storing the class,
   // particularly for L4. Storage follows the order of member definitions in this class. With vectors prefixed with
   // sizes to allocate before reading in with the right sizes.
 
-  /// Deserialize the contents of an instance from a sequence of bytes. Compatible with `toBytes`.
+  /// Deserialize the contents of an instance from a sequence of bytes. Compatible with `byteStorage`.
   static ProcessedRequestSentence fromBytes(const char *data, size_t size);
 
   /// Serialize the contents of an instance to a sequence of bytes. Compatible with `fromBytes`.

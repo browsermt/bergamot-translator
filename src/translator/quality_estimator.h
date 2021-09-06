@@ -157,10 +157,18 @@ class LogisticRegressorQualityEstimator : public QualityEstimator {
   Matrix extractFeatures(const std::vector<SubwordRange> &wordIndexes, const std::vector<float> &logProbs) const;
 };
 
-/// The createQualityEstimator method create a quality estimator
+/// createQualityEstimator model takes an `AlignedMemory`, which is the return from `getQualityEstimatorModel`.
 ///
-/// By default, if the qualityFileMemory is empty it will use
-/// the unsupervised learning approach (UnsupervisedQualityEstimator).
+/// `getQualityEstimatorModel` contains two different implementations, one when the `quality` argument has some value as
+/// a possible `Options` and where it does not.
+///
+/// If a non `quality` option is provided, then by default, it uses the UnsupervisedQualityEstimator implementation.
+///
+/// If a value is passed to the `quality` argument, the model file is read and converted into an `AlignedMemory`
+/// structure, which instantiates a QualityEstimator object.
+
+/// @param [in] qualityFileMemory: An `AlignedMemory` which is created by parsing a QE model binary file through
+/// getQualityEstimatorModel
 inline std::shared_ptr<QualityEstimator> createQualityEstimator(const AlignedMemory &qualityFileMemory) {
   // If no quality file return simple model
   if (qualityFileMemory.size() == 0) {

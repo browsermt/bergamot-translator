@@ -7,29 +7,32 @@ namespace bergamot {
 
 void ResponseBuilder::buildQualityScores(const ProcessedRequestSentences &processedRequestSentences,
                                          Response &response) {
+  // No means to test the changes except compile words, temporarily commented to be updated after QE integration.
   /*
-std::vector<Quality> qualityScores;
-for (auto &processedRequestSentence : processedRequestSentences) {
-  response.qualityScores.push_back(
-      Quality{processedRequestSentence.sentenceScore(), processedRequestSentence.wordScores()});
-}
-*/
+    std::vector<Quality> qualityScores;
+    for (auto &processedRequestSentence : processedRequestSentences) {
+      Quality quality{processedRequestSentence.sentenceScore(), toVector(processedRequestSentence.wordScores())};
+      response.qualityScores.push_back(std::move(quality));
+    }
+  */
 }
 
 void ResponseBuilder::buildAlignments(const ProcessedRequestSentences &processedRequestSentences, Response &response) {
+  // There are no means to test this works due to tests being removed. TagTree will have to take over after cache,
+  // tentatively.
   /*
- for (auto &processedRequestSentence : processedRequestSentences) {
-   auto softAlignment = processedRequestSentence.softAlignment();
-   auto threshold = responseOptions_.alignmentThreshold;
-   auto hardAlignment = data::ConvertSoftAlignToHardAlign(softAlignment, threshold);
-   Alignment unified_alignment;
-   for (auto &p : hardAlignment) {
-     unified_alignment.emplace_back(Point{p.srcPos, p.tgtPos, p.prob});
-   }
+  for (auto &processedRequestSentence : processedRequestSentences) {
+    auto softAlignment = processedRequestSentence.softAlignment();
+    auto threshold = responseOptions_.alignmentThreshold;
+    auto hardAlignment = data::ConvertSoftAlignToHardAlign(softAlignment, threshold);
+    Alignment unified_alignment;
+    for (auto &p : hardAlignment) {
+      unified_alignment.emplace_back(Point{p.srcPos, p.tgtPos, p.prob});
+    }
 
-   response.alignments.push_back(std::move(unified_alignment));
- }
- */
+    response.alignments.push_back(std::move(unified_alignment));
+  }
+  */
 }
 
 void ResponseBuilder::buildTranslatedText(const ProcessedRequestSentences &processedRequestSentences,

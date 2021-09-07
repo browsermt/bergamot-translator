@@ -20,14 +20,16 @@ namespace bergamot {
 /// stored as:
 ///     [n, v0, v1, ... v_{n-1}]
 /// where n = number of elements, and v_{i} is the i-th element.
-
+///
+/// This is almost a 'static' std::span (https://en.cppreference.com/w/cpp/container/span), but we're not at C++20 yet.
 template <class T>
 class ConstRangeView {
  public:
   using value_type = T;
   ConstRangeView() : sizeLoc_(nullptr), begin_{nullptr}, end_{nullptr} {}
 
-  /// Builds a ConstRangeView provided a pointer and type.
+  /// Builds a ConstRangeView provided a pointer and type. Expects the data-layout starting from ptr to already have
+  /// contents [n, v_0, ... v{n-1}].
   explicit ConstRangeView(const void *ptr) {
     sizeLoc_ = reinterpret_cast<const std::size_t *>(ptr);
 
@@ -38,6 +40,7 @@ class ConstRangeView {
     end_ = begin_ + size();
   }
 
+  /// Storage size in bytes used by the range: storing size plus the contents.
   size_t memSize() const {
     return (                  //
         sizeof(std::size_t)   // size_
@@ -45,14 +48,21 @@ class ConstRangeView {
     );
   }
 
+  // Allows iterator based for loops.
   const T *cbegin() const { return begin_; }
   const T *cend() const { return end_; }
 
+  /// Number of elements in the range.
   size_t size() const {
     assert(sizeLoc_ != nullptr);
     return *sizeLoc_;
   }
 
+  // Allows index based for-loops using size()
+  const T &operator[](size_t i) const { return *(begin_ + i); }
+
+  /// Compute storageSize known only a vector. This is useful to compute the required-size to allocate before writing
+  /// onto a range.
   static size_t storageSize(const std::vector<T> &v) {
     return (                    //  Binary math follows
         sizeof(std::size_t)     // The size variable written at the start.
@@ -61,9 +71,11 @@ class ConstRangeView {
   }
 
  private:
-  const T *begin_;
-  const T *end_;
-  const size_t *sizeLoc_;
+  const size_t *sizeLoc_;  // &n
+
+  // Open interval [begin, end)
+  const T *begin_;  ///< &(v_{0})
+  const T *end_;    ///< &(v_{n})
 };
 
 /// Underlying flat sequential binary storage for entities in a ProcessedRequestSentence. Views are provided onto this
@@ -128,9 +140,14 @@ class Storage {
 
 class StorageIO {
  public:
-  // Helper methods to load "view" types backed by storage.
   StorageIO(Storage &storage) : storage_(storage) { ptr_ = storage_.data_; }
 
+  // Helper methods to load "view" types (or views onto ranges) backed by storage.
+  // These either read and advance the internal pointer to begin the next read or write and advance the internal
+  // pointer. A read or write with the respective method returns a "view" onto the underlying storage as the type for
+  // aliased interpretation outside.
+
+  /// Read individual variable of type T. Returns a T* which can be assigned at call-site.
   template <class T>
   const T *readVar() {
     T *var = reinterpret_cast<T *>(ptr_);
@@ -138,6 +155,17 @@ class StorageIO {
     return var;
   }
 
+  /// Reads a range constituted by elements of type T. Returns a ConstRangeView<T>, which is a reduced proxy mimicking a
+  /// vector.
+  template <class T>
+  ConstRangeView<T> readRange() {
+    ConstRangeView<T> view(ptr_);
+    ptr_ = advance(view.memSize());
+    return view;
+  }
+
+  /// Writes a variable of type T into storage, from value. Returns a T* to call-site pointing to the written address,
+  /// which will store value.
   template <class T>
   const T *writeVar(const T &value) {
     // Variable is marked to point to pointer, then the incoming value written.
@@ -149,13 +177,8 @@ class StorageIO {
     return var;
   }
 
-  template <class T>
-  ConstRangeView<T> readRange() {
-    ConstRangeView<T> view(ptr_);
-    ptr_ = advance(view.memSize());
-    return view;
-  }
-
+  /// Writes a range of elements of type T into storage. The elements are loaded from a vector<T>. ConstRangeView<T>
+  /// equivalent of the vector is returned to call site.
   template <class T>
   ConstRangeView<T> writeRange(const std::vector<T> &v) {
     // Modification of pointer happens only here.
@@ -171,6 +194,8 @@ class StorageIO {
   }
 
  private:
+  // Advance read/write marker by bytes. Also checks that the read/write does not go out of bounds if compiled in a
+  // debug setting.
   inline void *advance(size_t bytes) {
     void *ptrAfter = reinterpret_cast<void *>(reinterpret_cast<char *>(ptr_) + bytes);
     const void *end = reinterpret_cast<const void *>(reinterpret_cast<const char *>(storage_.data()) + storage_.size());
@@ -209,9 +234,9 @@ class ProcessedRequestSentence {
   ProcessedRequestSentence(ProcessedRequestSentence &&) = default;
   ProcessedRequestSentence &operator=(ProcessedRequestSentence &&) = default;
 
-  // The following: fromBytes(...) and toBytes(...) are helpers to work with blobs / bytearray storing the class,
-  // particularly for L4. Storage follows the order of member definitions in this class. With vectors prefixed with
-  // sizes to allocate before reading in with the right sizes.
+  // The following: fromBytesView(...) and toBytesView(...) are helpers to work with blobs / bytearray storing the
+  // required entities. Storage follows the order of member definitions in this class. With vectors
+  // prefixed with sizes to allocate before reading in with the right sizes.
 
   /// Deserialize the contents of an instance from a sequence of bytes. Compatible with `toBytesView`.
   static ProcessedRequestSentence fromBytesView(const string_view &bytesView);
@@ -228,6 +253,7 @@ class ProcessedRequestSentence {
   const WordScores &wordScores() const { return wordScores_; }
   float sentenceScore() const { return *sentenceScorePtr_; }
 
+  /// Clones underlying storage, useful when the cache has to own storage and use it as a value in its records.
   Storage cloneStorage() const { return Storage(storage_.data(), storage_.size()); }
 
  private:

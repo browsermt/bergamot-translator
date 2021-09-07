@@ -87,8 +87,6 @@ CacheStats ThreadSafeL4Cache::stats() const {
   stats.activeRecords = perfData.Get(L4::HashTablePerfCounter::RecordsCount);
   stats.evictedRecords = perfData.Get(L4::HashTablePerfCounter::EvictedRecordsCount);
   stats.totalSize = perfData.Get(L4::HashTablePerfCounter::TotalIndexSize);
-  stats.keySize = perfData.Get(L4::HashTablePerfCounter::TotalKeySize);
-  stats.valueSize = perfData.Get(L4::HashTablePerfCounter::TotalValueSize);
   return stats;
 }
 
@@ -136,8 +134,6 @@ void ThreadUnsafeLRUCache::insert(const marian::Words &words,
     ++stats_.evictedRecords;
     --stats_.activeRecords;
     stats_.totalSize = storageSize_;
-    stats_.keySize -= sizeof(Record::Key);
-    stats_.valueSize -= (removeCandidatePtr->value).size();
 
     storage_.erase(removeCandidatePtr);
     ++removeCandidatePtr;
@@ -152,8 +148,6 @@ void ThreadUnsafeLRUCache::insert(const marian::Words &words,
     // Update cache stats
     ++stats_.activeRecords;
     stats_.totalSize = storageSize_;
-    stats_.keySize += sizeof(Record::Key);
-    stats_.valueSize += (removeCandidatePtr->value).size();
   }
 }
 

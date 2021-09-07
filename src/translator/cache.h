@@ -38,8 +38,6 @@ struct CacheStats {
   size_t misses{0};
   size_t activeRecords{0};
   size_t evictedRecords{0};
-  size_t keySize{0};
-  size_t valueSize{0};
   size_t totalSize{0};
 };
 
@@ -50,8 +48,6 @@ void debug(const std::string &label, const CacheStats &stats) {
     cacheInspect__(hits);
     cacheInspect__(misses);
     cacheInspect__(totalSize);
-    cacheInspect__(keySize);
-    cacheInspect__(valueSize);
     cacheInspect__(evictedRecords);
     cacheInspect__(activeRecords);
 #undef cacheInspect__

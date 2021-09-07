@@ -79,8 +79,8 @@ void debug(const std::string &label, const CacheStats &stats) {
 class ThreadSafeL4Cache {
  public:
   // L4 has weird interfaces with Hungarian Notation (hence IWritableHashTable). All implementations take Key and Value
-  // defined in this implementation. Both Key and Value are of format: (uint8* mdata, size_t size). L4 doesn't own
-  // these - we point something that is alive for the duration, the original storage are memcpy'd into L4s internal
+  // defined in this interface. Both Key and Value are of format: (uint8* mdata, size_t size). L4 doesn't own
+  // these - we point something that is alive for the duration, the contents of this are memcpy'd into L4s internal
   // storage.
   //
   // To hide the cryptic names, this class uses friendly "KeyBytes" and "ValueBytes", which is what they essentially
@@ -171,13 +171,19 @@ class ThreadUnsafeLRUCache {
   CacheStats stats() const;
 
  private:
-  using Key = std::uint64_t;
-  using Value = Storage;
-
+  // A Record type holds Key and Value together in a linked-list as a building block for the LRU cache.
+  // Currently we use uint64_t for Key to reduce collisions. Value (Storage) is simply a binary sequential memory with
+  // some enhancements to read variables and ranges from the memory. The API works with marian::Words (internally
+  // reduced to uint6_t to reduce vector comparisons) and ProcessedRequestSentence (which can be constructed given a
+  // Storage - which is a more compressed representation).
   struct Record {
+    using Key = std::uint64_t;
+    using Value = Storage;
+
     Key key;
     Value value;
-    size_t size() const { return /*key=*/sizeof(size_t) + value.size(); }
+
+    size_t size() const { return /*key=*/sizeof(Key) + value.size(); }
   };
 
   // A list representing memory where the items are stored and a hashmap (unordered_map) with values pointing to this
@@ -186,7 +192,7 @@ class ThreadUnsafeLRUCache {
   using RecordPtr = RecordList::iterator;
 
   RecordList storage_;
-  std::unordered_map<Key, RecordPtr> cache_;
+  std::unordered_map<Record::Key, RecordPtr> cache_;
 
   /// Active sizes (in bytes) stored in storage_
   size_t storageSize_;
@@ -194,7 +200,8 @@ class ThreadUnsafeLRUCache {
   // Limit of size (in bytes) of storage_
   size_t storageSizeLimit_;
 
-  cache_util::HashWords<Key> hashFn_;
+  cache_util::HashWords<Record::Key> hashFn_;
+
   CacheStats stats_;
 };
 

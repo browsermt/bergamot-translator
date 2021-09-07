@@ -70,24 +70,23 @@ class ConstRangeView {
 /// storage to mimick ranges. This class allows for optimizing storage for L4-caches continuous binary representation
 /// requirements.
 class Storage {
+  friend class StorageIO;
+
  public:
   /// To be used in conjunction with delayedAllocate. A ProcessedRequestSentence is created uninitialized. Upon incoming
   /// History, we compute the requireSize and allocate later with delayed allocate.
-  Storage() : data_{nullptr}, size_(0), ptr_{nullptr} {}
+  Storage() : data_{nullptr}, size_(0) {}
 
   void delayedAllocate(size_t requiredSize) {
     assert(!initialized());
     size_ = requiredSize;
     data_ = malloc(sizeof(char) * size_);
-    ptr_ = data_;
   }
 
   /// Copy contents of size bytes from data. To be used to copy from cache holding.
   Storage(const void *data, size_t size) : size_(size) {
     data_ = malloc(sizeof(char) * size);
     std::memcpy(data_, data, size);
-
-    ptr_ = data_;
   }
 
   ~Storage() {
@@ -102,21 +101,18 @@ class Storage {
   /// Forbid copy assignment for performance optimizations.
   Storage &operator=(const Storage &storage) = delete;
 
-  Storage(Storage &&other) : data_(other.data_), size_(other.size_), ptr_(other.ptr_) {
+  Storage(Storage &&other) : data_(other.data_), size_(other.size_) {
     other.data_ = nullptr;
     other.size_ = 0;
-    other.ptr_ = nullptr;
   }
 
   Storage &operator=(Storage &&other) {
     data_ = other.data_;
     size_ = other.size_;
-    ptr_ = other.ptr_;
 
     // Set the other memory to uninitialized
     other.data_ = nullptr;
     other.size_ = 0;
-    other.ptr_ = nullptr;
     return *this;
   }
 
@@ -125,7 +121,16 @@ class Storage {
   const void *data() const { return data_; }
   size_t size() const { return size_; }
 
+ private:
+  void *data_;
+  size_t size_;
+};
+
+class StorageIO {
+ public:
   // Helper methods to load "view" types backed by storage.
+  StorageIO(Storage &storage) : storage_(storage) { ptr_ = storage_.data_; }
+
   template <class T>
   const T *readVar() {
     T *var = reinterpret_cast<T *>(ptr_);
@@ -168,14 +173,13 @@ class Storage {
  private:
   inline void *advance(size_t bytes) {
     void *ptrAfter = reinterpret_cast<void *>(reinterpret_cast<char *>(ptr_) + bytes);
-    void *end = reinterpret_cast<void *>(reinterpret_cast<char *>(data_) + size_);
+    const void *end = reinterpret_cast<const void *>(reinterpret_cast<const char *>(storage_.data()) + storage_.size());
     assert(ptrAfter <= end);
     return ptrAfter;
   }
 
-  void *data_;
   void *ptr_;
-  size_t size_;
+  Storage &storage_;
 };
 
 /// History is marian object with plenty of `shared_ptr`s lying around, which makes keeping a lid on memory hard for

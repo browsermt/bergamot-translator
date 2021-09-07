@@ -41,20 +41,6 @@ struct CacheStats {
   size_t totalSize{0};
 };
 
-namespace {
-void debug(const std::string &label, const CacheStats &stats) {
-  if (std::getenv("BERGAMOT_CACHE_DEBUG")) {
-#define cacheInspect__(var) std::cerr << #var << stats.var << "\n";
-    cacheInspect__(hits);
-    cacheInspect__(misses);
-    cacheInspect__(totalSize);
-    cacheInspect__(evictedRecords);
-    cacheInspect__(activeRecords);
-#undef cacheInspect__
-  }
-}
-}  // namespace
-
 /// ThreadSafeL4Cache is an adapter built on top of L4 specialized for the use-case of bergamot-translator. L4 is a
 /// thread-safe cache implementation written in the "lock-free" paradigm using atomic constucts. There is locking when
 /// structures are deleted, which runs in the background using an epoch based memory reclamation (EBR) scheme. Eviction
@@ -64,9 +50,7 @@ void debug(const std::string &label, const CacheStats &stats) {
 ///
 /// This implementation creates one additional thread which manages the garbage collection for the class.  While it may
 /// be possible to get this class to compile in WASM architecture, the additional thread makes using this class
-/// unsuitable for WASM's current blocking workflow.
-///
-/// Keys are marian::Words, values are ProcessedRequestSentences.
+/// unsuitable for WASM's current blocking workflow.  Keys are marian::Words, values are ProcessedRequestSentences.
 ///
 /// There is a serialization (converting to binary (data*, size)) of structs overhead with this class as well, which
 /// helps keep tight lid on memory usage. This should however be cheaper in comparison to recomputing through the graph.
@@ -75,9 +59,8 @@ void debug(const std::string &label, const CacheStats &stats) {
 class ThreadSafeL4Cache {
  public:
   // L4 has weird interfaces with Hungarian Notation (hence IWritableHashTable). All implementations take Key and Value
-  // defined in this interface. Both Key and Value are of format: (uint8* mdata, size_t size). L4 doesn't own
-  // these - we point something that is alive for the duration, the contents of this are memcpy'd into L4s internal
-  // storage.
+  // defined in this interface. Both Key and Value are of format: (uint8* mdata, size_t size). L4 doesn't own these - we
+  // point something that is alive for the duration, the contents of this are memcpy'd into L4s internal storage.
   //
   // To hide the cryptic names, this class uses friendly "KeyBytes" and "ValueBytes", which is what they essentially
   // are.
@@ -110,8 +93,8 @@ class ThreadSafeL4Cache {
   CacheStats stats() const;
 
  private:
-  /// cacheConfig {sizeInBytes, recordTimeToLive, removeExpired} determins the upper limit on cache storage, time for a
-  /// record to live and whether or not to evict expired records.
+  /// cacheConfig {sizeInBytes, recordTimeToLive, removeExpired} determins the upper limit on cache storage, time for
+  /// a record to live and whether or not to evict expired records.
   L4::HashTableConfig::Cache cacheConfig_;
 
   /// epochManagerConfig_{epochQueueSize, epochProcessingInterval, numActionQueues}:

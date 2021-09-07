@@ -52,7 +52,6 @@ bool ThreadSafeL4Cache::fetch(const marian::Words &words, ProcessedRequestSenten
     processedRequestSentence = std::move(ProcessedRequestSentence::fromBytesView(bytesView));
   }
 
-  debug("After Fetch", stats());
   return fetchSuccess;
 }
 
@@ -74,9 +73,7 @@ void ThreadSafeL4Cache::insert(const marian::Words &words, const ProcessedReques
   valBytes.m_data = reinterpret_cast<const std::uint8_t *>(serialized.data());
   valBytes.m_size = sizeof(string_view::value_type) * serialized.size();
 
-  debug("Before Add", stats());
   hashTable.Add(keyBytes, valBytes);
-  debug("After Add", stats());
 }
 
 CacheStats ThreadSafeL4Cache::stats() const {

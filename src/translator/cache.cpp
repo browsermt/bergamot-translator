@@ -48,7 +48,8 @@ bool ThreadSafeL4Cache::fetch(const marian::Words &words, ProcessedRequestSenten
   if (fetchSuccess) {
     const char *data = reinterpret_cast<const char *>(valBytes.m_data);
     size_t size = valBytes.m_size;
-    processedRequestSentence = std::move(ProcessedRequestSentence::fromBytes(data, size));
+    string_view bytesView(data, size);
+    processedRequestSentence = std::move(ProcessedRequestSentence::fromBytesView(bytesView));
   }
 
   debug("After Fetch", stats());
@@ -68,7 +69,7 @@ void ThreadSafeL4Cache::insert(const marian::Words &words, const ProcessedReques
   keyBytes.m_size = 8;
 
   ValueBytes valBytes;
-  string_view serialized = processedRequestSentence.byteStorage();
+  string_view serialized = processedRequestSentence.toBytesView();
 
   valBytes.m_data = reinterpret_cast<const std::uint8_t *>(serialized.data());
   valBytes.m_size = sizeof(string_view::value_type) * serialized.size();
@@ -100,8 +101,9 @@ bool ThreadUnsafeLRUCache::fetch(const marian::Words &words, ProcessedRequestSen
   auto p = cache_.find(hashFn_(words));
   if (p != cache_.end()) {
     auto recordPtr = p->second;
-    const ProcessedRequestSentence &value = recordPtr->value;
-    processedRequestSentence = std::move(value.clone());
+    const Storage &value = recordPtr->value;
+    string_view bytesView(reinterpret_cast<const char *>(value.data()), value.size());
+    processedRequestSentence = std::move(ProcessedRequestSentence::fromBytesView(bytesView));
 
     // Refresh recently used
     auto record = std::move(*recordPtr);
@@ -123,7 +125,7 @@ void ThreadUnsafeLRUCache::insert(const marian::Words &words,
 
   // Unfortunately we have to keep ownership within cache (with a clone). The original is sometimes owned by the items
   // that is forwarded for building response, std::move(...)  would invalidate this one.
-  candidate.value = std::move(processedRequestSentence.clone());
+  candidate.value = std::move(processedRequestSentence.cloneStorage());
 
   // Loop until not end and we have not found space to insert candidate adhering to configured storage limits.
   auto removeCandidatePtr = storage_.begin();

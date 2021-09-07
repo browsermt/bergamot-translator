@@ -209,17 +209,14 @@ class ProcessedRequestSentence {
   // particularly for L4. Storage follows the order of member definitions in this class. With vectors prefixed with
   // sizes to allocate before reading in with the right sizes.
 
-  /// Deserialize the contents of an instance from a sequence of bytes. Compatible with `byteStorage`.
-  static ProcessedRequestSentence fromBytes(const char *data, size_t size);
+  /// Deserialize the contents of an instance from a sequence of bytes. Compatible with `toBytesView`.
+  static ProcessedRequestSentence fromBytesView(const string_view &bytesView);
 
-  /// Serialize the contents of an instance to a sequence of bytes. Compatible with `fromBytes`.
-  string_view byteStorage() const;
+  /// Serialize the contents of an instance to a sequence of bytes. Compatible with `fromBytesView`.
+  string_view toBytesView() const;
 
   /// Returns if a ProcessedRequestSentence is empty.
   bool empty() const { return !storage_.initialized(); }
-
-  // Returns the size of the underlying storage.
-  size_t size() const { return storage_.size(); }
 
   // Const accessors for private members
   const Words &words() const { return words_; }
@@ -227,12 +224,10 @@ class ProcessedRequestSentence {
   const WordScores &wordScores() const { return wordScores_; }
   float sentenceScore() const { return *sentenceScorePtr_; }
 
-  ProcessedRequestSentence clone() const {
-    return ProcessedRequestSentence(reinterpret_cast<const char *>(storage_.data()), storage_.size());
-  }
+  Storage cloneStorage() const { return Storage(storage_.data(), storage_.size()); }
 
  private:
-  ProcessedRequestSentence(const char *data, size_t size);
+  ProcessedRequestSentence(const string_view &bytesview);
 
   // All types are aliased within this class.
   Words words_;

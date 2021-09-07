@@ -5,40 +5,18 @@
 namespace marian {
 namespace bergamot {
 
-namespace {
-
-// Read and seek pointer forward.
-template <class T>
-void readVarAndAdvance(T *&var, void *&ptr) {
-  var = reinterpret_cast<T *>(ptr);
-  ptr = reinterpret_cast<void *>(reinterpret_cast<char *>(ptr) + sizeof(T));
-}
-
-// For writing and seeking forward
-template <class T>
-void writeVarAndAdvance(const T &value, T *&var, void *&ptr) {
-  // Variable is marked to point to pointer, then the incoming value written.
-  var = reinterpret_cast<T *>(ptr);
-  *var = value;
-
-  // Advance pointer after write.
-  ptr = reinterpret_cast<void *>(reinterpret_cast<char *>(ptr) + sizeof(T));
-}
-
-}  // namespace
-
 ProcessedRequestSentence::ProcessedRequestSentence() {}
 
 ProcessedRequestSentence::ProcessedRequestSentence(const char *data, size_t size) : storage_(data, size) {
-  void *readMarker = storage_.data();
-  words_ = Words(readMarker);
-  readVarAndAdvance<size_t>(softAlignmentSizePtr_, readMarker);
+  words_ = storage_.readRange<Words::value_type>();
+  softAlignmentSizePtr_ = storage_.readVar<size_t>();
   for (size_t i = 0; i < *(softAlignmentSizePtr_); i++) {
-    softAlignment_.emplace_back(readMarker);
+    auto unitAlignment = storage_.readRange<DistSourceGivenTarget::value_type>();
+    softAlignment_.push_back(std::move(unitAlignment));
   }
 
-  wordScores_ = WordScores(readMarker);
-  readVarAndAdvance<float>(sentenceScorePtr_, readMarker);
+  wordScores_ = storage_.readRange<WordScores::value_type>();
+  sentenceScorePtr_ = storage_.readVar<float>();
 }
 
 ProcessedRequestSentence::ProcessedRequestSentence(const History &history) {
@@ -65,15 +43,15 @@ ProcessedRequestSentence::ProcessedRequestSentence(const History &history) {
   storage_.delayedAllocate(requiredSize);
 
   // Write onto the allocated space.
-  void *writeMarker = storage_.data();
-  words_ = Words(words, writeMarker);
-  writeVarAndAdvance<size_t>(softAlignment.size(), softAlignmentSizePtr_, writeMarker);
+  words_ = storage_.writeRange<Words::value_type>(words);
+  softAlignmentSizePtr_ = storage_.writeVar<size_t>(softAlignment.size());
   for (size_t i = 0; i < softAlignment.size(); i++) {
-    softAlignment_.emplace_back(softAlignment[i], writeMarker);
+    auto unitAlignment = storage_.writeRange<DistSourceGivenTarget::value_type>(softAlignment[i]);
+    softAlignment_.push_back(std::move(unitAlignment));
   }
 
-  wordScores_ = WordScores(wordScores, writeMarker);
-  writeVarAndAdvance<float>(sentenceScore, sentenceScorePtr_, writeMarker);
+  wordScores_ = storage_.writeRange<WordScores::value_type>(wordScores);
+  sentenceScorePtr_ = storage_.writeVar<float>(sentenceScore);
 }
 
 string_view ProcessedRequestSentence::byteStorage() const {

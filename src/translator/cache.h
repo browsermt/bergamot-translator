@@ -172,7 +172,7 @@ class ThreadUnsafeLRUCache {
 
  private:
   using Key = std::uint64_t;
-  using Value = ProcessedRequestSentence;
+  using Value = ProcessedRequestSentence;  // Optimize, keep only storage?
 
   struct Record {
     Key key;

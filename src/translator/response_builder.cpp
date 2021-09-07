@@ -42,7 +42,7 @@ void ResponseBuilder::buildTranslatedText(const ProcessedRequestSentences &proce
     Words words;
 
     auto wordsSpan = processedRequestSentences[sentenceIdx].words();
-    for (auto p = wordsSpan.begin(); p != wordsSpan.end(); p++) {
+    for (auto p = wordsSpan.cbegin(); p != wordsSpan.cend(); p++) {
       words.push_back(*p);
     }
 

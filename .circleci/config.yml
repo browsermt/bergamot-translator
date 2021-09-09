@@ -1,6 +1,37 @@
 version: 2.1
 jobs:
-  build:
+  build-with-wormhole:
+    docker:
+      - image: 'emscripten/emsdk:2.0.9'
+    resource_class: medium
+
+    working_directory: ~/checkout
+
+    steps:
+      - checkout
+
+      - run:
+          name: Build WASM
+          command: bash build-wasm.sh WORMHOLE
+
+      - run:
+          name: Check artifacts
+          working_directory: build-wasm
+          command: |
+            ls -all bergamot*
+            if ls bergamot*.wasm &>/dev/null && ls bergamot*.js &>/dev/null
+            then
+              echo "Artifacts Successfully Generated"
+            else
+              echo "Failure: Artifacts Not Present"
+              exit 1
+            fi
+
+      - store_artifacts:
+          path: "build-wasm"
+          destination: "wasm-wormhole"
+
+  build-without-wormhole:
     docker:
       - image: 'emscripten/emsdk:2.0.9'
     resource_class: medium
@@ -29,4 +60,10 @@ jobs:
 
       - store_artifacts:
           path: "build-wasm"
-          destination: "build-wasm"
+          destination: "wasm-without-wormhole"
+
+workflows:
+  build:
+      jobs:
+          - build-with-wormhole
+          - build-without-wormhole

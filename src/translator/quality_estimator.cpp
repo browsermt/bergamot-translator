@@ -14,20 +14,20 @@ void UnsupervisedQualityEstimator::computeQualityScores(const Histories& histori
 Response::SentenceQualityScore UnsupervisedQualityEstimator::computeSentenceScores(const std::vector<float>& logProbs,
                                                                                    const AnnotatedText& target,
                                                                                    const size_t sentenceIdx) const {
-  const std::vector<SubwordRange> wordIndexes = mapWords(logProbs, target, sentenceIdx);
+  const std::vector<SubwordRange> wordIndices = mapWords(logProbs, target, sentenceIdx);
 
   std::vector<float> wordScores;
 
-  for (const SubwordRange& wordIndex : wordIndexes) {
+  for (const SubwordRange& wordIndice : wordIndices) {
     wordScores.push_back(
-        std::accumulate(logProbs.begin() + wordIndex.begin, logProbs.begin() + wordIndex.end, float(0.0)) /
-        wordIndex.size());
+        std::accumulate(logProbs.begin() + wordIndice.begin, logProbs.begin() + wordIndice.end, float(0.0)) /
+        wordIndice.size());
   }
 
   const float sentenceScore =
       std::accumulate(std::begin(wordScores), std::end(wordScores), float(0.0)) / wordScores.size();
 
-  return {wordScores, subwordToWords(wordIndexes, target, sentenceIdx), sentenceScore};
+  return {wordScores, subwordToWords(wordIndices, target, sentenceIdx), sentenceScore};
 }
 
 LogisticRegressorQualityEstimator::Matrix::Matrix(const size_t rowsParam, const size_t colsParam)
@@ -153,14 +153,14 @@ Response::SentenceQualityScore LogisticRegressorQualityEstimator::computeSentenc
     const std::vector<float>& logProbs, const AnnotatedText& target, const size_t sentenceIdx) const
 
 {
-  const std::vector<SubwordRange> wordIndexes = mapWords(logProbs, target, sentenceIdx);
+  const std::vector<SubwordRange> wordIndices = mapWords(logProbs, target, sentenceIdx);
 
-  const std::vector<float> wordScores = predict(extractFeatures(wordIndexes, logProbs));
+  const std::vector<float> wordScores = predict(extractFeatures(wordIndices, logProbs));
 
   const float sentenceScore =
       std::accumulate(std::begin(wordScores), std::end(wordScores), float(0.0)) / wordScores.size();
 
-  return {wordScores, subwordToWords(wordIndexes, target, sentenceIdx), sentenceScore};
+  return {wordScores, subwordToWords(wordIndices, target, sentenceIdx), sentenceScore};
 }
 
 std::vector<float> LogisticRegressorQualityEstimator::predict(const Matrix& features) const {
@@ -185,32 +185,32 @@ std::vector<float> LogisticRegressorQualityEstimator::predict(const Matrix& feat
 // the minimum log probability of the subword level tokens that a given word is made of; the number of subword level
 // tokens that a word is made of and the overall log probability mean of the entire sequence
 LogisticRegressorQualityEstimator::Matrix LogisticRegressorQualityEstimator::extractFeatures(
-    const std::vector<SubwordRange>& wordIndexes, const std::vector<float>& logProbs) const {
-  if (wordIndexes.empty()) {
+    const std::vector<SubwordRange>& wordIndices, const std::vector<float>& logProbs) const {
+  if (wordIndices.empty()) {
     return std::move(Matrix(0, 0));
   }
   // The number of features (numFeatures), which is currently must be 4
-  Matrix features(wordIndexes.size(), /*numFeatures =*/4);
+  Matrix features(wordIndices.size(), /*numFeatures =*/4);
   size_t featureRow = 0;
   // I_MEAN = index position in the feature vector hat represents the mean of log probability of a given word
   // I_MIN = index position  in the feature vector that represents the minimum of log probability of a given word
   // I_NUM_SUBWORDS = index position in the feature vector that represents the number of subwords that compose a given
-  // word I_NUM_SUBWORDS = index position in the feature vector that represents the overall log probability score in
-  // the entire seuquence
+  // I_OVERALL_MEAN = index position in the feature vector that represents the overall log probability score in the
+  // entire sequence
   const size_t I_MEAN{0}, I_MIN{1}, I_NUM_SUBWORDS{2}, I_OVERALL_MEAN{3};
 
   float overallMean = 0.0;
   size_t numlogProbs = 0;
 
-  for (const SubwordRange& wordIndex : wordIndexes) {
-    if (wordIndex.begin == wordIndex.end) {
+  for (const SubwordRange& wordIndice : wordIndices) {
+    if (wordIndice.begin == wordIndice.end) {
       ++featureRow;
       continue;
     }
 
     float minScore = std::numeric_limits<float>::max();
 
-    for (size_t i = wordIndex.begin; i < wordIndex.end; ++i) {
+    for (size_t i = wordIndice.begin; i < wordIndice.end; ++i) {
       ++numlogProbs;
       overallMean += logProbs[i];
       features.at(featureRow, I_MEAN) += logProbs[i];
@@ -218,9 +218,9 @@ LogisticRegressorQualityEstimator::Matrix LogisticRegressorQualityEstimator::ext
       minScore = std::min<float>(logProbs[i], minScore);
     }
 
-    features.at(featureRow, I_MEAN) /= static_cast<float>(wordIndex.size());
+    features.at(featureRow, I_MEAN) /= static_cast<float>(wordIndice.size());
     features.at(featureRow, I_MIN) = minScore;
-    features.at(featureRow, I_NUM_SUBWORDS) = wordIndex.size();
+    features.at(featureRow, I_NUM_SUBWORDS) = wordIndice.size();
 
     ++featureRow;
   }
@@ -229,7 +229,7 @@ LogisticRegressorQualityEstimator::Matrix LogisticRegressorQualityEstimator::ext
     return std::move(Matrix(0, 0));
   }
 
-  overallMean /= wordIndexes.rbegin()->end;
+  overallMean /= wordIndices.rbegin()->end;
 
   for (int i = 0; i < features.rows; ++i) {
     features.at(i, I_OVERALL_MEAN) = overallMean;
@@ -245,7 +245,7 @@ std::vector<SubwordRange> mapWords(const std::vector<float>& logProbs, const Ann
     return {};
   }
   // It is expected that translated words will have at least one word
-  std::vector<SubwordRange> wordIndexes(/*numWords=*/1);
+  std::vector<SubwordRange> wordIndices(/*numWords=*/1);
 
   /// The LogisticRegressorQualityEstimator model ignores the presence of the EOS token, and hence we only need to
   /// iterate n-1 positions.
@@ -256,24 +256,24 @@ std::vector<SubwordRange> mapWords(const std::vector<float>& logProbs, const Ann
 
     // if the first character is whitespace, it's a beginning of a new word
     if (isspace(firstLetter)) {
-      wordIndexes.back().end = subwordIdx;
-      wordIndexes.emplace_back();
-      wordIndexes.back().begin = subwordIdx;
+      wordIndices.back().end = subwordIdx;
+      wordIndices.emplace_back();
+      wordIndices.back().begin = subwordIdx;
     }
   }
 
-  wordIndexes.back().end = logProbs.size() - 1;
+  wordIndices.back().end = logProbs.size() - 1;
 
-  return wordIndexes;
+  return wordIndices;
 }
 
-std::vector<ByteRange> subwordToWords(const std::vector<SubwordRange>& wordIndexes, const AnnotatedText& target,
+std::vector<ByteRange> subwordToWords(const std::vector<SubwordRange>& wordIndices, const AnnotatedText& target,
                                       const size_t sentenceIdx) {
   std::vector<ByteRange> words;
 
-  for (const SubwordRange& wordIndex : wordIndexes) {
-    size_t wordBegin = target.wordAsByteRange(sentenceIdx, wordIndex.begin).begin;
-    size_t wordEnd = target.wordAsByteRange(sentenceIdx, wordIndex.end).begin;
+  for (const SubwordRange& wordIndice : wordIndices) {
+    size_t wordBegin = target.wordAsByteRange(sentenceIdx, wordIndice.begin).begin;
+    size_t wordEnd = target.wordAsByteRange(sentenceIdx, wordIndice.end).begin;
 
     if (isspace(target.text.at(wordBegin))) {
       ++wordBegin;

@@ -154,7 +154,7 @@ class LogisticRegressorQualityEstimator : public QualityEstimator {
   Response::SentenceQualityScore computeSentenceScores(const std::vector<float> &logProbs, const AnnotatedText &target,
                                                        const size_t sentenceIdx) const;
 
-  Matrix extractFeatures(const std::vector<SubwordRange> &wordIndexes, const std::vector<float> &logProbs) const;
+  Matrix extractFeatures(const std::vector<SubwordRange> &wordIndices, const std::vector<float> &logProbs) const;
 };
 
 /// createQualityEstimator model takes an `AlignedMemory`, which is the return from `getQualityEstimatorModel`.
@@ -212,11 +212,11 @@ std::vector<SubwordRange> mapWords(const std::vector<float> &logProbs, const Ann
 /// Given a vector of subwordRanges, it maps the elements to be real words rather than sublevel tokens. The words are
 /// represented through ByteRanges.
 
-/// @param [in] SubwordRanges: A vector where each element correspond to the index of a real word and its values are
+/// @param [in] wordIndices: A vector where each element correspond to the index of a real word and its values are
 /// represented by the SubwordRanges (which are aliases of ByteRanges) which represents sublevel token positions
 /// @param [in] target: AnnotatedText target value
 /// @param [in] sentenceIdx: the id of a candidate sentence
-std::vector<ByteRange> subwordToWords(const std::vector<SubwordRange> &wordIndexes, const AnnotatedText &target,
+std::vector<ByteRange> subwordToWords(const std::vector<SubwordRange> &wordIndices, const AnnotatedText &target,
                                       const size_t sentenceIdx);
 
 }  // namespace marian::bergamot

@@ -62,7 +62,36 @@ class TagTree {
 class TagTreeBuilder {
  public:
   TagTreeBuilder(std::vector<ByteRange> brv) {
+    treeValid = true;
     nTags = brv.size();
+
+    // zero-th interval must be root
+    parentVector.push_back(0);
+    for (size_t i = 1; i < nTags; i++) {
+      size_t parentIndex = 0;
+      size_t parentSoFarOpen = 0;
+      size_t parentSoFarClose = SIZE_MAX;
+      bool parentFound = false;
+
+      // All intervals that can cover brv[i] must appear before brv[i]
+      for (size_t j = 0; j < i; j++) {
+        if (brv[j].begin <= brv[i].begin && brv[i].end <= brv[j].end) {
+          if (parentSoFarOpen <= brv[j].begin && brv[j].end <= parentSoFarClose) {
+            parentSoFarOpen = brv[j].begin;
+            parentSoFarClose = brv[j].end;
+            parentIndex = j;
+            parentFound = true;
+          }
+        }
+      }
+      if (parentFound) {
+        parentVector.push_back(parentIndex);
+      } else {
+        treeValid = false;
+      }
+    }
+
+    // For inspection
     coverageMatrix.reserve(nTags * nTags);
     for (size_t i = 0; i < nTags; i++) {
       for (size_t j = 0; j < nTags; j++) {
@@ -81,9 +110,28 @@ class TagTreeBuilder {
     }
   }
 
+  void showParents() {
+    if (treeValid) {
+      std::cout << "Graph size: " << nTags << std::endl;
+      for (size_t i = 0; i < nTags; i++) {
+        std::cout << " " << parentVector[i];
+      }
+      std::cout << std::endl;
+    } else {
+      std::cout << "Tree invalid.\n" << nTags << std::endl;
+    }
+  }
+
+  void buildTagTree() {
+    if (treeValid) {
+    }
+  }
+
  private:
   size_t nTags;
   std::vector<bool> coverageMatrix;
+  std::vector<size_t> parentVector;
+  bool treeValid;
 };
 
 class TagProcessor {

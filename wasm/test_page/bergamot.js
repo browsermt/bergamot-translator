@@ -32,14 +32,20 @@ document.querySelector("#load").addEventListener("click", async() => {
 const translateCall = () => {
     const text = document.querySelector('#from').value;
     const paragraphs = text.split("\n");
-
-    worker.postMessage(["translate", paragraphs]);
+    document.querySelector("#load").disabled = true;
+    const lang = document.querySelector('input[name="modellang"]:checked').value;
+    const from = lang.substring(0, 2);
+    const to = lang.substring(2, 4);
+    worker.postMessage(["translate", from, to, paragraphs]);
+    document.querySelector("#load").disabled = false;
 }
 
 worker.onmessage = function(e) {
     console.debug(`Message received from worker`);
     if (e.data[0] === 'translated_result') {
-        document.querySelector('#to').value = e.data[1].join("\n");
+        if (e.data[1]) {
+            document.querySelector('#to').value = e.data[1].join("\n");
+        }
         log(e.data[2]);
     }
     if ((e.data[0] === 'module_loaded') || (e.data[0] === 'model_loaded')) {

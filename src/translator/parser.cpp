@@ -110,7 +110,8 @@ std::shared_ptr<marian::Options> parseOptionsFromString(const std::string &confi
   configParser.addOption<std::string>("--ssplit-prefix-file", "Bergamot Options",
                                       "File with nonbreaking prefixes for sentence splitting.");
 
-  configParser.addOption<std::string>("--ssplit-mode", "Bergamot Options", "[paragraph, sentence, wrapped_text]");
+  configParser.addOption<std::string>("--ssplit-mode", "Bergamot Options", "[paragraph, sentence, wrapped_text]",
+                                      "paragraph");
 
   // Parse configs onto defaultConfig. The preliminary merge sets the YAML internal representation with legal values.
   const YAML::Node &defaultConfig = configParser.getConfig();

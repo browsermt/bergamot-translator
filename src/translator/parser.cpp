@@ -84,9 +84,6 @@ void ConfigParser::addOptionsBoundToConfig(CLI::App &app, CLIConfig &config) {
   app.add_option("--cpu-threads", config.numWorkers, "Number of worker threads to use for translation");
 
   app_.add_option("--bergamot-mode", config.opMode, "Operating mode for bergamot: [wasm, native, decoder]");
-
-
-
 }
 
 std::shared_ptr<marian::Options> parseOptionsFromFilePath(const std::string &configPath, bool validate /*= true*/) {

@@ -114,7 +114,6 @@ class TranslationModel {
 
   void loadBackend(size_t idx);
   Ptr<marian::data::CorpusBatch> convertToMarianBatch(Batch& batch);
-
 };
 
 }  // namespace bergamot

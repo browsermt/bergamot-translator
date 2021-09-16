@@ -110,9 +110,11 @@ class TranslationModel {
   /// Hold replicas of the backend (graph, scorers, shortlist) for use in each thread.
   /// Controlled and consistent external access via graph(id), scorerEnsemble(id),
   std::vector<MarianBackend> backend_;
+  std::shared_ptr<QualityEstimator> qualityEstimator_;
 
   void loadBackend(size_t idx);
   Ptr<marian::data::CorpusBatch> convertToMarianBatch(Batch& batch);
+
 };
 
 }  // namespace bergamot

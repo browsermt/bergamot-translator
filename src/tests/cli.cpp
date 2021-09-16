@@ -28,9 +28,14 @@ int main(int argc, char *argv[]) {
     case OpMode::TEST_TARGET_WORDS:
       testapp::annotatedTextWords(service, models.front(), /*source=*/false);
       break;
-
     case OpMode::TEST_FORWARD_BACKWARD_FOR_OUTBOUND:
       testapp::forwardAndBackward(service, models);
+      break;
+    case OpMode::TEST_QUALITY_ESTIMATOR_WORDS:
+      testapp::qualityEstimatorWords(service, models.front());
+      break;
+    case OpMode::TEST_QUALITY_ESTIMATOR_SCORES:
+      testapp::qualityEstimatorScores(service, models.front());
       break;
     default:
       ABORT("Incompatible op-mode. Choose one of the test modes.");

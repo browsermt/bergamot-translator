@@ -31,6 +31,12 @@ void annotatedTextSentences(AsyncService &service, Ptr<TranslationModel> model, 
 
 void forwardAndBackward(AsyncService &service, std::vector<Ptr<TranslationModel>> &models);
 
+// Reads from stdin and translates the read content. Prints the quality words for each sentence.
+void qualityEstimatorWords(AsyncService &service, Ptr<TranslationModel> model);
+
+// Reads from stdin and translates the read content. Prints the quality scores for each sentence.
+void qualityEstimatorScores(AsyncService &service, Ptr<TranslationModel> model);
+
 }  // namespace testapp
 }  // namespace bergamot
 }  // namespace marian

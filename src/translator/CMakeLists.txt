@@ -10,6 +10,7 @@ add_library(bergamot-translator STATIC
     batching_pool.cpp
     aggregate_batching_pool.cpp
     response_builder.cpp
+    quality_estimator.cpp
     batch.cpp
     annotation.cpp
     service.cpp

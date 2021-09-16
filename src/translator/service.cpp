@@ -4,6 +4,7 @@
 #include <utility>
 
 #include "batch.h"
+#include "byte_array_util.h"
 #include "definitions.h"
 
 namespace marian {

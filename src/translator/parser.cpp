@@ -21,6 +21,8 @@ std::istringstream &operator>>(std::istringstream &in, OpMode &mode) {
       {"test-response-target-sentences", OpMode::TEST_TARGET_SENTENCES},
       {"test-response-source-words", OpMode::TEST_SOURCE_WORDS},
       {"test-response-target-words", OpMode::TEST_TARGET_WORDS},
+      {"test-quality-estimator-words", OpMode::TEST_QUALITY_ESTIMATOR_WORDS},
+      {"test-quality-estimator-scores", OpMode::TEST_QUALITY_ESTIMATOR_SCORES},
       {"test-forward-backward", OpMode::TEST_FORWARD_BACKWARD_FOR_OUTBOUND},
   };
 
@@ -82,6 +84,9 @@ void ConfigParser::addOptionsBoundToConfig(CLI::App &app, CLIConfig &config) {
   app.add_option("--cpu-threads", config.numWorkers, "Number of worker threads to use for translation");
 
   app_.add_option("--bergamot-mode", config.opMode, "Operating mode for bergamot: [wasm, native, decoder]");
+
+
+
 }
 
 std::shared_ptr<marian::Options> parseOptionsFromFilePath(const std::string &configPath, bool validate /*= true*/) {
@@ -112,6 +117,8 @@ std::shared_ptr<marian::Options> parseOptionsFromString(const std::string &confi
 
   configParser.addOption<std::string>("--ssplit-mode", "Bergamot Options", "[paragraph, sentence, wrapped_text]",
                                       "paragraph");
+
+  configParser.addOption<std::string>("--quality", "Bergamot Options", "File considering Quality Estimation model");
 
   // Parse configs onto defaultConfig. The preliminary merge sets the YAML internal representation with legal values.
   const YAML::Node &defaultConfig = configParser.getConfig();

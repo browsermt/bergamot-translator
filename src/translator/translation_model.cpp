@@ -17,7 +17,10 @@ TranslationModel::TranslationModel(const Config &options, MemoryBundle &&memory 
       memory_(std::move(memory)),
       vocabs_(options, std::move(memory_.vocabs)),
       textProcessor_(options, vocabs_, std::move(memory_.ssplitPrefixFile)),
-      batchingPool_(options) {
+      batchingPool_(options), 
+      qualityEstimator_(createQualityEstimator(getQualityEstimatorModel(memory, options)))
+ {
+
   ABORT_IF(replicas == 0, "At least one replica needs to be created.");
   backend_.resize(replicas);
   // ShortList: Load from memoryBundle or options
@@ -94,7 +97,7 @@ Ptr<Request> TranslationModel::makeRequest(size_t requestId, std::string &&sourc
   AnnotatedText annotatedSource;
 
   textProcessor_.process(std::move(source), annotatedSource, segments);
-  ResponseBuilder responseBuilder(responseOptions, std::move(annotatedSource), vocabs_, callback);
+  ResponseBuilder responseBuilder(responseOptions, std::move(annotatedSource), vocabs_, callback,  *qualityEstimator_);
 
   Ptr<Request> request = New<Request>(requestId, std::move(segments), std::move(responseBuilder));
   return request;

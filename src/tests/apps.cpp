@@ -74,6 +74,40 @@ void forwardAndBackward(AsyncService &service, std::vector<Ptr<TranslationModel>
   std::cout << backwardResponse.target.text;
 }
 
+void qualityEstimatorWords(AsyncService &service, Ptr<TranslationModel> model) {
+  ResponseOptions responseOptions;
+  responseOptions.qualityScores = true;
+  std::string source = readFromStdin();
+  const Response response = translateForResponse(service, model, std::move(source), responseOptions);
+
+  for (const auto &sentenceQualityEstimate : response.qualityScores) {
+    std::cout << "[SentenceBegin]\n";
+
+    for (const auto &wordByteRange : sentenceQualityEstimate.wordByteRanges) {
+      const string_view word(response.target.text.data() + wordByteRange.begin, wordByteRange.size());
+      std::cout << word << "\n";
+    }
+    std::cout << "[SentenceEnd]\n\n";
+  }
+}
+
+void qualityEstimatorScores(AsyncService &service, Ptr<TranslationModel> model) {
+  ResponseOptions responseOptions;
+  responseOptions.qualityScores = true;
+
+  std::string source = readFromStdin();
+  const Response response = translateForResponse(service, model, std::move(source), responseOptions);
+
+  for (const auto &sentenceQualityEstimate : response.qualityScores) {
+    std::cout << std::fixed << std::setprecision(3) << sentenceQualityEstimate.sentenceScore << "\n";
+
+    for (const float &wordScore : sentenceQualityEstimate.wordScores) {
+      std::cout << std::fixed << std::setprecision(3) << wordScore << "\n";
+    }
+    std::cout << "\n";
+  }
+}
+
 }  // namespace testapp
 }  // namespace bergamot
 }  // namespace marian

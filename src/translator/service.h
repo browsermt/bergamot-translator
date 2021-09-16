@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "data/types.h"
+#include "quality_estimator.h"
 #include "response.h"
 #include "response_builder.h"
 #include "text_processor.h"
@@ -98,6 +99,9 @@ class AsyncService {
   AsyncService::Config config_;
 
   std::vector<std::thread> workers_;
+
+  /// Stores requestId of active request. Used to establish
+  /// ordering among requests and logging/book-keeping.
 
   /// Numbering requests processed through this instance. Used to keep account of arrival times of the request. This
   /// allows for using this quantity in priority based ordering.

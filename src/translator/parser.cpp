@@ -146,6 +146,7 @@ std::shared_ptr<marian::Options> parseOptionsFromString(const std::string &confi
       "shortlist",  // except: only the first element in the sequence is a path, handled in the
                     //  processPaths function
       "ssplit-prefix-file", // added for bergamot
+      "quality", // added for bergamot
   };
   // clang-format on
 

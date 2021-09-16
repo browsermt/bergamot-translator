@@ -55,6 +55,37 @@ void annotatedTextSentences(Ptr<Options> options, bool source) {
   }
 }
 
+void qualityEstimatorWords(const Ptr<Options> &options) {
+  ResponseOptions responseOptions;
+  responseOptions.qualityScores = true;
+  const Response response = translateFromStdin(options, responseOptions);
+
+  for (const auto &sentenceQualityEstimate : response.qualityScores) {
+    std::cout << "[SentenceBegin]\n";
+
+    for (const auto &wordByteRange : sentenceQualityEstimate.wordByteRanges) {
+      const string_view word(response.target.text.data() + wordByteRange.begin, wordByteRange.size());
+      std::cout << word << "\n";
+    }
+    std::cout << "[SentenceEnd]\n\n";
+  }
+}
+
+void qualityEstimatorScores(const Ptr<Options> &options) {
+  ResponseOptions responseOptions;
+  responseOptions.qualityScores = true;
+  const Response response = translateFromStdin(options, responseOptions);
+
+  for (const auto &sentenceQualityEstimate : response.qualityScores) {
+    std::cout << std::fixed << std::setprecision(3) << sentenceQualityEstimate.sentenceScore << "\n";
+
+    for (const float &wordScore : sentenceQualityEstimate.wordScores) {
+      std::cout << std::fixed << std::setprecision(3) << wordScore << "\n";
+    }
+    std::cout << "\n";
+  }
+}
+
 }  // namespace testapp
 }  // namespace bergamot
 }  // namespace marian

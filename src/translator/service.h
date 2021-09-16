@@ -3,6 +3,7 @@
 
 #include "batch_translator.h"
 #include "data/types.h"
+#include "quality_estimator.h"
 #include "response.h"
 #include "response_builder.h"
 #include "text_processor.h"
@@ -46,7 +47,7 @@ class Service {
   /// the given bytearray memories.
   /// @param options Marian options object
   /// @param memoryBundle holds all byte-array memories. Can be a set/subset of
-  /// model, shortlist, vocabs and ssplitPrefixFile bytes. Optional.
+  /// model, shortlist, vocabs and ssplitPrefixFile or QualityEstimation bytes. Optional.
   explicit Service(Ptr<Options> options, MemoryBundle memoryBundle = {});
 
   /// Construct Service from a string configuration. If memoryBundle is empty, Service is
@@ -54,7 +55,7 @@ class Service {
   /// the given bytearray memories.
   /// @param [in] config string parsable as YAML expected to adhere with marian config
   /// @param [in] memoryBundle holds all byte-array memories. Can be a set/subset of
-  /// model, shortlist, vocabs and ssplitPrefixFile bytes. Optional.
+  /// model, shortlist, vocabs and ssplitPrefixFile or qualityEstimation bytes. Optional.
   explicit Service(const std::string &config, MemoryBundle memoryBundle = {})
       : Service(parseOptions(config, /*validate=*/false), std::move(memoryBundle)) {}
 
@@ -115,6 +116,8 @@ class Service {
   AlignedMemory modelMemory_;  // ORDER DEPENDENCY (translators_)
   /// Shortlist memory passed as bytes.
   AlignedMemory shortlistMemory_;  // ORDER DEPENDENCY (translators_)
+
+  std::shared_ptr<QualityEstimator> qualityEstimator_;
 
   /// Stores requestId of active request. Used to establish
   /// ordering among requests and logging/book-keeping.

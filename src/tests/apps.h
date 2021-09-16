@@ -33,6 +33,12 @@ void annotatedTextWords(Ptr<Options> options, bool source = true);
 // in each line, depending on source = true or false respectively.
 void annotatedTextSentences(Ptr<Options> options, bool source = true);
 
+// Reads from stdin and translates the read content. Prints the quality words for each sentence.
+void qualityEstimatorWords(const Ptr<Options>& options);
+
+// Reads from stdin and translates the read content. Prints the quality scores for each sentence.
+void qualityEstimatorScores(const Ptr<Options>& options);
+
 }  // namespace testapp
 }  // namespace bergamot
 }  // namespace marian

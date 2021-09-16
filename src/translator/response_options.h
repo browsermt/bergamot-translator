@@ -13,16 +13,6 @@ enum ConcatStrategy {
   SPACE
 };
 
-enum QualityScoreType {
-  /// Provide a free quality-score that comes with the machine-translation model
-  /// itself.
-  FREE,
-
-  /// An expensive quality-score that runs additional computations to determine
-  /// quality of an output.
-  EXPENSIVE
-};
-
 /// ResponseOptions dictate how to construct a Response for an input string of
 /// text to be translated.
 struct ResponseOptions {
@@ -40,7 +30,6 @@ struct ResponseOptions {
   /// matrix).
   float alignmentThreshold{0.2f};
 
-  QualityScoreType qualityScoreType{QualityScoreType::FREE};
   ConcatStrategy concatStrategy{ConcatStrategy::FAITHFUL};
 };
 

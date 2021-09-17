@@ -34,7 +34,7 @@ class ConstRangeView {
     sizeLoc_ = reinterpret_cast<const std::size_t *>(ptr);
 
     // Advance length of one std::size_t to get vector begin
-    begin_ = reinterpret_cast<const T *>(reinterpret_cast<const char *>(ptr) + sizeof(std::size_t));
+    begin_ = reinterpret_cast<const T *>(ptr + sizeof(std::size_t));
 
     // End is simply begin + number of elements now
     end_ = begin_ + size();

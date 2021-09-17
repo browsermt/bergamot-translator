@@ -57,9 +57,7 @@ ProcessedRequestSentence::ProcessedRequestSentence(const History &history) {
   sentenceScorePtr_ = io.writeVar<float>(sentenceScore);
 }
 
-string_view ProcessedRequestSentence::toBytesView() const {
-  return string_view(reinterpret_cast<const char *>(storage_.data()), storage_.size());
-}
+string_view ProcessedRequestSentence::toBytesView() const { return string_view(storage_.data(), storage_.size()); }
 
 /// Construct from stream of bytes
 ProcessedRequestSentence ProcessedRequestSentence::fromBytesView(const string_view &bytesView) {

@@ -97,7 +97,7 @@ bool ThreadUnsafeLRUCache::fetch(const marian::Words &words, ProcessedRequestSen
   if (p != cache_.end()) {
     auto recordPtr = p->second;
     const Storage &value = recordPtr->value;
-    string_view bytesView(reinterpret_cast<const char *>(value.data()), value.size());
+    string_view bytesView(value.data(), value.size());
     processedRequestSentence = std::move(ProcessedRequestSentence::fromBytesView(bytesView));
 
     // Refresh recently used

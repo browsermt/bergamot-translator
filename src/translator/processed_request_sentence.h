@@ -30,7 +30,7 @@ class ConstRangeView {
 
   /// Builds a ConstRangeView provided a pointer and type. Expects the data-layout starting from ptr to already have
   /// contents [n, v_0, ... v{n-1}].
-  explicit ConstRangeView(const void *ptr) {
+  explicit ConstRangeView(const char *ptr) {
     sizeLoc_ = reinterpret_cast<const std::size_t *>(ptr);
 
     // Advance length of one std::size_t to get vector begin
@@ -92,18 +92,18 @@ class Storage {
   void delayedAllocate(size_t requiredSize) {
     assert(!initialized());
     size_ = requiredSize;
-    data_ = malloc(sizeof(char) * size_);
+    data_ = new char[size_];
   }
 
   /// Copy contents of size bytes from data. To be used to copy from cache holding.
-  Storage(const void *data, size_t size) : size_(size) {
-    data_ = malloc(sizeof(char) * size);
+  Storage(const char *data, size_t size) : size_(size) {
+    data_ = new char[size];
     std::memcpy(data_, data, size);
   }
 
   ~Storage() {
     if (initialized()) {
-      free(data_);
+      delete[] data_;
     }
   }
 
@@ -130,11 +130,11 @@ class Storage {
 
   inline bool initialized() const { return data_ != nullptr; }
 
-  const void *data() const { return data_; }
+  const char *data() const { return data_; }
   size_t size() const { return size_; }
 
  private:
-  void *data_;
+  char *data_;
   size_t size_;
 };
 
@@ -183,7 +183,7 @@ class StorageIO {
   ConstRangeView<T> writeRange(const std::vector<T> &v) {
     // Modification of pointer happens only here.
     *(reinterpret_cast<size_t *>(ptr_)) = v.size();
-    T *begin = reinterpret_cast<T *>(reinterpret_cast<char *>(ptr_) + sizeof(std::size_t));
+    T *begin = reinterpret_cast<T *>(ptr_ + sizeof(std::size_t));
     std::copy(v.begin(), v.end(), begin);
 
     // Prepare view.
@@ -196,14 +196,14 @@ class StorageIO {
  private:
   // Advance read/write marker by bytes. Also checks that the read/write does not go out of bounds if compiled in a
   // debug setting.
-  inline void *advance(size_t bytes) {
-    void *ptrAfter = reinterpret_cast<void *>(reinterpret_cast<char *>(ptr_) + bytes);
-    const void *end = reinterpret_cast<const void *>(reinterpret_cast<const char *>(storage_.data()) + storage_.size());
+  inline char *advance(size_t bytes) {
+    char *ptrAfter = ptr_ + bytes;
+    const char *end = storage_.data() + storage_.size();
     assert(ptrAfter <= end);
     return ptrAfter;
   }
 
-  void *ptr_;
+  char *ptr_;
   Storage &storage_;
 };
 

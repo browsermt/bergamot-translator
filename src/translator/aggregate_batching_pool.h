@@ -23,6 +23,9 @@ namespace bergamot {
 /// BatchingPool.
 ///
 /// Matches API provided by BatchingPool except arguments additionally parameterized by TranslationModel.
+///
+/// Note: This class is not thread-safe. You may use this class wrapped with ThreadsafeBatchingPool for a thread-safe
+/// equivalent of this class, if needed.
 class AggregateBatchingPool {
  public:
   /// Create an AggregateBatchingPool with (tentatively) global (across all BatchingPools) limits

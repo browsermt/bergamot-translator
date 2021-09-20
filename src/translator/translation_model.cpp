@@ -165,8 +165,8 @@ Ptr<marian::data::CorpusBatch> TranslationModel::convertToMarianBatch(Batch &bat
 
 void TranslationModel::translateBatch(size_t deviceId, Batch &batch) {
   auto &backend = backend_[deviceId];
-  auto search = New<BeamSearch>(options_, backend.scorerEnsemble, vocabs_.target());
-  auto histories = search->search(backend.graph, convertToMarianBatch(batch));
+  BeamSearch search(options_, backend.scorerEnsemble, vocabs_.target());
+  Histories histories = search.search(backend.graph, convertToMarianBatch(batch));
   batch.completeBatch(histories);
 }
 

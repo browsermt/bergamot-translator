@@ -10,6 +10,14 @@
 namespace marian {
 namespace bergamot {
 
+template <class T>
+struct HashPtr {
+  size_t operator()(const std::shared_ptr<T>& model) const {
+    size_t address = reinterpret_cast<size_t>(model.get());
+    return std::hash<size_t>()(address);
+  }
+};
+
 /// Aggregates request queueing and generation of batches from multiple TranslationModels (BatchingPools within,
 /// specifically), thereby acting as an intermediary to enable multiple translation model capability in BlockingService
 /// and AsyncService.
@@ -48,7 +56,7 @@ class AggregateBatchingPool {
   size_t generateBatch(Ptr<TranslationModel>& model, Batch& batch);
 
  private:
-  std::queue<std::shared_ptr<TranslationModel>> aggregateQueue_;
+  std::unordered_set<std::shared_ptr<TranslationModel>, HashPtr<TranslationModel>> aggregateQueue_;
 };
 
 }  // namespace bergamot

@@ -21,21 +21,7 @@ TranslationModel::TranslationModel(const Config &options, MemoryBundle &&memory 
       qualityEstimator_(createQualityEstimator(getQualityEstimatorModel(memory, options))) {
   ABORT_IF(replicas == 0, "At least one replica needs to be created.");
   backend_.resize(replicas);
-  // ShortList: Load from memoryBundle or options
-  for (size_t idx = 0; idx < replicas; idx++) {
-    loadBackend(idx);
-  }
-}
 
-void TranslationModel::loadBackend(size_t idx) {
-  // Aliasing to reuse old code.
-  auto &slgen_ = backend_[idx].shortlistGenerator;
-  auto &graph_ = backend_[idx].graph;
-  auto &scorers_ = backend_[idx].scorerEnsemble;
-
-  marian::DeviceId device_(idx, DeviceType::cpu);
-
-  // Old code.
   if (options_->hasAndNotEmpty("shortlist")) {
     int srcIdx = 0, trgIdx = 1;
     bool shared_vcb =
@@ -43,17 +29,28 @@ void TranslationModel::loadBackend(size_t idx) {
         vocabs_.target();  // vocabs_->sources().front() is invoked as we currently only support one source vocab
     if (memory_.shortlist.size() > 0 && memory_.shortlist.begin() != nullptr) {
       bool check = options_->get<bool>("check-bytearray", false);
-      slgen_ = New<data::BinaryShortlistGenerator>(memory_.shortlist.begin(), memory_.shortlist.size(),
-                                                   vocabs_.sources().front(), vocabs_.target(), srcIdx, trgIdx,
-                                                   shared_vcb, check);
+      shortlistGenerator_ = New<data::BinaryShortlistGenerator>(memory_.shortlist.begin(), memory_.shortlist.size(),
+                                                                vocabs_.sources().front(), vocabs_.target(), srcIdx,
+                                                                trgIdx, shared_vcb, check);
     } else {
       // Changed to BinaryShortlistGenerator to enable loading binary shortlist file
       // This class also supports text shortlist file
-      slgen_ = New<data::BinaryShortlistGenerator>(options_, vocabs_.sources().front(), vocabs_.target(), srcIdx,
-                                                   trgIdx, shared_vcb);
+      shortlistGenerator_ = New<data::BinaryShortlistGenerator>(options_, vocabs_.sources().front(), vocabs_.target(),
+                                                                srcIdx, trgIdx, shared_vcb);
     }
   }
 
+  for (size_t idx = 0; idx < replicas; idx++) {
+    loadBackend(idx);
+  }
+}
+
+void TranslationModel::loadBackend(size_t idx) {
+  // Aliasing to reuse old code.
+  auto &graph_ = backend_[idx].graph;
+  auto &scorers_ = backend_[idx].scorerEnsemble;
+
+  marian::DeviceId device_(idx, DeviceType::cpu);
   graph_ = New<ExpressionGraph>(true);  // set the graph to be inference only
   auto prec = options_->get<std::vector<std::string>>("precision", {"float32"});
   graph_->setDefaultElementType(typeFromString(prec[0]));
@@ -81,8 +78,8 @@ void TranslationModel::loadBackend(size_t idx) {
   }
   for (auto scorer : scorers_) {
     scorer->init(graph_);
-    if (slgen_) {
-      scorer->setShortlistGenerator(slgen_);
+    if (shortlistGenerator_) {
+      scorer->setShortlistGenerator(shortlistGenerator_);
     }
   }
   graph_->forward();

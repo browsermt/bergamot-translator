@@ -42,6 +42,7 @@ namespace bergamot {
 class TranslationModel {
  public:
   using Config = Ptr<Options>;
+  using ShortlistGenerator = Ptr<data::ShortlistGenerator const>;
 
   /// Equivalent to options based constructor, where `options` is parsed from string configuration. Configuration can be
   /// JSON or YAML. Keys expected correspond to those of `marian-decoder`, available at
@@ -100,12 +101,13 @@ class TranslationModel {
   struct MarianBackend {
     using Graph = Ptr<ExpressionGraph>;
     using ScorerEnsemble = std::vector<Ptr<Scorer>>;
-    using ShortlistGenerator = Ptr<data::ShortlistGenerator const>;
 
     Graph graph;
     ScorerEnsemble scorerEnsemble;
-    ShortlistGenerator shortlistGenerator;
   };
+
+  // ShortlistGenerator is purely const, we don't need one per thread.
+  ShortlistGenerator shortlistGenerator_;
 
   /// Hold replicas of the backend (graph, scorers, shortlist) for use in each thread.
   /// Controlled and consistent external access via graph(id), scorerEnsemble(id),

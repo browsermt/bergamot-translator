@@ -15,7 +15,7 @@ size_t AggregateBatchingPool::enqueueRequest(Ptr<TranslationModel> model, Ptr<Re
 }
 
 size_t AggregateBatchingPool::generateBatch(Ptr<TranslationModel>& model, Batch& batch) {
-  while (model == nullptr && !aggregateQueue_.empty()) {
+  while (!aggregateQueue_.empty()) {
     Ptr<TranslationModel> candidate = aggregateQueue_.front();
     size_t numSentences = candidate->generateBatch(batch);
     if (numSentences > 0) {

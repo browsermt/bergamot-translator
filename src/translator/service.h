@@ -110,7 +110,7 @@ class AsyncService {
   /// An aggregate batching pool associated with an async translating instance, which maintains an aggregate queue of
   /// requests compiled from  batching-pools of multiple translation models. The batching pool is wrapped around one
   /// object for thread-safety.
-  GuardedBatchingPoolAccess<AggregateBatchingPool> safeBatchingPool_;
+  ThreadsafeBatchingPool<AggregateBatchingPool> safeBatchingPool_;
 };
 
 }  // namespace bergamot

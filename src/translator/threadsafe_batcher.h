@@ -31,11 +31,11 @@ namespace bergamot {
 /// * consume: `size_t generateBatch(...)` (returns number of elements available to be consumed)
 
 template <class BatchingPoolType>
-class GuardedBatchingPoolAccess {
+class ThreadsafeBatchingPool {
  public:
   template <class... Args>
-  GuardedBatchingPoolAccess(Args &&... args);
-  ~GuardedBatchingPoolAccess();
+  ThreadsafeBatchingPool(Args &&... args);
+  ~ThreadsafeBatchingPool();
 
   template <class... Args>
   void enqueueRequest(Args &&... args);

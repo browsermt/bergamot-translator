@@ -46,17 +46,16 @@ TranslationModel::TranslationModel(const Config &options, MemoryBundle &&memory 
 }
 
 void TranslationModel::loadBackend(size_t idx) {
-  // Aliasing to reuse old code.
-  auto &graph_ = backend_[idx].graph;
-  auto &scorers_ = backend_[idx].scorerEnsemble;
+  auto &graph = backend_[idx].graph;
+  auto &scorerEnsemble = backend_[idx].scorerEnsemble;
 
   marian::DeviceId device_(idx, DeviceType::cpu);
-  graph_ = New<ExpressionGraph>(true);  // set the graph to be inference only
+  graph = New<ExpressionGraph>(/*inference=*/true);  // set the graph to be inference only
   auto prec = options_->get<std::vector<std::string>>("precision", {"float32"});
-  graph_->setDefaultElementType(typeFromString(prec[0]));
-  graph_->setDevice(device_);
-  graph_->getBackend()->configureDevice(options_);
-  graph_->reserveWorkspaceMB(options_->get<size_t>("workspace"));
+  graph->setDefaultElementType(typeFromString(prec[0]));
+  graph->setDevice(device_);
+  graph->getBackend()->configureDevice(options_);
+  graph->reserveWorkspaceMB(options_->get<size_t>("workspace"));
 
   // Marian Model: Load from memoryBundle or shortList
   if (memory_.model.size() > 0 &&
@@ -72,17 +71,17 @@ void TranslationModel::loadBackend(size_t idx) {
     const std::vector<const void *> container = {
         memory_.model.begin()};  // Marian supports multiple models initialised in this manner hence std::vector.
                                  // However we will only ever use 1 during decoding.
-    scorers_ = createScorers(options_, container);
+    scorerEnsemble = createScorers(options_, container);
   } else {
-    scorers_ = createScorers(options_);
+    scorerEnsemble = createScorers(options_);
   }
-  for (auto scorer : scorers_) {
-    scorer->init(graph_);
+  for (auto scorer : scorerEnsemble) {
+    scorer->init(graph);
     if (shortlistGenerator_) {
       scorer->setShortlistGenerator(shortlistGenerator_);
     }
   }
-  graph_->forward();
+  graph->forward();
 }
 
 // Make request process is shared between Async and Blocking workflow of translating.

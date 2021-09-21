@@ -23,29 +23,28 @@ namespace bergamot {
 /// structures required to run the forward pass of the neural network, along with preprocessing logic (TextProcessor)
 /// and a BatchingPool to create batches that are to be used in conjuction with an instance.
 ///
-/// Assuming parameters are provided correctly, the following is an example of use of API provided by this class to
-/// complete translation:
-///
-/// ```cpp
-/// TranslationModel model(...);
-/// auto request = model.makeRequest(...);
-/// model.enqueueRequest(request);
-/// Batch batch;
-/// while ( generateBatch(batch)) {
-///      model.translateBatch(batch);
-/// }
-/// ```
-///
 /// Thread-safety is not handled here, but the methods are available at granularity enough to be used in threaded async
 /// workflow for translation.
 
 class TranslationModel {
  public:
   using Config = Ptr<Options>;
+  using ShortlistGenerator = Ptr<data::ShortlistGenerator const>;
 
   /// Equivalent to options based constructor, where `options` is parsed from string configuration. Configuration can be
   /// JSON or YAML. Keys expected correspond to those of `marian-decoder`, available at
   /// https://marian-nmt.github.io/docs/cmd/marian-decoder/
+  ///
+  /// Note that `replicas` is not stable. This is a temporary workaround while a more daunting task of separating
+  /// workspace from TranslationModel and binding it to threads is to be undertaken separately. Until the separation is
+  /// achieved, both TranslationModel and Service will need to be aware of workers. This is expected to be resolved
+  /// eventually, with only Service having the knowledge of how many workers are active.
+  ///
+  /// WebAssembly uses only single-thread, and we can hardcode replicas = 1 and use it anywhere and (client) needn't be
+  /// aware of this ugliness at the moment, thus providing a stable API solely for WebAssembly single-threaded modus
+  /// operandi.
+  ///
+  /// TODO(@jerinphilip): Clean this up.
   TranslationModel(const std::string& config, MemoryBundle&& memory, size_t replicas = 1)
       : TranslationModel(parseOptionsFromString(config, /*validate=*/false), std::move(memory), replicas){};
 
@@ -100,12 +99,13 @@ class TranslationModel {
   struct MarianBackend {
     using Graph = Ptr<ExpressionGraph>;
     using ScorerEnsemble = std::vector<Ptr<Scorer>>;
-    using ShortlistGenerator = Ptr<data::ShortlistGenerator const>;
 
     Graph graph;
     ScorerEnsemble scorerEnsemble;
-    ShortlistGenerator shortlistGenerator;
   };
+
+  // ShortlistGenerator is purely const, we don't need one per thread.
+  ShortlistGenerator shortlistGenerator_;
 
   /// Hold replicas of the backend (graph, scorers, shortlist) for use in each thread.
   /// Controlled and consistent external access via graph(id), scorerEnsemble(id),

@@ -10,6 +10,17 @@
 namespace marian {
 namespace bergamot {
 
+/// Hashes a pointer to an object using the address the pointer points to. If two pointers point to the same address,
+/// they hash to the same value.  Useful to put widely shared_ptrs of entities (eg: TranslationModel, Vocab, Shortlist)
+/// etc into containers which require the members to be hashable (std::unordered_set, std::unordered_map).
+template <class T>
+struct HashPtr {
+  size_t operator()(const std::shared_ptr<T>& t) const {
+    size_t address = reinterpret_cast<size_t>(t.get());
+    return std::hash<size_t>()(address);
+  }
+};
+
 /// Aggregates request queueing and generation of batches from multiple TranslationModels (BatchingPools within,
 /// specifically), thereby acting as an intermediary to enable multiple translation model capability in BlockingService
 /// and AsyncService.
@@ -23,6 +34,9 @@ namespace bergamot {
 /// BatchingPool.
 ///
 /// Matches API provided by BatchingPool except arguments additionally parameterized by TranslationModel.
+///
+/// Note: This class is not thread-safe. You may use this class wrapped with ThreadsafeBatchingPool for a thread-safe
+/// equivalent of this class, if needed.
 class AggregateBatchingPool {
  public:
   /// Create an AggregateBatchingPool with (tentatively) global (across all BatchingPools) limits
@@ -45,7 +59,7 @@ class AggregateBatchingPool {
   size_t generateBatch(Ptr<TranslationModel>& model, Batch& batch);
 
  private:
-  std::queue<std::shared_ptr<TranslationModel>> aggregateQueue_;
+  std::unordered_set<std::shared_ptr<TranslationModel>, HashPtr<TranslationModel>> aggregateQueue_;
 };
 
 }  // namespace bergamot

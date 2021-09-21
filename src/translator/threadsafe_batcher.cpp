@@ -10,17 +10,17 @@ namespace bergamot {
 
 template <class BatchingPoolType>
 template <class... Args>
-GuardedBatchingPoolAccess<BatchingPoolType>::GuardedBatchingPoolAccess(Args &&... args)
+ThreadsafeBatchingPool<BatchingPoolType>::ThreadsafeBatchingPool(Args &&... args)
     : backend_(std::forward<Args>(args)...), enqueued_(0), shutdown_(false) {}
 
 template <class BatchingPoolType>
-GuardedBatchingPoolAccess<BatchingPoolType>::~GuardedBatchingPoolAccess() {
+ThreadsafeBatchingPool<BatchingPoolType>::~ThreadsafeBatchingPool() {
   shutdown();
 }
 
 template <class BatchingPoolType>
 template <class... Args>
-void GuardedBatchingPoolAccess<BatchingPoolType>::enqueueRequest(Args &&... args) {
+void ThreadsafeBatchingPool<BatchingPoolType>::enqueueRequest(Args &&... args) {
   std::unique_lock<std::mutex> lock(mutex_);
   assert(!shutdown_);
   enqueued_ += backend_.enqueueRequest(std::forward<Args>(args)...);
@@ -28,7 +28,7 @@ void GuardedBatchingPoolAccess<BatchingPoolType>::enqueueRequest(Args &&... args
 }
 
 template <class BatchingPoolType>
-void GuardedBatchingPoolAccess<BatchingPoolType>::shutdown() {
+void ThreadsafeBatchingPool<BatchingPoolType>::shutdown() {
   std::unique_lock<std::mutex> lock(mutex_);
   shutdown_ = true;
   work_.notify_all();
@@ -36,7 +36,7 @@ void GuardedBatchingPoolAccess<BatchingPoolType>::shutdown() {
 
 template <class BatchingPoolType>
 template <class... Args>
-size_t GuardedBatchingPoolAccess<BatchingPoolType>::generateBatch(Args &&... args) {
+size_t ThreadsafeBatchingPool<BatchingPoolType>::generateBatch(Args &&... args) {
   std::unique_lock<std::mutex> lock(mutex_);
   work_.wait(lock, [this]() { return enqueued_ || shutdown_; });
   size_t sentencesInBatch = backend_.generateBatch(std::forward<Args>(args)...);

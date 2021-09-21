@@ -1,150 +1,127 @@
 #ifndef SRC_BERGAMOT_SERVICE_H_
 #define SRC_BERGAMOT_SERVICE_H_
 
-#include "batch_translator.h"
+#include <queue>
+#include <thread>
+#include <vector>
+
 #include "cache.h"
 #include "data/types.h"
+#include "quality_estimator.h"
 #include "response.h"
 #include "response_builder.h"
 #include "text_processor.h"
-#include "threadsafe_batcher.h"
+#include "threadsafe_batching_pool.h"
+#include "translation_model.h"
 #include "translator/parser.h"
 #include "vocabs.h"
-
-#ifndef WASM_COMPATIBLE_SOURCE
-#include <thread>
-#endif
-
-#include <queue>
-#include <vector>
 
 namespace marian {
 namespace bergamot {
 
-///  This is intended to be similar to the ones  provided for training or
-///  decoding in ML pipelines with the following  additional capabilities:
+class BlockingService;
+class AsyncService;
+
+/// See AsyncService.
 ///
-///  1. Provision of a request -> response based translation flow unlike the
-///  usual a line based translation or decoding provided in most ML frameworks.
-///  2. Internal handling of normalization etc which changes source text to
-///  provide to client translation meta-information like alignments consistent
-///  with the unnormalized input text.
-///  3. The API splits each text entry into sentences internally, which are then
-///  translated independent of each other. The translated sentences are then
-///  joined back together and returned in Response.
-///
-/// Service exposes methods to instantiate from a string configuration (which
-/// can cover most translators) and to translate an incoming blob of text.
-///
-/// Optionally Service can be initialized by also passing bytearray memories
-/// for purposes of efficiency (which defaults to empty and then reads from
-/// file supplied through config).
-///
-class Service {
+/// BlockingService is a not-threaded counterpart of AsyncService which can operate only in a blocking workflow (queue a
+/// bunch of texts and optional args to translate, wait till the translation finishes).
+class BlockingService {
  public:
-  /// Construct Service from Marian options. If memoryBundle is empty, Service is
-  /// initialized from file-based loading. Otherwise, Service is initialized from
-  /// the given bytearray memories.
-  /// @param options Marian options object
-  /// @param memoryBundle holds all byte-array memories. Can be a set/subset of
-  /// model, shortlist, vocabs and ssplitPrefixFile bytes. Optional.
-  explicit Service(Ptr<Options> options, MemoryBundle memoryBundle = {});
+  struct Config {};
+  /// Construct a BlockingService with configuration loaded from an Options object. Does not require any keys, values to
+  /// be set.
+  BlockingService(const BlockingService::Config &config);
 
-  /// Construct Service from a string configuration. If memoryBundle is empty, Service is
-  /// initialized from file-based loading. Otherwise, Service is initialized from
-  /// the given bytearray memories.
-  /// @param [in] config string parsable as YAML expected to adhere with marian config
-  /// @param [in] memoryBundle holds all byte-array memories. Can be a set/subset of
-  /// model, shortlist, vocabs and ssplitPrefixFile bytes. Optional.
-  explicit Service(const std::string &config, MemoryBundle memoryBundle = {})
-      : Service(parseOptions(config, /*validate=*/false), std::move(memoryBundle)) {}
+  /// Translate multiple text-blobs in a single *blocking* API call, providing ResponseOptions which applies across all
+  /// text-blobs dictating how to construct Response. ResponseOptions can be used to enable/disable additional
+  /// information like quality-scores, alignments etc.
 
-  /// Explicit destructor to clean up after any threads initialized in
-  /// asynchronous operation mode.
-  ~Service();
+  /// If you have async/multithread capabilities, it is recommended to work with AsyncService instead of this class.
+  /// Note that due to batching differences and consequent floating-point rounding differences, this is not guaranteed
+  /// to have the same output as AsyncService.
 
-  /// Translate an input, providing Options to construct Response. This is
-  /// useful when one has to set/unset alignments or quality in the Response to
-  /// save compute spent in constructing these objects.
-  ///
+  /// @param [in] translationModel: TranslationModel to use for the request.
   /// @param [in] source: rvalue reference of the string to be translated
-  /// @param [in] callback: A callback function provided by the client which
-  /// accepts an rvalue of a Response. Called on successful construction of a
-  /// Response following completion of translation of source by worker threads.
-  /// @param [in] responseOptions: Options indicating whether or not to include
-  /// some member in the Response, also specify any additional configurable
-  /// parameters.
-  void translate(std::string &&source, std::function<void(Response &&)> &&callback,
-                 ResponseOptions options = ResponseOptions());
-
-#ifdef WASM_COMPATIBLE_SOURCE
-  /// Translate multiple text-blobs in a single *blocking* API call, providing
-  /// ResponseOptions which applies across all text-blobs dictating how to
-  /// construct Response. ResponseOptions can be used to enable/disable
-  /// additional information like quality-scores, alignments etc.
-  ///
-  /// All texts are combined to efficiently construct batches together providing
-  /// speedups compared to calling translate() indepdently on individual
-  /// text-blob. Note that there will be minor differences in output when
-  /// text-blobs are individually translated due to approximations but similar
-  /// quality nonetheless. If you have async/multithread capabilities, it is
-  /// recommended to work with callbacks and translate() API.
-  ///
-  /// @param [in] source: rvalue reference of the string to be translated
-  /// @param [in] responseOptions: ResponseOptions indicating whether or not
-  /// to include some member in the Response, also specify any additional
-  /// configurable parameters.
-  std::vector<Response> translateMultiple(std::vector<std::string> &&source, ResponseOptions responseOptions);
-#endif
-
-  /// Returns if model is alignment capable or not.
-  bool isAlignmentSupported() const { return options_->hasAndNotEmpty("alignment"); }
+  /// @param [in] responseOptions: ResponseOptions indicating whether or not to include some member in the Response,
+  /// also specify any additional configurable parameters.
+  std::vector<Response> translateMultiple(std::shared_ptr<TranslationModel> translationModel,
+                                          std::vector<std::string> &&source, const ResponseOptions &responseOptions);
 
   /// Returns cache stats
-  CacheStats cacheStats();
+  CacheStats cacheStats() const;
 
  private:
-  /// Queue an input for translation.
-  void queueRequest(std::string &&input, std::function<void(Response &&)> &&callback, ResponseOptions responseOptions);
+  ///  Numbering requests processed through this instance. Used to keep account of arrival times of the request. This
+  ///  allows for using this quantity in priority based ordering.
+  size_t requestId_;
 
-  /// Translates through direct interaction between batcher_ and translators_
+  /// An aggregate batching pool associated with an async translating instance, which maintains an aggregate queue of
+  /// requests compiled from  batching-pools of multiple translation models. Not thread-safe.
+  AggregateBatchingPool batchingPool_;
 
-  /// Number of workers to launch.
-  size_t numWorkers_;
+  Config config_;
 
-  /// Options object holding the options Service was instantiated with.
-  Ptr<Options> options_;
+  std::unique_ptr<ThreadUnsafeLRUCache> cache_{nullptr};
+};
 
-  /// Model memory to load model passed as bytes.
-  AlignedMemory modelMemory_;  // ORDER DEPENDENCY (translators_)
-  /// Shortlist memory passed as bytes.
-  AlignedMemory shortlistMemory_;  // ORDER DEPENDENCY (translators_)
+/// Effectively a threadpool, providing an API to take a translation request of a source-text, paramaterized by
+/// TranslationModel to be used for translation. Configurability on optional items for the Response corresponding to a
+/// request is provisioned through ResponseOptions.
+class AsyncService {
+ public:
+  struct Config {
+    size_t numWorkers;
+  };
+  /// Construct an AsyncService with configuration loaded from Options. Expects positive integer value for
+  /// `cpu-threads`. Additionally requires options which configure AggregateBatchingPool.
+  AsyncService(const AsyncService::Config &config);
+
+  /// Create a TranslationModel compatible with this instance of Service. Internally assigns how many replicas of
+  /// backend needed based on worker threads set. See TranslationModel for documentation on other params.
+  template <class ConfigType>
+  Ptr<TranslationModel> createCompatibleModel(const ConfigType &config, MemoryBundle &&memory = MemoryBundle{}) {
+    // @TODO: Remove this remove this dependency/coupling.
+    return New<TranslationModel>(config, std::move(memory), /*replicas=*/config_.numWorkers);
+  }
+
+  /// With the supplied TranslationModel, translate an input. A Response is constructed with optional items set/unset
+  /// indicated via ResponseOptions. Upon completion translation of the input, the client supplied callback is triggered
+  /// with the constructed Response. Concurrent-calls to this function are safe.
+  ///
+  /// @param [in] translationModel: TranslationModel to use for the request.
+  /// @param [in] source: rvalue reference of the string to be translated. This is available as-is to the client later
+  /// in the Response corresponding to this call along with the translated-text and meta-data.
+  /// @param [in] callback: A callback function provided by the client which accepts an rvalue of a Response.
+  /// @param [in] responseOptions: Options indicating whether or not to include some member in the Response, also
+  /// specify any additional configurable parameters.
+  void translate(std::shared_ptr<TranslationModel> translationModel, std::string &&source, CallbackType callback,
+                 const ResponseOptions &options = ResponseOptions());
+
+  /// Thread joins and proper shutdown are required to be handled explicitly.
+  ~AsyncService();
+
+  CacheStats cacheStats() const;
+
+ private:
+  AsyncService::Config config_;
+
+  std::vector<std::thread> workers_;
 
   /// Stores requestId of active request. Used to establish
   /// ordering among requests and logging/book-keeping.
 
+  /// Numbering requests processed through this instance. Used to keep account of arrival times of the request. This
+  /// allows for using this quantity in priority based ordering.
   size_t requestId_;
-  /// Store vocabs representing source and target.
-  Vocabs vocabs_;  // ORDER DEPENDENCY (text_processor_)
 
-  /// TextProcesser takes a blob of text and converts into format consumable by
-  /// the batch-translator and annotates sentences and words.
-  TextProcessor text_processor_;  // ORDER DEPENDENCY (vocabs_)
-
-  /// Batcher handles generation of batches from a request, subject to
-  /// packing-efficiency and priority optimization heuristics.
-  ThreadsafeBatcher batcher_;
+  /// An aggregate batching pool associated with an async translating instance, which maintains an aggregate queue of
+  /// requests compiled from  batching-pools of multiple translation models. The batching pool is wrapped around one
+  /// object for thread-safety.
+  ThreadsafeBatchingPool<AggregateBatchingPool> safeBatchingPool_;
 
   /// Cache to store translations in for reuse if a sentence comes again for translation.
-  std::unique_ptr<TranslationCache> cache_{nullptr};
-
-  // The following constructs are available providing full capabilities on a non
-  // WASM platform, where one does not have to hide threads.
-#ifdef WASM_COMPATIBLE_SOURCE
-  BatchTranslator blocking_translator_;  // ORDER DEPENDENCY (modelMemory_, shortlistMemory_)
-#else
-  std::vector<std::thread> workers_;
-#endif  // WASM_COMPATIBLE_SOURCE
+  std::unique_ptr<ThreadSafeL4Cache> cache_{nullptr};
 };
 
 }  // namespace bergamot

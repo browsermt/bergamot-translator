@@ -7,14 +7,7 @@ namespace bergamot {
 
 void ResponseBuilder::buildQualityScores(const ProcessedRequestSentences &processedRequestSentences,
                                          Response &response) {
-  // No means to test the changes except compile words, temporarily commented to be updated after QE integration.
-  /*
-    std::vector<Quality> qualityScores;
-    for (auto &processedRequestSentence : processedRequestSentences) {
-      Quality quality{processedRequestSentence.sentenceScore(), toVector(processedRequestSentence.wordScores())};
-      response.qualityScores.push_back(std::move(quality));
-    }
-  */
+  qualityEstimator_.computeQualityScores(processedRequestSentences, response);
 }
 
 void ResponseBuilder::buildAlignments(const ProcessedRequestSentences &processedRequestSentences, Response &response) {

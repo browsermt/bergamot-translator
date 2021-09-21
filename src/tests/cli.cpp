@@ -1,23 +1,48 @@
-
 #include "apps.h"
 
 int main(int argc, char *argv[]) {
-  auto cp = marian::bergamot::createConfigParser();
-  auto options = cp.parseOptions(argc, argv, true);
-  const std::string mode = options->get<std::string>("bergamot-mode");
   using namespace marian::bergamot;
-  if (mode == "test-response-source-sentences") {
-    testapp::annotatedTextSentences(options, /*source=*/true);
-  } else if (mode == "test-response-target-sentences") {
-    testapp::annotatedTextSentences(options, /*source=*/false);
-  } else if (mode == "test-response-source-words") {
-    testapp::annotatedTextWords(options, /*source=*/true);
-  } else if (mode == "test-response-target-words") {
-    testapp::annotatedTextWords(options, /*source=*/false);
-  } else if (mode == "test-translation-cache") {
-    testapp::translationCache(options);
-  } else {
-    ABORT("Unknown --mode {}. Please run a valid test", mode);
+  marian::bergamot::ConfigParser configParser;
+  configParser.parseArgs(argc, argv);
+  auto &config = configParser.getConfig();
+  AsyncService::Config serviceConfig{config.numWorkers};
+  AsyncService service(serviceConfig);
+  std::vector<std::shared_ptr<TranslationModel>> models;
+
+  for (auto &modelConfigPath : config.modelConfigPaths) {
+    TranslationModel::Config modelConfig = parseOptionsFromFilePath(modelConfigPath);
+    std::shared_ptr<TranslationModel> model = service.createCompatibleModel(modelConfig);
+    models.push_back(model);
+  }
+
+  switch (config.opMode) {
+    case OpMode::TEST_SOURCE_SENTENCES:
+      testapp::annotatedTextSentences(service, models.front(), /*source=*/true);
+      break;
+    case OpMode::TEST_TARGET_SENTENCES:
+      testapp::annotatedTextSentences(service, models.front(), /*source=*/false);
+      break;
+    case OpMode::TEST_SOURCE_WORDS:
+      testapp::annotatedTextWords(service, models.front(), /*source=*/true);
+      break;
+    case OpMode::TEST_TARGET_WORDS:
+      testapp::annotatedTextWords(service, models.front(), /*source=*/false);
+      break;
+    case OpMode::TEST_FORWARD_BACKWARD_FOR_OUTBOUND:
+      testapp::forwardAndBackward(service, models);
+      break;
+    case OpMode::TEST_QUALITY_ESTIMATOR_WORDS:
+      testapp::qualityEstimatorWords(service, models.front());
+      break;
+    case OpMode::TEST_QUALITY_ESTIMATOR_SCORES:
+      testapp::qualityEstimatorScores(service, models.front());
+      break;
+    case OpMode::TEST_TRANSLATION_CACHE:
+      testapp::translationCache(service, models.front());
+      break;
+    default:
+      ABORT("Incompatible op-mode. Choose one of the test modes.");
+      break;
   }
   return 0;
 }

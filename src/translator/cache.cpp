@@ -7,21 +7,18 @@ namespace bergamot {
 
 #ifndef WASM_COMPATIBLE_SOURCE
 
-ThreadSafeL4Cache::ThreadSafeL4Cache(Ptr<Options> options)
-    : epochManagerConfig_(options->get<size_t>("cache-ebr-queue-size"),
-                          std::chrono::milliseconds(options->get<size_t>("cache-ebr-interval")),
-                          options->get<size_t>("cache-ebr-num-queues")),
-      cacheConfig_(options->get<size_t>("cache-size") * 1024 * 1024,
-                   std::chrono::seconds(options->get<size_t>("cache-time-to-live")),
-                   options->get<bool>("cache-remove-expired")),
+ThreadSafeL4Cache::ThreadSafeL4Cache(const CacheConfig &config)
+    : epochManagerConfig_(config.ebrQueueSize, std::chrono::milliseconds(config.ebrIntervalInMilliseconds),
+                          config.ebrNumQueues),
+      cacheConfig_(config.size * 1024 * 1024, std::chrono::seconds(config.timeToLiveInMilliseconds),
+                   config.removeExpired),
       service_(epochManagerConfig_),
       context_(service_.GetContext()) {
   // There is only a single cache we use. However, L4 construction API given by example demands we give it a string
   // identifier.
   const std::string cacheIdentifier = "global-cache";
-  size_t numBuckets = options->get<size_t>("cache-buckets");
   hashTableIndex_ = service_.AddHashTable(L4::HashTableConfig(
-      cacheIdentifier, L4::HashTableConfig::Setting{static_cast<uint32_t>(numBuckets)}, cacheConfig_));
+      cacheIdentifier, L4::HashTableConfig::Setting{static_cast<uint32_t>(config.numBuckets)}, cacheConfig_));
 }
 
 bool ThreadSafeL4Cache::fetch(const marian::Words &words, ProcessedRequestSentence &processedRequestSentence) {
@@ -89,8 +86,8 @@ CacheStats ThreadSafeL4Cache::stats() const {
 
 #endif  // WASM_COMPATIBLE_SOURCE
 
-ThreadUnsafeLRUCache::ThreadUnsafeLRUCache(Ptr<Options> options)
-    : storageSizeLimit_(options->get<size_t>("cache-size") * 1024 * 1024), storageSize_(0) {}
+ThreadUnsafeLRUCache::ThreadUnsafeLRUCache(const CacheConfig &config)
+    : storageSizeLimit_(config.size * 1024 * 1024), storageSize_(0) {}
 
 bool ThreadUnsafeLRUCache::fetch(const marian::Words &words, ProcessedRequestSentence &processedRequestSentence) {
   auto p = cache_.find(hashFn_(words));

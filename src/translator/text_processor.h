@@ -47,17 +47,17 @@ class TextProcessor {
   /// @param [out] segments: marian::Word equivalents of the sentences processed and stored in AnnotatedText for
   /// consumption of marian translation pipeline.
 
-  void process(std::string &&blob, AnnotatedText &source, Segments &segments);
+  void process(std::string &&blob, AnnotatedText &source, Segments &segments) const;
 
  private:
   void parseCommonOptions(Ptr<Options> options);
 
   /// Tokenizes an input string, returns Words corresponding. Loads the
   /// corresponding byte-ranges into tokenRanges.
-  Segment tokenize(const string_view &input, std::vector<string_view> &tokenRanges);
+  Segment tokenize(const string_view &input, std::vector<string_view> &tokenRanges) const;
 
   /// Wrap into sentences of at most maxLengthBreak_ tokens and add to source.
-  void wrap(Segment &sentence, std::vector<string_view> &tokenRanges, Segments &segments, AnnotatedText &source);
+  void wrap(Segment &sentence, std::vector<string_view> &tokenRanges, Segments &segments, AnnotatedText &source) const;
 
   const Vocabs &vocabs_;   ///< Vocabularies used to tokenize a sentence
   size_t maxLengthBreak_;  ///< Parameter used to wrap sentences to a maximum number of tokens

@@ -22,7 +22,7 @@ namespace bergamot {
 /// A Request is an internal representation used to represent a request after
 /// processed by TextProcessor into sentences constituted by marian::Words.
 ///
-/// The batching mechanism (Batcher) draws from multiple Requests and compiles
+/// The batching mechanism (BatchingPool) draws from multiple Requests and compiles
 /// sentences into a batch. When a batch completes translation (at
 /// BatchTranslator, intended in a different thread), backward propogation
 /// happens through:
@@ -65,7 +65,7 @@ class Request {
   Segment getSegment(size_t index) const;
 
   /// For notions of priority among requests, used to enable std::set in
-  /// Batcher.
+  /// BatchingPool.
   bool operator<(const Request &request) const;
 
   /// Processes a history obtained after translating in a heterogenous batch
@@ -101,7 +101,7 @@ class Request {
 
 /// A RequestSentence provides a view to a sentence within a Request. Existence
 /// of this class allows the sentences and associated information to be kept
-/// within Request, while batching mechanism (Batcher) compiles Batch from
+/// within Request, while batching mechanism (BatchingPool) compiles Batch from
 /// RequestSentence-s coming from different Requests.
 class RequestSentence {
  public:

@@ -5,16 +5,18 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/project_version.h.in
 add_library(bergamot-translator STATIC
     byte_array_util.cpp
     text_processor.cpp
-    batch_translator.cpp 
+    translation_model.cpp
     request.cpp 
-    batcher.cpp
+    batching_pool.cpp
+    aggregate_batching_pool.cpp
     response_builder.cpp
+    quality_estimator.cpp
     batch.cpp
     annotation.cpp
     service.cpp
     cache.cpp
-    threadsafe_batcher.cpp
     processed_request_sentence.cpp
+    parser.cpp
 )
 if (USE_WASM_COMPATIBLE_SOURCE)
   # Using wasm compatible sources should include this compile definition;

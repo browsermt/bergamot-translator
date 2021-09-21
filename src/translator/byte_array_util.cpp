@@ -124,12 +124,30 @@ void getVocabsMemoryFromConfig(marian::Ptr<marian::Options> options,
   }
 }
 
+AlignedMemory getQualityEstimatorModel(const marian::Ptr<marian::Options>& options) {
+  const auto qualityEstimatorPath = options->get<std::string>("quality", "");
+  if (qualityEstimatorPath.empty()) {
+    return {};
+  }
+  return loadFileToMemory(qualityEstimatorPath, 64);
+}
+
+AlignedMemory getQualityEstimatorModel(MemoryBundle& memoryBundle, const marian::Ptr<marian::Options>& options) {
+  if (memoryBundle.qualityEstimatorMemory.size() == 0) {
+    return getQualityEstimatorModel(options);
+  }
+
+  return std::move(memoryBundle.qualityEstimatorMemory);
+}
+
 MemoryBundle getMemoryBundleFromConfig(marian::Ptr<marian::Options> options) {
   MemoryBundle memoryBundle;
   memoryBundle.model = getModelMemoryFromConfig(options);
   memoryBundle.shortlist = getShortlistMemoryFromConfig(options);
   getVocabsMemoryFromConfig(options, memoryBundle.vocabs);
   memoryBundle.ssplitPrefixFile = getSsplitPrefixFileMemoryFromConfig(options);
+  memoryBundle.qualityEstimatorMemory = getQualityEstimatorModel(options);
+
   return memoryBundle;
 }
 

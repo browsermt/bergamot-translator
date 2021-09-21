@@ -33,12 +33,29 @@ struct HashWords {
 
 }  // namespace cache_util
 
+struct CacheConfig {
+  size_t size;
+  size_t ebrQueueSize;
+  size_t ebrNumQueues;
+  size_t ebrIntervalInMilliseconds;
+  size_t numBuckets;
+  bool removeExpired;
+  bool timeToLiveInMilliseconds;
+};
+
 struct CacheStats {
   size_t hits{0};
   size_t misses{0};
   size_t activeRecords{0};
   size_t evictedRecords{0};
   size_t totalSize{0};
+};
+
+class TranslationCache {
+ public:
+  virtual bool fetch(const marian::Words &words, ProcessedRequestSentence &processedRequestSentence) = 0;
+  virtual void insert(const marian::Words &words, const ProcessedRequestSentence &processedRequestSentence) = 0;
+  virtual CacheStats stats() const = 0;
 };
 
 /// ThreadSafeL4Cache is an adapter built on top of L4 specialized for the use-case of bergamot-translator. L4 is a
@@ -56,7 +73,7 @@ struct CacheStats {
 /// helps keep tight lid on memory usage. This should however be cheaper in comparison to recomputing through the graph.
 
 #ifndef WASM_COMPATIBLE_SOURCE
-class ThreadSafeL4Cache {
+class ThreadSafeL4Cache : public TranslationCache {
  public:
   // L4 has weird interfaces with Hungarian Notation (hence IWritableHashTable). All implementations take Key and Value
   // defined in this interface. Both Key and Value are of format: (uint8* mdata, size_t size). L4 doesn't own these - we
@@ -71,7 +88,7 @@ class ThreadSafeL4Cache {
   ///
   /// @param [in] options: Options object which is used to configure the cache. See command-line parser for
   /// documentation (`marian::bergamot::createConfigParser()`)
-  ThreadSafeL4Cache(Ptr<Options> options);
+  ThreadSafeL4Cache(const CacheConfig &config);
 
   /// Fetches a record from cache, storing it in processedRequestSentence if found. Calls to fetch are thread-safe and
   /// lock-free.
@@ -125,13 +142,13 @@ class ThreadSafeL4Cache {
 /// This class comes as an afterthought, so expect parameters which may not be used to achieve parity with
 /// ThreadSafeL4Cache.
 
-class ThreadUnsafeLRUCache {
+class ThreadUnsafeLRUCache : public TranslationCache {
  public:
   /// Construct a ThreadUnSafeLRUCache from configuration passed via key values in an Options object:
   ///
   /// @param [in] options: Options object which is used to configure the cache. See command-line parser for
   /// documentation (`marian::bergamot::createConfigParser()`)
-  ThreadUnsafeLRUCache(Ptr<Options> options);
+  ThreadUnsafeLRUCache(const CacheConfig &config);
 
   /// Fetches a record from cache, storing it in processedRequestSentence if found. Not thread-safe.
   ///
@@ -183,12 +200,6 @@ class ThreadUnsafeLRUCache {
 
   CacheStats stats_;
 };
-
-#ifndef WASM_COMPATIBLE_SOURCE
-typedef ThreadSafeL4Cache TranslationCache;
-#else
-typedef ThreadUnsafeLRUCache TranslationCache;
-#endif
 
 }  // namespace bergamot
 }  // namespace marian

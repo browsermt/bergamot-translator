@@ -1,4 +1,4 @@
-#include "batcher.h"
+#include "batching_pool.h"
 
 #include <cassert>
 
@@ -8,7 +8,7 @@
 namespace marian {
 namespace bergamot {
 
-Batcher::Batcher(Ptr<Options> options) {
+BatchingPool::BatchingPool(Ptr<Options> options) {
   miniBatchWords = options->get<int>("mini-batch-words");
   bucket_.resize(options->get<int>("max-length-break") + 1);
   ABORT_IF(bucket_.size() - 1 > miniBatchWords,
@@ -16,7 +16,7 @@ Batcher::Batcher(Ptr<Options> options) {
            "longer than what can fit in a batch.");
 }
 
-bool Batcher::cleaveBatch(Batch &batch) {
+size_t BatchingPool::generateBatch(Batch &batch) {
   // For now simply iterates on buckets and converts batches greedily.  This
   // has to be enhanced with optimizing over priority. The baseline
   // implementation should at least be as fast as marian's maxi-batch with full
@@ -35,16 +35,15 @@ bool Batcher::cleaveBatch(Batch &batch) {
       } else {
         // Check if elements exist
         assert(batch.size() > 0);
-        return true;
+        return batch.size();
       }
     }
   }
 
-  bool isValidBatch = batch.size() > 0;
-  return isValidBatch;
+  return batch.size();
 }
 
-void Batcher::addWholeRequest(Ptr<Request> request) {
+size_t BatchingPool::enqueueRequest(Ptr<Request> request) {
   for (size_t i = 0; i < request->numSegments(); i++) {
     if (!request->isCachePrefilled(i)) {
       RequestSentence sentence(i, request);
@@ -53,6 +52,8 @@ void Batcher::addWholeRequest(Ptr<Request> request) {
       bucket_[bucket_id].insert(sentence);
     }
   }
+
+  return request->numSegments();
 }
 
 }  // namespace bergamot

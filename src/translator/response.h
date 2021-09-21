@@ -26,14 +26,6 @@ struct Point {
 /// Alignment is a sparse matrix, where Points represent entries with values.
 typedef std::vector<Point> Alignment;
 
-/// -loglikelhoods of the sequence components as proxy to quality.
-struct Quality {
-  /// Certainty/uncertainty score for sequence.
-  float sequence;
-  /// Certainty/uncertainty for each word in the sequence.
-  std::vector<float> word;
-};
-
 /// Response holds AnnotatedText(s) of source-text and translated text,
 /// alignment information between source and target sub-words and sentences.
 ///
@@ -41,6 +33,19 @@ struct Quality {
 /// sentences boundaries, which are required to interpret Quality and
 /// Alignment (s) at the moment.
 struct Response {
+  /// SentenceQualityScore  contains the quality data of a given translated sentence.
+  /// It includes the confidence (proxied by log probabilities) of each decoded word
+  /// (higher logprobs imply better-translated words), the ByteRanges of each term,
+  /// and logprobs of the whole sentence, represented as the mean word scores.
+  struct SentenceQualityScore {
+    /// Quality score of each translated word
+    std::vector<float> wordScores;
+    /// Each word position in the translated text
+    std::vector<ByteRange> wordByteRanges;
+    /// Whole sentence quality score (it is composed by the mean of its words)
+    float sentenceScore = 0.0;
+  };
+
   /// Convenience function to obtain number of units translated. Same as
   /// `.source.numSentences()` and `.target.numSentences().` The processing of a
   /// text of into sentences are handled internally, and this information can be
@@ -54,11 +59,11 @@ struct Response {
   /// translated text and annotations of (sub-)words and sentences.
   AnnotatedText target;
 
-  /// -logprob of each word and negative log likelihood of sequence (sentence)
+  /// logprob of each word and  the total sequence (sentence)
   /// normalized by length, for each sentence processed by the translator.
   /// Indices correspond to ranges accessible through respective Annotation on
   /// source or target.
-  std::vector<Quality> qualityScores;
+  std::vector<SentenceQualityScore> qualityScores;
 
   /// Alignments between source and target. Each Alignment is a
   /// sparse matrix representation with indices corresponding

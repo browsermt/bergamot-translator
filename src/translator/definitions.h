@@ -29,6 +29,8 @@ struct MemoryBundle {
 
   /// @todo Not implemented yet
   AlignedMemory ssplitPrefixFile{};
+
+  AlignedMemory qualityEstimatorMemory;  ///< Byte-array of qe model (aligned to 64)
 };
 
 /// ByteRange stores indices for half-interval [begin, end) in a string. Can be
@@ -38,6 +40,9 @@ struct ByteRange {
   size_t end;
   const size_t size() const { return end - begin; }
 };
+
+class Response;
+using CallbackType = std::function<void(Response&&)>;
 
 }  // namespace bergamot
 }  // namespace marian

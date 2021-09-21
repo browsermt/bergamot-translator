@@ -112,7 +112,8 @@ void decoder(const CLIConfig &config) {
   for (size_t sentenceIdx = 0; sentenceIdx < response.size(); sentenceIdx++) {
     std::cout << response.target.sentence(sentenceIdx) << "\n";
   }
-  LOG(info, "Total time: {:.5f}s wall", decoderTimer.elapsed());
+
+  std::cerr << "Total time: " << std::setprecision(5) << decoderTimer.elapsed() << "s wall" << std::endl;
 }
 
 /// Command line interface to the test the features being developed as part of bergamot C++ library on native platform.

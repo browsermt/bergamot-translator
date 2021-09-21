@@ -1,6 +1,10 @@
 #ifndef SRC_BERGAMOT_PARSER_H
 #define SRC_BERGAMOT_PARSER_H
 
+#include <fstream>
+#include <sstream>
+
+#include "3rd_party/marian-dev/src/3rd_party/CLI/CLI.hpp"
 #include "3rd_party/yaml-cpp/yaml.h"
 #include "common/config_parser.h"
 #include "common/config_validator.h"
@@ -10,65 +14,63 @@
 namespace marian {
 namespace bergamot {
 
-inline marian::ConfigParser createConfigParser() {
-  marian::ConfigParser cp(marian::cli::mode::translation);
-  cp.addOption<std::string>("--ssplit-prefix-file", "Bergamot Options",
-                            "File with nonbreaking prefixes for sentence splitting.");
+enum OpMode {
+  APP_WASM,
+  APP_NATIVE,
+  APP_DECODER,
+  TEST_SOURCE_SENTENCES,
+  TEST_TARGET_SENTENCES,
+  TEST_SOURCE_WORDS,
+  TEST_TARGET_WORDS,
+  TEST_QUALITY_ESTIMATOR_WORDS,
+  TEST_QUALITY_ESTIMATOR_SCORES,
+  TEST_FORWARD_BACKWARD_FOR_OUTBOUND,
+};
 
-  cp.addOption<std::string>("--ssplit-mode", "Server Options", "[paragraph, sentence, wrapped_text]", "paragraph");
+/// Overload for CL11, convert a read from a stringstream into opmode.
+std::istringstream &operator>>(std::istringstream &in, OpMode &mode);
 
-  cp.addOption<int>("--max-length-break", "Bergamot Options",
-                    "Maximum input tokens to be processed in a single sentence.", 128);
+struct CLIConfig {
+  using ModelConfigPaths = std::vector<std::string>;
+  ModelConfigPaths modelConfigPaths;
+  bool byteArray;
+  bool validateByteArray;
+  size_t numWorkers;
+  OpMode opMode;
+};
 
-  cp.addOption<bool>("--bytearray", "Bergamot Options",
-                     "Flag holds whether to construct service from bytearrays, only for testing purpose", false);
+/// ConfigParser for bergamot. Internally stores config options with CLIConfig. CLI11 parsing binds the parsing code to
+/// write to the members of the CLIConfig instance owned by this class. Usage:
+///
+/// ```cpp
+/// ConfigParser configParser;
+/// configParser.parseArgs(argc, argv);
+/// auto &config = configParser.getConfig();
+/// ```
+class ConfigParser {
+ public:
+  ConfigParser();
+  void parseArgs(int argc, char *argv[]);
+  const CLIConfig &getConfig() { return config_; }
 
-  cp.addOption<bool>("--check-bytearray", "Bergamot Options",
-                     "Flag holds whether to check the content of the bytearrays (true by default)", true);
+ private:
+  // Special Options: build-info and version. These are not taken down further, the respective logic executed and
+  // program exits after.
+  void addSpecialOptions(CLI::App &app);
+  void handleSpecialOptions();
 
-  cp.addOption<std::string>("--bergamot-mode", "Bergamot Options",
-                            "Operating mode for bergamot: [wasm, native, decoder]", "native");
+  void addOptionsBoundToConfig(CLI::App &app, CLIConfig &config);
 
-  cp.addOption<std::string>("--quality", "Bergamot Options", "File considering Quality Estimation model");
+  CLIConfig config_;
+  CLI::App app_;
 
-  return cp;
-}
+  bool build_info_{false};
+  bool version_{false};
+};
 
-inline std::shared_ptr<marian::Options> parseOptions(const std::string &config, bool validate = true) {
-  marian::Options options;
-
-  // @TODO(jerinphilip) There's something off here, @XapaJIaMnu suggests
-  // that should not be using the defaultConfig. This function only has access
-  // to std::string config and needs to be able to construct Options from the
-  // same.
-
-  // Absent the following code-segment, there is a parsing exception thrown on
-  // rebuilding YAML.
-  //
-  // Error: Unhandled exception of type 'N4YAML11InvalidNodeE': invalid node;
-  // this may result from using a map iterator as a sequence iterator, or
-  // vice-versa
-  //
-  // Error: Aborted from void unhandledException() in
-  // 3rd_party/marian-dev/src/common/logging.cpp:113
-
-  marian::ConfigParser configParser = createConfigParser();
-  const YAML::Node &defaultConfig = configParser.getConfig();
-
-  options.merge(defaultConfig);
-
-  // Parse configs onto defaultConfig.
-  options.parse(config);
-  YAML::Node configCopy = options.cloneToYamlNode();
-
-  if (validate) {
-    // Perform validation on parsed options only when requested
-    marian::ConfigValidator validator(configCopy);
-    validator.validateOptions(marian::cli::mode::translation);
-  }
-
-  return std::make_shared<marian::Options>(options);
-}
+std::shared_ptr<marian::Options> parseOptionsFromString(const std::string &config, bool validate = true,
+                                                        std::string pathsInSameDirAs = "");
+std::shared_ptr<marian::Options> parseOptionsFromFilePath(const std::string &config, bool validate = true);
 
 }  //  namespace bergamot
 }  //  namespace marian

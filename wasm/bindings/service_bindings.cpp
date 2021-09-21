@@ -8,8 +8,10 @@
 
 using namespace emscripten;
 
-typedef marian::bergamot::Service Service;
-typedef marian::bergamot::AlignedMemory AlignedMemory;
+using BlockingService = marian::bergamot::BlockingService;
+using TranslationModel = marian::bergamot::TranslationModel;
+using AlignedMemory = marian::bergamot::AlignedMemory;
+using MemoryBundle = marian::bergamot::MemoryBundle;
 
 val getByteArrayView(AlignedMemory& alignedMemory) {
   return val(typed_memory_view(alignedMemory.size(), alignedMemory.as<char>()));
@@ -42,9 +44,9 @@ std::vector<std::shared_ptr<AlignedMemory>> prepareVocabsSmartMemories(std::vect
   return vocabsSmartMemories;
 }
 
-marian::bergamot::MemoryBundle prepareMemoryBundle(AlignedMemory* modelMemory, AlignedMemory* shortlistMemory,
-                                                   std::vector<AlignedMemory*> uniqueVocabsMemories) {
-  marian::bergamot::MemoryBundle memoryBundle;
+MemoryBundle prepareMemoryBundle(AlignedMemory* modelMemory, AlignedMemory* shortlistMemory,
+                                 std::vector<AlignedMemory*> uniqueVocabsMemories) {
+  MemoryBundle memoryBundle;
   memoryBundle.model = std::move(*modelMemory);
   memoryBundle.shortlist = std::move(*shortlistMemory);
   memoryBundle.vocabs = std::move(prepareVocabsSmartMemories(uniqueVocabsMemories));
@@ -52,18 +54,31 @@ marian::bergamot::MemoryBundle prepareMemoryBundle(AlignedMemory* modelMemory, A
   return memoryBundle;
 }
 
-Service* ServiceFactory(const std::string& config, AlignedMemory* modelMemory, AlignedMemory* shortlistMemory,
-                        std::vector<AlignedMemory*> uniqueVocabsMemories) {
-  return new Service(config, std::move(prepareMemoryBundle(modelMemory, shortlistMemory, uniqueVocabsMemories)));
+// This allows only shared_ptrs to be operational in JavaScript, according to emscripten.
+// https://emscripten.org/docs/porting/connecting_cpp_and_javascript/embind.html#smart-pointers
+std::shared_ptr<TranslationModel> TranslationModelFactory(const std::string& config, AlignedMemory* model,
+                                                          AlignedMemory* shortlist,
+                                                          std::vector<AlignedMemory*> vocabs) {
+  MemoryBundle memoryBundle = prepareMemoryBundle(model, shortlist, vocabs);
+  return std::make_shared<TranslationModel>(config, std::move(memoryBundle));
 }
 
-EMSCRIPTEN_BINDINGS(translation_service) {
-  class_<Service>("Service")
-      .constructor(&ServiceFactory, allow_raw_pointers())
-      .function("translate", &Service::translateMultiple)
-      .function("isAlignmentSupported", &Service::isAlignmentSupported);
-  // ^ We redirect Service::translateMultiple to WASMBound::translate instead. Sane API is
-  // translate. If and when async comes, we can be done with this inconsistency.
+EMSCRIPTEN_BINDINGS(translation_model) {
+  class_<TranslationModel>("TranslationModel")
+      .smart_ptr_constructor("TranslationModel", &TranslationModelFactory, allow_raw_pointers());
+}
+
+EMSCRIPTEN_BINDINGS(blocking_service_config) {
+  value_object<BlockingService::Config>("BlockingServiceConfig");
+  // .field("name", &BlockingService::Config::name")
+  // The above is a future hook. Note that more will come - for cache, for workspace-size or graph details  limits on
+  // aggregate-batching etc.
+}
+
+EMSCRIPTEN_BINDINGS(blocking_service) {
+  class_<BlockingService>("BlockingService")
+      .constructor<BlockingService::Config>()
+      .function("translate", &BlockingService::translateMultiple);
 
   register_vector<std::string>("VectorString");
 }

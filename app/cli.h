@@ -34,34 +34,40 @@ namespace app {
 /// * Output: written to stdout as translations for the sentences supplied in corresponding lines
 ///
 /// @param [options]: Options to translate passed down to marian through Options.
-void wasm(Ptr<Options> options) {
+void wasm(const CLIConfig &config) {
   // Here, we take the command-line interface which is uniform across all apps. This is parsed into Ptr<Options> by
   // marian. However, mozilla does not allow a Ptr<Options> constructor and demands an std::string constructor since
   // std::string isn't marian internal unlike Ptr<Options>. Since this std::string path needs to be tested for mozilla
   // and since this class/CLI is intended at testing mozilla's path, we go from:
   //
-  // cmdline -> Ptr<Options> -> std::string -> Service(std::string)
+  // cmdline -> Ptr<Options> -> std::string -> TranslationModel(std::string)
   //
   // Overkill, yes.
 
-  std::string config = options->asYamlString();
-  Service model(config);
+  const std::string &modelConfigPath = config.modelConfigPaths.front();
+
+  Ptr<Options> options = parseOptionsFromFilePath(modelConfigPath);
+  MemoryBundle memoryBundle = getMemoryBundleFromConfig(options);
+
+  BlockingService::Config serviceConfig;
+  BlockingService service(serviceConfig);
+
+  std::shared_ptr<TranslationModel> translationModel =
+      std::make_shared<TranslationModel>(options->asYamlString(), std::move(memoryBundle));
 
   ResponseOptions responseOptions;
   std::vector<std::string> texts;
 
-#ifdef WASM_COMPATIBLE_SOURCE
   // Hide the translateMultiple operation
   for (std::string line; std::getline(std::cin, line);) {
     texts.emplace_back(line);
   }
 
-  auto results = model.translateMultiple(std::move(texts), responseOptions);
+  auto results = service.translateMultiple(translationModel, std::move(texts), responseOptions);
 
   for (auto &result : results) {
     std::cout << result.getTranslatedText() << std::endl;
   }
-#endif
 }
 
 /// Application used to benchmark with marian-decoder from time-to-time. The implementation in this repository follows a
@@ -82,9 +88,13 @@ void wasm(Ptr<Options> options) {
 /// * Output: to stdout, translations of the sentences supplied via stdin in corresponding lines
 ///
 /// @param [in] options: constructed from command-line supplied arguments
-void decoder(Ptr<Options> options) {
+void decoder(const CLIConfig &config) {
   marian::timer::Timer decoderTimer;
-  Service service(options);
+  AsyncService::Config asyncConfig{config.numWorkers};
+  AsyncService service(asyncConfig);
+  auto options = parseOptionsFromFilePath(config.modelConfigPaths.front());
+  MemoryBundle memoryBundle;
+  Ptr<TranslationModel> translationModel = service.createCompatibleModel(options, std::move(memoryBundle));
   // Read a large input text blob from stdin
   std::ostringstream std_input;
   std_input << std::cin.rdbuf();
@@ -95,14 +105,15 @@ void decoder(Ptr<Options> options) {
   std::future<Response> responseFuture = responsePromise.get_future();
   auto callback = [&responsePromise](Response &&response) { responsePromise.set_value(std::move(response)); };
 
-  service.translate(std::move(input), std::move(callback));
+  service.translate(translationModel, std::move(input), std::move(callback));
   responseFuture.wait();
   const Response &response = responseFuture.get();
 
   for (size_t sentenceIdx = 0; sentenceIdx < response.size(); sentenceIdx++) {
     std::cout << response.target.sentence(sentenceIdx) << "\n";
   }
-  LOG(info, "Total time: {:.5f}s wall", decoderTimer.elapsed());
+
+  std::cerr << "Total time: " << std::setprecision(5) << decoderTimer.elapsed() << "s wall" << std::endl;
 }
 
 /// Command line interface to the test the features being developed as part of bergamot C++ library on native platform.
@@ -114,16 +125,19 @@ void decoder(Ptr<Options> options) {
 /// * Output: to stdout, translation of the source text faithful to source structure.
 ///
 /// @param [in] options: options to build translator
-void native(Ptr<Options> options) {
+void native(const CLIConfig &config) {
+  AsyncService::Config asyncConfig{config.numWorkers};
+  AsyncService service(asyncConfig);
+
+  auto options = parseOptionsFromFilePath(config.modelConfigPaths.front());
   // Prepare memories for bytearrays (including model, shortlist and vocabs)
   MemoryBundle memoryBundle;
-
-  if (options->get<bool>("bytearray")) {
+  if (config.byteArray) {
     // Load legit values into bytearrays.
     memoryBundle = getMemoryBundleFromConfig(options);
   }
 
-  Service service(options, std::move(memoryBundle));
+  Ptr<TranslationModel> translationModel = service.createCompatibleModel(options, std::move(memoryBundle));
 
   // Read a large input text blob from stdin
   std::ostringstream std_input;
@@ -137,7 +151,7 @@ void native(Ptr<Options> options) {
   std::future<Response> responseFuture = responsePromise.get_future();
   auto callback = [&responsePromise](Response &&response) { responsePromise.set_value(std::move(response)); };
 
-  service.translate(std::move(input), std::move(callback), responseOptions);
+  service.translate(translationModel, std::move(input), std::move(callback), responseOptions);
   responseFuture.wait();
   Response response = responseFuture.get();
 

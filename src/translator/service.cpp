@@ -10,88 +10,59 @@
 namespace marian {
 namespace bergamot {
 
-Service::Service(Ptr<Options> options, MemoryBundle memoryBundle)
-    : requestId_(0),
-      options_(options),
-      vocabs_(options, std::move(memoryBundle.vocabs)),
-      text_processor_(options, vocabs_, std::move(memoryBundle.ssplitPrefixFile)),
-      batcher_(options),
-      numWorkers_(std::max<int>(1, options->get<int>("cpu-threads"))),
-      modelMemory_(std::move(memoryBundle.model)),
-      shortlistMemory_(std::move(memoryBundle.shortlist)),
-      qualityEstimator_(createQualityEstimator(getQualityEstimatorModel(memoryBundle, options)))
-#ifdef WASM_COMPATIBLE_SOURCE
-      ,
-      blocking_translator_(DeviceId(0, DeviceType::cpu), vocabs_, options_, &modelMemory_, &shortlistMemory_)
-#endif
-{
-#ifdef WASM_COMPATIBLE_SOURCE
-  blocking_translator_.initialize();
-#else
-  workers_.reserve(numWorkers_);
-  for (size_t cpuId = 0; cpuId < numWorkers_; cpuId++) {
-    workers_.emplace_back([cpuId, this] {
-      marian::DeviceId deviceId(cpuId, DeviceType::cpu);
-      BatchTranslator translator(deviceId, vocabs_, options_, &modelMemory_, &shortlistMemory_);
-      translator.initialize();
-      Batch batch;
-      // Run thread mainloop
-      while (batcher_ >> batch) {
-        translator.translate(batch);
-      }
-    });
-  }
-#endif
-}
+BlockingService::BlockingService(const BlockingService::Config &config) : requestId_(0), batchingPool_() {}
 
-#ifdef WASM_COMPATIBLE_SOURCE
-std::vector<Response> Service::translateMultiple(std::vector<std::string> &&inputs, ResponseOptions responseOptions) {
-  // We queue the individual Requests so they get compiled at batches to be
-  // efficiently translated.
+std::vector<Response> BlockingService::translateMultiple(std::shared_ptr<TranslationModel> translationModel,
+                                                         std::vector<std::string> &&sources,
+                                                         const ResponseOptions &responseOptions) {
   std::vector<Response> responses;
-  responses.resize(inputs.size());
+  responses.resize(sources.size());
 
-  for (size_t i = 0; i < inputs.size(); i++) {
+  for (size_t i = 0; i < sources.size(); i++) {
     auto callback = [i, &responses](Response &&response) { responses[i] = std::move(response); };  //
-    queueRequest(std::move(inputs[i]), std::move(callback), responseOptions);
+    Ptr<Request> request =
+        translationModel->makeRequest(requestId_++, std::move(sources[i]), callback, responseOptions);
+    batchingPool_.enqueueRequest(translationModel, request);
   }
 
   Batch batch;
-  // There's no need to do shutdown here because it's single threaded.
-  while (batcher_ >> batch) {
-    blocking_translator_.translate(batch);
+  Ptr<TranslationModel> model{nullptr};
+  while (batchingPool_.generateBatch(model, batch)) {
+    model->translateBatch(/*deviceId=*/0, batch);
   }
 
   return responses;
 }
-#endif
 
-void Service::queueRequest(std::string &&input, std::function<void(Response &&)> &&callback,
-                           ResponseOptions responseOptions) {
-  Segments segments;
-  AnnotatedText source;
-
-  text_processor_.process(std::move(input), source, segments);
-
-  ResponseBuilder responseBuilder(responseOptions, std::move(source), vocabs_, std::move(callback), *qualityEstimator_);
-  Ptr<Request> request = New<Request>(requestId_++, std::move(segments), std::move(responseBuilder));
-
-  batcher_.addWholeRequest(request);
+AsyncService::AsyncService(const AsyncService::Config &config) : requestId_(0), config_(config), safeBatchingPool_() {
+  ABORT_IF(config_.numWorkers == 0, "Number of workers should be at least 1 in a threaded workflow");
+  workers_.reserve(config_.numWorkers);
+  for (size_t cpuId = 0; cpuId < config_.numWorkers; cpuId++) {
+    workers_.emplace_back([cpuId, this] {
+      // Consumer thread main-loop. Note that this is an infinite-loop unless the monitor is explicitly told to
+      // shutdown, which happens in the destructor for this class.
+      Batch batch;
+      Ptr<TranslationModel> translationModel{nullptr};
+      while (safeBatchingPool_.generateBatch(translationModel, batch)) {
+        translationModel->translateBatch(cpuId, batch);
+      }
+    });
+  }
 }
 
-void Service::translate(std::string &&input, std::function<void(Response &&)> &&callback,
-                        ResponseOptions responseOptions) {
-  queueRequest(std::move(input), std::move(callback), responseOptions);
-}
-
-Service::~Service() {
-  batcher_.shutdown();
-#ifndef WASM_COMPATIBLE_SOURCE
+AsyncService::~AsyncService() {
+  safeBatchingPool_.shutdown();
   for (std::thread &worker : workers_) {
     assert(worker.joinable());
     worker.join();
   }
-#endif
+}
+
+void AsyncService::translate(std::shared_ptr<TranslationModel> translationModel, std::string &&source,
+                             CallbackType callback, const ResponseOptions &responseOptions) {
+  // Producer thread, a call to this function adds new work items. If batches are available, notifies workers waiting.
+  Ptr<Request> request = translationModel->makeRequest(requestId_++, std::move(source), callback, responseOptions);
+  safeBatchingPool_.enqueueRequest(translationModel, request);
 }
 
 }  // namespace bergamot

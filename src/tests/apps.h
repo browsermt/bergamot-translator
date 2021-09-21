@@ -39,6 +39,10 @@ void qualityEstimatorScores(AsyncService &service, Ptr<TranslationModel> model);
 
 void translationCache(AsyncService &service, Ptr<TranslationModel> model);
 
+void benchmarkCacheEditWorkflow(AsyncService &service, Ptr<TranslationModel> model);
+
+void wngt20IncrementalDecodingForCache(AsyncService &service, Ptr<TranslationModel> model);
+
 }  // namespace testapp
 }  // namespace bergamot
 }  // namespace marian

@@ -80,7 +80,10 @@ CacheStats ThreadSafeL4Cache::stats() const {
   stats.misses = perfData.Get(L4::HashTablePerfCounter::CacheMissCount);
   stats.activeRecords = perfData.Get(L4::HashTablePerfCounter::RecordsCount);
   stats.evictedRecords = perfData.Get(L4::HashTablePerfCounter::EvictedRecordsCount);
-  stats.totalSize = perfData.Get(L4::HashTablePerfCounter::TotalIndexSize);
+  stats.evictedRecords = perfData.Get(L4::HashTablePerfCounter::EvictedRecordsCount);
+  stats.totalSize = perfData.Get(L4::HashTablePerfCounter::TotalIndexSize) +
+                    perfData.Get(L4::HashTablePerfCounter::TotalKeySize) +
+                    perfData.Get(L4::HashTablePerfCounter::TotalValueSize);
   return stats;
 }
 

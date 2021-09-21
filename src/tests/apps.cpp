@@ -1,5 +1,9 @@
 #include "apps.h"
 
+#include <random>
+
+#include "common/timer.h"
+
 namespace marian {
 namespace bergamot {
 
@@ -60,7 +64,7 @@ void translationCache(AsyncService &service, Ptr<TranslationModel> model) {
   ResponseOptions responseOptions;
 
   // Read a large input text blob from stdin
-  std::string source = readFromStdin();
+  const std::string source = readFromStdin();
 
 #ifndef WASM_COMPATIBLE_SOURCE
   auto translateForResponse = [&service, &model, &responseOptions](std::string source) {
@@ -102,6 +106,144 @@ void translationCache(AsyncService &service, Ptr<TranslationModel> model) {
            "same path, this is expected to be same.");
 
   std::cout << firstResponse.target.text;
+}
+
+void benchmarkCacheEditWorkflow(AsyncService &service, Ptr<TranslationModel> model) {
+  std::cout << "Starting cache-warmup" << std::endl;
+  Response response;
+
+  {
+    ResponseOptions responseOptions;
+    std::string input = readFromStdin();
+
+    // Running this once lets the tokenizer work it's magic in response.source (annotation).
+    response = translateForResponse(service, model, std::move(input), responseOptions);
+  }
+
+  std::cout << "Completed first round of translations!" << std::endl;
+
+  ResponseOptions responseOptions;
+  // Hyperparameters
+  std::mt19937 generator;
+  generator.seed(42);
+
+  enum class Action { ERROR_THEN_CORRECT_STOP, CORRECT_STOP, TYPE_THROUGH };
+  std::discrete_distribution<> actionSampler({0.05, 0.15, 0.8});
+
+  std::vector<size_t> counts(/*numActions=*/3, /*init-value=*/0);
+
+  // A simple state machine which advances each step and ends after a finite number of steps. The choice of a bunch of
+  // mistakes are probabilistic.
+  size_t previousWordEnd = 0;
+  const std::string &input = response.source.text;
+  std::string buffer;
+  Response editResponse;
+  std::cout << "Number of sentences: " << response.source.numSentences() << std::endl;
+
+  marian::timer::Timer taskTimer;
+  for (size_t s = 0; s < response.source.numSentences(); s++) {
+    for (size_t w = 0; w < response.source.numWords(s); w++) {
+      ByteRange currentWord = response.source.wordAsByteRange(s, w);
+      int index = actionSampler(generator);
+      ++counts[index];
+
+      Action action = static_cast<Action>(index);
+      switch (action) {
+        case Action::ERROR_THEN_CORRECT_STOP: {
+          // Error once
+          buffer = input.substr(0, previousWordEnd) + " 0xdeadbeef" /* highly unlikely error token */;
+          editResponse = translateForResponse(service, model, std::move(buffer), responseOptions);
+
+          // Backspace a token
+          buffer = input.substr(0, previousWordEnd);
+          editResponse = translateForResponse(service, model, std::move(buffer), responseOptions);
+
+          // Correct
+          buffer = input.substr(0, currentWord.end);
+          editResponse = translateForResponse(service, model, std::move(buffer), responseOptions);
+          break;
+        }
+
+        case Action::CORRECT_STOP: {
+          buffer = input.substr(0, currentWord.end);
+          editResponse = translateForResponse(service, model, std::move(buffer), responseOptions);
+          break;
+        }
+
+        case Action::TYPE_THROUGH: {
+          break;
+        }
+
+        default: {
+          ABORT("Unknown action");
+          break;
+        }
+      }
+      previousWordEnd = currentWord.end;
+    }
+  }
+
+  auto cacheStats = service.cacheStats();
+  std::cout << "Hits / Misses = " << cacheStats.hits << "/ " << cacheStats.misses << std::endl;
+  std::cout << "Action samples: ";
+  for (size_t index = 0; index < counts.size(); index++) {
+    std::cout << "{" << index << ":" << counts[index] << "} ";
+  }
+  std::cout << std::endl;
+  LOG(info, "Total time: {:.5f}s wall", taskTimer.elapsed());
+}
+
+void wngt20IncrementalDecodingForCache(AsyncService &service, Ptr<TranslationModel> model) {
+  // In this particular benchmark-run, we don't care for speed. We run through WNGT 1M sentences, all hopefully unique.
+  // Analyzing cache usage every 1K sentences.
+  marian::timer::Timer decoderTimer;
+  ResponseOptions responseOptions;
+  // Read a large input text blob from stdin
+
+  std::cout << "[";
+
+  auto processDelta = [&service, &model, &responseOptions](size_t lineBegin, size_t lineEnd, std::string &&buffer) {
+    // Once we have the interval lines, send it for translation.
+    Response response = translateForResponse(service, model, std::move(buffer), responseOptions);
+    auto cacheStats = service.cacheStats();
+
+    // The following prints a JSON, not great, but enough to be consumed later in python.
+    if (lineBegin != 0) {
+      std::cout << "," << '\n';
+    }
+    std::cout << "{\n";
+    std::cout << "\"lines\" : " << lineEnd << ",\n ";
+    std::cout << "\"hits\" : " << cacheStats.hits << ",\n ";
+    std::cout << "\"misses\" : " << cacheStats.misses << ",\n ";
+    std::cout << "\"evictedRecords\": " << cacheStats.evictedRecords << ",\n";
+    std::cout << "\"activeRecords\": " << cacheStats.activeRecords << ",\n";
+    std::cout << "\"totalSize\": " << cacheStats.totalSize << "\n";
+    std::cout << "}\n";
+  };
+
+  constexpr size_t interval = 1000;
+  bool first = true;
+  std::string buffer, line;
+  size_t lineId;
+  for (lineId = 0; std::getline(std::cin, line); lineId++) {
+    buffer += line;
+    buffer += "\n";
+
+    if ((lineId + 1) % interval == 0) {
+      // [lineBegin, lineEnd) representing the range.
+      processDelta(/*lineBegin=*/(lineId + 1) - interval, /*lineEnd=*/lineId + 1, std::move(buffer));
+      buffer.clear();
+    }
+  }
+
+  if (!buffer.empty()) {
+    processDelta(/*lineBegin=*/(lineId + 1) - interval, /*lineEnd=*/lineId + 1, std::move(buffer));
+  }
+
+  std::cout << "]";
+  std::cout << std::endl;
+
+  // LOG(info, "Total time: {:.5f}s wall", decoderTimer.elapsed());
 }
 
 void forwardAndBackward(AsyncService &service, std::vector<Ptr<TranslationModel>> &models) {

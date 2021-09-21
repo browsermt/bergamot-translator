@@ -10,7 +10,7 @@
 #include "response.h"
 #include "response_builder.h"
 #include "text_processor.h"
-#include "threadsafe_batcher.h"
+#include "threadsafe_batching_pool.h"
 #include "translation_model.h"
 #include "translator/parser.h"
 #include "vocabs.h"

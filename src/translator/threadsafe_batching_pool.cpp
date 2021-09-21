@@ -1,5 +1,5 @@
 
-#ifndef SRC_BERGAMOT_THREADSAFE_BATCHER_IMPL
+#ifndef SRC_BERGAMOT_THREADSAFE_BATCHING_POOL_IMPL
 #error "This is an impl file and must not be included directly!"
 #endif
 

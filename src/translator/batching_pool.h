@@ -1,5 +1,5 @@
-#ifndef SRC_BERGAMOT_BATCHER_H_
-#define SRC_BERGAMOT_BATCHER_H_
+#ifndef SRC_BERGAMOT_BATCHING_POOL_H_
+#define SRC_BERGAMOT_BATCHING_POOL_H_
 
 #include <set>
 #include <vector>
@@ -35,4 +35,4 @@ class BatchingPool {
 }  // namespace bergamot
 }  // namespace marian
 
-#endif  // SRC_BERGAMOT_BATCHER_H_
+#endif  // SRC_BERGAMOT_BATCHING_POOL_H_

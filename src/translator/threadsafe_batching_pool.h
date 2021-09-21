@@ -1,6 +1,6 @@
-/* Thread-safe wrapper around batcher. */
-#ifndef SRC_BERGAMOT_THREADSAFE_BATCHER_H_
-#define SRC_BERGAMOT_THREADSAFE_BATCHER_H_
+/* Thread-safe wrapper around BatchingPool or AggregateBatchingPool, made generic with templates. */
+#ifndef SRC_BERGAMOT_THREADSAFE_BATCHING_POOL_H_
+#define SRC_BERGAMOT_THREADSAFE_BATCHING_POOL_H_
 
 #include <condition_variable>
 #include <mutex>
@@ -64,8 +64,8 @@ class ThreadsafeBatchingPool {
 }  // namespace bergamot
 }  // namespace marian
 
-#define SRC_BERGAMOT_THREADSAFE_BATCHER_IMPL
-#include "threadsafe_batcher.cpp"
-#undef SRC_BERGAMOT_THREADSAFE_BATCHER_IMPL
+#define SRC_BERGAMOT_THREADSAFE_BATCHING_POOL_IMPL
+#include "threadsafe_batching_pool.cpp"
+#undef SRC_BERGAMOT_THREADSAFE_BATCHING_POOL_IMPL
 
-#endif  // SRC_BERGAMOT_THREADSAFE_BATCHER_H_
+#endif  // SRC_BERGAMOT_THREADSAFE_BATCHING_POOL_H_

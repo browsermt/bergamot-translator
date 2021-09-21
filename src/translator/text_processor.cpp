@@ -81,7 +81,7 @@ TextProcessor::TextProcessor(Ptr<Options> options, const Vocabs &vocabs, const A
 
 void TextProcessor::parseCommonOptions(Ptr<Options> options) {
   maxLengthBreak_ = options->get<size_t>("max-length-break");
-  ssplitMode_ = string2splitmode(options->get<std::string>("ssplit-mode", "paragraph"));
+  ssplitMode_ = string2splitmode(options->get<std::string>("ssplit-mode"));
 }
 
 void TextProcessor::process(std::string &&input, AnnotatedText &source, Segments &segments) const {

@@ -36,6 +36,8 @@ TEST_CASE("From ByteRange vector") {
   TagTreeBuilder ttb(brvec);
   ttb.showGraph();
   ttb.showParents();
+  TagTree tt = ttb.getTagTree();
+  tt.print();
 }
 
 TEST_CASE("TagTree Construction") {

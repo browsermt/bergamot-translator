@@ -98,10 +98,31 @@ class TagTreeBuilder {
         coverageMatrix[i * nTags + j] = (i != j && brv[i].begin <= brv[j].begin && brv[i].end >= brv[j].end);
       }
     }
+
+//    tt_ = TagTree(brv[0]);
+    brv_ = brv;
+  }
+
+  TagTree getTagTree()
+  {
+    return growTagTree(0);
+  }
+
+  TagTree growTagTree(size_t index)
+  {
+    TagTree tt(brv_[index]);
+    for(size_t childIndex = 0; childIndex < nTags; childIndex++)
+    {
+      if (childIndex != index && parentVector[childIndex] == index)
+      {
+        tt.addSubtree(growTagTree(childIndex));
+      }
+    }
+    return tt;
   }
 
   void showGraph() {
-    std::cout << "Graph size: " << nTags << std::endl;
+    std::cout << "GraphgrowTagTree(0); size: " << nTags << std::endl;
     for (size_t i = 0; i < nTags; i++) {
       for (size_t j = 0; j < nTags; j++) {
         std::cout << " " << coverageMatrix[i * nTags + j];
@@ -122,16 +143,13 @@ class TagTreeBuilder {
     }
   }
 
-  void buildTagTree() {
-    if (treeValid) {
-    }
-  }
 
  private:
   size_t nTags;
   std::vector<bool> coverageMatrix;
   std::vector<size_t> parentVector;
   bool treeValid;
+  std::vector<ByteRange> brv_;
 };
 
 class TagProcessor {

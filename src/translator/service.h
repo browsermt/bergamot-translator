@@ -30,7 +30,7 @@ class AsyncService;
 class BlockingService {
  public:
   struct Config {
-    size_t workspaceSizeInMB;
+    size_t workspaceSizeInMB{1024};
   };
   /// Construct a BlockingService with configuration loaded from an Options object. Does not require any keys, values to
   /// be set.
@@ -72,7 +72,7 @@ class AsyncService {
  public:
   struct Config {
     size_t numWorkers;
-    size_t workspaceSizeInMB;
+    size_t workspaceSizeInMB{1024};
   };
   /// Construct an AsyncService with configuration loaded from Options. Expects positive integer value for
   /// `cpu-threads`. Additionally requires options which configure AggregateBatchingPool.

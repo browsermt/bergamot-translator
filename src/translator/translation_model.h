@@ -30,6 +30,8 @@ class TranslationModel {
  public:
   using Config = Ptr<Options>;
   using ShortlistGenerator = Ptr<data::ShortlistGenerator const>;
+  using ScorerEnsemble = std::vector<Ptr<Scorer>>;
+  using Graph = Ptr<ExpressionGraph>;
 
   /// Equivalent to options based constructor, where `options` is parsed from string configuration. Configuration can be
   /// JSON or YAML. Keys expected correspond to those of `marian-decoder`, available at
@@ -84,7 +86,7 @@ class TranslationModel {
   /// @param [in] deviceId: There are replicas of backend created for use in each worker thread. deviceId indicates
   /// which replica to use.
   /// @param [in] batch: A batch generated from generateBatch from the same TranslationModel instance.
-  void translateBatch(size_t deviceId, Batch& batch);
+  void translateBatch(Graph& graph, Batch& batch);
 
  private:
   Config options_;
@@ -95,24 +97,16 @@ class TranslationModel {
   /// Maintains sentences from multiple requests bucketed by length and sorted by priority in each bucket.
   BatchingPool batchingPool_;
 
-  /// A package of marian-entities which form a backend to translate.
-  struct MarianBackend {
-    using Graph = Ptr<ExpressionGraph>;
-    using ScorerEnsemble = std::vector<Ptr<Scorer>>;
-
-    Graph graph;
-    ScorerEnsemble scorerEnsemble;
-  };
-
   // ShortlistGenerator is purely const, we don't need one per thread.
   ShortlistGenerator shortlistGenerator_;
 
   /// Hold replicas of the backend (graph, scorers, shortlist) for use in each thread.
   /// Controlled and consistent external access via graph(id), scorerEnsemble(id),
-  std::vector<MarianBackend> backend_;
+  std::vector<ScorerEnsemble> scorerReplicas_;
   std::shared_ptr<QualityEstimator> qualityEstimator_;
 
-  void loadBackend(size_t idx);
+  ScorerEnsemble buildScorerEnsemble();
+  void initScorerOntoGraph(ScorerEnsemble& scorerEnsemble, Graph& graph);
   Ptr<marian::data::CorpusBatch> convertToMarianBatch(Batch& batch);
 };
 

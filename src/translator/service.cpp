@@ -10,7 +10,30 @@
 namespace marian {
 namespace bergamot {
 
-BlockingService::BlockingService(const BlockingService::Config &config) : requestId_(0), batchingPool_() {}
+Ptr<Options> horribleOptionsHack() {
+  Ptr<Options> options = std::make_shared<Options>();
+  options->set<std::string>("gemm-precision", "int8shiftAlphaAll");
+  options->set<bool>("dump-quantmult", false);
+  options->set<float>("clip-gemm", 1.0);
+  options->set<bool>("use-legacy-batching", false);
+  return options;
+}
+
+Graph createGraph(size_t workspaceSizeInMB, size_t cpuId) {
+  marian::DeviceId device_(cpuId, DeviceType::cpu);
+  Graph graph = New<ExpressionGraph>(/*inference=*/true);  // set the graph to be inference only
+  // auto prec = options_->get<std::vector<std::string>>("precision", {"float32"});
+  std::vector<std::string> prec = {"float32"};  // Hardcode now.
+
+  graph->setDefaultElementType(typeFromString(prec[0]));
+  graph->setDevice(device_);
+  graph->getBackend()->configureDevice(horribleOptionsHack());
+  graph->reserveWorkspaceMB(workspaceSizeInMB);
+  return graph;
+}
+
+BlockingService::BlockingService(const BlockingService::Config &config)
+    : requestId_(0), batchingPool_(), graph_(createGraph(config.workspaceSizeInMB, /*cpuId=*/0)) {}
 
 std::vector<Response> BlockingService::translateMultiple(std::shared_ptr<TranslationModel> translationModel,
                                                          std::vector<std::string> &&sources,
@@ -28,7 +51,7 @@ std::vector<Response> BlockingService::translateMultiple(std::shared_ptr<Transla
   Batch batch;
   Ptr<TranslationModel> model{nullptr};
   while (batchingPool_.generateBatch(model, batch)) {
-    model->translateBatch(/*deviceId=*/0, batch);
+    model->translateBatch(graph_, batch);
   }
 
   return responses;
@@ -36,15 +59,19 @@ std::vector<Response> BlockingService::translateMultiple(std::shared_ptr<Transla
 
 AsyncService::AsyncService(const AsyncService::Config &config) : requestId_(0), config_(config), safeBatchingPool_() {
   ABORT_IF(config_.numWorkers == 0, "Number of workers should be at least 1 in a threaded workflow");
+
   workers_.reserve(config_.numWorkers);
+  graphs_.resize(config_.numWorkers, nullptr);
   for (size_t cpuId = 0; cpuId < config_.numWorkers; cpuId++) {
     workers_.emplace_back([cpuId, this] {
       // Consumer thread main-loop. Note that this is an infinite-loop unless the monitor is explicitly told to
       // shutdown, which happens in the destructor for this class.
+      graphs_[cpuId] = createGraph(config_.workspaceSizeInMB, cpuId);
+
       Batch batch;
       Ptr<TranslationModel> translationModel{nullptr};
       while (safeBatchingPool_.generateBatch(translationModel, batch)) {
-        translationModel->translateBatch(cpuId, batch);
+        translationModel->translateBatch(graphs_[cpuId], batch);
       }
     });
   }

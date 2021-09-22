@@ -18,6 +18,8 @@
 namespace marian {
 namespace bergamot {
 
+using Graph = Ptr<ExpressionGraph>;
+
 class BlockingService;
 class AsyncService;
 
@@ -27,7 +29,9 @@ class AsyncService;
 /// bunch of texts and optional args to translate, wait till the translation finishes).
 class BlockingService {
  public:
-  struct Config {};
+  struct Config {
+    size_t workspaceSizeInMB;
+  };
   /// Construct a BlockingService with configuration loaded from an Options object. Does not require any keys, values to
   /// be set.
   BlockingService(const BlockingService::Config &config);
@@ -56,6 +60,8 @@ class BlockingService {
   /// requests compiled from  batching-pools of multiple translation models. Not thread-safe.
   AggregateBatchingPool batchingPool_;
 
+  Graph graph_;
+
   Config config_;
 };
 
@@ -66,6 +72,7 @@ class AsyncService {
  public:
   struct Config {
     size_t numWorkers;
+    size_t workspaceSizeInMB;
   };
   /// Construct an AsyncService with configuration loaded from Options. Expects positive integer value for
   /// `cpu-threads`. Additionally requires options which configure AggregateBatchingPool.
@@ -98,6 +105,7 @@ class AsyncService {
  private:
   AsyncService::Config config_;
 
+  std::vector<Graph> graphs_;
   std::vector<std::thread> workers_;
 
   /// Stores requestId of active request. Used to establish

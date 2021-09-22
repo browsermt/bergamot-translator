@@ -20,7 +20,7 @@ TranslationModel::TranslationModel(const Config &options, MemoryBundle &&memory 
       batchingPool_(options),
       qualityEstimator_(createQualityEstimator(getQualityEstimatorModel(memory, options))) {
   ABORT_IF(replicas == 0, "At least one replica needs to be created.");
-  backend_.resize(replicas);
+  scorerReplicas_.resize(replicas);
 
   if (options_->hasAndNotEmpty("shortlist")) {
     int srcIdx = 0, trgIdx = 1;
@@ -39,24 +39,10 @@ TranslationModel::TranslationModel(const Config &options, MemoryBundle &&memory 
                                                                 srcIdx, trgIdx, shared_vcb);
     }
   }
-
-  for (size_t idx = 0; idx < replicas; idx++) {
-    loadBackend(idx);
-  }
 }
 
-void TranslationModel::loadBackend(size_t idx) {
-  auto &graph = backend_[idx].graph;
-  auto &scorerEnsemble = backend_[idx].scorerEnsemble;
-
-  marian::DeviceId device_(idx, DeviceType::cpu);
-  graph = New<ExpressionGraph>(/*inference=*/true);  // set the graph to be inference only
-  auto prec = options_->get<std::vector<std::string>>("precision", {"float32"});
-  graph->setDefaultElementType(typeFromString(prec[0]));
-  graph->setDevice(device_);
-  graph->getBackend()->configureDevice(options_);
-  graph->reserveWorkspaceMB(options_->get<size_t>("workspace"));
-
+TranslationModel::ScorerEnsemble TranslationModel::buildScorerEnsemble() {
+  ScorerEnsemble scorerEnsemble;
   // Marian Model: Load from memoryBundle or shortList
   if (memory_.model.size() > 0 &&
       memory_.model.begin() !=
@@ -75,13 +61,8 @@ void TranslationModel::loadBackend(size_t idx) {
   } else {
     scorerEnsemble = createScorers(options_);
   }
-  for (auto scorer : scorerEnsemble) {
-    scorer->init(graph);
-    if (shortlistGenerator_) {
-      scorer->setShortlistGenerator(shortlistGenerator_);
-    }
-  }
-  graph->forward();
+
+  return scorerEnsemble;
 }
 
 // Make request process is shared between Async and Blocking workflow of translating.
@@ -162,10 +143,25 @@ Ptr<marian::data::CorpusBatch> TranslationModel::convertToMarianBatch(Batch &bat
   return corpusBatch;
 }
 
-void TranslationModel::translateBatch(size_t deviceId, Batch &batch) {
-  auto &backend = backend_[deviceId];
-  BeamSearch search(options_, backend.scorerEnsemble, vocabs_.target());
-  Histories histories = search.search(backend.graph, convertToMarianBatch(batch));
+void TranslationModel::initScorerOntoGraph(ScorerEnsemble &scorerEnsemble, Graph &graph) {
+  for (auto scorer : scorerEnsemble) {
+    scorer->init(graph);
+    if (shortlistGenerator_) {
+      scorer->setShortlistGenerator(shortlistGenerator_);
+    }
+  }
+  graph->forward();
+}
+
+void TranslationModel::translateBatch(Graph &graph, Batch &batch) {
+  DeviceId deviceId = graph->getDeviceId();
+  auto &scorerEnsemble = scorerReplicas_[deviceId.no];
+  if (scorerEnsemble.empty()) {
+    scorerEnsemble = buildScorerEnsemble();
+    initScorerOntoGraph(scorerEnsemble, graph);
+  }
+  BeamSearch search(options_, scorerEnsemble, vocabs_.target());
+  Histories histories = search.search(graph, convertToMarianBatch(batch));
   batch.completeBatch(histories);
 }
 

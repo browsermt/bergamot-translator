@@ -42,7 +42,7 @@ struct CLIConfig {
   size_t numWorkers;
   OpMode opMode;
 
-  bool cache;
+  bool cacheEnabled;
   CacheConfig cacheConfig;
 };
 

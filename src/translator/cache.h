@@ -34,13 +34,13 @@ struct HashWords {
 }  // namespace cache_util
 
 struct CacheConfig {
-  size_t size;
-  size_t ebrQueueSize;
-  size_t ebrNumQueues;
-  size_t ebrIntervalInMilliseconds;
-  size_t numBuckets;
-  bool removeExpired;
-  bool timeToLiveInMilliseconds;
+  size_t sizeInMB{20};
+  size_t ebrQueueSize{1000};
+  size_t ebrNumQueues{4};
+  size_t ebrIntervalInMilliseconds{1000 /*ms*/};
+  size_t numBuckets{10000};
+  bool removeExpired{false};
+  size_t timeToLiveInMilliseconds{1000};
 };
 
 struct CacheStats {
@@ -75,6 +75,12 @@ class TranslationCache {
 #ifndef WASM_COMPATIBLE_SOURCE
 class ThreadSafeL4Cache : public TranslationCache {
  public:
+  /// Construct a ThreadSafeL4Cache from configuration passed via key values in an Options object:
+  ///
+  /// @param [in] options: Options object which is used to configure the cache. See command-line parser for
+  /// documentation (`marian::bergamot::createConfigParser()`)
+  ThreadSafeL4Cache(const CacheConfig &config);
+
   // L4 has weird interfaces with Hungarian Notation (hence IWritableHashTable). All implementations take Key and Value
   // defined in this interface. Both Key and Value are of format: (uint8* mdata, size_t size). L4 doesn't own these - we
   // point something that is alive for the duration, the contents of this are memcpy'd into L4s internal storage.
@@ -83,12 +89,6 @@ class ThreadSafeL4Cache : public TranslationCache {
   // are.
   using KeyBytes = L4::IWritableHashTable::Key;
   using ValueBytes = L4::IWritableHashTable::Value;
-
-  /// Construct a ThreadSafeL4Cache from configuration passed via key values in an Options object:
-  ///
-  /// @param [in] options: Options object which is used to configure the cache. See command-line parser for
-  /// documentation (`marian::bergamot::createConfigParser()`)
-  ThreadSafeL4Cache(const CacheConfig &config);
 
   /// Fetches a record from cache, storing it in processedRequestSentence if found. Calls to fetch are thread-safe and
   /// lock-free.
@@ -108,6 +108,9 @@ class ThreadSafeL4Cache : public TranslationCache {
   void insert(const marian::Words &words, const ProcessedRequestSentence &processedRequestSentence);
 
   CacheStats stats() const;
+
+  ThreadSafeL4Cache(const ThreadSafeL4Cache &) = delete;
+  ThreadSafeL4Cache &operator=(const ThreadSafeL4Cache &) = delete;
 
  private:
   /// cacheConfig {sizeInBytes, recordTimeToLive, removeExpired} determins the upper limit on cache storage, time for

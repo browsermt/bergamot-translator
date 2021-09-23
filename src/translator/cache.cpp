@@ -10,7 +10,7 @@ namespace bergamot {
 ThreadSafeL4Cache::ThreadSafeL4Cache(const CacheConfig &config)
     : epochManagerConfig_(config.ebrQueueSize, std::chrono::milliseconds(config.ebrIntervalInMilliseconds),
                           config.ebrNumQueues),
-      cacheConfig_(config.size * 1024 * 1024, std::chrono::seconds(config.timeToLiveInMilliseconds),
+      cacheConfig_(config.sizeInMB * 1024 * 1024, std::chrono::seconds(config.timeToLiveInMilliseconds),
                    config.removeExpired),
       service_(epochManagerConfig_),
       context_(service_.GetContext()) {
@@ -90,7 +90,7 @@ CacheStats ThreadSafeL4Cache::stats() const {
 #endif  // WASM_COMPATIBLE_SOURCE
 
 ThreadUnsafeLRUCache::ThreadUnsafeLRUCache(const CacheConfig &config)
-    : storageSizeLimit_(config.size * 1024 * 1024), storageSize_(0) {}
+    : storageSizeLimit_(config.sizeInMB * 1024 * 1024), storageSize_(0) {}
 
 bool ThreadUnsafeLRUCache::fetch(const marian::Words &words, ProcessedRequestSentence &processedRequestSentence) {
   auto p = cache_.find(hashFn_(words));

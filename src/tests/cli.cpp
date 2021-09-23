@@ -5,7 +5,13 @@ int main(int argc, char *argv[]) {
   marian::bergamot::ConfigParser configParser;
   configParser.parseArgs(argc, argv);
   auto &config = configParser.getConfig();
-  AsyncService::Config serviceConfig{config.numWorkers};
+  AsyncService::Config serviceConfig;
+
+  // TODO(improve)
+  serviceConfig.numWorkers = config.numWorkers;
+  serviceConfig.cacheEnabled = config.cacheEnabled;
+  serviceConfig.cacheConfig = config.cacheConfig;
+
   AsyncService service(serviceConfig);
   std::vector<std::shared_ptr<TranslationModel>> models;
 

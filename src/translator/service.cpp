@@ -10,7 +10,13 @@
 namespace marian {
 namespace bergamot {
 
-BlockingService::BlockingService(const BlockingService::Config &config) : requestId_(0), batchingPool_() {}
+BlockingService::BlockingService(const BlockingService::Config &config) : requestId_(0), batchingPool_() {
+  if (config.cacheEnabled) {
+    cache_ = std::make_unique<ThreadUnsafeLRUCache>(config.cacheConfig);
+  } else {
+    cache_ = nullptr;
+  }
+}
 
 CacheStats BlockingService::cacheStats() const {
   if (cache_ == nullptr) {
@@ -42,6 +48,11 @@ std::vector<Response> BlockingService::translateMultiple(std::shared_ptr<Transla
 }
 
 AsyncService::AsyncService(const AsyncService::Config &config) : requestId_(0), config_(config), safeBatchingPool_() {
+  if (config.cacheEnabled) {
+    cache_ = std::make_unique<ThreadSafeL4Cache>(config_.cacheConfig);
+  } else {
+    cache_ = nullptr;
+  }
   ABORT_IF(config_.numWorkers == 0, "Number of workers should be at least 1 in a threaded workflow");
   workers_.reserve(config_.numWorkers);
   for (size_t cpuId = 0; cpuId < config_.numWorkers; cpuId++) {

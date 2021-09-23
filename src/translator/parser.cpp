@@ -87,25 +87,23 @@ void ConfigParser::addOptionsBoundToConfig(CLI::App &app, CLIConfig &config) {
 
   app_.add_option("--bergamot-mode", config.opMode, "Operating mode for bergamot: [wasm, native, decoder]");
 
-  app_.add_option("--cache-translations", config.cache, "To cache translations or not", true);
+  app_.add_option("--cache-translations", config.cacheEnabled, "To cache translations or not", false);
 
   auto &cacheConfig = config.cacheConfig;
-  app_.add_option("--cache-size", cacheConfig.size, "Number of histories to keep in translation cache", 20);
+  app_.add_option("--cache-size", cacheConfig.sizeInMB, "Megabytes of storage used by cache");
   app_.add_option("--cache-ebr-queue-size", cacheConfig.ebrQueueSize,
-                  "Number of action to allow in a queue for epoch based reclamation.", 1000);
+                  "Number of action to allow in a queue for epoch based reclamation.");
   app_.add_option("--cache-ebr-num-queues", cacheConfig.ebrNumQueues,
-                  "Number of queues of actions to maintain, increase to increase throughput.", 4);
+                  "Number of queues of actions to maintain, increase to increase throughput.");
   app_.add_option("--cache-ebr-interval", cacheConfig.ebrIntervalInMilliseconds,
-                  "Time between runs of background thread for epoch-based-reclamation, in milliseconds.", 1000 /*ms*/);
-  app_.add_option("--cache-buckets", cacheConfig.numBuckets, "Number of buckets to keep in the hashtable", 10000);
+                  "Time between runs of background thread for epoch-based-reclamation, in milliseconds.");
+  app_.add_option("--cache-buckets", cacheConfig.numBuckets, "Number of buckets to keep in the hashtable");
   app_.add_option("--cache-remove-expired", cacheConfig.removeExpired,
                   "Whether to remove expired records on a garbage collection iteration or not. Expiry determined by "
-                  "user-specified time-window",
-                  false);
+                  "user-specified time-window");
   app_.add_option("--cache-time-to-live", cacheConfig.timeToLiveInMilliseconds,
                   "How long a record in cache should be valid for in milliseconds. This is insignificant without "
-                  "remove expired flag set.",
-                  1000 /*ms*/);
+                  "remove expired flag set.");
 }
 
 std::shared_ptr<marian::Options> parseOptionsFromFilePath(const std::string &configPath, bool validate /*= true*/) {

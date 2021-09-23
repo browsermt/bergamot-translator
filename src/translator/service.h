@@ -28,7 +28,10 @@ class AsyncService;
 /// bunch of texts and optional args to translate, wait till the translation finishes).
 class BlockingService {
  public:
-  struct Config {};
+  struct Config {
+    bool cacheEnabled;
+    CacheConfig cacheConfig;
+  };
   /// Construct a BlockingService with configuration loaded from an Options object. Does not require any keys, values to
   /// be set.
   BlockingService(const BlockingService::Config &config);
@@ -72,6 +75,8 @@ class AsyncService {
  public:
   struct Config {
     size_t numWorkers;
+    bool cacheEnabled;
+    CacheConfig cacheConfig;
   };
   /// Construct an AsyncService with configuration loaded from Options. Expects positive integer value for
   /// `cpu-threads`. Additionally requires options which configure AggregateBatchingPool.

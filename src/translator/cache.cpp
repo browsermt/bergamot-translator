@@ -2,8 +2,6 @@
 
 #include <cstdlib>
 
-#include "translation_model.h"
-
 namespace marian {
 namespace bergamot {
 
@@ -37,7 +35,7 @@ bool ThreadSafeL4Cache::fetch(const TranslationModel *model, const marian::Words
   /// TODO(@jerinphilip): Empirical evaluation that this is okay.
 
   KeyBytes keyBytes;
-  auto key = hashFn_(words);
+  uint64_t key = hashFn_(words);
 
   // L4 requires uint8_t byte-stream, so we treat 64 bits as a uint8 array, with 8 members.
   keyBytes.m_data = reinterpret_cast<const std::uint8_t *>(&key);

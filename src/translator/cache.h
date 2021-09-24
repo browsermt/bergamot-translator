@@ -51,10 +51,14 @@ struct CacheStats {
   size_t totalSize{0};
 };
 
+class TranslationModel;
+
 class TranslationCache {
  public:
-  virtual bool fetch(const marian::Words &words, ProcessedRequestSentence &processedRequestSentence) = 0;
-  virtual void insert(const marian::Words &words, const ProcessedRequestSentence &processedRequestSentence) = 0;
+  virtual bool fetch(const TranslationModel *model, const marian::Words &words,
+                     ProcessedRequestSentence &processedRequestSentence) = 0;
+  virtual void insert(const TranslationModel *model, const marian::Words &words,
+                      const ProcessedRequestSentence &processedRequestSentence) = 0;
   virtual CacheStats stats() const = 0;
 };
 
@@ -97,7 +101,8 @@ class ThreadSafeL4Cache : public TranslationCache {
   /// @param [out] processedRequestSentence: stores cached results for use outside if found.
   ///
   /// @returns true if query found in cache false otherwise.
-  bool fetch(const marian::Words &words, ProcessedRequestSentence &processedRequestSentence);
+  bool fetch(const TranslationModel *model, const marian::Words &words,
+             ProcessedRequestSentence &processedRequestSentence);
 
   /// Inserts a new record into cache. Thread-safe. Modifies the structure so takes locks, configure sharding to
   /// configure how fine-grained the locks are to reduce contention.
@@ -105,7 +110,8 @@ class ThreadSafeL4Cache : public TranslationCache {
   /// @param [in] words: marian::Words processed from a sentence
   /// @param [in] processedRequestSentence: minimum translated information corresponding to words
   ///
-  void insert(const marian::Words &words, const ProcessedRequestSentence &processedRequestSentence);
+  void insert(const TranslationModel *model, const marian::Words &words,
+              const ProcessedRequestSentence &processedRequestSentence);
 
   CacheStats stats() const;
 
@@ -159,13 +165,15 @@ class ThreadUnsafeLRUCache : public TranslationCache {
   /// @param [out] processedRequestSentence: stores cached results for use outside if found.
   ///
   /// @returns true if query found in cache false otherwise.
-  bool fetch(const marian::Words &words, ProcessedRequestSentence &processedRequestSentence);
+  bool fetch(const TranslationModel *model, const marian::Words &words,
+             ProcessedRequestSentence &processedRequestSentence);
 
   /// Inserts a new record into cache.
   ///
   /// @param [in] words: marian::Words processed from a sentence
   /// @param [in] processedRequestSentence: minimum translated information corresponding to words
-  void insert(const marian::Words &words, const ProcessedRequestSentence &processedRequestSentence);
+  void insert(const TranslationModel *model, const marian::Words &words,
+              const ProcessedRequestSentence &processedRequestSentence);
 
   CacheStats stats() const;
 

@@ -52,7 +52,7 @@ class Request {
   /// translation of all units in a Request.
   /// @param [in] cache: Cache to use when looking for translation. If nullptr, cache is inactive and translations are
   /// freshly generated.
-  Request(size_t Id, TranslationModel *model, Segments &&segments, ResponseBuilder &&responseBuilder,
+  Request(size_t Id, const TranslationModel *model, Segments &&segments, ResponseBuilder &&responseBuilder,
           TranslationCache *cache = nullptr);
 
   /// Obtain the count of tokens in the segment correponding to index. Used to
@@ -82,7 +82,7 @@ class Request {
 
  private:
   size_t Id_;
-  TranslationModel *model_;
+  const TranslationModel *model_;
 
   /// Multiple translation-workers can concurrently access the same Request. The
   /// following atomic atomically operates on the variable holding sentences

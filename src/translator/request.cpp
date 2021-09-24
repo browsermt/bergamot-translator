@@ -11,7 +11,7 @@ namespace marian {
 namespace bergamot {
 
 // -----------------------------------------------------------------
-Request::Request(size_t Id, TranslationModel *model, Segments &&segments, ResponseBuilder &&responseBuilder,
+Request::Request(size_t Id, const TranslationModel *model, Segments &&segments, ResponseBuilder &&responseBuilder,
                  TranslationCache *cache)
     : Id_(Id),
       segments_(std::move(segments)),
@@ -33,7 +33,7 @@ Request::Request(size_t Id, TranslationModel *model, Segments &&segments, Respon
       // complete (non-empty ProcessedRequestSentence). Also update accounting used elsewhere (counter_) to reflect one
       // less segment to translate.
       for (size_t idx = 0; idx < segments_.size(); idx++) {
-        if (cache_->fetch(getSegment(idx), processedRequestSentences_[idx])) {
+        if (cache_->fetch(model_, getSegment(idx), processedRequestSentences_[idx])) {
           --counter_;
         }
       }
@@ -64,7 +64,7 @@ void Request::processHistory(size_t index, Ptr<History> history) {
   // update cache if available to store the result.
   processedRequestSentences_[index] = std::move(ProcessedRequestSentence(*history));
   if (cache_ != nullptr) {
-    cache_->insert(getSegment(index), processedRequestSentences_[index]);
+    cache_->insert(model_, getSegment(index), processedRequestSentences_[index]);
   }
 
   // In case this is last request in, completeRequest is called, which sets the

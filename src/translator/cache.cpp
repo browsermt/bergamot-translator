@@ -1,6 +1,8 @@
-#include "translator/cache.h"
+#include "cache.h"
 
 #include <cstdlib>
+
+#include "translation_model.h"
 
 namespace marian {
 namespace bergamot {
@@ -21,7 +23,8 @@ ThreadSafeL4Cache::ThreadSafeL4Cache(const CacheConfig &config)
       cacheIdentifier, L4::HashTableConfig::Setting{static_cast<uint32_t>(config.numBuckets)}, cacheConfig_));
 }
 
-bool ThreadSafeL4Cache::fetch(const marian::Words &words, ProcessedRequestSentence &processedRequestSentence) {
+bool ThreadSafeL4Cache::fetch(const TranslationModel *model, const marian::Words &words,
+                              ProcessedRequestSentence &processedRequestSentence) {
   auto &hashTable = context_[hashTableIndex_];
 
   /// We take marian's default hash function, which is templated for hash-type. We treat marian::Word (which are indices
@@ -52,7 +55,8 @@ bool ThreadSafeL4Cache::fetch(const marian::Words &words, ProcessedRequestSenten
   return fetchSuccess;
 }
 
-void ThreadSafeL4Cache::insert(const marian::Words &words, const ProcessedRequestSentence &processedRequestSentence) {
+void ThreadSafeL4Cache::insert(const TranslationModel *model, const marian::Words &words,
+                               const ProcessedRequestSentence &processedRequestSentence) {
   auto context = service_.GetContext();
   auto &hashTable = context[hashTableIndex_];
 
@@ -92,7 +96,8 @@ CacheStats ThreadSafeL4Cache::stats() const {
 ThreadUnsafeLRUCache::ThreadUnsafeLRUCache(const CacheConfig &config)
     : storageSizeLimit_(config.sizeInMB * 1024 * 1024), storageSize_(0) {}
 
-bool ThreadUnsafeLRUCache::fetch(const marian::Words &words, ProcessedRequestSentence &processedRequestSentence) {
+bool ThreadUnsafeLRUCache::fetch(const TranslationModel *model, const marian::Words &words,
+                                 ProcessedRequestSentence &processedRequestSentence) {
   auto p = cache_.find(hashFn_(words));
   if (p != cache_.end()) {
     auto recordPtr = p->second;
@@ -113,7 +118,7 @@ bool ThreadUnsafeLRUCache::fetch(const marian::Words &words, ProcessedRequestSen
   return false;
 }
 
-void ThreadUnsafeLRUCache::insert(const marian::Words &words,
+void ThreadUnsafeLRUCache::insert(const TranslationModel *model, const marian::Words &words,
                                   const ProcessedRequestSentence &processedRequestSentence) {
   Record candidate;
   candidate.key = hashFn_(words);

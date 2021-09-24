@@ -12,21 +12,29 @@
 
 #include "common/hash.h"
 #include "processed_request_sentence.h"
+#include "translation_model.h"
 #include "translator/beam_search.h"
 
 namespace marian {
 namespace bergamot {
 
+struct CacheKey {
+  const TranslationModel *model;
+  const marian::Words &words;
+};
+
 namespace cache_util {
 
 template <class HashWordType>
-struct HashWords {
-  HashWordType operator()(const Words &words) const {
+struct HashCacheKey {
+  HashWordType operator()(const CacheKey &key) const {
     size_t seed = 42;
-    for (auto &word : words) {
+    for (auto &word : key.words) {
       HashWordType hashWord = static_cast<HashWordType>(word.toWordIndex());
       util::hash_combine<HashWordType>(seed, hashWord);
     }
+
+    util::hash_combine<HashWordType>(seed, (key.model)->modelId());
     return seed;
   }
 };
@@ -50,8 +58,6 @@ struct CacheStats {
   size_t evictedRecords{0};
   size_t totalSize{0};
 };
-
-class TranslationModel;
 
 class TranslationCache {
  public:
@@ -141,7 +147,7 @@ class ThreadSafeL4Cache : public TranslationCache {
   /// context_[hashTableIndex_] gives the hashmap for Get(...) or Add(...) operations
   size_t hashTableIndex_;
 
-  cache_util::HashWords<uint64_t> hashFn_;
+  cache_util::HashCacheKey<uint64_t> hashFn_;
 };
 
 #endif
@@ -207,7 +213,7 @@ class ThreadUnsafeLRUCache : public TranslationCache {
   // Limit of size (in bytes) of storage_
   size_t storageSizeLimit_;
 
-  cache_util::HashWords<Record::Key> hashFn_;
+  cache_util::HashCacheKey<Record::Key> hashFn_;
 
   CacheStats stats_;
 };

@@ -6,6 +6,7 @@
 #include "common/logging.h"
 #include "definitions.h"
 #include "response.h"
+#include "translation_model.h"
 
 namespace marian {
 namespace bergamot {

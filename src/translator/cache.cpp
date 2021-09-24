@@ -35,7 +35,7 @@ bool ThreadSafeL4Cache::fetch(const TranslationModel *model, const marian::Words
   /// TODO(@jerinphilip): Empirical evaluation that this is okay.
 
   KeyBytes keyBytes;
-  uint64_t key = hashFn_(words);
+  uint64_t key = hashFn_({model, words});
 
   // L4 requires uint8_t byte-stream, so we treat 64 bits as a uint8 array, with 8 members.
   keyBytes.m_data = reinterpret_cast<const std::uint8_t *>(&key);
@@ -60,7 +60,7 @@ void ThreadSafeL4Cache::insert(const TranslationModel *model, const marian::Word
 
   KeyBytes keyBytes;
 
-  auto key = hashFn_(words);
+  auto key = hashFn_({model, words});
 
   // L4 requires uint8_t byte-stream, so we treat 64 bits as a uint8 array, with 8 members.
   keyBytes.m_data = reinterpret_cast<const std::uint8_t *>(&key);
@@ -96,7 +96,7 @@ ThreadUnsafeLRUCache::ThreadUnsafeLRUCache(const CacheConfig &config)
 
 bool ThreadUnsafeLRUCache::fetch(const TranslationModel *model, const marian::Words &words,
                                  ProcessedRequestSentence &processedRequestSentence) {
-  auto p = cache_.find(hashFn_(words));
+  auto p = cache_.find(hashFn_({model, words}));
   if (p != cache_.end()) {
     auto recordPtr = p->second;
     const Storage &value = recordPtr->value;
@@ -119,7 +119,7 @@ bool ThreadUnsafeLRUCache::fetch(const TranslationModel *model, const marian::Wo
 void ThreadUnsafeLRUCache::insert(const TranslationModel *model, const marian::Words &words,
                                   const ProcessedRequestSentence &processedRequestSentence) {
   Record candidate;
-  candidate.key = hashFn_(words);
+  candidate.key = hashFn_({model, words});
 
   // Unfortunately we have to keep ownership within cache (with a clone). The original is sometimes owned by the items
   // that is forwarded for building response, std::move(...)  would invalidate this one.

@@ -96,7 +96,7 @@ class TranslationModel {
   /// Used to salt hashing words so same set of words coming for translation in different models go into different
   /// hash-keys. This can happen when a user switches immediately translation language on pages for example (with same
   /// vocabulary).
-  uint64_t modelId() const { return modelId_; };
+  size_t modelId() const { return modelId_; };
 
  private:
   Config options_;
@@ -127,8 +127,8 @@ class TranslationModel {
   void loadBackend(size_t idx);
   Ptr<marian::data::CorpusBatch> convertToMarianBatch(Batch& batch);
 
-  uint64_t modelId_;
-  uint64_t computeUniqueId(AlignedMemory& memory, const std::string& config);
+  size_t modelId_;
+  size_t computeUniqueId(AlignedMemory& memory, const std::string& config);
 };
 
 }  // namespace bergamot

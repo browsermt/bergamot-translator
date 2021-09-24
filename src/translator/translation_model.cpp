@@ -172,10 +172,10 @@ void TranslationModel::translateBatch(size_t deviceId, Batch &batch) {
   batch.completeBatch(histories);
 }
 
-uint64_t TranslationModel::computeUniqueId(AlignedMemory &memory, const std::string &config) {
+size_t TranslationModel::computeUniqueId(AlignedMemory &memory, const std::string &config) {
   // Hash the configString for a first part. This will already have model information if a filesystem path is supplied
   // instead of AlignedMemory and provide a subject to collisions unique identifier for a model.
-  uint64_t hashVal = std::hash<std::string>()(config);
+  size_t hashVal = std::hash<std::string>()(config);
 
   // Second part: model
   if (memory.begin() != nullptr && memory.size() > 0) {
@@ -183,7 +183,7 @@ uint64_t TranslationModel::computeUniqueId(AlignedMemory &memory, const std::str
     // unique to the model.
     size_t bytes = std::min<size_t>(100, memory.size());
     std::string_view tail(reinterpret_cast<char *>(memory.begin() + memory.size() - bytes), bytes);
-    uint64_t tailHash = std::hash<std::string_view>()(tail);
+    size_t tailHash = std::hash<std::string_view>()(tail);
     util::hash_combine(hashVal, tailHash);
   } else {
     // Otherwise same hardcoded value everytime. The hex is simply string to hex of "modelMem".

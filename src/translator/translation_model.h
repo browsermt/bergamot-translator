@@ -19,6 +19,8 @@
 namespace marian {
 namespace bergamot {
 
+class Request;
+
 /// A TranslationModel is associated with the translation of a single language direction. Holds the graph and other
 /// structures required to run the forward pass of the neural network, along with preprocessing logic (TextProcessor)
 /// and a BatchingPool to create batches that are to be used in conjuction with an instance.

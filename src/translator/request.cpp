@@ -11,13 +11,13 @@ namespace marian {
 namespace bergamot {
 
 // -----------------------------------------------------------------
-Request::Request(size_t Id, Segments &&segments, ResponseBuilder &&responseBuilder, TranslationCache *cache)
+Request::Request(size_t Id, TranslationModel *model, Segments &&segments, ResponseBuilder &&responseBuilder,
+                 TranslationCache *cache)
     : Id_(Id),
       segments_(std::move(segments)),
       responseBuilder_(std::move(responseBuilder)),
-      cache_(cache)
-
-{
+      cache_(cache),
+      model_(model) {
   // 1. If there are no segments_, we are never able to trigger the responseBuilder calls from a different thread. This
   // happens when the use provides empty input, or the sentence and subword preprocessing deems no translatable units
   // present. However, in this case we want an empty valid response. There's no need to do any additional processing

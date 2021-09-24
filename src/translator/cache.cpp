@@ -2,8 +2,24 @@
 
 #include <cstdlib>
 
+#include "translation_model.h"
+
 namespace marian {
 namespace bergamot {
+
+namespace cache_util {
+
+size_t HashCacheKey::operator()(const CacheKey &key) const {
+  size_t seed = 42;
+  for (auto &word : key.words) {
+    size_t hashWord = static_cast<size_t>(word.toWordIndex());
+    util::hash_combine<size_t>(seed, hashWord);
+  }
+
+  util::hash_combine<size_t>(seed, (key.model)->modelId());
+  return seed;
+}
+}  // namespace cache_util
 
 #ifndef WASM_COMPATIBLE_SOURCE
 
@@ -26,7 +42,7 @@ bool ThreadSafeL4Cache::fetch(const TranslationModel *model, const marian::Words
   auto &hashTable = context_[hashTableIndex_];
 
   /// We take marian's default hash function, which is templated for hash-type. We treat marian::Word (which are indices
-  /// represented by size_t (unverified) and convert it into a uint64_t for hashing with more bits)
+  /// represented by size_t (unverified) and convert it into a size_t for hashing with more bits)
   ///
   /// Note that there can still be collisions, in which case the translations returned from cache can be wrong. It's
   /// practically very unlikely (claims @XapaJIaMnu). To guarantee correctness, comparisons need to be made with the
@@ -35,7 +51,7 @@ bool ThreadSafeL4Cache::fetch(const TranslationModel *model, const marian::Words
   /// TODO(@jerinphilip): Empirical evaluation that this is okay.
 
   KeyBytes keyBytes;
-  uint64_t key = hashFn_({model, words});
+  size_t key = hashFn_({model, words});
 
   // L4 requires uint8_t byte-stream, so we treat 64 bits as a uint8 array, with 8 members.
   keyBytes.m_data = reinterpret_cast<const std::uint8_t *>(&key);
@@ -60,7 +76,7 @@ void ThreadSafeL4Cache::insert(const TranslationModel *model, const marian::Word
 
   KeyBytes keyBytes;
 
-  auto key = hashFn_({model, words});
+  size_t key = hashFn_({model, words});
 
   // L4 requires uint8_t byte-stream, so we treat 64 bits as a uint8 array, with 8 members.
   keyBytes.m_data = reinterpret_cast<const std::uint8_t *>(&key);

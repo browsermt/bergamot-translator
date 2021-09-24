@@ -9,4 +9,4 @@
 	url = https://github.com/browsermt/bergamot-translator-tests
 [submodule "3rd_party/L4"]
 	path = 3rd_party/L4
-	url = https://github.com/microsoft/L4
+	url = https://github.com/browsermt/L4

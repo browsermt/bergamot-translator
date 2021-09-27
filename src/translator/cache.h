@@ -59,6 +59,16 @@ class TranslationCache {
   virtual CacheStats stats() const = 0;
 };
 
+class NoCache : TranslationCache {
+  bool fetch(const TranslationModel *model, const marian::Words &words,
+             ProcessedRequestSentence &processedRequestSentence) {
+    return false;
+  };
+  void insert(const TranslationModel *model, const marian::Words &words,
+              const ProcessedRequestSentence &processedRequestSentence){};
+  CacheStats stats() const { return CacheStats{}; };
+};
+
 /// ThreadSafeL4Cache is an adapter built on top of L4 specialized for the use-case of bergamot-translator. L4 is a
 /// thread-safe cache implementation written in the "lock-free" paradigm using atomic constucts. There is locking when
 /// structures are deleted, which runs in the background using an epoch based memory reclamation (EBR) scheme. Eviction
@@ -141,6 +151,10 @@ class ThreadSafeL4Cache : public TranslationCache {
   cache_util::HashCacheKey hashFn_;
 };
 
+#else
+// When operating in WASM, we set ThreadSafeL4Cache to NoCache, which is equivalent to having no-cache active. This
+// fixes compile failures.
+using ThreadSafeL4Cache = NoCache;
 #endif
 
 /// Alternative cache for non-thread based workflow (specifically WASM). LRU Eviction Policy. Uses a lot of std::list.

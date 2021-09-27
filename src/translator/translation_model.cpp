@@ -173,25 +173,5 @@ void TranslationModel::translateBatch(size_t deviceId, Batch &batch) {
   batch.completeBatch(histories);
 }
 
-size_t TranslationModel::computeUniqueId(AlignedMemory &memory, const std::string &config) {
-  // Hash the configString for a first part. This will already have model information if a filesystem path is supplied
-  // instead of AlignedMemory and provide a subject to collisions unique identifier for a model.
-  size_t hashVal = std::hash<std::string>()(config);
-
-  // Second part: model
-  if (memory.begin() != nullptr && memory.size() > 0) {
-    // If we have an AlignedMemory supplied, hash a 100 bytes at the tail which are floats from a tensor and hopefully
-    // unique to the model.
-    size_t bytes = std::min<size_t>(100, memory.size());
-    std::string_view tail(reinterpret_cast<char *>(memory.begin() + memory.size() - bytes), bytes);
-    size_t tailHash = std::hash<std::string_view>()(tail);
-    util::hash_combine(hashVal, tailHash);
-  } else {
-    // Otherwise same hardcoded value everytime. The hex is simply string to hex of "modelMem".
-    util::hash_combine(hashVal, 0x6d6f64656c4d656d);
-  }
-  return hashVal;
-}
-
 }  // namespace bergamot
 }  // namespace marian

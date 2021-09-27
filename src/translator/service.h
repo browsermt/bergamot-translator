@@ -29,7 +29,7 @@ class AsyncService;
 class BlockingService {
  public:
   struct Config {
-    bool cacheEnabled;
+    bool cacheEnabled{false};
     CacheConfig cacheConfig;
   };
   /// Construct a BlockingService with configuration loaded from an Options object. Does not require any keys, values to
@@ -75,7 +75,7 @@ class AsyncService {
  public:
   struct Config {
     size_t numWorkers;
-    bool cacheEnabled;
+    bool cacheEnabled{false};
     CacheConfig cacheConfig;
   };
   /// Construct an AsyncService with configuration loaded from Options. Expects positive integer value for

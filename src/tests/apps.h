@@ -142,6 +142,7 @@ class TestSuite {
 
     auto statsSecondRun = service_.cacheStats();
     LOG(info, "Cache Hits/Misses = {}/{}", statsSecondRun.hits, statsSecondRun.misses);
+    ABORT_IF(statsSecondRun.hits <= 0, "At least one hit expected, none found.");
     ABORT_IF(statsSecondRun.hits != statsFirstRun.misses,
              "Mismatch in expected hits. This test is supposed to check if all previous misses are hit in second run. "
              "Ensure you give an input file and cache-size caps within reasonable limits.");

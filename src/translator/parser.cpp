@@ -87,7 +87,7 @@ void ConfigParser::addOptionsBoundToConfig(CLI::App &app, CLIConfig &config) {
 
   app_.add_option("--bergamot-mode", config.opMode, "Operating mode for bergamot: [wasm, native, decoder]");
 
-  app_.add_option("--cache-translations", config.cacheEnabled, "To cache translations or not", false);
+  app_.add_flag("--cache-translations", config.cacheEnabled, "To cache translations or not");
 
   auto &cacheConfig = config.cacheConfig;
   app_.add_option("--cache-size", cacheConfig.sizeInMB, "Megabytes of storage used by cache");

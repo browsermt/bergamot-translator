@@ -88,14 +88,13 @@ class TranslationModel {
   /// @param [in] batch: A batch generated from generateBatch from the same TranslationModel instance.
   void translateBatch(size_t deviceId, Batch& batch);
 
-  /// Provides a unique identifier (hash) for a `TranslationModel` instance. This is guaranteed to be same if the
-  /// options object and the AlignedMemory for model supplied is the same.  (translateLocally uses configStr and
-  /// filesytem based loads, while extension removes model entry from config and provides the model as an
-  /// AlignedMemory).
+  /// Provides a unique identifier for a `TranslationModel` instance. For use in cache to separate translation cache for
+  /// same source-sequence under different models into different hash-values hence distinguishing entries between
+  /// different TranslationModels.
   ///
-  /// Used to salt hashing words so same set of words coming for translation in different models go into different
-  /// hash-keys. This can happen when a user switches immediately translation language on pages for example (with same
-  /// vocabulary).
+  /// Note: This is dependent on the order of initiliazation. i.e, if a TranslationModel is created, destroyed then
+  /// created again during an client service lifetime both instances are not treated as the same models. More precisely,
+  /// this is assigned at creation than computed as a function of the contents of a TranslationModel.
   size_t modelId() const { return modelId_; };
 
  private:
@@ -127,8 +126,8 @@ class TranslationModel {
   void loadBackend(size_t idx);
   Ptr<marian::data::CorpusBatch> convertToMarianBatch(Batch& batch);
 
-  size_t modelId_;
-  size_t computeUniqueId(AlignedMemory& memory, const std::string& config);
+  const size_t modelId_;
+  static std::atomic<size_t> modelCounter;
 };
 
 }  // namespace bergamot

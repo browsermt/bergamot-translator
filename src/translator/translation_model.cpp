@@ -11,9 +11,12 @@
 namespace marian {
 namespace bergamot {
 
+std::atomic<size_t> TranslationModel::modelCounter = 0;
+
 TranslationModel::TranslationModel(const Config &options, MemoryBundle &&memory /*=MemoryBundle{}*/,
                                    size_t replicas /*=1*/)
-    : options_(options),
+    : modelId_(modelCounter++),
+      options_(options),
       memory_(std::move(memory)),
       vocabs_(options, std::move(memory_.vocabs)),
       textProcessor_(options, vocabs_, std::move(memory_.ssplitPrefixFile)),
@@ -43,8 +46,6 @@ TranslationModel::TranslationModel(const Config &options, MemoryBundle &&memory 
   for (size_t idx = 0; idx < replicas; idx++) {
     loadBackend(idx);
   }
-
-  modelId_ = computeUniqueId(memory_.model, options_->asYamlString());
 }
 
 void TranslationModel::loadBackend(size_t idx) {

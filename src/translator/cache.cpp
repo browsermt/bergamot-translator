@@ -18,8 +18,6 @@ size_t HashCacheKey::operator()(const CacheKey &key) const {
   return seed;
 }
 
-#ifndef WASM_COMPATIBLE_SOURCE
-
 ThreadSafeL4Cache::ThreadSafeL4Cache(const CacheConfig &config)
     : epochManagerConfig_(config.ebrQueueSize, std::chrono::milliseconds(config.ebrIntervalInMilliseconds),
                           config.ebrNumQueues),
@@ -101,8 +99,6 @@ CacheStats ThreadSafeL4Cache::stats() const {
                     perfData.Get(L4::HashTablePerfCounter::TotalValueSize);
   return stats;
 }
-
-#endif  // WASM_COMPATIBLE_SOURCE
 
 ThreadUnsafeLRUCache::ThreadUnsafeLRUCache(const CacheConfig &config)
     : storageSizeLimit_(config.sizeInMB * 1024 * 1024), storageSize_(0) {}

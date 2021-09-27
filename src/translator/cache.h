@@ -6,10 +6,7 @@
 #include <unordered_map>
 #include <utility>
 
-#ifndef WASM_COMPATIBLE_SOURCE
 #include "3rd_party/L4/inc/L4/LocalMemory/HashTableService.h"
-#endif
-
 #include "common/hash.h"
 #include "processed_request_sentence.h"
 #include "translator/beam_search.h"
@@ -69,7 +66,6 @@ class TranslationCache {
 /// There is a serialization (converting to binary (data*, size)) of structs overhead with this class as well, which
 /// helps keep tight lid on memory usage. This should however be cheaper in comparison to recomputing through the graph.
 
-#ifndef WASM_COMPATIBLE_SOURCE
 class ThreadSafeL4Cache : public TranslationCache {
  public:
   /// Construct a ThreadSafeL4Cache from configuration passed via key values in an Options object:
@@ -136,8 +132,6 @@ class ThreadSafeL4Cache : public TranslationCache {
 
   HashCacheKey hashFn_;
 };
-
-#endif
 
 /// Alternative cache for non-thread based workflow (specifically WASM). LRU Eviction Policy. Uses a lot of std::list.
 /// Yes, std::list; If someone needs a more efficient version, look into threads and go for ThreadSafeL4Cache.

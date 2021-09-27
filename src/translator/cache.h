@@ -24,13 +24,9 @@ struct CacheKey {
   const marian::Words &words;
 };
 
-namespace cache_util {
-
 struct HashCacheKey {
   size_t operator()(const CacheKey &key) const;
 };
-
-}  // namespace cache_util
 
 struct CacheConfig {
   size_t sizeInMB{20};
@@ -138,7 +134,7 @@ class ThreadSafeL4Cache : public TranslationCache {
   /// context_[hashTableIndex_] gives the hashmap for Get(...) or Add(...) operations
   size_t hashTableIndex_;
 
-  cache_util::HashCacheKey hashFn_;
+  HashCacheKey hashFn_;
 };
 
 #endif
@@ -204,7 +200,7 @@ class ThreadUnsafeLRUCache : public TranslationCache {
   // Limit of size (in bytes) of storage_
   size_t storageSizeLimit_;
 
-  cache_util::HashCacheKey hashFn_;
+  HashCacheKey hashFn_;
 
   CacheStats stats_;
 };

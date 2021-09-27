@@ -7,8 +7,6 @@
 namespace marian {
 namespace bergamot {
 
-namespace cache_util {
-
 size_t HashCacheKey::operator()(const CacheKey &key) const {
   size_t seed = 42;
   for (auto &word : key.words) {
@@ -19,7 +17,6 @@ size_t HashCacheKey::operator()(const CacheKey &key) const {
   util::hash_combine<size_t>(seed, (key.model)->modelId());
   return seed;
 }
-}  // namespace cache_util
 
 #ifndef WASM_COMPATIBLE_SOURCE
 

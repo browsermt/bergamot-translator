@@ -1,6 +1,8 @@
 #include "cli.h"
+#include "common/logging.h"
 
 int main(int argc, char *argv[]) {
+  createLoggers();
   marian::bergamot::ConfigParser configParser;
   configParser.parseArgs(argc, argv);
   auto &config = configParser.getConfig();

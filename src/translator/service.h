@@ -13,6 +13,7 @@
 #include "text_processor.h"
 #include "threadsafe_batching_pool.h"
 #include "translation_model.h"
+#include "translator/logging.h"
 #include "translator/parser.h"
 #include "vocabs.h"
 
@@ -66,6 +67,8 @@ class BlockingService {
   Config config_;
 
   std::unique_ptr<ThreadUnsafeLRUCache> cache_{nullptr};
+
+  Logger logger_;
 };
 
 /// Effectively a threadpool, providing an API to take a translation request of a source-text, paramaterized by
@@ -127,6 +130,8 @@ class AsyncService {
 
   /// Cache to store translations in for reuse if a sentence comes again for translation.
   std::unique_ptr<ThreadSafeL4Cache> cache_{nullptr};
+
+  Logger logger_;
 };
 
 }  // namespace bergamot

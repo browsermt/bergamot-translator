@@ -10,7 +10,7 @@
 namespace marian {
 namespace bergamot {
 
-BlockingService::BlockingService(const BlockingService::Config &config) : requestId_(0), batchingPool_() {
+BlockingService::BlockingService(const BlockingService::Config &config) : requestId_(0), batchingPool_(), logger_() {
   if (config.cacheEnabled) {
     cache_ = std::make_unique<ThreadUnsafeLRUCache>(config.cacheConfig);
   } else {
@@ -47,7 +47,8 @@ std::vector<Response> BlockingService::translateMultiple(std::shared_ptr<Transla
   return responses;
 }
 
-AsyncService::AsyncService(const AsyncService::Config &config) : requestId_(0), config_(config), safeBatchingPool_() {
+AsyncService::AsyncService(const AsyncService::Config &config)
+    : requestId_(0), config_(config), safeBatchingPool_(), logger_() {
   if (config.cacheEnabled) {
     cache_ = std::make_unique<ThreadSafeL4Cache>(config_.cacheConfig);
   } else {

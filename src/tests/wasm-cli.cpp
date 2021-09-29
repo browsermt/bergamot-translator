@@ -1,10 +1,8 @@
-#include "apps.h"
-#include "common/logging.h"
 
+#include "apps.h"
 using namespace marian::bergamot;
 
 int main(int argc, char *argv[]) {
-  createLoggers();
   ConfigParser configParser;
   configParser.parseArgs(argc, argv);
   auto &config = configParser.getConfig();

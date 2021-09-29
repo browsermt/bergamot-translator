@@ -53,7 +53,7 @@ size_t BatchingPool::enqueueRequest(Ptr<Request> request) {
     }
   }
 
-  return request->numSegments();
+  return request->numToBeFreshlyTranslated();
 }
 
 }  // namespace bergamot

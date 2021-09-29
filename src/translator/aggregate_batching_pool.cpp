@@ -9,9 +9,8 @@ AggregateBatchingPool::AggregateBatchingPool() {
 }
 
 size_t AggregateBatchingPool::enqueueRequest(Ptr<TranslationModel> model, Ptr<Request> request) {
-  model->enqueueRequest(request);
   aggregateQueue_.insert(model);
-  return request->numSegments();
+  return model->enqueueRequest(request);
 }
 
 size_t AggregateBatchingPool::generateBatch(Ptr<TranslationModel>& model, Batch& batch) {

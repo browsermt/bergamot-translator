@@ -72,7 +72,8 @@ class TranslationModel {
 
   /// Relays a request to the batching-pool specific to this translation model.
   /// @param [in] request: Request constructed through makeRequest
-  void enqueueRequest(Ptr<Request> request) { batchingPool_.enqueueRequest(request); };
+  /// @returns Number of sentences generated from this request as work units.
+  size_t enqueueRequest(Ptr<Request> request) { return batchingPool_.enqueueRequest(request); };
 
   /// Generates a batch from the batching-pool for this translation model, compiling from several active requests. Note
   /// that it is possible that calls to this method can give empty-batches.

@@ -44,16 +44,10 @@ class TestSuite {
 
   void benchmarkDecoder(Ptr<TranslationModel> &model) {
     marian::timer::Timer decoderTimer;
-    std::string input = readFromStdin();
+    std::string source = readFromStdin();
 
-    // Wait on future until Response is complete
-    std::promise<Response> responsePromise;
-    std::future<Response> responseFuture = responsePromise.get_future();
-    auto callback = [&responsePromise](Response &&response) { responsePromise.set_value(std::move(response)); };
-
-    service_.translate(model, std::move(input), std::move(callback));
-    responseFuture.wait();
-    const Response &response = responseFuture.get();
+    ResponseOptions responseOptions;
+    Response response = translateForResponse_(service_, model, std; : move(source), responseOptions);
 
     for (size_t sentenceIdx = 0; sentenceIdx < response.size(); sentenceIdx++) {
       std::cout << response.target.sentence(sentenceIdx) << "\n";

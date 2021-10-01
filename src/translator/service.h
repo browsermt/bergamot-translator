@@ -64,7 +64,7 @@ class BlockingService {
   /// requests compiled from  batching-pools of multiple translation models. Not thread-safe.
   AggregateBatchingPool batchingPool_;
 
-  Config config_;
+  const Config config_;
 
   std::unique_ptr<ThreadUnsafeLRUCache> cache_{nullptr};
 
@@ -112,7 +112,7 @@ class AsyncService {
   CacheStats cacheStats() const;
 
  private:
-  AsyncService::Config config_;
+  const Config config_;
 
   std::vector<std::thread> workers_;
 

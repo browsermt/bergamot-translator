@@ -31,7 +31,7 @@ class BlockingService {
  public:
   struct Config {
     bool cacheEnabled{false};
-    CacheConfig cacheConfig;
+    TranslationCache::Config cacheConfig;
   };
   /// Construct a BlockingService with configuration loaded from an Options object. Does not require any keys, values to
   /// be set.
@@ -53,7 +53,7 @@ class BlockingService {
                                           std::vector<std::string> &&source, const ResponseOptions &responseOptions);
 
   /// Returns cache stats
-  CacheStats cacheStats() const;
+  TranslationCache::Stats cacheStats() const;
 
  private:
   ///  Numbering requests processed through this instance. Used to keep account of arrival times of the request. This
@@ -79,7 +79,7 @@ class AsyncService {
   struct Config {
     size_t numWorkers;
     bool cacheEnabled{false};
-    CacheConfig cacheConfig;
+    TranslationCache::Config cacheConfig;
   };
   /// Construct an AsyncService with configuration loaded from Options. Expects positive integer value for
   /// `cpu-threads`. Additionally requires options which configure AggregateBatchingPool.
@@ -109,7 +109,7 @@ class AsyncService {
   /// Thread joins and proper shutdown are required to be handled explicitly.
   ~AsyncService();
 
-  CacheStats cacheStats() const;
+  TranslationCache::Stats cacheStats() const;
 
  private:
   const Config config_;

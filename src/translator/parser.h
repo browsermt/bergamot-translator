@@ -43,7 +43,7 @@ struct CLIConfig {
   OpMode opMode;
 
   bool cacheEnabled;
-  CacheConfig cacheConfig;
+  TranslationCache::Config cacheConfig;
 };
 
 /// ConfigParser for bergamot. Internally stores config options with CLIConfig. CLI11 parsing binds the parsing code to

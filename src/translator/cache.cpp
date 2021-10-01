@@ -7,18 +7,18 @@
 namespace marian {
 namespace bergamot {
 
-size_t hashCacheKey(const CacheKey &key) {
+size_t TranslationCache::hash(const TranslationCache::CacheKey &key) {
   size_t seed = 42;
   for (auto &word : key.words) {
     size_t hashWord = static_cast<size_t>(word.toWordIndex());
     util::hash_combine<size_t>(seed, hashWord);
   }
 
-  util::hash_combine<size_t>(seed, (key.model)->modelId());
+  util::hash_combine<size_t>(seed, key.model.modelId());
   return seed;
 }
 
-ThreadSafeL4Cache::ThreadSafeL4Cache(const CacheConfig &config)
+ThreadSafeL4Cache::ThreadSafeL4Cache(const TranslationCache::Config &config)
     : epochManagerConfig_(config.ebrQueueSize, std::chrono::milliseconds(config.ebrIntervalInMilliseconds),
                           config.ebrNumQueues),
       cacheConfig_(config.sizeInMB * 1024 * 1024, std::chrono::seconds(config.timeToLiveInMilliseconds),
@@ -32,8 +32,7 @@ ThreadSafeL4Cache::ThreadSafeL4Cache(const CacheConfig &config)
       cacheIdentifier, L4::HashTableConfig::Setting{static_cast<uint32_t>(config.numBuckets)}, cacheConfig_));
 }
 
-bool ThreadSafeL4Cache::fetch(const TranslationModel *model, const marian::Words &words,
-                              ProcessedRequestSentence &processedRequestSentence) {
+bool ThreadSafeL4Cache::fetch(const CacheKey &cacheKey, ProcessedRequestSentence &processedRequestSentence) {
   auto &hashTable = context_[hashTableIndex_];
 
   /// We take marian's default hash function, which is templated for hash-type. We treat marian::Word (which are indices
@@ -46,7 +45,7 @@ bool ThreadSafeL4Cache::fetch(const TranslationModel *model, const marian::Words
   /// TODO(@jerinphilip): Empirical evaluation that this is okay.
 
   KeyBytes keyBytes;
-  size_t key = hashCacheKey({model, words});
+  size_t key = TranslationCache::hash(cacheKey);
 
   // L4 requires uint8_t byte-stream, so we treat 64 bits as a uint8 array, with 8 members.
   keyBytes.m_data = reinterpret_cast<const std::uint8_t *>(&key);
@@ -64,14 +63,13 @@ bool ThreadSafeL4Cache::fetch(const TranslationModel *model, const marian::Words
   return fetchSuccess;
 }
 
-void ThreadSafeL4Cache::insert(const TranslationModel *model, const marian::Words &words,
-                               const ProcessedRequestSentence &processedRequestSentence) {
+void ThreadSafeL4Cache::insert(const CacheKey &cacheKey, const ProcessedRequestSentence &processedRequestSentence) {
   auto context = service_.GetContext();
   auto &hashTable = context[hashTableIndex_];
 
   KeyBytes keyBytes;
 
-  size_t key = hashCacheKey({model, words});
+  size_t key = hash(cacheKey);
 
   // L4 requires uint8_t byte-stream, so we treat 64 bits as a uint8 array, with 8 members.
   keyBytes.m_data = reinterpret_cast<const std::uint8_t *>(&key);
@@ -86,9 +84,9 @@ void ThreadSafeL4Cache::insert(const TranslationModel *model, const marian::Word
   hashTable.Add(keyBytes, valBytes);
 }
 
-CacheStats ThreadSafeL4Cache::stats() const {
+TranslationCache::Stats ThreadSafeL4Cache::stats() const {
   auto &perfData = context_[hashTableIndex_].GetPerfData();
-  CacheStats stats;
+  TranslationCache::Stats stats;
   stats.hits = perfData.Get(L4::HashTablePerfCounter::CacheHitCount);
   stats.misses = perfData.Get(L4::HashTablePerfCounter::CacheMissCount);
   stats.activeRecords = perfData.Get(L4::HashTablePerfCounter::RecordsCount);
@@ -100,12 +98,11 @@ CacheStats ThreadSafeL4Cache::stats() const {
   return stats;
 }
 
-ThreadUnsafeLRUCache::ThreadUnsafeLRUCache(const CacheConfig &config)
+ThreadUnsafeLRUCache::ThreadUnsafeLRUCache(const TranslationCache::Config &config)
     : storageSizeLimit_(config.sizeInMB * 1024 * 1024), storageSize_(0) {}
 
-bool ThreadUnsafeLRUCache::fetch(const TranslationModel *model, const marian::Words &words,
-                                 ProcessedRequestSentence &processedRequestSentence) {
-  auto p = cache_.find(hashCacheKey({model, words}));
+bool ThreadUnsafeLRUCache::fetch(const CacheKey &cacheKey, ProcessedRequestSentence &processedRequestSentence) {
+  auto p = cache_.find(TranslationCache::hash(cacheKey));
   if (p != cache_.end()) {
     auto recordPtr = p->second;
     const Storage &value = recordPtr->value;
@@ -125,10 +122,9 @@ bool ThreadUnsafeLRUCache::fetch(const TranslationModel *model, const marian::Wo
   return false;
 }
 
-void ThreadUnsafeLRUCache::insert(const TranslationModel *model, const marian::Words &words,
-                                  const ProcessedRequestSentence &processedRequestSentence) {
+void ThreadUnsafeLRUCache::insert(const CacheKey &cacheKey, const ProcessedRequestSentence &processedRequestSentence) {
   Record candidate;
-  candidate.key = hashCacheKey({model, words});
+  candidate.key = TranslationCache::hash(cacheKey);
 
   // Unfortunately we have to keep ownership within cache (with a clone). The original is sometimes owned by the items
   // that is forwarded for building response, std::move(...)  would invalidate this one.
@@ -160,8 +156,8 @@ void ThreadUnsafeLRUCache::insert(const TranslationModel *model, const marian::W
   }
 }
 
-CacheStats ThreadUnsafeLRUCache::stats() const {
-  CacheStats stats = stats_;
+TranslationCache::Stats ThreadUnsafeLRUCache::stats() const {
+  TranslationCache::Stats stats = stats_;
   return stats;
 }
 

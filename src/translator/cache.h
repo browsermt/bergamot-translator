@@ -16,38 +16,68 @@ namespace bergamot {
 
 class TranslationModel;
 
-struct CacheKey {
-  const TranslationModel *model;
-  const marian::Words &words;
-};
-
-size_t hashCacheKey(const CacheKey &key);
-
-struct CacheConfig {
-  size_t sizeInMB{20};
-  size_t ebrQueueSize{1000};
-  size_t ebrNumQueues{4};
-  size_t ebrIntervalInMilliseconds{1000 /*ms*/};
-  size_t numBuckets{10000};
-  bool removeExpired{false};
-  size_t timeToLiveInMilliseconds{1000};
-};
-
-struct CacheStats {
-  size_t hits{0};
-  size_t misses{0};
-  size_t activeRecords{0};
-  size_t evictedRecords{0};
-  size_t totalSize{0};
-};
+/// Interface for for a cache which caches previously computed translation results for a query uniquely identified by
+/// (TranslationModel, marian::Words). This allows the calls to cache within Request for each RequestSentence to be
+/// agnostic to the underlying Cache implementation, so long as they implement this interface.
+///
+/// [Q] Why not diverge WASM and Native if there are so much diverging differences?
+/// A: Unfortunately cache is part of common-code used by translation for both WASM and Native. Solutions here are
+/// interface inheritance at runtime or swapping classes at compile-time. This implementation choses to go for interface
+/// inheritance, abstracting common structures into the interface below, in addition to specifying the contract required
+/// for translation to work.
 
 class TranslationCache {
  public:
-  virtual bool fetch(const TranslationModel *model, const marian::Words &words,
-                     ProcessedRequestSentence &processedRequestSentence) = 0;
-  virtual void insert(const TranslationModel *model, const marian::Words &words,
-                      const ProcessedRequestSentence &processedRequestSentence) = 0;
-  virtual CacheStats stats() const = 0;
+  // One might be inclined to argue we only have L4 as a cache based on the following config. However, the second cache
+  // only uses sizeInMB as an option to construct and this struct will weakly suffice for now. Using a stronger per
+  // cache config or a sum-type (union/variant) will lead to complications in parsing due to CLI11 requiring all to be
+  // known at parse-time (no ability to dynamically switch between L4 or LRU (stub) based on a previous parse
+  // parameter), and create undesirable duplication.
+  //
+  // TODO: Reach some more optimal middle-ground.
+  struct Config {
+    size_t sizeInMB{20};
+    size_t ebrQueueSize{1000};
+    size_t ebrNumQueues{4};
+    size_t ebrIntervalInMilliseconds{1000 /*ms*/};
+    size_t numBuckets{10000};
+    bool removeExpired{false};
+    size_t timeToLiveInMilliseconds{1000};
+  };
+
+  /// Common stats structure between both caches.
+  struct Stats {
+    size_t hits{0};
+    size_t misses{0};
+    size_t activeRecords{0};
+    size_t evictedRecords{0};
+    size_t totalSize{0};
+  };
+
+ protected:
+  /// The key for cache is (model, words). This is a thin record type. We only require these to be references valid to
+  /// be able to dereference at the time of hashing, hence we only store the references. It is on the user to ensure
+  /// that the addresses these point to don't become invalid during process.
+  struct CacheKey {
+    const TranslationModel &model;
+    const marian::Words &words;
+  };
+
+  /// Hashes the marian::Words salted by a unique-id picked up from the model.
+  static size_t hash(const TranslationCache::CacheKey &key);
+
+ public:
+  // Interface.
+  //
+  /// @param[in]  CacheKey = (TranslationModel&, Words&) for which previously computed translation results are looked
+  /// up in cache.
+  /// @param[out] processedRequestSentence: stores cached results for use outside if found.
+  ///
+  /// @returns true if query found in cache false otherwise.
+  virtual bool fetch(const CacheKey &cacheKey, ProcessedRequestSentence &processedRequestSentence) = 0;
+
+  virtual void insert(const CacheKey &cacheKey, const ProcessedRequestSentence &processedRequestSentence) = 0;
+  virtual TranslationCache::Stats stats() const = 0;
 };
 
 /// ThreadSafeL4Cache is an adapter built on top of L4 specialized for the use-case of bergamot-translator. L4 is a
@@ -66,11 +96,8 @@ class TranslationCache {
 
 class ThreadSafeL4Cache : public TranslationCache {
  public:
-  /// Construct a ThreadSafeL4Cache from configuration passed via key values in an Options object:
-  ///
-  /// @param [in] options: Options object which is used to configure the cache. See command-line parser for
-  /// documentation (`marian::bergamot::createConfigParser()`)
-  ThreadSafeL4Cache(const CacheConfig &config);
+  /// Construct a ThreadSafeL4Cache from configuration specified by TranslationCache::Config
+  ThreadSafeL4Cache(const TranslationCache::Config &config);
 
   // L4 has weird interfaces with Hungarian Notation (hence IWritableHashTable). All implementations take Key and Value
   // defined in this interface. Both Key and Value are of format: (uint8* mdata, size_t size). L4 doesn't own these - we
@@ -83,24 +110,13 @@ class ThreadSafeL4Cache : public TranslationCache {
 
   /// Fetches a record from cache, storing it in processedRequestSentence if found. Calls to fetch are thread-safe and
   /// lock-free.
-  ///
-  /// @param [in]  words: query marian:Words for which translation results are looked up in cache.
-  /// @param [out] processedRequestSentence: stores cached results for use outside if found.
-  ///
-  /// @returns true if query found in cache false otherwise.
-  bool fetch(const TranslationModel *model, const marian::Words &words,
-             ProcessedRequestSentence &processedRequestSentence);
+  bool fetch(const CacheKey &cacheKey, ProcessedRequestSentence &processedRequestSentence) override;
 
   /// Inserts a new record into cache. Thread-safe. Modifies the structure so takes locks, configure sharding to
   /// configure how fine-grained the locks are to reduce contention.
-  ///
-  /// @param [in] words: marian::Words processed from a sentence
-  /// @param [in] processedRequestSentence: minimum translated information corresponding to words
-  ///
-  void insert(const TranslationModel *model, const marian::Words &words,
-              const ProcessedRequestSentence &processedRequestSentence);
+  void insert(const CacheKey &cacheKey, const ProcessedRequestSentence &processedRequestSentence) override;
 
-  CacheStats stats() const;
+  TranslationCache::Stats stats() const;
 
   ThreadSafeL4Cache(const ThreadSafeL4Cache &) = delete;
   ThreadSafeL4Cache &operator=(const ThreadSafeL4Cache &) = delete;
@@ -133,32 +149,12 @@ class ThreadSafeL4Cache : public TranslationCache {
 /// Yes, std::list; If someone needs a more efficient version, look into threads and go for ThreadSafeL4Cache.
 /// This class comes as an afterthought, so expect parameters which may not be used to achieve parity with
 /// ThreadSafeL4Cache.
-
 class ThreadUnsafeLRUCache : public TranslationCache {
  public:
-  /// Construct a ThreadUnSafeLRUCache from configuration passed via key values in an Options object:
-  ///
-  /// @param [in] options: Options object which is used to configure the cache. See command-line parser for
-  /// documentation (`marian::bergamot::createConfigParser()`)
-  ThreadUnsafeLRUCache(const CacheConfig &config);
-
-  /// Fetches a record from cache, storing it in processedRequestSentence if found. Not thread-safe.
-  ///
-  /// @param [in]  words: query marian:Words for which translation results are looked up in cache.
-  /// @param [out] processedRequestSentence: stores cached results for use outside if found.
-  ///
-  /// @returns true if query found in cache false otherwise.
-  bool fetch(const TranslationModel *model, const marian::Words &words,
-             ProcessedRequestSentence &processedRequestSentence);
-
-  /// Inserts a new record into cache.
-  ///
-  /// @param [in] words: marian::Words processed from a sentence
-  /// @param [in] processedRequestSentence: minimum translated information corresponding to words
-  void insert(const TranslationModel *model, const marian::Words &words,
-              const ProcessedRequestSentence &processedRequestSentence);
-
-  CacheStats stats() const;
+  ThreadUnsafeLRUCache(const TranslationCache::Config &config);
+  bool fetch(const CacheKey &cacheKey, ProcessedRequestSentence &processedRequestSentence) override;
+  void insert(const CacheKey &cacheKey, const ProcessedRequestSentence &processedRequestSentence) override;
+  TranslationCache::Stats stats() const;
 
  private:
   // A Record type holds Key and Value together in a linked-list as a building block for the LRU cache.
@@ -190,7 +186,7 @@ class ThreadUnsafeLRUCache : public TranslationCache {
   // Limit of size (in bytes) of storage_
   size_t storageSizeLimit_;
 
-  CacheStats stats_;
+  TranslationCache::Stats stats_;
 };
 
 }  // namespace bergamot

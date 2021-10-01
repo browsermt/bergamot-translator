@@ -13,10 +13,10 @@ namespace bergamot {
 std::istringstream &operator>>(std::istringstream &in, OpMode &mode) {
   std::string modeString;
   in >> modeString;
-  std::unordered_map<std::string, OpMode> table = {
-      {"wasm", OpMode::APP_WASM},
+  const std::unordered_map<std::string, OpMode> table = {
       {"native", OpMode::APP_NATIVE},
-      {"decoder", OpMode::APP_DECODER},
+      {"wasm", OpMode::TEST_WASM_PATH},
+      {"decoder", OpMode::TEST_BENCHMARK_DECODER},
       {"test-response-source-sentences", OpMode::TEST_SOURCE_SENTENCES},
       {"test-response-target-sentences", OpMode::TEST_TARGET_SENTENCES},
       {"test-response-source-words", OpMode::TEST_SOURCE_WORDS},
@@ -36,74 +36,6 @@ std::istringstream &operator>>(std::istringstream &in, OpMode &mode) {
   }
 
   return in;
-}
-
-ConfigParser::ConfigParser() : app_{"Bergamot Options"} {
-  addSpecialOptions(app_);
-  addOptionsBoundToConfig(app_, config_);
-};
-
-void ConfigParser::parseArgs(int argc, char *argv[]) {
-  try {
-    app_.parse(argc, argv);
-    handleSpecialOptions();
-  } catch (const CLI::ParseError &e) {
-    exit(app_.exit(e));
-  }
-}
-
-void ConfigParser::addSpecialOptions(CLI::App &app) {
-  app.add_flag("--build-info", build_info_, "Print build-info and exit");
-  app.add_flag("--version", version_, "Print version-info and exit");
-}
-
-void ConfigParser::handleSpecialOptions() {
-  if (build_info_) {
-#ifndef _MSC_VER  // cmake build options are not available on MSVC based build.
-    std::cerr << cmakeBuildOptionsAdvanced() << std::endl;
-    exit(0);
-#else   // _MSC_VER
-    ABORT("build-info is not available on MSVC based build.");
-#endif  // _MSC_VER
-  }
-
-  if (version_) {
-    std::cerr << buildVersion() << std::endl;
-    exit(0);
-  }
-}
-
-void ConfigParser::addOptionsBoundToConfig(CLI::App &app, CLIConfig &config) {
-  app.add_option("--model-config-paths", config.modelConfigPaths,
-                 "Configuration files list, can be used for pivoting multiple models or multiple model workflows");
-
-  app.add_flag("--bytearray", config.byteArray,
-               "Flag holds whether to construct service from bytearrays, only for testing purpose");
-
-  app.add_flag("--check-bytearray", config.validateByteArray,
-               "Flag holds whether to check the content of the bytearrays (true by default)");
-
-  app.add_option("--cpu-threads", config.numWorkers, "Number of worker threads to use for translation");
-
-  app.add_option("--bergamot-mode", config.opMode, "Operating mode for bergamot: [wasm, native, decoder]");
-
-  app.add_flag("--cache-translations", config.cacheEnabled, "To cache translations or not");
-
-  auto &cacheConfig = config.cacheConfig;
-  app.add_option("--cache-size", cacheConfig.sizeInMB, "Megabytes of storage used by cache");
-  app.add_option("--cache-ebr-queue-size", cacheConfig.ebrQueueSize,
-                 "Number of action to allow in a queue for epoch based reclamation.");
-  app.add_option("--cache-ebr-num-queues", cacheConfig.ebrNumQueues,
-                 "Number of queues of actions to maintain, increase to increase throughput.");
-  app.add_option("--cache-ebr-interval", cacheConfig.ebrIntervalInMilliseconds,
-                 "Time between runs of background thread for epoch-based-reclamation, in milliseconds.");
-  app.add_option("--cache-buckets", cacheConfig.numBuckets, "Number of buckets to keep in the hashtable");
-  app.add_option("--cache-remove-expired", cacheConfig.removeExpired,
-                 "Whether to remove expired records on a garbage collection iteration or not. Expiry determined by "
-                 "user-specified time-window");
-  app.add_option("--cache-time-to-live", cacheConfig.timeToLiveInMilliseconds,
-                 "How long a record in cache should be valid for in milliseconds. This is insignificant without "
-                 "remove expired flag set.");
 }
 
 std::shared_ptr<marian::Options> parseOptionsFromFilePath(const std::string &configPath, bool validate /*= true*/) {

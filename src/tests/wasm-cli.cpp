@@ -1,18 +1,28 @@
-
 #include "apps.h"
 using namespace marian::bergamot;
 
+void wasm(BlockingService &service, std::shared_ptr<TranslationModel> &model) {
+  ResponseOptions responseOptions;
+  std::vector<std::string> texts;
+
+  // Hide the translateMultiple operation
+  for (std::string line; std::getline(std::cin, line);) {
+    texts.emplace_back(line);
+  }
+
+  auto results = service.translateMultiple(model, std::move(texts), responseOptions);
+
+  for (auto &result : results) {
+    std::cout << result.getTranslatedText() << std::endl;
+  }
+}
+
 int main(int argc, char *argv[]) {
-  ConfigParser configParser;
+  ConfigParser<BlockingService> configParser;
   configParser.parseArgs(argc, argv);
+
   auto &config = configParser.getConfig();
-  BlockingService::Config serviceConfig;
-
-  // TODO(improve)
-  serviceConfig.cacheEnabled = config.cacheEnabled;
-  serviceConfig.cacheConfig = config.cacheConfig;
-
-  BlockingService service(serviceConfig);
+  BlockingService service(config.serviceConfig);
 
   TestSuite<BlockingService> testSuite(service);
   std::vector<std::shared_ptr<TranslationModel>> models;
@@ -24,6 +34,10 @@ int main(int argc, char *argv[]) {
   }
 
   switch (config.opMode) {
+    case OpMode::TEST_WASM_PATH:
+      wasm(service, models.front());
+      break;
+
     case OpMode::TEST_SOURCE_SENTENCES:
       testSuite.annotatedTextSentences(models.front(), /*source=*/true);
       break;

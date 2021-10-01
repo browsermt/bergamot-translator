@@ -18,7 +18,7 @@ size_t TranslationCache::hash(const TranslationCache::CacheKey &key) {
   return seed;
 }
 
-ThreadSafeL4Cache::ThreadSafeL4Cache(const TranslationCache::Config &config)
+ThreadSafeL4Cache::ThreadSafeL4Cache(const ThreadSafeL4Cache::Config &config)
     : epochManagerConfig_(config.ebrQueueSize, std::chrono::milliseconds(config.ebrIntervalInMilliseconds),
                           config.ebrNumQueues),
       cacheConfig_(config.sizeInMB * 1024 * 1024, std::chrono::seconds(config.timeToLiveInMilliseconds),
@@ -98,7 +98,7 @@ TranslationCache::Stats ThreadSafeL4Cache::stats() const {
   return stats;
 }
 
-ThreadUnsafeLRUCache::ThreadUnsafeLRUCache(const TranslationCache::Config &config)
+ThreadUnsafeLRUCache::ThreadUnsafeLRUCache(const ThreadUnsafeLRUCache::Config &config)
     : storageSizeLimit_(config.sizeInMB * 1024 * 1024), storageSize_(0) {}
 
 bool ThreadUnsafeLRUCache::fetch(const CacheKey &cacheKey, ProcessedRequestSentence &processedRequestSentence) {

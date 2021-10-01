@@ -7,6 +7,7 @@
 #include "3rd_party/marian-dev/src/3rd_party/CLI/CLI.hpp"
 #include "3rd_party/yaml-cpp/yaml.h"
 #include "cache.h"
+#include "common/build_info.h"
 #include "common/config_parser.h"
 #include "common/config_validator.h"
 #include "common/options.h"
@@ -15,10 +16,14 @@
 namespace marian {
 namespace bergamot {
 
+std::shared_ptr<marian::Options> parseOptionsFromString(const std::string &config, bool validate = true,
+                                                        std::string pathsInSameDirAs = "");
+std::shared_ptr<marian::Options> parseOptionsFromFilePath(const std::string &config, bool validate = true);
+
 enum OpMode {
-  APP_WASM,
   APP_NATIVE,
-  APP_DECODER,
+  TEST_BENCHMARK_DECODER,
+  TEST_WASM_PATH,
   TEST_SOURCE_SENTENCES,
   TEST_TARGET_SENTENCES,
   TEST_SOURCE_WORDS,
@@ -34,16 +39,17 @@ enum OpMode {
 /// Overload for CL11, convert a read from a stringstream into opmode.
 std::istringstream &operator>>(std::istringstream &in, OpMode &mode);
 
+template <class Service>
 struct CLIConfig {
-  using ModelConfigPaths = std::vector<std::string>;
-  ModelConfigPaths modelConfigPaths;
-  bool byteArray;
-  bool validateByteArray;
-  size_t numWorkers;
   OpMode opMode;
 
-  bool cacheEnabled;
-  TranslationCache::Config cacheConfig;
+  bool byteArray;
+  bool validateByteArray;
+
+  using ModelConfigPaths = std::vector<std::string>;
+
+  ModelConfigPaths modelConfigPaths;
+  typename Service::Config serviceConfig;
 };
 
 /// ConfigParser for bergamot. Internally stores config options with CLIConfig. CLI11 parsing binds the parsing code to
@@ -54,32 +60,68 @@ struct CLIConfig {
 /// configParser.parseArgs(argc, argv);
 /// auto &config = configParser.getConfig();
 /// ```
+template <class Service>
 class ConfigParser {
  public:
-  ConfigParser();
-  void parseArgs(int argc, char *argv[]);
-  const CLIConfig &getConfig() { return config_; }
+  ConfigParser() : app_{"Bergamot Options"} {
+    addSpecialOptions(app_);
+    addCommonOptions(app_, config_);
+    Service::Config::addOptions(app_, config_.serviceConfig);
+  };
+  void parseArgs(int argc, char *argv[]) {
+    try {
+      app_.parse(argc, argv);
+      handleSpecialOptions();
+    } catch (const CLI::ParseError &e) {
+      exit(app_.exit(e));
+    }
+  };
+  const CLIConfig<Service> &getConfig() { return config_; }
 
  private:
   // Special Options: build-info and version. These are not taken down further, the respective logic executed and
   // program exits after.
-  void addSpecialOptions(CLI::App &app);
-  void handleSpecialOptions();
+  void addSpecialOptions(CLI::App &app) {
+    app.add_flag("--build-info", build_info_, "Print build-info and exit");
+    app.add_flag("--version", version_, "Print version-info and exit");
+  };
 
-  void addOptionsBoundToConfig(CLI::App &app, CLIConfig &config);
+  void addCommonOptions(CLI::App &app, CLIConfig<Service> &config) {
+    app.add_option("--bergamot-mode", config.opMode, "Operating mode for bergamot: [wasm, native, decoder]");
+    app.add_option("--model-config-paths", config.modelConfigPaths,
+                   "Configuration files list, can be used for pivoting multiple models or multiple model workflows");
 
-  CLIConfig config_;
+    app.add_flag("--bytearray", config.byteArray,
+                 "Flag holds whether to construct service from bytearrays, only for testing purpose");
+
+    app.add_flag("--check-bytearray", config.validateByteArray,
+                 "Flag holds whether to check the content of the bytearrays (true by default)");
+  };
+
+  void handleSpecialOptions() {
+    if (build_info_) {
+#ifndef _MSC_VER  // cmake build options are not available on MSVC based build.
+      std::cerr << cmakeBuildOptionsAdvanced() << std::endl;
+      exit(0);
+#else   // _MSC_VER
+      ABORT("build-info is not available on MSVC based build.");
+#endif  // _MSC_VER
+    }
+
+    if (version_) {
+      std::cerr << buildVersion() << std::endl;
+      exit(0);
+    }
+  }
+
+  CLIConfig<Service> config_;
   CLI::App app_;
 
   bool build_info_{false};
   bool version_{false};
 };
 
-std::shared_ptr<marian::Options> parseOptionsFromString(const std::string &config, bool validate = true,
-                                                        std::string pathsInSameDirAs = "");
-std::shared_ptr<marian::Options> parseOptionsFromFilePath(const std::string &config, bool validate = true);
-
-}  //  namespace bergamot
+}  // namespace bergamot
 }  //  namespace marian
 
 #endif  //  SRC_BERGAMOT_PARSER_H

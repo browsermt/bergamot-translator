@@ -1,18 +1,16 @@
 #include "apps.h"
+#include "translator/parser.h"
+#include "translator/service.h"
+#include "translator/translation_model.h"
+
 using namespace marian::bergamot;
 
 int main(int argc, char *argv[]) {
-  ConfigParser configParser;
+  ConfigParser<AsyncService> configParser;
   configParser.parseArgs(argc, argv);
   auto &config = configParser.getConfig();
   AsyncService::Config serviceConfig;
-
-  // TODO(improve)
-  serviceConfig.numWorkers = config.numWorkers;
-  serviceConfig.cacheEnabled = config.cacheEnabled;
-  serviceConfig.cacheConfig = config.cacheConfig;
-
-  AsyncService service(serviceConfig);
+  AsyncService service(config.serviceConfig);
 
   TestSuite<AsyncService> testSuite(service);
   std::vector<std::shared_ptr<TranslationModel>> models;

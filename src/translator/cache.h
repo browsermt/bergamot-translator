@@ -28,23 +28,6 @@ class TranslationModel;
 
 class TranslationCache {
  public:
-  // One might be inclined to argue we only have L4 as a cache based on the following config. However, the second cache
-  // only uses sizeInMB as an option to construct and this struct will weakly suffice for now. Using a stronger per
-  // cache config or a sum-type (union/variant) will lead to complications in parsing due to CLI11 requiring all to be
-  // known at parse-time (no ability to dynamically switch between L4 or LRU (stub) based on a previous parse
-  // parameter), and create undesirable duplication.
-  //
-  // TODO: Reach some more optimal middle-ground.
-  struct Config {
-    size_t sizeInMB{20};
-    size_t ebrQueueSize{1000};
-    size_t ebrNumQueues{4};
-    size_t ebrIntervalInMilliseconds{1000 /*ms*/};
-    size_t numBuckets{10000};
-    bool removeExpired{false};
-    size_t timeToLiveInMilliseconds{1000};
-  };
-
   /// Common stats structure between both caches.
   struct Stats {
     size_t hits{0};
@@ -97,7 +80,35 @@ class TranslationCache {
 class ThreadSafeL4Cache : public TranslationCache {
  public:
   /// Construct a ThreadSafeL4Cache from configuration specified by TranslationCache::Config
-  ThreadSafeL4Cache(const TranslationCache::Config &config);
+  struct Config {
+    size_t sizeInMB{20};
+    size_t ebrQueueSize{1000};
+    size_t ebrNumQueues{4};
+    size_t ebrIntervalInMilliseconds{1000 /*ms*/};
+    size_t numBuckets{10000};
+    bool removeExpired{false};
+    size_t timeToLiveInMilliseconds{1000};
+
+    template <class App>
+    static void addOptions(App &app, Config &config) {
+      app.add_option("--cache-size", config.sizeInMB, "Megabytes of storage used by cache");
+      app.add_option("--cache-ebr-queue-size", config.ebrQueueSize,
+                     "Number of action to allow in a queue for epoch based reclamation.");
+      app.add_option("--cache-ebr-num-queues", config.ebrNumQueues,
+                     "Number of queues of actions to maintain, increase to increase throughput.");
+      app.add_option("--cache-ebr-interval", config.ebrIntervalInMilliseconds,
+                     "Time between runs of background thread for epoch-based-reclamation, in milliseconds.");
+      app.add_option("--cache-buckets", config.numBuckets, "Number of buckets to keep in the hashtable");
+      app.add_option("--cache-remove-expired", config.removeExpired,
+                     "Whether to remove expired records on a garbage collection iteration or not. Expiry determined by "
+                     "user-specified time-window");
+      app.add_option("--cache-time-to-live", config.timeToLiveInMilliseconds,
+                     "How long a record in cache should be valid for in milliseconds. This is insignificant without "
+                     "remove expired flag set.");
+    }
+  };
+
+  ThreadSafeL4Cache(const ThreadSafeL4Cache::Config &config);
 
   // L4 has weird interfaces with Hungarian Notation (hence IWritableHashTable). All implementations take Key and Value
   // defined in this interface. Both Key and Value are of format: (uint8* mdata, size_t size). L4 doesn't own these - we
@@ -151,7 +162,15 @@ class ThreadSafeL4Cache : public TranslationCache {
 /// ThreadSafeL4Cache.
 class ThreadUnsafeLRUCache : public TranslationCache {
  public:
-  ThreadUnsafeLRUCache(const TranslationCache::Config &config);
+  struct Config {
+    size_t sizeInMB;
+    template <class App>
+    static void addOptions(App &app, Config &config) {
+      app.add_option("--cache-size", config.sizeInMB, "Megabytes of storage used by cache");
+    }
+  };
+
+  ThreadUnsafeLRUCache(const ThreadUnsafeLRUCache::Config &config);
   bool fetch(const CacheKey &cacheKey, ProcessedRequestSentence &processedRequestSentence) override;
   void insert(const CacheKey &cacheKey, const ProcessedRequestSentence &processedRequestSentence) override;
   TranslationCache::Stats stats() const;

@@ -31,7 +31,12 @@ class BlockingService {
  public:
   struct Config {
     bool cacheEnabled{false};
-    TranslationCache::Config cacheConfig;
+    ThreadUnsafeLRUCache::Config cacheConfig;
+    template <class App>
+    static void addOptions(App &app, Config &config) {
+      app.add_flag("--cache-translations", config.cacheEnabled, "To cache translations or not");
+      ThreadUnsafeLRUCache::Config::addOptions(app, config.cacheConfig);
+    }
   };
   /// Construct a BlockingService with configuration loaded from an Options object. Does not require any keys, values to
   /// be set.
@@ -79,7 +84,14 @@ class AsyncService {
   struct Config {
     size_t numWorkers;
     bool cacheEnabled{false};
-    TranslationCache::Config cacheConfig;
+    ThreadSafeL4Cache::Config cacheConfig;
+    template <class App>
+    static void addOptions(App &app, Config &config) {
+      app.add_option("--cpu-threads", config.numWorkers, "Number of worker threads to use for translation");
+      app.add_flag("--cache-translations", config.cacheEnabled, "To cache translations or not");
+
+      ThreadSafeL4Cache::Config::addOptions(app, config.cacheConfig);
+    }
   };
   /// Construct an AsyncService with configuration loaded from Options. Expects positive integer value for
   /// `cpu-threads`. Additionally requires options which configure AggregateBatchingPool.

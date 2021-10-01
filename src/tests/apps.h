@@ -47,7 +47,7 @@ class TestSuite {
     std::string source = readFromStdin();
 
     ResponseOptions responseOptions;
-    Response response = translateForResponse_(service_, model, std; : move(source), responseOptions);
+    Response response = translateForResponse_(service_, model, std::move(source), responseOptions);
 
     for (size_t sentenceIdx = 0; sentenceIdx < response.size(); sentenceIdx++) {
       std::cout << response.target.sentence(sentenceIdx) << "\n";

@@ -21,9 +21,7 @@ struct CacheKey {
   const marian::Words &words;
 };
 
-struct HashCacheKey {
-  size_t operator()(const CacheKey &key) const;
-};
+size_t hashCacheKey(const CacheKey &key);
 
 struct CacheConfig {
   size_t sizeInMB{20};
@@ -129,8 +127,6 @@ class ThreadSafeL4Cache : public TranslationCache {
 
   /// context_[hashTableIndex_] gives the hashmap for Get(...) or Add(...) operations
   size_t hashTableIndex_;
-
-  HashCacheKey hashFn_;
 };
 
 /// Alternative cache for non-thread based workflow (specifically WASM). LRU Eviction Policy. Uses a lot of std::list.
@@ -193,8 +189,6 @@ class ThreadUnsafeLRUCache : public TranslationCache {
 
   // Limit of size (in bytes) of storage_
   size_t storageSizeLimit_;
-
-  HashCacheKey hashFn_;
 
   CacheStats stats_;
 };

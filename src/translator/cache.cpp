@@ -7,7 +7,7 @@
 namespace marian {
 namespace bergamot {
 
-size_t HashCacheKey::operator()(const CacheKey &key) const {
+size_t hashCacheKey(const CacheKey &key) {
   size_t seed = 42;
   for (auto &word : key.words) {
     size_t hashWord = static_cast<size_t>(word.toWordIndex());
@@ -46,7 +46,7 @@ bool ThreadSafeL4Cache::fetch(const TranslationModel *model, const marian::Words
   /// TODO(@jerinphilip): Empirical evaluation that this is okay.
 
   KeyBytes keyBytes;
-  size_t key = hashFn_({model, words});
+  size_t key = hashCacheKey({model, words});
 
   // L4 requires uint8_t byte-stream, so we treat 64 bits as a uint8 array, with 8 members.
   keyBytes.m_data = reinterpret_cast<const std::uint8_t *>(&key);
@@ -71,7 +71,7 @@ void ThreadSafeL4Cache::insert(const TranslationModel *model, const marian::Word
 
   KeyBytes keyBytes;
 
-  size_t key = hashFn_({model, words});
+  size_t key = hashCacheKey({model, words});
 
   // L4 requires uint8_t byte-stream, so we treat 64 bits as a uint8 array, with 8 members.
   keyBytes.m_data = reinterpret_cast<const std::uint8_t *>(&key);
@@ -105,7 +105,7 @@ ThreadUnsafeLRUCache::ThreadUnsafeLRUCache(const CacheConfig &config)
 
 bool ThreadUnsafeLRUCache::fetch(const TranslationModel *model, const marian::Words &words,
                                  ProcessedRequestSentence &processedRequestSentence) {
-  auto p = cache_.find(hashFn_({model, words}));
+  auto p = cache_.find(hashCacheKey({model, words}));
   if (p != cache_.end()) {
     auto recordPtr = p->second;
     const Storage &value = recordPtr->value;
@@ -128,7 +128,7 @@ bool ThreadUnsafeLRUCache::fetch(const TranslationModel *model, const marian::Wo
 void ThreadUnsafeLRUCache::insert(const TranslationModel *model, const marian::Words &words,
                                   const ProcessedRequestSentence &processedRequestSentence) {
   Record candidate;
-  candidate.key = hashFn_({model, words});
+  candidate.key = hashCacheKey({model, words});
 
   // Unfortunately we have to keep ownership within cache (with a clone). The original is sometimes owned by the items
   // that is forwarded for building response, std::move(...)  would invalidate this one.

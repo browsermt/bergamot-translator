@@ -9,7 +9,7 @@ int main(int argc, char *argv[]) {
   ConfigParser<AsyncService> configParser;
   configParser.parseArgs(argc, argv);
   auto &config = configParser.getConfig();
-  AsyncService::Config serviceConfig;
+
   AsyncService service(config.serviceConfig);
 
   TestSuite<AsyncService> testSuite(service);
@@ -17,7 +17,12 @@ int main(int argc, char *argv[]) {
 
   for (auto &modelConfigPath : config.modelConfigPaths) {
     TranslationModel::Config modelConfig = parseOptionsFromFilePath(modelConfigPath);
-    std::shared_ptr<TranslationModel> model = service.createCompatibleModel(modelConfig);
+    MemoryBundle memoryBundle;
+    if (config.byteArray) {
+      memoryBundle = getMemoryBundleFromConfig(modelConfig);
+    }
+
+    std::shared_ptr<TranslationModel> model = service.createCompatibleModel(modelConfig, std::move(memoryBundle));
     models.push_back(model);
   }
 

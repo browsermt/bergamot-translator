@@ -41,15 +41,36 @@ std::istringstream &operator>>(std::istringstream &in, OpMode &mode);
 
 template <class Service>
 struct CLIConfig {
-  OpMode opMode;
-
-  bool byteArray;
-  bool validateByteArray;
-
+  using ServiceConfig = typename Service::Config;
   using ModelConfigPaths = std::vector<std::string>;
 
+  OpMode opMode;
+  bool byteArray{false};
+
+  // For marian-models we retain the old marian-yml configs to a large extent. These are supplied as file-paths to the
+  // CLI. For multiple model workflows, we allow more than one model config to be supplied. How to process the models
+  // provided is decided by the application.
   ModelConfigPaths modelConfigPaths;
-  typename Service::Config serviceConfig;
+
+  ServiceConfig serviceConfig;
+
+  /// All config in bergamot has the following templated addOptions(...) method hierarchically placing parse actions on
+  /// "option-groups" in nested structs. This allows to keep additional documentation and information on defaults
+  /// alongside. Since this is templated with App, we don't add a CLI11 dependency in any configs, thus CLI11 not coming
+  /// into the picture until the parser is instantiated.
+  template <class App>
+  static void addOptions(App &app, CLIConfig<Service> &config) {
+    app.add_option("--bergamot-mode", config.opMode, "Operating mode for bergamot: [wasm, native, decoder]");
+    app.add_option("--model-config-paths", config.modelConfigPaths,
+                   "Configuration files list, can be used for pivoting multiple models or multiple model workflows")
+        ->required();
+
+    app.add_flag("--bytearray", config.byteArray,
+                 "Toggle whether to construct models using bytearrays loaded into memory instead of filesystem, "
+                 "only for testing purpose");
+
+    ServiceConfig::addOptions(app, config.serviceConfig);
+  };
 };
 
 /// ConfigParser for bergamot. Internally stores config options with CLIConfig. CLI11 parsing binds the parsing code to
@@ -65,8 +86,7 @@ class ConfigParser {
  public:
   ConfigParser() : app_{"Bergamot Options"} {
     addSpecialOptions(app_);
-    addCommonOptions(app_, config_);
-    Service::Config::addOptions(app_, config_.serviceConfig);
+    CLIConfig<Service>::addOptions(app_, config_);
   };
   void parseArgs(int argc, char *argv[]) {
     try {
@@ -84,18 +104,6 @@ class ConfigParser {
   void addSpecialOptions(CLI::App &app) {
     app.add_flag("--build-info", build_info_, "Print build-info and exit");
     app.add_flag("--version", version_, "Print version-info and exit");
-  };
-
-  void addCommonOptions(CLI::App &app, CLIConfig<Service> &config) {
-    app.add_option("--bergamot-mode", config.opMode, "Operating mode for bergamot: [wasm, native, decoder]");
-    app.add_option("--model-config-paths", config.modelConfigPaths,
-                   "Configuration files list, can be used for pivoting multiple models or multiple model workflows");
-
-    app.add_flag("--bytearray", config.byteArray,
-                 "Flag holds whether to construct service from bytearrays, only for testing purpose");
-
-    app.add_flag("--check-bytearray", config.validateByteArray,
-                 "Flag holds whether to check the content of the bytearrays (true by default)");
   };
 
   void handleSpecialOptions() {

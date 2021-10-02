@@ -29,7 +29,10 @@ int main(int argc, char *argv[]) {
 
   for (auto &modelConfigPath : config.modelConfigPaths) {
     TranslationModel::Config modelConfig = parseOptionsFromFilePath(modelConfigPath);
-    std::shared_ptr<TranslationModel> model = std::make_shared<TranslationModel>(modelConfig);
+    // Anything WASM is expected to use the byte-array-loads. So we hard-code grabbing MemoryBundle from FS and use the
+    // MemoryBundle capable constructor.
+    MemoryBundle memoryBundle = getMemoryBundleFromConfig(modelConfig);
+    std::shared_ptr<TranslationModel> model = std::make_shared<TranslationModel>(modelConfig, std::move(memoryBundle));
     models.push_back(model);
   }
 

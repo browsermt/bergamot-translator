@@ -79,7 +79,6 @@ class TranslationCache {
 
 class ThreadSafeL4Cache : public TranslationCache {
  public:
-  /// Construct a ThreadSafeL4Cache from configuration specified by TranslationCache::Config
   struct Config {
     size_t sizeInMB{20};
     size_t ebrQueueSize{1000};
@@ -108,6 +107,7 @@ class ThreadSafeL4Cache : public TranslationCache {
     }
   };
 
+  /// Construct a ThreadSafeL4Cache from configuration specified by TranslationCache::Config
   ThreadSafeL4Cache(const ThreadSafeL4Cache::Config &config);
 
   // L4 has weird interfaces with Hungarian Notation (hence IWritableHashTable). All implementations take Key and Value

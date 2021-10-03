@@ -62,8 +62,7 @@ struct CLIConfig {
   static void addOptions(App &app, CLIConfig<Service> &config) {
     app.add_option("--bergamot-mode", config.opMode, "Operating mode for bergamot: [wasm, native, decoder]");
     app.add_option("--model-config-paths", config.modelConfigPaths,
-                   "Configuration files list, can be used for pivoting multiple models or multiple model workflows")
-        ->required();
+                   "Configuration files list, can be used for pivoting multiple models or multiple model workflows");
 
     app.add_flag("--bytearray", config.byteArray,
                  "Toggle whether to construct models using bytearrays loaded into memory instead of filesystem, "

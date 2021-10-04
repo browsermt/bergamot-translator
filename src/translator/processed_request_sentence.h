@@ -140,7 +140,7 @@ class Storage {
 
 class StorageIO {
  public:
-  StorageIO(Storage &storage) : storage_(storage) { ptr_ = storage_.data_; }
+  explicit StorageIO(Storage &storage) : storage_(storage) { ptr_ = storage_.data_; }
 
   // Helper methods to load "view" types (or views onto ranges) backed by storage.
   // These either read and advance the internal pointer to begin the next read or write and advance the internal

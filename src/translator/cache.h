@@ -37,7 +37,6 @@ class TranslationCache {
     size_t totalSize{0};
   };
 
- protected:
   /// The key for cache is (model, words). This is a thin record type. We only require these to be references valid to
   /// be able to dereference at the time of hashing, hence we only store the references. It is on the user to ensure
   /// that the addresses these point to don't become invalid during process.
@@ -49,8 +48,10 @@ class TranslationCache {
   /// Hashes the marian::Words salted by a unique-id picked up from the model.
   static size_t hash(const TranslationCache::CacheKey &key);
 
- public:
   // Interface.
+
+  /// Retrieves a cached translation result corresponding to a unique input. Reports if hit or miss with the return
+  /// value.
   //
   /// @param[in]  CacheKey = (TranslationModel&, Words&) for which previously computed translation results are looked
   /// up in cache.
@@ -59,7 +60,14 @@ class TranslationCache {
   /// @returns true if query found in cache false otherwise.
   virtual bool fetch(const CacheKey &cacheKey, ProcessedRequestSentence &processedRequestSentence) = 0;
 
+  /// Inserts a value associated with CacheKey into the internal storage.
+  ///
+  /// @param[in]  CacheKey = (TranslationModel&, Words&) for which previously computed translation results are looked
+  /// up in cache.
+  /// @param[in] processedRequestSentence: stores cached results for use outside if found.
   virtual void insert(const CacheKey &cacheKey, const ProcessedRequestSentence &processedRequestSentence) = 0;
+
+  /// Stats of hits, eviction, misses and storage-size during the lifetime of the cache.
   virtual TranslationCache::Stats stats() const = 0;
 };
 

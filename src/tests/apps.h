@@ -42,6 +42,49 @@ class TestSuite {
  public:
   TestSuite(Service &service) : service_(service), translateForResponse_() {}
 
+  void run(const OpMode opMode, std::vector<Ptr<TranslationModel>> &models) {
+    switch (opMode) {
+      case OpMode::TEST_BENCHMARK_DECODER:
+        benchmarkDecoder(models.front());
+        break;
+      case OpMode::TEST_SOURCE_SENTENCES:
+        annotatedTextSentences(models.front(), /*source=*/true);
+        break;
+      case OpMode::TEST_TARGET_SENTENCES:
+        annotatedTextSentences(models.front(), /*source=*/false);
+        break;
+      case OpMode::TEST_SOURCE_WORDS:
+        annotatedTextWords(models.front(), /*source=*/true);
+        break;
+      case OpMode::TEST_TARGET_WORDS:
+        annotatedTextWords(models.front(), /*source=*/false);
+        break;
+      case OpMode::TEST_FORWARD_BACKWARD_FOR_OUTBOUND:
+        forwardAndBackward(models);
+        break;
+      case OpMode::TEST_QUALITY_ESTIMATOR_WORDS:
+        qualityEstimatorWords(models.front());
+        break;
+      case OpMode::TEST_QUALITY_ESTIMATOR_SCORES:
+        qualityEstimatorScores(models.front());
+        break;
+      case OpMode::TEST_TRANSLATION_CACHE:
+        translationCache(models.front());
+        break;
+      case OpMode::TEST_CACHE_STORAGE_GROWTH:
+        wngt20IncrementalDecodingForCache(models.front());
+        break;
+      case OpMode::TEST_BENCHMARK_EDIT_WORKFLOW:
+        benchmarkCacheEditWorkflow(models.front());
+        break;
+
+      default:
+        ABORT("Incompatible op-mode. Choose one of the test modes.");
+        break;
+    }
+  }
+
+ private:
   void benchmarkDecoder(Ptr<TranslationModel> &model) {
     marian::timer::Timer decoderTimer;
     std::string source = readFromStdin();

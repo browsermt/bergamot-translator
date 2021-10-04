@@ -24,13 +24,11 @@ ThreadSafeL4Cache::ThreadSafeL4Cache(const ThreadSafeL4Cache::Config &config)
       cacheConfig_(config.sizeInMB * 1024 * 1024, std::chrono::seconds(config.timeToLiveInMilliseconds),
                    config.removeExpired),
       service_(epochManagerConfig_),
-      context_(service_.GetContext()) {
-  // There is only a single cache we use. However, L4 construction API given by example demands we give it a string
-  // identifier.
-  const std::string cacheIdentifier = "global-cache";
-  hashTableIndex_ = service_.AddHashTable(L4::HashTableConfig(
-      cacheIdentifier, L4::HashTableConfig::Setting{static_cast<uint32_t>(config.numBuckets)}, cacheConfig_));
-}
+      context_(service_.GetContext()),
+      hashTableIndex_(service_.AddHashTable(L4::HashTableConfig(
+          "global-cache", L4::HashTableConfig::Setting{static_cast<uint32_t>(config.numBuckets)}, cacheConfig_)))
+
+{}
 
 bool ThreadSafeL4Cache::fetch(const CacheKey &cacheKey, ProcessedRequestSentence &processedRequestSentence) {
   auto &hashTable = context_[hashTableIndex_];

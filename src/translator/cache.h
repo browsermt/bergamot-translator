@@ -161,7 +161,7 @@ class ThreadSafeL4Cache : public TranslationCache {
   L4::LocalMemory::Context context_;
 
   /// context_[hashTableIndex_] gives the hashmap for Get(...) or Add(...) operations
-  size_t hashTableIndex_;
+  const size_t hashTableIndex_;
 };
 
 /// Alternative cache for non-thread based workflow (specifically WASM). LRU Eviction Policy. Uses a lot of std::list.

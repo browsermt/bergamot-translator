@@ -68,7 +68,7 @@ class TranslationCache {
   virtual void insert(const CacheKey &cacheKey, const ProcessedRequestSentence &processedRequestSentence) = 0;
 
   /// Stats of hits, eviction, misses and storage-size during the lifetime of the cache.
-  virtual TranslationCache::Stats stats() const = 0;
+  virtual TranslationCache::Stats stats() = 0;
 };
 
 /// ThreadSafeL4Cache is an adapter built on top of L4 specialized for the use-case of bergamot-translator. L4 is a
@@ -135,7 +135,7 @@ class ThreadSafeL4Cache : public TranslationCache {
   /// configure how fine-grained the locks are to reduce contention.
   void insert(const CacheKey &cacheKey, const ProcessedRequestSentence &processedRequestSentence) override;
 
-  TranslationCache::Stats stats() const;
+  TranslationCache::Stats stats();
 
   ThreadSafeL4Cache(const ThreadSafeL4Cache &) = delete;
   ThreadSafeL4Cache &operator=(const ThreadSafeL4Cache &) = delete;
@@ -155,10 +155,6 @@ class ThreadSafeL4Cache : public TranslationCache {
   /// L4 Service. There's a string key based registration through service_ and accesses from multiple processes to get
   /// the same map.
   L4::LocalMemory::HashTableService service_;
-
-  /// An L4 Context, does magic with epochs everytime accessed;  "Once a context is retrieved, the operations such as
-  /// operator[] on the context and Get() are lock-free."
-  L4::LocalMemory::Context context_;
 
   /// context_[hashTableIndex_] gives the hashmap for Get(...) or Add(...) operations
   const size_t hashTableIndex_;
@@ -181,7 +177,7 @@ class ThreadUnsafeLRUCache : public TranslationCache {
   ThreadUnsafeLRUCache(const ThreadUnsafeLRUCache::Config &config);
   bool fetch(const CacheKey &cacheKey, ProcessedRequestSentence &processedRequestSentence) override;
   void insert(const CacheKey &cacheKey, const ProcessedRequestSentence &processedRequestSentence) override;
-  TranslationCache::Stats stats() const;
+  TranslationCache::Stats stats();
 
  private:
   // A Record type holds Key and Value together in a linked-list as a building block for the LRU cache.

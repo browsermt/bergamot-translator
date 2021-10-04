@@ -24,14 +24,14 @@ ThreadSafeL4Cache::ThreadSafeL4Cache(const ThreadSafeL4Cache::Config &config)
       cacheConfig_(config.sizeInMB * 1024 * 1024, std::chrono::seconds(config.timeToLiveInMilliseconds),
                    config.removeExpired),
       service_(epochManagerConfig_),
-      context_(service_.GetContext()),
       hashTableIndex_(service_.AddHashTable(L4::HashTableConfig(
           "global-cache", L4::HashTableConfig::Setting{static_cast<uint32_t>(config.numBuckets)}, cacheConfig_)))
 
 {}
 
 bool ThreadSafeL4Cache::fetch(const CacheKey &cacheKey, ProcessedRequestSentence &processedRequestSentence) {
-  auto &hashTable = context_[hashTableIndex_];
+  auto context = service_.GetContext();
+  auto &hashTable = context[hashTableIndex_];
 
   /// We take marian's default hash function, which is templated for hash-type. We treat marian::Word (which are indices
   /// represented by size_t (unverified) and convert it into a size_t for hashing with more bits)
@@ -82,8 +82,9 @@ void ThreadSafeL4Cache::insert(const CacheKey &cacheKey, const ProcessedRequestS
   hashTable.Add(keyBytes, valBytes);
 }
 
-TranslationCache::Stats ThreadSafeL4Cache::stats() const {
-  auto &perfData = context_[hashTableIndex_].GetPerfData();
+TranslationCache::Stats ThreadSafeL4Cache::stats() {
+  auto context = service_.GetContext();
+  auto &perfData = context[hashTableIndex_].GetPerfData();
   TranslationCache::Stats stats;
   stats.hits = perfData.Get(L4::HashTablePerfCounter::CacheHitCount);
   stats.misses = perfData.Get(L4::HashTablePerfCounter::CacheMissCount);
@@ -154,7 +155,7 @@ void ThreadUnsafeLRUCache::insert(const CacheKey &cacheKey, const ProcessedReque
   }
 }
 
-TranslationCache::Stats ThreadUnsafeLRUCache::stats() const {
+TranslationCache::Stats ThreadUnsafeLRUCache::stats() {
   TranslationCache::Stats stats = stats_;
   return stats;
 }

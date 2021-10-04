@@ -19,7 +19,7 @@ BlockingService::BlockingService(const BlockingService::Config &config)
   }
 }
 
-TranslationCache::Stats BlockingService::cacheStats() const {
+TranslationCache::Stats BlockingService::cacheStats() {
   if (cache_ == nullptr) {
     return TranslationCache::Stats{};
   }
@@ -86,7 +86,7 @@ void AsyncService::translate(std::shared_ptr<TranslationModel> translationModel,
   safeBatchingPool_.enqueueRequest(translationModel, request);
 }
 
-TranslationCache::Stats AsyncService::cacheStats() const {
+TranslationCache::Stats AsyncService::cacheStats() {
   if (cache_ != nullptr) {
     return cache_->stats();
   } else {

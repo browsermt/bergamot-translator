@@ -58,7 +58,7 @@ class BlockingService {
                                           std::vector<std::string> &&source, const ResponseOptions &responseOptions);
 
   /// Returns cache stats
-  TranslationCache::Stats cacheStats() const;
+  TranslationCache::Stats cacheStats();
 
  private:
   ///  Numbering requests processed through this instance. Used to keep account of arrival times of the request. This
@@ -121,7 +121,7 @@ class AsyncService {
   /// Thread joins and proper shutdown are required to be handled explicitly.
   ~AsyncService();
 
-  TranslationCache::Stats cacheStats() const;
+  TranslationCache::Stats cacheStats();
 
  private:
   const Config config_;

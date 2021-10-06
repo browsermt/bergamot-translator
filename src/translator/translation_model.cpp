@@ -81,6 +81,14 @@ void TranslationModel::loadBackend(size_t idx) {
       scorer->setShortlistGenerator(shortlistGenerator_);
     }
   }
+
+  // Forward consumes nodeForward and we'll be unable to do anything.
+  auto deviceId = graph->getDeviceId().no;
+  if (deviceId == 0) {
+    std::cout << graph->graphviz() << std::endl;
+    graph->pprintTensors();
+  }
+
   graph->forward();
 }
 
@@ -167,6 +175,7 @@ void TranslationModel::translateBatch(size_t deviceId, Batch &batch) {
   BeamSearch search(options_, backend.scorerEnsemble, vocabs_.target());
   Histories histories = search.search(backend.graph, convertToMarianBatch(batch));
   batch.completeBatch(histories);
+  (backend.graph)->logActive();
 }
 
 }  // namespace bergamot

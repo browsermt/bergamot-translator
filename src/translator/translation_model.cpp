@@ -181,10 +181,10 @@ void TranslationModel::translateBatch(Workspace &workspace, Batch &batch) {
   auto p = backend_.find(deviceId);
   if (p == backend_.end()) {
     backend_[deviceId] = MarianBackend{};
+    loadBackend(backend_[deviceId], workspace);
   }
 
   auto &backend = backend_[deviceId];
-  loadBackend(backend, workspace);
 
   BeamSearch search(options_, backend.scorerEnsemble, vocabs_.target());
   Histories histories = search.search(backend.graph, convertToMarianBatch(batch));

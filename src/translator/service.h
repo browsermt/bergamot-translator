@@ -20,7 +20,7 @@ namespace bergamot {
 
 class Workspace {
  public:
-  Workspace(size_t deviceId, size_t workspaceSizeInMB) {
+  Workspace(size_t deviceId, size_t workspaceSizeInMB) : deviceId_(deviceId) {
     // We'll eventually get rid of this, but proof of concept faster?
     auto graph = New<ExpressionGraph>(/*inference=*/true);  // set the graph to be inference only
     const std::string precision{"float32"};
@@ -39,9 +39,12 @@ class Workspace {
   Ptr<TensorAllocator> tensors() { return tensors_; }
   Ptr<TensorAllocator> cache() { return cache_; }
 
+  size_t id() { return deviceId_; }
+
  private:
   Ptr<TensorAllocator> tensors_{nullptr};
   Ptr<TensorAllocator> cache_{nullptr};
+  const size_t deviceId_;
 
   Ptr<Options> horribleOptionsHack() {
     Ptr<Options> options = std::make_shared<Options>();

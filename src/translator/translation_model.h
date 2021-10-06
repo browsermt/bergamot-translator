@@ -19,6 +19,8 @@
 namespace marian {
 namespace bergamot {
 
+class Workspace;
+
 /// A TranslationModel is associated with the translation of a single language direction. Holds the graph and other
 /// structures required to run the forward pass of the neural network, along with preprocessing logic (TextProcessor)
 /// and a BatchingPool to create batches that are to be used in conjuction with an instance.
@@ -84,7 +86,7 @@ class TranslationModel {
   /// @param [in] deviceId: There are replicas of backend created for use in each worker thread. deviceId indicates
   /// which replica to use.
   /// @param [in] batch: A batch generated from generateBatch from the same TranslationModel instance.
-  void translateBatch(size_t deviceId, Batch& batch);
+  void translateBatch(Workspace& workspace, Batch& batch);
 
  private:
   Config options_;
@@ -100,7 +102,7 @@ class TranslationModel {
     using Graph = Ptr<ExpressionGraph>;
     using ScorerEnsemble = std::vector<Ptr<Scorer>>;
 
-    Graph graph;
+    Graph graph{nullptr};
     ScorerEnsemble scorerEnsemble;
   };
 
@@ -109,10 +111,11 @@ class TranslationModel {
 
   /// Hold replicas of the backend (graph, scorers, shortlist) for use in each thread.
   /// Controlled and consistent external access via graph(id), scorerEnsemble(id),
-  std::vector<MarianBackend> backend_;
+  // std::vector<MarianBackend> backend_;
+  std::unordered_map<size_t, MarianBackend> backend_;
   std::shared_ptr<QualityEstimator> qualityEstimator_;
 
-  void loadBackend(size_t idx);
+  void loadBackend(MarianBackend& backend, Workspace& workspace);
   Ptr<marian::data::CorpusBatch> convertToMarianBatch(Batch& batch);
 };
 

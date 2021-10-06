@@ -29,7 +29,7 @@ std::vector<Response> BlockingService::translateMultiple(std::shared_ptr<Transla
   Batch batch;
   Ptr<TranslationModel> model{nullptr};
   while (batchingPool_.generateBatch(model, batch)) {
-    model->translateBatch(/*deviceId=*/0, batch);
+    model->translateBatch(workspace_, batch);
   }
 
   return responses;
@@ -46,7 +46,7 @@ AsyncService::AsyncService(const AsyncService::Config &config) : requestId_(0), 
       Batch batch;
       Ptr<TranslationModel> translationModel{nullptr};
       while (safeBatchingPool_.generateBatch(translationModel, batch)) {
-        translationModel->translateBatch(cpuId, batch);
+        translationModel->translateBatch(workspaces_[cpuId], batch);
       }
     });
   }

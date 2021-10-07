@@ -175,9 +175,17 @@ Ptr<marian::data::CorpusBatch> TranslationModel::convertToMarianBatch(Batch &bat
 }
 
 void TranslationModel::translateBatch(Workspace &workspace, Batch &batch) {
-  size_t deviceId = workspace.id();
+  // We're the only people accessing this workspace, it's safe to clear.
+  // Expectation is that the workspace contains things that don't require long-term storage (per batch things).
+
+  // Parameters are stored separately and hopefully initialized and kept-isolated in the graph after
+  // scorer->init(graph) in loadBackend(...).
+
+  // This allows to avoid any leaks and generate maximum room for this incoming translation on the workspace.
+  workspace.clear();
 
   // Create backend if not exists, for device. Dynamically.
+  size_t deviceId = workspace.id();
   auto p = backend_.find(deviceId);
   if (p == backend_.end()) {
     backend_[deviceId] = MarianBackend{};

@@ -41,6 +41,11 @@ class Workspace {
 
   size_t id() { return deviceId_; }
 
+  void clear() {
+    tensors_->clear();
+    cache_->clear();
+  }
+
  private:
   Ptr<TensorAllocator> tensors_{nullptr};
   Ptr<TensorAllocator> cache_{nullptr};

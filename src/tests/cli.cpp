@@ -39,6 +39,7 @@ int main(int argc, char *argv[]) {
       break;
     case OpMode::TEST_MULTIMODELS_INTENSIVE:
       testapp::concurrentMultimodelsIntensive(service, models);
+      break;
     default:
       ABORT("Incompatible op-mode. Choose one of the test modes.");
       break;

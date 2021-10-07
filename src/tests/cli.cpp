@@ -37,6 +37,8 @@ int main(int argc, char *argv[]) {
     case OpMode::TEST_QUALITY_ESTIMATOR_SCORES:
       testapp::qualityEstimatorScores(service, models.front());
       break;
+    case OpMode::TEST_MULTIMODELS_INTENSIVE:
+      testapp::concurrentMultimodelsIntensive(service, models);
     default:
       ABORT("Incompatible op-mode. Choose one of the test modes.");
       break;

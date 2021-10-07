@@ -1,5 +1,8 @@
 #include "apps.h"
 
+#include <sstream>
+#include <thread>
+
 namespace marian {
 namespace bergamot {
 
@@ -105,6 +108,56 @@ void qualityEstimatorScores(AsyncService &service, Ptr<TranslationModel> model) 
       std::cout << std::fixed << std::setprecision(3) << wordScore << "\n";
     }
     std::cout << "\n";
+  }
+}
+
+void concurrentMultimodelsIntensive(AsyncService &service, std::vector<Ptr<TranslationModel>> &models) {
+  ABORT_IF(models.size() < 2, "Intensive test needs at least two models.");
+  ResponseOptions responseOptions;
+  std::string source = readFromStdin();
+
+  std::vector<std::thread> workers;
+
+  for (size_t idx = 0; idx < models.size(); idx++) {
+    Ptr<TranslationModel> model = models[idx];
+
+    auto op = [&service, model, source, responseOptions]() {
+      // Nope, don't care for speed.
+      std::stringstream stream;
+      stream << source;
+
+      auto readLines = [](std::stringstream &stream, size_t numLines) {
+        std::string buffer;
+        std::string line;
+        size_t linesStreamed = 0;
+        bool first = true;
+        while (std::getline(stream, line) && linesStreamed < numLines) {
+          if (!first) {
+            buffer += "\n";
+            first = false;
+          }
+          buffer += line;
+          linesStreamed += 1;
+        }
+        return buffer;
+      };
+
+      auto callback = [](Response &&response) {
+        // No-op. We ignore this for now.
+      };
+
+      while (!stream.eof()) {
+        size_t numLines = 40;
+        std::string buffer = readLines(stream, numLines);
+        service.translate(model, std::move(buffer), callback, responseOptions);
+      }
+    };
+
+    workers.emplace_back(op);
+  }
+
+  for (auto &worker : workers) {
+    worker.join();
   }
 }
 

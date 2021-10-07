@@ -110,12 +110,12 @@ class BlockingService {
   /// requests compiled from  batching-pools of multiple translation models. Not thread-safe.
   AggregateBatchingPool batchingPool_;
 
-  Workspace workspace_;
-
   Config config_;
 
   // Logger which shuts down cleanly with service.
   Logger logger_;
+
+  Workspace workspace_;
 };
 
 /// Effectively a threadpool, providing an API to take a translation request of a source-text, paramaterized by

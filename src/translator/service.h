@@ -20,14 +20,17 @@ namespace bergamot {
 
 class Workspace {
  public:
-  Workspace(size_t deviceId, size_t workspaceSizeInMB) : deviceId_(deviceId) {
+  Workspace(size_t deviceId, size_t workspaceSizeInMB)
+      : device_(deviceId, DeviceType::cpu), precision_(typeFromString("float32")) {
     // We'll eventually get rid of this, but proof of concept faster?
     auto graph = New<ExpressionGraph>(/*inference=*/true);  // set the graph to be inference only
-    const std::string precision{"float32"};
-    graph->setDefaultElementType(typeFromString(precision));
-    marian::DeviceId device(deviceId, DeviceType::cpu);
-    graph->setDevice(device);
+    graph->setDefaultElementType(precision_);
+    graph->setDevice(device_);
+
+    // TODO(@jerinphilip): Are we just fine without configuring? Does Backend have sane defaults?
+    // This however does not affect memory allocations.
     graph->getBackend()->configureDevice(horribleOptionsHack());
+
     Ptr<Backend> backend = graph->getBackend();
 
     tensors_ = New<TensorAllocator>(backend);
@@ -39,7 +42,9 @@ class Workspace {
   Ptr<TensorAllocator> tensors() { return tensors_; }
   Ptr<TensorAllocator> cache() { return cache_; }
 
-  size_t id() { return deviceId_; }
+  size_t id() const { return device_.no; }
+  marian::DeviceId device() const { return device_; }
+  marian::Type precision() const { return precision_; }
 
   void clear() {
     tensors_->clear();
@@ -49,7 +54,8 @@ class Workspace {
  private:
   Ptr<TensorAllocator> tensors_{nullptr};
   Ptr<TensorAllocator> cache_{nullptr};
-  const size_t deviceId_;
+  const marian::DeviceId device_;
+  const marian::Type precision_;
 
   Ptr<Options> horribleOptionsHack() {
     Ptr<Options> options = std::make_shared<Options>();

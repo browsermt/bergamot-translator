@@ -52,14 +52,15 @@ void TranslationModel::loadBackend(MarianBackend &backend, Workspace &workspace)
   auto &graph = backend.graph;
   auto &scorerEnsemble = backend.scorerEnsemble;
 
-  marian::DeviceId device_(workspace.id(), DeviceType::cpu);
   graph = New<ExpressionGraph>(/*inference=*/true);  // set the graph to be inference only
-  auto prec = options_->get<std::vector<std::string>>("precision", {"float32"});
-  graph->setDefaultElementType(typeFromString(prec[0]));
-  graph->setDevice(device_);
+  graph->setDefaultElementType(workspace.precision());
+  graph->setDevice(workspace.device());
+
+  // This graph is for certain required to be configured to the TranslationModel's options.
   graph->getBackend()->configureDevice(options_);
+
+  // The translation-model's graph share workspace bound to threads, with other translation-models.
   graph->setWorkspaces(workspace.tensors(), workspace.cache());
-  // graph->reserveWorkspaceMB(options_->get<size_t>("workspace"));
 
   // Marian Model: Load from memoryBundle or shortList
   if (memory_.model.size() > 0 &&

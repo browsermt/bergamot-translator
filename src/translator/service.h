@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "data/types.h"
+#include "logging.h"
 #include "quality_estimator.h"
 #include "response.h"
 #include "response_builder.h"
@@ -57,6 +58,9 @@ class BlockingService {
   AggregateBatchingPool batchingPool_;
 
   Config config_;
+
+  // Logger which shuts down cleanly with service.
+  Logger logger_;
 };
 
 /// Effectively a threadpool, providing an API to take a translation request of a source-text, paramaterized by
@@ -111,6 +115,9 @@ class AsyncService {
   /// requests compiled from  batching-pools of multiple translation models. The batching pool is wrapped around one
   /// object for thread-safety.
   ThreadsafeBatchingPool<AggregateBatchingPool> safeBatchingPool_;
+
+  // Logger which shuts down cleanly with service.
+  Logger logger_;
 };
 
 }  // namespace bergamot

@@ -183,7 +183,7 @@ void TranslationModel::translateBatch(Workspace &workspace, Batch &batch) {
   // scorer->init(graph) in loadBackend(...).
 
   // This allows to avoid any leaks and generate maximum room for this incoming translation on the workspace.
-  workspace.clear();
+  // workspace.clear();
 
   // Create backend if not exists, for device. Dynamically.
   size_t deviceId = workspace.id();

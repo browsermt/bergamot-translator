@@ -88,11 +88,11 @@ void TranslationModel::loadBackend(MarianBackend &backend, Workspace &workspace)
   }
 
   // Forward consumes nodeForward and we'll be unable to do anything.
-  auto deviceId = graph->getDeviceId().no;
-  if (deviceId == 0) {
-    std::cout << graph->graphviz() << std::endl;
-    graph->pprintTensors();
-  }
+  // auto deviceId = graph->getDeviceId().no;
+  // if (deviceId == 0) {
+  //   std::cout << graph->graphviz() << std::endl;
+  //   graph->pprintTensors();
+  // }
 
   graph->forward();
 }

@@ -239,13 +239,21 @@ void concurrentMultimodelsIntensive(AsyncService &service, std::vector<Ptr<Trans
     std::atomic<size_t> pending_;
   };
 
-  std::vector<std::vector<Response>> threadResponses;
+  std::vector<std::thread> cqFeeds;
 
+  // Leave these parallely running, so interplay happens.
+  //
   for (size_t idx = 0; idx < models.size(); idx++) {
     Ptr<TranslationModel> model = models[idx];
-    ContinuousQueuing cq(service, model, source, numLinesInBatch, responseOptions);
-    cq.enqueue();
-    ResponseWriter(idx).writeThreaded(cq.responses());
+    cqFeeds.emplace_back([&service, model, source, numLinesInBatch, responseOptions, idx]() {
+      ContinuousQueuing cq(service, model, source, numLinesInBatch, responseOptions);
+      cq.enqueue();
+      ResponseWriter(idx).writeThreaded(cq.responses());
+    });
+  }
+
+  for (size_t idx = 0; idx < models.size(); idx++) {
+    cqFeeds[idx].join();
   }
 }
 

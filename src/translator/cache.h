@@ -1,5 +1,4 @@
 #pragma once
-#include <atomic>
 #include <memory>
 #include <vector>
 
@@ -13,27 +12,27 @@ class AtomicCache {
     Value value;
   };
 
-  explicit AtomicCache(std::size_t size) : records_(size) {}
+  using FloatingRecord = std::shared_ptr<Record>;
 
-  bool Find(const Key &key, Value &value) const {
-    const std::atomic<Record> &record = records_[hash_(key) % records_.size()];
-    // Record ret = std::atomic_load(&record);
-    Record ret = record.load();
-    if (ret.key == key) {
-      value = ret.value;
-      return true;
+  explicit AtomicCache(std::size_t size) : records_(size, nullptr) {}
+
+  FloatingRecord Find(const Key &key) const {
+    const FloatingRecord &record = records_[hash_(key) % records_.size()];
+    FloatingRecord ret = std::atomic_load(&record);
+    if (ret && equals_(key, ret->key)) {
+      return ret;
+    } else {
+      return FloatingRecord{nullptr};
     }
-    return false;
   }
 
-  void Store(Record &recordIn) {
-    std::atomic<Record> &record = records_[hash_(recordIn.key) % records_.size()];
-    // std::atomic_store(&record, recordIn);
-    record.store(recordIn);
+  void Store(FloatingRecord &recordIn) {
+    FloatingRecord &record = records_[hash_(recordIn->key) % records_.size()];
+    atomic_store(&record, recordIn);
   }
 
  private:
-  std::vector<std::atomic<Record>> records_;
+  std::vector<FloatingRecord> records_;
 
   Hash hash_;
   Equals equals_;

@@ -12,6 +12,7 @@ foreach(test ${UNIT_TESTS})
     target_link_libraries("run_${test}" ${EXT_LIBS} marian ${EXT_LIBS} marian_cuda ${EXT_LIBS} Catch bergamot-translator)
   else(CUDA_FOUND)
     target_link_libraries("run_${test}" marian ${EXT_LIBS} Catch bergamot-translator)
+    target_link_options("run_${test}" PUBLIC "-latomic")
   endif(CUDA_FOUND)
 
   if(msvc)

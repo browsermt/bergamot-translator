@@ -33,10 +33,10 @@ namespace marian::bergamot {
 /// For any complex workflows involving non-blocking concurrent translation, it is required to write something not
 /// constrained by the following.
 
-template <class Service, class SpecializedTranslateForResponse = TranslateForResponse<Service>>
+template <class Service>
 class TestSuite {
  private:
-  SpecializedTranslateForResponse translateForResponse_;
+  TranslateForResponse<Service> translateForResponse_;
   Service &service_;
 
  public:
@@ -170,59 +170,6 @@ class TestSuite {
       }
       std::cout << "\n";
     }
-  }
-
-  void wngt20IncrementalDecodingForCache(Ptr<TranslationModel> model) {
-    // In this particular benchmark-run, we don't care for speed. We run through WNGT 1M sentences, all hopefully
-    // unique. Analyzing cache usage every 1K sentences.
-    marian::timer::Timer decoderTimer;
-    ResponseOptions responseOptions;
-    // Read a large input text blob from stdin
-
-    std::cout << "[";
-
-    auto processDelta = [this, &model, &responseOptions](size_t lineBegin, size_t lineEnd, std::string &&buffer) {
-      // Once we have the interval lines, send it for translation.
-      Response response = translateForResponse_(service_, model, std::move(buffer), responseOptions);
-      auto cacheStats = service_.cacheStats();
-
-      // The following prints a JSON, not great, but enough to be consumed later in python.
-      if (lineBegin != 0) {
-        std::cout << "," << '\n';
-      }
-      std::cout << "{\n";
-      std::cout << "\"lines\" : " << lineEnd << ",\n ";
-      std::cout << "\"hits\" : " << cacheStats.hits << ",\n ";
-      std::cout << "\"misses\" : " << cacheStats.misses << ",\n ";
-      std::cout << "\"evictedRecords\": " << cacheStats.evictedRecords << ",\n";
-      std::cout << "\"activeRecords\": " << cacheStats.activeRecords << ",\n";
-      std::cout << "\"totalSize\": " << cacheStats.totalSize << "\n";
-      std::cout << "}\n";
-    };
-
-    constexpr size_t interval = 1000;
-    bool first = true;
-    std::string buffer, line;
-    size_t lineId;
-    for (lineId = 0; std::getline(std::cin, line); lineId++) {
-      buffer += line;
-      buffer += "\n";
-
-      if ((lineId + 1) % interval == 0) {
-        // [lineBegin, lineEnd) representing the range.
-        processDelta(/*lineBegin=*/(lineId + 1) - interval, /*lineEnd=*/lineId + 1, std::move(buffer));
-        buffer.clear();
-      }
-    }
-
-    if (!buffer.empty()) {
-      processDelta(/*lineBegin=*/(lineId + 1) - interval, /*lineEnd=*/lineId + 1, std::move(buffer));
-    }
-
-    std::cout << "]";
-    std::cout << std::endl;
-
-    // LOG(info, "Total time: {:.5f}s wall", decoderTimer.elapsed());
   }
 };
 

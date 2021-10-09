@@ -13,10 +13,10 @@ namespace bergamot {
 std::istringstream &operator>>(std::istringstream &in, OpMode &mode) {
   std::string modeString;
   in >> modeString;
-  std::unordered_map<std::string, OpMode> table = {
-      {"wasm", OpMode::APP_WASM},
+  const std::unordered_map<std::string, OpMode> table = {
       {"native", OpMode::APP_NATIVE},
-      {"decoder", OpMode::APP_DECODER},
+      {"wasm", OpMode::TEST_WASM_PATH},
+      {"decoder", OpMode::TEST_BENCHMARK_DECODER},
       {"test-response-source-sentences", OpMode::TEST_SOURCE_SENTENCES},
       {"test-response-target-sentences", OpMode::TEST_TARGET_SENTENCES},
       {"test-response-source-words", OpMode::TEST_SOURCE_WORDS},
@@ -34,56 +34,6 @@ std::istringstream &operator>>(std::istringstream &in, OpMode &mode) {
   }
 
   return in;
-}
-
-ConfigParser::ConfigParser() : app_{"Bergamot Options"} {
-  addSpecialOptions(app_);
-  addOptionsBoundToConfig(app_, config_);
-};
-
-void ConfigParser::parseArgs(int argc, char *argv[]) {
-  try {
-    app_.parse(argc, argv);
-    handleSpecialOptions();
-  } catch (const CLI::ParseError &e) {
-    exit(app_.exit(e));
-  }
-}
-
-void ConfigParser::addSpecialOptions(CLI::App &app) {
-  app.add_flag("--build-info", build_info_, "Print build-info and exit");
-  app.add_flag("--version", version_, "Print version-info and exit");
-}
-
-void ConfigParser::handleSpecialOptions() {
-  if (build_info_) {
-#ifndef _MSC_VER  // cmake build options are not available on MSVC based build.
-    std::cerr << cmakeBuildOptionsAdvanced() << std::endl;
-    exit(0);
-#else   // _MSC_VER
-    ABORT("build-info is not available on MSVC based build.");
-#endif  // _MSC_VER
-  }
-
-  if (version_) {
-    std::cerr << buildVersion() << std::endl;
-    exit(0);
-  }
-}
-
-void ConfigParser::addOptionsBoundToConfig(CLI::App &app, CLIConfig &config) {
-  app.add_option("--model-config-paths", config.modelConfigPaths,
-                 "Configuration files list, can be used for pivoting multiple models or multiple model workflows");
-
-  app.add_flag("--bytearray", config.byteArray,
-               "Flag holds whether to construct service from bytearrays, only for testing purpose");
-
-  app.add_flag("--check-bytearray", config.validateByteArray,
-               "Flag holds whether to check the content of the bytearrays (true by default)");
-
-  app.add_option("--cpu-threads", config.numWorkers, "Number of worker threads to use for translation");
-
-  app_.add_option("--bergamot-mode", config.opMode, "Operating mode for bergamot: [wasm, native, decoder]");
 }
 
 std::shared_ptr<marian::Options> parseOptionsFromFilePath(const std::string &configPath, bool validate /*= true*/) {

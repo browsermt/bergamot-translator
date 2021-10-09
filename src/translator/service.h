@@ -27,7 +27,12 @@ class AsyncService;
 /// bunch of texts and optional args to translate, wait till the translation finishes).
 class BlockingService {
  public:
-  struct Config {};
+  struct Config {
+    template <class App>
+    static void addOptions(App &app, Config &config) {
+      // Options will come here.
+    }
+  };
   /// Construct a BlockingService with configuration loaded from an Options object. Does not require any keys, values to
   /// be set.
   BlockingService(const BlockingService::Config &config);
@@ -66,6 +71,10 @@ class AsyncService {
  public:
   struct Config {
     size_t numWorkers;
+    template <class App>
+    static void addOptions(App &app, Config &config) {
+      app.add_option("--cpu-threads", config.numWorkers, "Workers to form translation backend");
+    }
   };
   /// Construct an AsyncService with configuration loaded from Options. Expects positive integer value for
   /// `cpu-threads`. Additionally requires options which configure AggregateBatchingPool.

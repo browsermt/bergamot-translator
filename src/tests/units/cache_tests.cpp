@@ -25,7 +25,7 @@ TEST_CASE("Test Cache in a threaded setting") {
       TestCache::FloatingRecord record = cache.Find(query);
       if (record) {
         auto [key, value] = *record;
-        assert(value == key);
+        assert(value == query);
       }
 
       TestCache::FloatingRecord replacement = std::make_shared<TestCache::Record>(query, query);

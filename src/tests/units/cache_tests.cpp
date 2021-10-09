@@ -4,6 +4,7 @@
 
 #include "catch.hpp"
 #include "translator/cache.h"
+#include "translator/history.h"
 
 using namespace marian::bergamot;
 
@@ -41,4 +42,8 @@ TEST_CASE("Test Cache in a threaded setting") {
   for (size_t t = 0; t < numThreads; t++) {
     workers[t].join();
   }
+
+  // Can we create a specialization of the actual cache-type we want? Does it compile, at least?
+  using TranslationCache = AtomicCache<size_t, marian::History>;
+  TranslationCache translationCache(100);
 }

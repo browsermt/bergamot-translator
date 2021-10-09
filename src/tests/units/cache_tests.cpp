@@ -52,5 +52,5 @@ TEST_CASE("Test Cache in a threaded setting") {
   }
 
   // Can we create one for our use case, at compile?
-  // AtomicCache<size_t, std::shared_ptr<marian::History>> TranslationCache(100);
+  AtomicCache<size_t, std::shared_ptr<marian::History>> TranslationCache(100);
 }

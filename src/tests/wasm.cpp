@@ -1,4 +1,4 @@
-#include "apps.h"
+#include "common.h"
 using namespace marian::bergamot;
 
 void wasm(BlockingService &service, std::shared_ptr<TranslationModel> &model) {

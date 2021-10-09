@@ -24,12 +24,11 @@ TEST_CASE("Test Cache in a threaded setting") {
       int key = randomGenerator();
       TestCache::FloatingRecord record = cache.Find(key);
       if (record) {
-        assert(record->value == key);
+        auto [key, value] = *record;
+        assert(value == key);
       }
 
-      TestCache::FloatingRecord replacement = std::make_shared<TestCache::Record>();
-      replacement->key = key;
-      replacement->value = key;
+      TestCache::FloatingRecord replacement = std::make_shared<TestCache::Record>(key, key);
       cache.Store(replacement);
     }
   };

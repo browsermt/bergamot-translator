@@ -99,8 +99,6 @@ class BlockingService {
   std::vector<Response> translateMultiple(std::shared_ptr<TranslationModel> translationModel,
                                           std::vector<std::string> &&source, const ResponseOptions &responseOptions);
 
-  Workspace workspace(size_t /*idx*/) { return workspace_; }
-
  private:
   ///  Numbering requests processed through this instance. Used to keep account of arrival times of the request. This
   ///  allows for using this quantity in priority based ordering.
@@ -151,8 +149,6 @@ class AsyncService {
   /// specify any additional configurable parameters.
   void translate(std::shared_ptr<TranslationModel> translationModel, std::string &&source, CallbackType callback,
                  const ResponseOptions &options = ResponseOptions());
-
-  Workspace workspace(size_t idx) { return workspaces_[idx]; }
 
   /// Thread joins and proper shutdown are required to be handled explicitly.
   ~AsyncService();

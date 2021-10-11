@@ -28,7 +28,7 @@ class AtomicCache {
     return std::make_pair(found, value);
   }
 
-  void store(const Key &key, Value &&value) { atomicStore(key, std::move(value)); }
+  void store(const Key &key, Value value) { atomicStore(key, value); }
 
   const Stats stats() const { return stats_; }
 
@@ -52,7 +52,7 @@ class AtomicCache {
     return false;
   }
 
-  void atomicStore(const Key &key, Value &&value) {
+  void atomicStore(const Key &key, Value value) {
     // No probing, direct map onto records_
     size_t index = hash_(key) % records_.size();
     size_t mutexId = hash_(key) % mutexBuckets_.size();
@@ -67,7 +67,7 @@ class AtomicCache {
     }
 
     candidate.first = key;
-    candidate.second = std::move(value);
+    candidate.second = value;
   }
 
   std::vector<Record> records_;

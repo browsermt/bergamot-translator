@@ -12,9 +12,12 @@
 namespace marian {
 namespace bergamot {
 
+std::atomic<size_t> TranslationModel::modelCounter_ = 0;
+
 TranslationModel::TranslationModel(const Config &options, MemoryBundle &&memory /*=MemoryBundle{}*/,
                                    size_t replicas /*=1*/)
-    : options_(options),
+    : modelId_(modelCounter_++),
+      options_(options),
       memory_(std::move(memory)),
       vocabs_(options, std::move(memory_.vocabs)),
       textProcessor_(options, vocabs_, std::move(memory_.ssplitPrefixFile)),
@@ -94,7 +97,8 @@ Ptr<Request> TranslationModel::makeRequest(size_t requestId, std::string &&sourc
   textProcessor_.process(std::move(source), annotatedSource, segments);
   ResponseBuilder responseBuilder(responseOptions, std::move(annotatedSource), vocabs_, callback, *qualityEstimator_);
 
-  Ptr<Request> request = New<Request>(requestId, std::move(segments), std::move(responseBuilder), cache);
+  Ptr<Request> request =
+      New<Request>(requestId, /*model=*/*this, std::move(segments), std::move(responseBuilder), cache);
   return request;
 }
 

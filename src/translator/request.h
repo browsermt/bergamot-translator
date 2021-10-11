@@ -17,6 +17,8 @@
 namespace marian {
 namespace bergamot {
 
+class TranslationModel;
+
 /// A Request is an internal representation used to represent a request after
 /// processed by TextProcessor into sentences constituted by marian::Words.
 ///
@@ -49,7 +51,8 @@ class Request {
   /// Request.
   /// @param [in] cache: Cache supplied externally to attempt to fetch translations or store them after completion for
   /// reuse later.
-  Request(size_t Id, Segments &&segments, ResponseBuilder &&responseBuilder, TranslationCache *cache);
+  Request(size_t Id, const TranslationModel &model, Segments &&segments, ResponseBuilder &&responseBuilder,
+          TranslationCache *cache);
 
   /// Obtain the count of tokens in the segment correponding to index. Used to
   /// insert sentence from multiple requests into the corresponding size bucket.
@@ -70,8 +73,13 @@ class Request {
   /// compiled from requests.
   void processHistory(size_t index, Ptr<History> history);
 
+  bool cacheHitPrefilled(size_t index) const { return histories_[index] != nullptr; }
+
  private:
   size_t Id_;
+
+  /// TranslationModel associated with this request
+  const TranslationModel &model_;
 
   /// Multiple translation-workers can concurrently access the same Request. The
   /// following atomic atomically operates on the variable holding sentences

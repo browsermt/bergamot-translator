@@ -1,7 +1,10 @@
 #ifndef SRC_BERGAMOT_RESPONSE_BUILDER_H_
 #define SRC_BERGAMOT_RESPONSE_BUILDER_H_
 
+#include <optional>
+
 #include "data/types.h"
+#include "quality_estimator.h"
 #include "response.h"
 #include "response_options.h"
 #include "vocabs.h"
@@ -24,12 +27,15 @@ class ResponseBuilder {
   /// or not in the response and any additional configurable parameters.
   /// @param [in] vocabs: marian vocab object (used in decoding)
   /// @param [in] callback: callback with operates on the constructed Response.
-  ResponseBuilder(ResponseOptions responseOptions, AnnotatedText &&source, Vocabs &vocabs,
-                  std::function<void(Response &&)> callback)
+  /// @param [in] qualityEstimator: the QualityEstimator model that can be used
+  /// to provide translation quality probability.
+  ResponseBuilder(ResponseOptions responseOptions, AnnotatedText &&source, const Vocabs &vocabs,
+                  std::function<void(Response &&)> callback, const QualityEstimator &qualityEstimator)
       : responseOptions_(responseOptions),
         source_(std::move(source)),
         vocabs_(vocabs),
-        callback_(std::move(callback)) {}
+        callback_(std::move(callback)),
+        qualityEstimator_(qualityEstimator) {}
 
   /// Constructs and sets the promise of a Response object from obtained
   /// histories after translating.
@@ -86,6 +92,8 @@ class ResponseBuilder {
   std::function<void(Response &&)> callback_;  //  To be set when callback triggered and
                                                //  after Response constructed.
   AnnotatedText source_;
+
+  const QualityEstimator &qualityEstimator_;
 };
 }  // namespace bergamot
 }  // namespace marian

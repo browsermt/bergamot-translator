@@ -1,8 +1,8 @@
 # Unit tests
 set(UNIT_TESTS
     annotation_tests
-    tag_tests
-)
+    quality_estimator_tests
+    tag_tests)
 
 foreach(test ${UNIT_TESTS})
   add_executable("run_${test}" run_tests.cpp "${test}.cpp")

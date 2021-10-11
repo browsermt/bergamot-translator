@@ -52,7 +52,7 @@ ug::ssplit::SentenceSplitter loadSplitter(const AlignedMemory &memory) {
 
 }  // namespace
 
-Segment TextProcessor::tokenize(const string_view &segment, std::vector<string_view> &wordRanges) {
+Segment TextProcessor::tokenize(const string_view &segment, std::vector<string_view> &wordRanges) const {
   // vocabs_->sources().front() is invoked as we currently only support one source vocab
   return vocabs_.sources().front()->encodeWithByteRanges(segment, wordRanges, /*addEOS=*/false, /*inference=*/true);
 }
@@ -81,10 +81,10 @@ TextProcessor::TextProcessor(Ptr<Options> options, const Vocabs &vocabs, const A
 
 void TextProcessor::parseCommonOptions(Ptr<Options> options) {
   maxLengthBreak_ = options->get<size_t>("max-length-break");
-  ssplitMode_ = string2splitmode(options->get<std::string>("ssplit-mode", "paragraph"));
+  ssplitMode_ = string2splitmode(options->get<std::string>("ssplit-mode"));
 }
 
-void TextProcessor::process(std::string &&input, AnnotatedText &source, Segments &segments) {
+void TextProcessor::process(std::string &&input, AnnotatedText &source, Segments &segments) const {
   source = std::move(AnnotatedText(std::move(input)));
   std::string_view input_converted(source.text.data(), source.text.size());
   auto sentenceStream = ug::ssplit::SentenceStream(input_converted, ssplit_, ssplitMode_);
@@ -108,7 +108,7 @@ void TextProcessor::process(std::string &&input, AnnotatedText &source, Segments
 }
 
 void TextProcessor::wrap(Segment &segment, std::vector<string_view> &wordRanges, Segments &segments,
-                         AnnotatedText &source) {
+                         AnnotatedText &source) const {
   // There's an EOS token added to the words, manually. SentencePiece/marian-vocab is set to not append EOS. Marian
   // requires EOS to be at the end as a marker to start translating. So while we're supplied maxLengthBreak_ from
   // outside, we need to ensure there's space for EOS in each wrapped segment.

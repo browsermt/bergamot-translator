@@ -1,4 +1,6 @@
 var translationService, responseOptions, input = undefined;
+// A map of language-pair to TranslationModel object
+var translationModels = new Map();
 const BERGAMOT_TRANSLATOR_MODULE = "bergamot-translator-worker.js";
 
 const encoder = new TextEncoder(); // string to utf-8 converter
@@ -33,23 +35,35 @@ onmessage = async function(e) {
     }
     else if (command === 'load_model') {
         let start = Date.now();
-        await constructTranslationService(e.data[1], e.data[2]);
-        result = `translation model '${e.data[1]}${e.data[2]}' successfully loaded; took ${(Date.now() - start) / 1000} secs`;
+        try {
+            await constructTranslationService();
+            await constructTranslationModel(e.data[1], e.data[2]);
+            result = `translation model '${e.data[1]}${e.data[2]}' successfully loaded; took ${(Date.now() - start) / 1000} secs`;
+        } catch (error) {
+            result = `translation model '${e.data[1]}${e.data[2]}' loading failed: '${error.message}'`;
+        }
         log(result);
         log('Posting message back to main script');
         postMessage(['model_loaded', result]);
     }
     else if (command === 'translate') {
-        const inputParagraphs = e.data[1];
+        const from = e.data[1];
+        const to = e.data[2];
+        const inputParagraphs = e.data[3];
         let inputWordCount = 0;
         inputParagraphs.forEach(sentence => {
             inputWordCount += sentence.trim().split(" ").filter(word => word.trim() !== "").length;
         })
 
         let start = Date.now();
-        const translatedParagraphs = translate(e.data[1]);
-        const secs = (Date.now() - start) / 1000;
-        result = `Translation of (${inputWordCount}) words took ${secs} secs (${Math.round(inputWordCount / secs)} words per second)`;
+        var translatedParagraphs;
+        try {
+            translatedParagraphs  = translate(from, to, inputParagraphs);
+            const secs = (Date.now() - start) / 1000;
+            result = `Translation '${from}${to}' Successful. Speed: ${Math.round(inputWordCount / secs)} Words per second (${inputWordCount} words in ${secs} secs)`;
+        } catch (error) {
+            result = `Error: ${error.message}`;
+        }
         log(result);
         log('Posting message back to main script');
         postMessage(['translated_result', translatedParagraphs, result]);
@@ -77,8 +91,24 @@ const prepareAlignedMemoryFromBuffer = async (buffer, alignmentSize) => {
     return alignedMemory;
 }
 
-const constructTranslationService = async (from, to) => {
+// Instantiate the Translation Service
+const constructTranslationService = async () => {
+    if (!translationService) {
+        var translationServiceConfig = {};
+        log(`Creating Translation Service with config: ${translationServiceConfig}`);
+        translationService = new Module.BlockingService(translationServiceConfig);
+        log(`Translation Service created successfully`);
+    }
+}
+
+const constructTranslationModel = async (from, to) => {
     const languagePair = `${from}${to}`;
+    if (translationModels.has(languagePair)) {
+        var oldModel = translationModels.get(languagePair);
+        // Destruct the old TranslationModel explicitly and Remove its entry from the map
+        oldModel.delete();
+        translationModels.delete(languagePair);
+    }
 
     // Vocab files are re-used in both translation directions
     const vocabLanguagePair = from === "en" ? `${to}${from}` : languagePair;
@@ -133,50 +163,44 @@ gemm-precision: int8shift
     log(`modelFile: ${modelFile}\nshortlistFile: ${shortlistFile}\nNo. of unique vocabs: ${uniqueVocabFiles.size}`);
     uniqueVocabFiles.forEach(item => log(`unique vocabFile: ${item}`));
 
-    try {
-      // Download the files as buffers from the given urls
-        let start = Date.now();
-        const downloadedBuffers = await Promise.all([downloadAsArrayBuffer(modelFile), downloadAsArrayBuffer(shortlistFile)]);
-        const modelBuffer = downloadedBuffers[0];
-        const shortListBuffer = downloadedBuffers[1];
+    // Download the files as buffers from the given urls
+    let start = Date.now();
+    const downloadedBuffers = await Promise.all([downloadAsArrayBuffer(modelFile), downloadAsArrayBuffer(shortlistFile)]);
+    const modelBuffer = downloadedBuffers[0];
+    const shortListBuffer = downloadedBuffers[1];
 
-        const downloadedVocabBuffers = [];
-        for (let item of uniqueVocabFiles.values()) {
-            downloadedVocabBuffers.push(await downloadAsArrayBuffer(item));
-        }
-        log(`All files for ${languagePair} language pair took ${(Date.now() - start) / 1000} secs to download`);
-
-        // Construct AlignedMemory objects with downloaded buffers
-        let constructedAlignedMemories = await Promise.all([prepareAlignedMemoryFromBuffer(modelBuffer, 256),
-                                                                prepareAlignedMemoryFromBuffer(shortListBuffer, 64)]);
-        let alignedModelMemory = constructedAlignedMemories[0];
-        let alignedShortlistMemory = constructedAlignedMemories[1];
-        let alignedVocabsMemoryList = new Module.AlignedMemoryList;
-        for(let item of downloadedVocabBuffers) {
-            let alignedMemory = await prepareAlignedMemoryFromBuffer(item, 64);
-            alignedVocabsMemoryList.push_back(alignedMemory);
-        }
-        log(`Aligned vocab memories: ${alignedVocabsMemoryList.get(0).size()}`);
-        log(`Aligned model memory: ${alignedModelMemory.size()}`);
-        log(`Aligned shortlist memory: ${alignedShortlistMemory.size()}`);
-
-        // Instantiate the Translation Service
-        if (translationService) {
-            translationService.delete();
-            translationService = undefined;
-        }
-
-        log(`Creating Translation Service with config: ${modelConfig}`);
-        translationService = new Module.Service(modelConfig, alignedModelMemory, alignedShortlistMemory, alignedVocabsMemoryList);
-        if (typeof translationService === 'undefined') {
-            throw Error(`Translation Service construction failed`);
-        }
-    } catch (error) {
-        log(error);
+    const downloadedVocabBuffers = [];
+    for (let item of uniqueVocabFiles.values()) {
+        downloadedVocabBuffers.push(await downloadAsArrayBuffer(item));
     }
-  }
+    log(`All files for ${languagePair} language pair took ${(Date.now() - start) / 1000} secs to download`);
 
-const translate = (paragraphs) => {
+    // Construct AlignedMemory objects with downloaded buffers
+    let constructedAlignedMemories = await Promise.all([prepareAlignedMemoryFromBuffer(modelBuffer, 256),
+                                                            prepareAlignedMemoryFromBuffer(shortListBuffer, 64)]);
+    let alignedModelMemory = constructedAlignedMemories[0];
+    let alignedShortlistMemory = constructedAlignedMemories[1];
+    let alignedVocabsMemoryList = new Module.AlignedMemoryList;
+    for(let item of downloadedVocabBuffers) {
+        let alignedMemory = await prepareAlignedMemoryFromBuffer(item, 64);
+        alignedVocabsMemoryList.push_back(alignedMemory);
+    }
+    log(`Aligned vocab memories: ${alignedVocabsMemoryList.get(0).size()}`);
+    log(`Aligned model memory: ${alignedModelMemory.size()}`);
+    log(`Aligned shortlist memory: ${alignedShortlistMemory.size()}`);
+
+    log(`Creating Translation Model with config: ${modelConfig}`);
+    var translationModel = new Module.TranslationModel(modelConfig, alignedModelMemory, alignedShortlistMemory, alignedVocabsMemoryList);
+    translationModels.set(languagePair, translationModel);
+}
+
+const translate = (from, to, paragraphs) => {
+    const languagePair = `${from}${to}`;
+    if (!translationModels.has(languagePair)) {
+        throw Error(`Please load translation model '${languagePair}' before translating`);
+    }
+    translationModel = translationModels.get(languagePair);
+
     // Instantiate the arguments of translate() API i.e. ResponseOptions and input (vector<string>)
     var responseOptions = new Module.ResponseOptions();
     let input = new Module.VectorString;
@@ -193,7 +217,7 @@ const translate = (paragraphs) => {
     log(`Input size: ${input.size()}`);
 
     // Translate the input, which is a vector<String>; the result is a vector<Response>
-    let result = translationService.translate(input, responseOptions);
+    let result = translationService.translate(translationModel, input, responseOptions);
 
     const translatedParagraphs = [];
     const translatedSentencesOfParagraphs = [];

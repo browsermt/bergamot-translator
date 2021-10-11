@@ -11,9 +11,11 @@ using namespace marian::bergamot;
 TEST_CASE("Test Cache in a threaded setting") {
   size_t numThreads = 100;
   size_t numIters = 10000;
-  using TestCache = AtomicCache<int, int>;
+  using Key = int;
+  using Value = int;
+  using TestCache = AtomicCache<Key, Value>;
 
-  TestCache cache(300);
+  TestCache cache(/*size=*/300, /*mutexBuckets=*/16);
 
   // Insert (x, x) into cache always. Tries to fetch, if hit assert the value is (x, x).
   // Not sure if this catches any ABA problem.
@@ -21,15 +23,14 @@ TEST_CASE("Test Cache in a threaded setting") {
   auto op = [numIters, &cache]() {
     std::mt19937_64 randomGenerator;
     for (size_t i = 0; i < numIters; i++) {
-      int query = randomGenerator();
-      TestCache::FloatingRecord record = cache.Find(query);
-      if (record) {
-        auto [key, value] = *record;
-        assert(value == query);
+      Key query = randomGenerator();
+      std::pair<bool, Value> result = cache.Find(query);
+      if (result.first) {
+        assert(result.second == query);
       }
 
-      TestCache::FloatingRecord replacement = std::make_shared<TestCache::Record>(query, query);
-      cache.Store(replacement);
+      Value value = query;
+      cache.Store(/*key=*/query, std::move(value));
     }
   };
 
@@ -43,6 +44,7 @@ TEST_CASE("Test Cache in a threaded setting") {
   }
 
   // Can we create a specialization of the actual cache-type we want? Does it compile, at least?
-  using TranslationCache = AtomicCache<size_t, marian::History>;
-  TranslationCache translationCache(100);
+  // We already have Ptr<History>, it's easier to move Ptr<History> to cache.
+  using TranslationCache = AtomicCache<size_t, std::shared_ptr<marian::History>>;
+  TranslationCache translationCache(/*size=*/300, /*mutexBuckets=*/16);
 }

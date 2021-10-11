@@ -3,6 +3,9 @@
 #include <mutex>
 #include <vector>
 
+#include "definitions.h"
+#include "translator/history.h"
+
 namespace marian::bergamot {
 
 template <class Key, class Value, class Hash = std::hash<Key>, class Equals = std::equal_to<Key>>
@@ -76,5 +79,7 @@ class AtomicCache {
   Hash hash_;
   Equals equals_;
 };
+
+typedef AtomicCache<size_t, Ptr<History>> TranslationCache;
 
 }  // namespace marian::bergamot

@@ -5,6 +5,7 @@
 #include <thread>
 #include <vector>
 
+#include "cache.h"
 #include "data/types.h"
 #include "quality_estimator.h"
 #include "response.h"
@@ -27,7 +28,10 @@ class AsyncService;
 /// bunch of texts and optional args to translate, wait till the translation finishes).
 class BlockingService {
  public:
-  struct Config {};
+  struct Config {
+    bool cacheEnabled;
+    size_t cacheSize;
+  };
   /// Construct a BlockingService with configuration loaded from an Options object. Does not require any keys, values to
   /// be set.
   BlockingService(const BlockingService::Config &config);
@@ -57,6 +61,8 @@ class BlockingService {
   AggregateBatchingPool batchingPool_;
 
   Config config_;
+
+  TranslationCache cache_;
 };
 
 /// Effectively a threadpool, providing an API to take a translation request of a source-text, paramaterized by
@@ -66,6 +72,9 @@ class AsyncService {
  public:
   struct Config {
     size_t numWorkers;
+    bool cacheEnabled;
+    size_t cacheSize;
+    size_t cacheMutexBuckets;
   };
   /// Construct an AsyncService with configuration loaded from Options. Expects positive integer value for
   /// `cpu-threads`. Additionally requires options which configure AggregateBatchingPool.
@@ -111,6 +120,8 @@ class AsyncService {
   /// requests compiled from  batching-pools of multiple translation models. The batching pool is wrapped around one
   /// object for thread-safety.
   ThreadsafeBatchingPool<AggregateBatchingPool> safeBatchingPool_;
+
+  TranslationCache cache_;
 };
 
 }  // namespace bergamot

@@ -2,6 +2,7 @@
 
 #include "batch.h"
 #include "byte_array_util.h"
+#include "cache.h"
 #include "common/logging.h"
 #include "data/corpus.h"
 #include "data/text_input.h"
@@ -86,14 +87,14 @@ void TranslationModel::loadBackend(size_t idx) {
 
 // Make request process is shared between Async and Blocking workflow of translating.
 Ptr<Request> TranslationModel::makeRequest(size_t requestId, std::string &&source, CallbackType callback,
-                                           const ResponseOptions &responseOptions) {
+                                           const ResponseOptions &responseOptions, TranslationCache *cache) {
   Segments segments;
   AnnotatedText annotatedSource;
 
   textProcessor_.process(std::move(source), annotatedSource, segments);
   ResponseBuilder responseBuilder(responseOptions, std::move(annotatedSource), vocabs_, callback, *qualityEstimator_);
 
-  Ptr<Request> request = New<Request>(requestId, std::move(segments), std::move(responseBuilder));
+  Ptr<Request> request = New<Request>(requestId, std::move(segments), std::move(responseBuilder), cache);
   return request;
 }
 

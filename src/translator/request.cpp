@@ -3,6 +3,7 @@
 #include <string>
 
 #include "annotation.h"
+#include "cache.h"
 #include "common/logging.h"
 #include "definitions.h"
 #include "response.h"
@@ -11,12 +12,8 @@ namespace marian {
 namespace bergamot {
 
 // -----------------------------------------------------------------
-Request::Request(size_t Id, Segments &&segments, ResponseBuilder &&responseBuilder)
-    : Id_(Id),
-      segments_(std::move(segments)),
-      responseBuilder_(std::move(responseBuilder))
-
-{
+Request::Request(size_t Id, Segments &&segments, ResponseBuilder &&responseBuilder, TranslationCache *cache)
+    : Id_(Id), segments_(std::move(segments)), responseBuilder_(std::move(responseBuilder)), cache_(cache) {
   counter_ = segments_.size();
   histories_.resize(segments_.size(), nullptr);
 

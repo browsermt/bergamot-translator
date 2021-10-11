@@ -21,13 +21,13 @@ TEST_CASE("Test Cache in a threaded setting") {
     std::mt19937_64 randomGenerator;
     for (size_t i = 0; i < numIters; i++) {
       Key query = randomGenerator();
-      std::pair<bool, Value> result = cache.Find(query);
+      std::pair<bool, Value> result = cache.find(query);
       if (result.first) {
         assert(result.second == query);
       }
 
       Value value = query;
-      cache.Store(/*key=*/query, std::move(value));
+      cache.store(/*key=*/query, std::move(value));
     }
   };
 

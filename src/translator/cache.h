@@ -22,18 +22,18 @@ class AtomicCache {
 
   explicit AtomicCache(size_t size, size_t buckets) : records_(size), mutexBuckets_(buckets), used_(size, false) {}
 
-  std::pair<bool, Value> Find(const Key &key) const {
+  std::pair<bool, Value> find(const Key &key) const {
     Value value;
-    bool found = AtomicLoad(key, value);
+    bool found = atomicLoad(key, value);
     return std::make_pair(found, value);
   }
 
-  void Store(const Key &key, Value &&value) { AtomicStore(key, std::move(value)); }
+  void store(const Key &key, Value &&value) { atomicStore(key, std::move(value)); }
 
   const Stats stats() const { return stats_; }
 
  private:
-  bool AtomicLoad(const Key &key, Value &value) const {
+  bool atomicLoad(const Key &key, Value &value) const {
     // No probing, direct map onto records_
     size_t index = hash_(key) % records_.size();
     size_t mutexId = hash_(key) % mutexBuckets_.size();
@@ -52,7 +52,7 @@ class AtomicCache {
     return false;
   }
 
-  void AtomicStore(const Key &key, Value &&value) {
+  void atomicStore(const Key &key, Value &&value) {
     // No probing, direct map onto records_
     size_t index = hash_(key) % records_.size();
     size_t mutexId = hash_(key) % mutexBuckets_.size();

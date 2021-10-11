@@ -10,6 +10,7 @@
 namespace marian {
 namespace bergamot {
 
+/// Holding Tag information
 class TagTree {
  public:
   friend class TagProcessor;  // allow TagProcessor class to access private members
@@ -59,15 +60,16 @@ class TagTree {
   std::vector<TagTree> subtree_;  // holds the children nodes
 };
 
+/// Building TagTree from a ByteRange vector (passing from the browser)
 class TagTreeBuilder {
  public:
   TagTreeBuilder(std::vector<ByteRange> brv) {
-    treeValid = true;
-    nTags = brv.size();
+    treeValid_ = true;
+    nTags_ = brv.size();
 
     // zero-th interval must be root
-    parentVector.push_back(0);
-    for (size_t i = 1; i < nTags; i++) {
+    parentVector_.push_back(0);
+    for (size_t i = 1; i < nTags_; i++) {
       size_t parentIndex = 0;
       size_t parentSoFarOpen = 0;
       size_t parentSoFarClose = SIZE_MAX;
@@ -85,70 +87,65 @@ class TagTreeBuilder {
         }
       }
       if (parentFound) {
-        parentVector.push_back(parentIndex);
+        parentVector_.push_back(parentIndex);
       } else {
-        treeValid = false;
+        treeValid_ = false;
       }
     }
 
     // For inspection
-    coverageMatrix.reserve(nTags * nTags);
-    for (size_t i = 0; i < nTags; i++) {
-      for (size_t j = 0; j < nTags; j++) {
-        coverageMatrix[i * nTags + j] = (i != j && brv[i].begin <= brv[j].begin && brv[i].end >= brv[j].end);
+    coverageMatrix_.reserve(nTags_ * nTags_);
+    for (size_t i = 0; i < nTags_; i++) {
+      for (size_t j = 0; j < nTags_; j++) {
+        coverageMatrix_[i * nTags_ + j] = (i != j && brv[i].begin <= brv[j].begin && brv[i].end >= brv[j].end);
       }
     }
 
-//    tt_ = TagTree(brv[0]);
+    //    tt_ = TagTree(brv[0]);
     brv_ = brv;
   }
 
-  TagTree getTagTree()
-  {
-    return growTagTree(0);
-  }
+  TagTree getTagTree() { return growTagTree(0); }
 
-  TagTree growTagTree(size_t index)
-  {
+  TagTree growTagTree(size_t index) {
     TagTree tt(brv_[index]);
-    for(size_t childIndex = 0; childIndex < nTags; childIndex++)
-    {
-      if (childIndex != index && parentVector[childIndex] == index)
-      {
+    for (size_t childIndex = 0; childIndex < nTags_; childIndex++) {
+      if (childIndex != index && parentVector_[childIndex] == index) {
         tt.addSubtree(growTagTree(childIndex));
       }
     }
     return tt;
   }
 
+  // for debugging
   void showGraph() {
-    std::cout << "GraphgrowTagTree(0); size: " << nTags << std::endl;
-    for (size_t i = 0; i < nTags; i++) {
-      for (size_t j = 0; j < nTags; j++) {
-        std::cout << " " << coverageMatrix[i * nTags + j];
+    std::cout << "GraphgrowTagTree(0); size: " << nTags_ << std::endl;
+    for (size_t i = 0; i < nTags_; i++) {
+      for (size_t j = 0; j < nTags_; j++) {
+        std::cout << " " << coverageMatrix_[i * nTags_ + j];
       }
       std::cout << std::endl;
     }
   }
 
+  // for debugging
   void showParents() {
-    if (treeValid) {
-      std::cout << "Graph size: " << nTags << std::endl;
-      for (size_t i = 0; i < nTags; i++) {
-        std::cout << " " << parentVector[i];
+    if (treeValid_) {
+      std::cout << "Graph size: " << nTags_ << std::endl;
+      for (size_t i = 0; i < nTags_; i++) {
+        std::cout << " " << parentVector_[i];
       }
       std::cout << std::endl;
     } else {
-      std::cout << "Tree invalid.\n" << nTags << std::endl;
+      std::cout << "Tree invalid.\n" << nTags_ << std::endl;
     }
   }
 
-
  private:
-  size_t nTags;
-  std::vector<bool> coverageMatrix;
-  std::vector<size_t> parentVector;
-  bool treeValid;
+  size_t nTags_;
+  std::vector<bool> coverageMatrix_;
+  std::vector<size_t> parentVector_;
+  bool treeValid_;
   std::vector<ByteRange> brv_;
 };
 

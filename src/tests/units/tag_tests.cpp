@@ -3,8 +3,8 @@
 
 using namespace marian::bergamot;
 
-void testCase(const marian::data::SoftAlignment& softAlign, size_t srcLength, size_t tgtLength, const TagTree& input,
-              int expectedExitStatus, const TagTree& expected, bool isDebug = false) {
+void tagProcessorTestcase(const marian::data::SoftAlignment& softAlign, size_t srcLength, size_t tgtLength,
+                          const TagTree& input, int expectedExitStatus, const TagTree& expected, bool isDebug = false) {
   TagProcessor tp = TagProcessor(softAlign, input, srcLength, tgtLength);
   int exitStatus = tp.traverseAndQuery();
   TagTree target = tp.getTargetRoot();
@@ -26,18 +26,67 @@ void testCase(const marian::data::SoftAlignment& softAlign, size_t srcLength, si
   }
 }
 
-TEST_CASE("From ByteRange vector") {
-  std::cout << "Graph build" << std::endl;
-  std::vector<ByteRange> brvec;
-  brvec.push_back(ByteRange{0, 10});
-  brvec.push_back(ByteRange{2, 5});
-  brvec.push_back(ByteRange{5, 7});
-  brvec.push_back(ByteRange{6, 7});
-  TagTreeBuilder ttb(brvec);
-  ttb.showGraph();
-  ttb.showParents();
-  TagTree tt = ttb.getTagTree();
-  tt.print();
+void tagTreeBuilderTestcase(std::vector<ByteRange> brvecInput, TagTree expected) {
+  TagTreeBuilder ttb(brvecInput);
+  TagTree ttOutput = ttb.getTagTree();
+  REQUIRE(ttOutput == expected);
+}
+
+TEST_CASE("TagTree building from ByteRange vector") {
+  SECTION("One-element tagTree") {
+    // Tag positions: [0,10)
+    std::vector<ByteRange> brvecInput;
+    brvecInput.push_back(ByteRange{0, 10});
+    TagTree expectedTTRoot(ByteRange{0, 10});
+    tagTreeBuilderTestcase(brvecInput, expectedTTRoot);
+  }
+
+  SECTION("Two-layer TagTree") {
+    // Input ByteRange vector
+    std::vector<ByteRange> brvecInput;
+    brvecInput.push_back(ByteRange{0, 10});
+    brvecInput.push_back(ByteRange{2, 5});
+    brvecInput.push_back(ByteRange{5, 7});
+    brvecInput.push_back(ByteRange{6, 7});
+
+    // Expected TagTree construction
+    TagTree expectedTTRoot(ByteRange{0, 10});
+    TagTree expectedL10(ByteRange{2, 5});
+    TagTree expectedL11(ByteRange{5, 7});
+    TagTree expectedL2(ByteRange{6, 7});
+    expectedL11.addSubtree(expectedL2);
+    expectedTTRoot.addSubtree(expectedL10);
+    expectedTTRoot.addSubtree(expectedL11);
+
+    // Compare results
+    tagTreeBuilderTestcase(brvecInput, expectedTTRoot);
+  }
+
+  SECTION("Example from Abhishek") {
+    // Original HTML text: <div><br><b>abc def<i>ghi jkl</i></b> <u>stu vw</u></div>.
+    // Tag positions: [0, 21) [0,0) [0,14) [7,14) [15, 21)
+    // Input ByteRange vector
+    std::vector<ByteRange> brvecInput;
+    brvecInput.push_back(ByteRange{0, 21});
+    brvecInput.push_back(ByteRange{0, 0});
+    brvecInput.push_back(ByteRange{0, 14});
+    brvecInput.push_back(ByteRange{7, 14});
+    brvecInput.push_back(ByteRange{15, 21});
+
+    // Expected TagTree construction
+    TagTree expectedTTRoot(ByteRange{0, 21});
+    TagTree expectedL10(ByteRange{0, 0});
+    TagTree expectedL11(ByteRange{0, 14});
+    TagTree expectedL2(ByteRange{7, 14});
+    TagTree expectedL12(ByteRange{15, 21});
+    expectedL11.addSubtree(expectedL2);
+    expectedTTRoot.addSubtree(expectedL10);
+    expectedTTRoot.addSubtree(expectedL11);
+    expectedTTRoot.addSubtree(expectedL12);
+
+    // Compare results
+    tagTreeBuilderTestcase(brvecInput, expectedTTRoot);
+  }
 }
 
 TEST_CASE("TagTree Construction") {
@@ -119,7 +168,7 @@ TEST_CASE("Test Tag Nesting Features with one sentence data") {
     TagTree input({0, 14});
     TagTree expected({0, 17});
     int expectedExit = 0;
-    testCase(softAlign, srcLength, tgtLength, input, expectedExit, expected);
+    tagProcessorTestcase(softAlign, srcLength, tgtLength, input, expectedExit, expected);
   }
 
   SECTION("The tag is wrapped in the middle of the sentence") {
@@ -128,7 +177,7 @@ TEST_CASE("Test Tag Nesting Features with one sentence data") {
     TagTree input({0, 4});
     TagTree expected({0, 5});
     int expectedExit = 0;
-    testCase(softAlign, srcLength, tgtLength, input, expectedExit, expected);
+    tagProcessorTestcase(softAlign, srcLength, tgtLength, input, expectedExit, expected);
   }
 
   SECTION("The tag is wrapped in the middle of the sentence case 2") {
@@ -137,7 +186,7 @@ TEST_CASE("Test Tag Nesting Features with one sentence data") {
     TagTree input({1, 4});
     TagTree expected({1, 5});
     int expectedExit = 0;
-    testCase(softAlign, srcLength, tgtLength, input, expectedExit, expected);
+    tagProcessorTestcase(softAlign, srcLength, tgtLength, input, expectedExit, expected);
   }
 
   SECTION("The tag is wrapped in one word [one-to-one]") {
@@ -145,7 +194,7 @@ TEST_CASE("Test Tag Nesting Features with one sentence data") {
     // [translated]:<span>Eine</span> republikanische Strategie, um der Wiederwahl Obamas entgegenzuwirken.
     TagTree input({0, 1});
     TagTree expected({0, 1});
-    testCase(softAlign, srcLength, tgtLength, input, 0, expected);
+    tagProcessorTestcase(softAlign, srcLength, tgtLength, input, 0, expected);
   }
 
   SECTION("The tag is wrapped in one word [one-to-zero]") {
@@ -154,7 +203,7 @@ TEST_CASE("Test Tag Nesting Features with one sentence data") {
     TagTree input({9, 10});
     TagTree expected({11, 12});  // ideally should be empty?
     int expectedExit = 0;
-    testCase(softAlign, srcLength, tgtLength, input, expectedExit, expected);
+    tagProcessorTestcase(softAlign, srcLength, tgtLength, input, expectedExit, expected);
   }
 
   SECTION("Nested tags with one child") {
@@ -165,7 +214,7 @@ TEST_CASE("Test Tag Nesting Features with one sentence data") {
     TagTree expectedRoot({0, 17});
     expectedRoot.addSubtree(TagTree({0, 5}));
     int expectedExit = 0;
-    testCase(softAlign, srcLength, tgtLength, inputRoot, expectedExit, expectedRoot);
+    tagProcessorTestcase(softAlign, srcLength, tgtLength, inputRoot, expectedExit, expectedRoot);
   }
 
   SECTION("Nested tags with two children") {
@@ -181,7 +230,7 @@ TEST_CASE("Test Tag Nesting Features with one sentence data") {
     expectedRoot.addSubtree(TagTree({8, 10}));
 
     int expectedExit = 0;
-    testCase(softAlign, srcLength, tgtLength, inputRoot, expectedExit, expectedRoot);
+    tagProcessorTestcase(softAlign, srcLength, tgtLength, inputRoot, expectedExit, expectedRoot);
   }
 
   SECTION("Nested tags with two children 2") {
@@ -199,7 +248,7 @@ TEST_CASE("Test Tag Nesting Features with one sentence data") {
     expectedRoot.addSubtree(TagTree({16, 17}));
 
     int expectedExit = 0;
-    testCase(softAlign, srcLength, tgtLength, inputRoot, expectedExit, expectedRoot);
+    tagProcessorTestcase(softAlign, srcLength, tgtLength, inputRoot, expectedExit, expectedRoot);
   }
 
   SECTION("Two-layer nested tags with one child") {
@@ -219,7 +268,7 @@ TEST_CASE("Test Tag Nesting Features with one sentence data") {
     expectedRoot.addSubtree(expectedL1);
 
     int expectedExit = 0;
-    testCase(softAlign, srcLength, tgtLength, inputRoot, expectedExit, expectedRoot);
+    tagProcessorTestcase(softAlign, srcLength, tgtLength, inputRoot, expectedExit, expectedRoot);
   }
 
   SECTION("Two-layer nested tags with two children 2") {
@@ -246,7 +295,7 @@ TEST_CASE("Test Tag Nesting Features with one sentence data") {
     expectedRoot.addSubtree(expectedL11);
 
     int expectedExit = 0;
-    testCase(softAlign, srcLength, tgtLength, inputRoot, expectedExit, expectedRoot);
+    tagProcessorTestcase(softAlign, srcLength, tgtLength, inputRoot, expectedExit, expectedRoot);
   }
 
   // This test case is intended to reproduce the 'no solution' situation where tag pairs processed earlier can disable
@@ -268,7 +317,7 @@ TEST_CASE("Test Tag Nesting Features with one sentence data") {
     expectedRoot.addSubtree(TagTree({0, 0}));
 
     int expectedExit = 1;
-    testCase(softAlign, srcLength, tgtLength, inputRoot, expectedExit, expectedRoot);
+    tagProcessorTestcase(softAlign, srcLength, tgtLength, inputRoot, expectedExit, expectedRoot);
   }
 
   SECTION("Empty tag in the beginning") {
@@ -277,7 +326,7 @@ TEST_CASE("Test Tag Nesting Features with one sentence data") {
     TagTree input({0, 0});
     TagTree expected({0, 0});
     int expectedExit = 0;
-    testCase(softAlign, srcLength, tgtLength, input, expectedExit, expected);
+    tagProcessorTestcase(softAlign, srcLength, tgtLength, input, expectedExit, expected);
   }
 
   SECTION("Empty tag in the end") {
@@ -286,7 +335,7 @@ TEST_CASE("Test Tag Nesting Features with one sentence data") {
     TagTree input({15, 15});
     TagTree expected({17, 17});
     int expectedExit = 0;
-    testCase(softAlign, srcLength, tgtLength, input, expectedExit, expected);
+    tagProcessorTestcase(softAlign, srcLength, tgtLength, input, expectedExit, expected);
   }
 
   SECTION("Empty tag in the middle") {
@@ -295,7 +344,7 @@ TEST_CASE("Test Tag Nesting Features with one sentence data") {
     TagTree input({3, 3});
     TagTree expected({4, 4});
     int expectedExit = 0;
-    testCase(softAlign, srcLength, tgtLength, input, expectedExit, expected);
+    tagProcessorTestcase(softAlign, srcLength, tgtLength, input, expectedExit, expected);
   }
 
   SECTION("Empty tag + open tags") {
@@ -306,7 +355,7 @@ TEST_CASE("Test Tag Nesting Features with one sentence data") {
     TagTree expectedRoot({0, 5});
     expectedRoot.addSubtree(TagTree({4, 4}));
     int expectedExit = 0;
-    testCase(softAlign, srcLength, tgtLength, inputRoot, expectedExit, expectedRoot);
+    tagProcessorTestcase(softAlign, srcLength, tgtLength, inputRoot, expectedExit, expectedRoot);
   }
 
   // Need preprocessor to form two tagTrees (queries)

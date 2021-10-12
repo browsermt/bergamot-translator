@@ -35,7 +35,7 @@ class AtomicCache {
   bool atomicLoad(const Key &key, Value &value) const {
     // No probing, direct map onto records_
     size_t index = hash_(key) % records_.size();
-    size_t mutexId = hash_(index) % mutexBuckets_.size();
+    size_t mutexId = index % mutexBuckets_.size();
 
     std::lock_guard<std::mutex> lock(mutexBuckets_[mutexId]);
     const Record &candidate = records_[index];
@@ -53,7 +53,7 @@ class AtomicCache {
   void atomicStore(const Key &key, Value value) {
     // No probing, direct map onto records_
     size_t index = hash_(key) % records_.size();
-    size_t mutexId = hash_(index) % mutexBuckets_.size();
+    size_t mutexId = index % mutexBuckets_.size();
 
     std::lock_guard<std::mutex> lock(mutexBuckets_[mutexId]);
     Record &candidate = records_[index];

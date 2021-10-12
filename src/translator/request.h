@@ -45,6 +45,8 @@ class Request {
   ///
   ///
   /// @param [in] Id: Identifier assigned to Request by Service.
+  /// @param [in] model: TranslationModel for identifying a unique translation unit key (model, words in a sentence) for
+  /// cache.
   /// @param [in] segments: Each segment is a unit to be translated.
   /// @param [in] responseBuilder: Callback function (of ResponseBuilder type)
   /// to be triggered upon the completion of translation of all units in a

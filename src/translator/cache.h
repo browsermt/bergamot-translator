@@ -17,7 +17,6 @@ class AtomicCache {
     size_t misses{0};
     size_t activeRecords{0};
     size_t evictedRecords{0};
-    size_t totalSize{9};
   };
 
   explicit AtomicCache(size_t size, size_t buckets) : records_(size), mutexBuckets_(buckets), used_(size, false) {}
@@ -36,14 +35,13 @@ class AtomicCache {
   bool atomicLoad(const Key &key, Value &value) const {
     // No probing, direct map onto records_
     size_t index = hash_(key) % records_.size();
-    size_t mutexId = hash_(key) % mutexBuckets_.size();
+    size_t mutexId = hash_(index) % mutexBuckets_.size();
 
     std::lock_guard<std::mutex> lock(mutexBuckets_[mutexId]);
     const Record &candidate = records_[index];
     if (key == candidate.first) {
       value = candidate.second;
       stats_.hits += 1;
-      stats_.activeRecords += 1;
       return true;
     } else {
       stats_.misses += 1;
@@ -55,15 +53,18 @@ class AtomicCache {
   void atomicStore(const Key &key, Value value) {
     // No probing, direct map onto records_
     size_t index = hash_(key) % records_.size();
-    size_t mutexId = hash_(key) % mutexBuckets_.size();
+    size_t mutexId = hash_(index) % mutexBuckets_.size();
 
     std::lock_guard<std::mutex> lock(mutexBuckets_[mutexId]);
     Record &candidate = records_[index];
 
     if (!used_[index]) {
-      stats_.evictedRecords += 1;
-      stats_.totalSize += 1;
+      // If this index is not used yet, we have one more active record.
+      stats_.activeRecords += 1;
       used_[index] = true;
+    } else {
+      // If we got a used-index, we're evicting something.
+      stats_.evictedRecords += 1;
     }
 
     candidate.first = key;

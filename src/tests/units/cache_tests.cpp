@@ -19,14 +19,18 @@ TEST_CASE("Test Cache in a threaded setting") {
 
   auto op = [numIters, &cache]() {
     std::mt19937_64 randomGenerator;
+    randomGenerator.seed(42);  // reproducible outputs
+    Value randMax = 2000;
+
     for (size_t i = 0; i < numIters; i++) {
-      Key query = randomGenerator();
+      Key query = randomGenerator() % randMax;
       std::pair<bool, Value> result = cache.find(query);
       if (result.first) {
-        assert(result.second == query);
+        REQUIRE(result.second == query);
       }
 
       Value value = query;
+      // std::cout << "Inserting " << query << " " << query << "\n";
       cache.store(/*key=*/query, std::move(value));
     }
   };
@@ -39,6 +43,14 @@ TEST_CASE("Test Cache in a threaded setting") {
   for (size_t t = 0; t < numThreads; t++) {
     workers[t].join();
   }
+
+  TestCache::Stats stats = cache.stats();
+  float hitRate = static_cast<float>(stats.hits) / static_cast<float>(stats.hits + stats.misses);
+
+  // This is non-deterministic due to threads.
+  std::cout << "Hit-Rate:" << hitRate << "\n";
+  std::cout << "(Hits, Misses) = " << stats.hits << " " << stats.misses << "\n";
+  std::cout << "(Active, Evicted) = " << stats.activeRecords << " " << stats.evictedRecords << "\n";
 
   // Can we create a specialization of the actual cache-type we want? Does it compile, at least?
   // We already have Ptr<History>, it's easier to move Ptr<History> to cache.

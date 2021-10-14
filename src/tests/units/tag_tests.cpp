@@ -378,4 +378,58 @@ TEST_CASE("Test Tag Nesting Features with one sentence data") {
   //      std::cout << i << tagTreeTarget[i].bound.begin << tagTreeTarget[i].bound.end << std::endl;
   //    }
   //  }
+
+  SECTION("Workflow for character-level ByteRange") {
+    std::string original = "A republican strategy to counteract the re-election of Obama.";
+    std::vector<ByteRange> brvecCharLevel;
+    brvecCharLevel.push_back(ByteRange{0, 25});
+    brvecCharLevel.push_back(ByteRange{0, 1});
+    brvecCharLevel.push_back(ByteRange{16, 25});
+
+    // Character->Token conversion. This is a placeholder to keep the workflow standalone.
+    // To integrate, make sure that the match table is identical to the one used in translation.
+    std::vector<ByteRange> brvecOriginalTokenLevel;
+    CharTokenMatchTable mt(original);
+    for (size_t tagIdx = 0; tagIdx < brvecCharLevel.size(); tagIdx++) {
+      size_t charIdxBegin = brvecCharLevel[tagIdx].begin;
+      size_t charIdxEnd = brvecCharLevel[tagIdx].end;
+      brvecOriginalTokenLevel.push_back(ByteRange{mt.getTokenIndex(charIdxBegin), mt.getTokenIndex(charIdxEnd)});
+    }
+
+    // Build token-level tag tree
+    TagTreeBuilder ttb(brvecOriginalTokenLevel);
+    TagTree ttOriginalTokenLevel = ttb.getTagTree();
+    // ttOriginalTokenLevel.print();
+    std::cout << "Original token-level tag tree" << std::endl;
+    ttOriginalTokenLevel.print();
+
+    // Do the translation. This is a placeholder to prevent the test from being massed up by translation.
+    // To integrate, call of the translator and replaced the string by the translated text.
+    std::string translated = "Eine republikanische Strategie, um der Wiederwahl Obamas entgegenzuwirken.";
+
+    // Run inside-outside algorithm to get the token-level tag tree for the translated text.
+    // It requires the soft-align probability table from the translator output.
+    // To integrate, extract the probability table to replace softAlign.
+    TagProcessor tp = TagProcessor(softAlign, ttOriginalTokenLevel, srcLength, tgtLength);
+    int exitStatus = tp.traverseAndQuery();
+    TagTree ttTranslatedTokenLevel = tp.getTargetRoot();
+    std::cout << "Translated token-level tag tree" << std::endl;
+    ttTranslatedTokenLevel.print();
+
+    // Flatten the token-level tag tree for the translated text to a token-level ByteRange vector.
+    std::vector<ByteRange> brvecTranslatedTokenLevel = ttTranslatedTokenLevel.flatten();
+
+    // Convert the token-level tag tree to the character level one
+    CharTokenMatchTable mtTranslated(translated);
+    std::vector<ByteRange> brvecTranslatedCharLevel;
+    for (ByteRange br : brvecTranslatedTokenLevel) {
+      brvecTranslatedCharLevel.push_back(
+          ByteRange{mtTranslated.getCharIndex(br.begin), mtTranslated.getCharIndex(br.end)});
+    }
+
+    std::cout << "Character-level ByteRange array for the translated text" << std::endl;
+    for (ByteRange br : brvecTranslatedCharLevel) {
+      std::cout << br.begin << " " << br.end << std::endl;
+    }
+  }
 }

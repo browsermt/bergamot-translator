@@ -26,6 +26,16 @@ class TagTree {
     }
   }
 
+  std::vector<ByteRange> flatten() {
+    std::vector<ByteRange> currentFlat;
+    currentFlat.push_back(bound_);
+    for (auto &i : subtree_) {
+      std::vector<ByteRange> childFlat = i.flatten();
+      currentFlat.insert(currentFlat.end(), childFlat.begin(), childFlat.end());
+    }
+    return currentFlat;
+  }
+
   // bottom-up construction
   void addSubtree(const TagTree &st) { subtree_.emplace_back(st); }
 
@@ -280,6 +290,42 @@ class TagProcessor {
     return 0;
   }
 };
+
+class CharTokenMatchTable {
+ public:
+  CharTokenMatchTable(std::string raw) {
+    raw_ = raw;
+    unsigned int pos = 0;
+    for (size_t idx = 0; idx < raw.size(); idx++) {
+      if (raw[idx] == ' ') pos++;
+      if (raw[idx] == ',' || raw[idx] == '.') {
+        pos++;
+        if (idx < raw.size() - 1 && raw[idx + 1] == ' ') {
+          idx++;
+        }
+      }
+      char2TokenTable_.push_back(pos);
+    }
+
+    size_t tokenIdx = 0;
+    for (size_t charIdx = 0; charIdx < char2TokenTable_.size(); charIdx++) {
+      if (charIdx == 0 || char2TokenTable_[charIdx - 1] != char2TokenTable_[charIdx]) {
+        token2CharTable_.push_back(charIdx);
+        //        std::cout <<"token2char " <<charIdx <<std::endl;
+      }
+    }
+  }
+
+  unsigned int getTokenIndex(unsigned int charIndex) { return char2TokenTable_[charIndex]; }
+
+  unsigned int getCharIndex(unsigned int tokenIndex) { return token2CharTable_[tokenIndex]; }
+
+ private:
+  std::string raw_;
+  std::vector<unsigned int> char2TokenTable_;
+  std::vector<unsigned int> token2CharTable_;
+};
+
 }  // namespace bergamot
 }  // namespace marian
 

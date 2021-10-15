@@ -108,6 +108,55 @@ void qualityEstimatorScores(AsyncService &service, Ptr<TranslationModel> model) 
   }
 }
 
+void generatorForTagTree(AsyncService &service, Ptr<TranslationModel> model) {
+  ResponseOptions responseOptions;
+  responseOptions.alignment = true;
+
+  std::string source = readFromStdin();
+  source.erase(std::remove(source.begin(), source.end(), '\n'), source.end());
+
+  const Response response = translateForResponse(service, model, std::move(source), responseOptions);
+
+  ABORT_IF(response.source.numSentences() != 1, "Cross sentence byteranges are tricky at the moment.");
+
+  std::cout << "std::string source = \"" << response.source.text << "\"\n";
+  std::cout << "std::string target = \"" << response.target.text << "\"\n";
+
+  for (size_t sentenceId = 0; sentenceId < 1; sentenceId++) {
+    std::cout << "std::vector<ByteRange> sourceTokens =  {";
+    for (size_t s = 0; s < response.source.numWords(sentenceId); s++) {
+      if (s != 0) std::cout << ", ";
+      auto sourceByteRange = response.source.wordAsByteRange(sentenceId, s);
+      std::cout << "{ " << sourceByteRange.begin << ", " << sourceByteRange.end << "}";
+    }
+
+    std::cout << "}\n";
+
+    std::cout << "std::vector<ByteRange> targetTokens =  {";
+    for (size_t t = 0; t < response.target.numWords(sentenceId); t++) {
+      if (t != 0) std::cout << ", ";
+      auto targetByteRange = response.target.wordAsByteRange(sentenceId, t);
+      std::cout << "{ " << targetByteRange.begin << ", " << targetByteRange.end << "}";
+    }
+
+    std::cout << "}\n";
+
+    // Print alignments
+    auto &alignments = response.alignments[sentenceId];
+    std::cout << "marian::data::SoftAlignment> alignments = {\n";
+    for (size_t t = 0; t < alignments.size(); t++) {
+      std::cout << "{ ";
+      for (size_t s = 0; s < alignments[t].size(); s++) {
+        if (s != 0) std::cout << ", ";
+        std::cout << alignments[t][s];
+      }
+      std::cout << "}\n";
+    }
+
+    std::cout << "}\n";
+  }
+}
+
 }  // namespace testapp
 }  // namespace bergamot
 }  // namespace marian

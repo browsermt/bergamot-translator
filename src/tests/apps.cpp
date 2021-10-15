@@ -119,8 +119,8 @@ void generatorForTagTree(AsyncService &service, Ptr<TranslationModel> model) {
 
   ABORT_IF(response.source.numSentences() != 1, "Cross sentence byteranges are tricky at the moment.");
 
-  std::cout << "std::string source = \"" << response.source.text << "\"\n";
-  std::cout << "std::string target = \"" << response.target.text << "\"\n";
+  std::cout << "std::string source = \"" << response.source.text << "\";\n";
+  std::cout << "std::string target = \"" << response.target.text << "\";\n";
 
   for (size_t sentenceId = 0; sentenceId < 1; sentenceId++) {
     std::cout << "std::vector<ByteRange> sourceTokens =  {";
@@ -130,7 +130,7 @@ void generatorForTagTree(AsyncService &service, Ptr<TranslationModel> model) {
       std::cout << "{ " << sourceByteRange.begin << ", " << sourceByteRange.end << "}";
     }
 
-    std::cout << "}\n";
+    std::cout << "};\n";
 
     std::cout << "std::vector<ByteRange> targetTokens =  {";
     for (size_t t = 0; t < response.target.numWords(sentenceId); t++) {
@@ -139,12 +139,13 @@ void generatorForTagTree(AsyncService &service, Ptr<TranslationModel> model) {
       std::cout << "{ " << targetByteRange.begin << ", " << targetByteRange.end << "}";
     }
 
-    std::cout << "}\n";
+    std::cout << "};\n";
 
     // Print alignments
     auto &alignments = response.alignments[sentenceId];
     std::cout << "marian::data::SoftAlignment> alignments = {\n";
     for (size_t t = 0; t < alignments.size(); t++) {
+      if (t != 0) std::cout << ", ";
       std::cout << "{ ";
       for (size_t s = 0; s < alignments[t].size(); s++) {
         if (s != 0) std::cout << ", ";
@@ -153,7 +154,7 @@ void generatorForTagTree(AsyncService &service, Ptr<TranslationModel> model) {
       std::cout << "}\n";
     }
 
-    std::cout << "}\n";
+    std::cout << "};\n";
   }
 }
 

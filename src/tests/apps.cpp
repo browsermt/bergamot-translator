@@ -127,7 +127,8 @@ void generatorForTagTree(AsyncService &service, Ptr<TranslationModel> model) {
     for (size_t s = 0; s < response.source.numWords(sentenceId); s++) {
       if (s != 0) std::cout << ", ";
       auto sourceByteRange = response.source.wordAsByteRange(sentenceId, s);
-      std::cout << "{ " << sourceByteRange.begin << ", " << sourceByteRange.end << "}";
+      std::cout << "/*" << response.source.word(sentenceId, s) << "*/ {" << sourceByteRange.begin << ", "
+                << sourceByteRange.end << " }";
     }
 
     std::cout << "};\n";
@@ -136,7 +137,8 @@ void generatorForTagTree(AsyncService &service, Ptr<TranslationModel> model) {
     for (size_t t = 0; t < response.target.numWords(sentenceId); t++) {
       if (t != 0) std::cout << ", ";
       auto targetByteRange = response.target.wordAsByteRange(sentenceId, t);
-      std::cout << "{ " << targetByteRange.begin << ", " << targetByteRange.end << "}";
+      std::cout << "/*" << response.target.word(sentenceId, t) << "*/ {" << targetByteRange.begin << ", "
+                << targetByteRange.end << " }";
     }
 
     std::cout << "};\n";
@@ -156,7 +158,7 @@ void generatorForTagTree(AsyncService &service, Ptr<TranslationModel> model) {
 
     std::cout << "};\n";
   }
-}
+}  // namespace testapp
 
 }  // namespace testapp
 }  // namespace bergamot

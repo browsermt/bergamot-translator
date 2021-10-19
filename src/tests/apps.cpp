@@ -108,6 +108,38 @@ void qualityEstimatorScores(AsyncService &service, Ptr<TranslationModel> model) 
   }
 }
 
+void translationCache(AsyncService &service, Ptr<TranslationModel> model) {
+  ResponseOptions responseOptions;
+
+  // Read a large input text blob from stdin
+  const std::string source = readFromStdin();
+
+  // Round 1
+  std::string buffer = source;
+  Response firstResponse = translateForResponse(service, model, std::move(buffer), responseOptions);
+
+  auto statsFirstRun = service.cacheStats();
+  LOG(info, "Cache Hits/Misses = {}/{}", statsFirstRun.hits, statsFirstRun.misses);
+  ABORT_IF(statsFirstRun.hits != 0, "Expecting no cache hits, but hits found.");
+
+  // Round 2; There should be cache hits
+  buffer = source;
+  Response secondResponse = translateForResponse(service, model, std::move(buffer), responseOptions);
+
+  auto statsSecondRun = service.cacheStats();
+  LOG(info, "Cache Hits/Misses = {}/{}", statsSecondRun.hits, statsSecondRun.misses);
+  ABORT_IF(statsSecondRun.hits <= 0, "At least one hit expected, none found.");
+  ABORT_IF(statsSecondRun.hits != statsFirstRun.misses,
+           "Mismatch in expected hits. This test is supposed to check if all previous misses are hit in second run. "
+           "Ensure you give an input file and cache-size caps within reasonable limits.");
+
+  ABORT_IF(firstResponse.target.text != secondResponse.target.text,
+           "Recompiled string provided different output when operated with cache. On the same hardware while using "
+           "same path, this is expected to be same.");
+
+  std::cout << firstResponse.target.text;
+}
+
 }  // namespace testapp
 }  // namespace bergamot
 }  // namespace marian

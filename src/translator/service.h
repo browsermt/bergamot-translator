@@ -29,8 +29,8 @@ class AsyncService;
 class BlockingService {
  public:
   struct Config {
-    bool cacheEnabled;
-    size_t cacheSize;
+    bool cacheEnabled{false};
+    size_t cacheSize{2000};
   };
   /// Construct a BlockingService with configuration loaded from an Options object. Does not require any keys, values to
   /// be set.
@@ -50,6 +50,8 @@ class BlockingService {
   /// also specify any additional configurable parameters.
   std::vector<Response> translateMultiple(std::shared_ptr<TranslationModel> translationModel,
                                           std::vector<std::string> &&source, const ResponseOptions &responseOptions);
+
+  TranslationCache::Stats cacheStats() { return cache_.stats(); }
 
  private:
   ///  Numbering requests processed through this instance. Used to keep account of arrival times of the request. This
@@ -72,8 +74,8 @@ class AsyncService {
  public:
   struct Config {
     size_t numWorkers;
-    bool cacheEnabled;
-    size_t cacheSize;
+    bool cacheEnabled{false};
+    size_t cacheSize{2000};
     size_t cacheMutexBuckets;
   };
   /// Construct an AsyncService with configuration loaded from Options. Expects positive integer value for
@@ -103,6 +105,8 @@ class AsyncService {
 
   /// Thread joins and proper shutdown are required to be handled explicitly.
   ~AsyncService();
+
+  TranslationCache::Stats cacheStats() { return cache_.stats(); }
 
  private:
   AsyncService::Config config_;

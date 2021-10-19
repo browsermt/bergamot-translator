@@ -180,7 +180,7 @@ skip-cost: true
 cpu-threads: 0
 quiet: true
 quiet-translation: true
-gemm-precision: int8shiftAll
+gemm-precision: int8shiftAlphaAll
 `;
 
   const modelFile = `${rootURL}/${languagePair}/${modelRegistry[languagePair]["model"].name}`;

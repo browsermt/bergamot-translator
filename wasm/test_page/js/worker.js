@@ -1,7 +1,7 @@
 // All variables specific to translation service
 var translationService, responseOptions, input = undefined;
 // A map of language-pair to TranslationModel object
-var translationModels = new Map();
+var languagePairToTranslationModels = new Map();
 
 const BERGAMOT_TRANSLATOR_MODULE = "bergamot-translator-worker.js";
 const MODEL_REGISTRY = "modelRegistry.js";
@@ -69,8 +69,55 @@ onmessage = async function(e) {
   }
 }
 
-// This function downloads file from a url and returns the array buffer
-const downloadAsArrayBuffer = async(url) => {
+// Instantiates the Translation Service
+const constructTranslationService = async () => {
+  if (!translationService) {
+    var translationServiceConfig = {};
+    log(`Creating Translation Service with config: ${translationServiceConfig}`);
+    translationService = new Module.BlockingService(translationServiceConfig);
+    log(`Translation Service created successfully`);
+  }
+}
+
+// Constructs a translation model object for the source and target language pair
+const constructTranslationModel = async (from, to) => {
+  // Delete all previously constructed translation models and clear the map
+  languagePairToTranslationModels.forEach((value, key) => {
+    log(`Destructing model '${key}'`);
+    value.delete();
+  });
+  languagePairToTranslationModels.clear();
+
+  // If none of the languages is English then construct multiple models with
+  // English as a pivot language.
+  if (from !== 'en' && to !== 'en') {
+    log(`Constructing model '${from}${to}' via pivoting: '${from}en' and 'en${to}'`);
+    await Promise.all([_constructTranslationModelInvolvingEnglish(from, 'en'),
+                        _constructTranslationModelInvolvingEnglish('en', to)]);
+  }
+  else {
+    log(`Constructing model '${from}${to}'`);
+    await _constructTranslationModelInvolvingEnglish(from, to);
+  }
+}
+
+// Translates text from source language to target language.
+const translate = (from, to, paragraphs) => {
+  // If none of the languages is English then perform translation with
+  // English as a pivot language.
+  if (from !== 'en' && to !== 'en') {
+    log(`Translating '${from}${to}' via pivoting: '${from}en' -> 'en${to}'`);
+    let translatedParagraphsInEnglish = _translateInvolvingEnglish(from, 'en', paragraphs);
+    return _translateInvolvingEnglish('en', to, translatedParagraphsInEnglish);
+  }
+  else {
+    log(`Translating '${from}${to}'`);
+    return _translateInvolvingEnglish(from, to, paragraphs);
+  }
+}
+
+// Downloads file from a url and returns the array buffer
+const _downloadAsArrayBuffer = async(url) => {
   const response = await fetch(url);
   if (!response.ok) {
     throw Error(`Downloading ${url} failed: HTTP ${response.status} - ${response.statusText}`);
@@ -78,8 +125,8 @@ const downloadAsArrayBuffer = async(url) => {
   return response.arrayBuffer();
 }
 
-// This function constructs and initializes the AlignedMemory from the array buffer and alignment size
-const prepareAlignedMemoryFromBuffer = async (buffer, alignmentSize) => {
+// Constructs and initializes the AlignedMemory from the array buffer and alignment size
+const _prepareAlignedMemoryFromBuffer = async (buffer, alignmentSize) => {
   var byteArray = new Int8Array(buffer);
   log(`Constructing Aligned memory. Size: ${byteArray.byteLength} bytes, Alignment: ${alignmentSize}`);
   var alignedMemory = new Module.AlignedMemory(byteArray.byteLength, alignmentSize);
@@ -90,38 +137,7 @@ const prepareAlignedMemoryFromBuffer = async (buffer, alignmentSize) => {
   return alignedMemory;
 }
 
-// Instantiate the Translation Service
-const constructTranslationService = async () => {
-  if (!translationService) {
-    var translationServiceConfig = {};
-    log(`Creating Translation Service with config: ${translationServiceConfig}`);
-    translationService = new Module.BlockingService(translationServiceConfig);
-    log(`Translation Service created successfully`);
-  }
-}
-
-const constructTranslationModel = async (from, to) => {
-  // Delete all previously constructed translation models and clear the map
-  translationModels.forEach((value, key) => {
-    log(`Destructing model '${key}'`);
-    value.delete();
-  });
-  translationModels.clear();
-
-  // If none of the languages is English then construct multiple models with
-  // English as a pivot language.
-  if (from !== 'en' && to !== 'en') {
-    log(`Constructing model '${from}${to}' via pivoting: '${from}en' and 'en${to}'`);
-    await Promise.all([constructTranslationModelInvolvingEnglish(from, 'en'),
-                        constructTranslationModelInvolvingEnglish('en', to)]);
-  }
-  else {
-    log(`Constructing model '${from}${to}'`);
-    await constructTranslationModelInvolvingEnglish(from, to);
-  }
-}
-
-const constructTranslationModelInvolvingEnglish = async (from, to) => {
+const _constructTranslationModelInvolvingEnglish = async (from, to) => {
   const languagePair = `${from}${to}`;
 
   /*Set the Model Configuration as YAML formatted string.
@@ -178,24 +194,24 @@ gemm-precision: int8shiftAll
 
   // Download the files as buffers from the given urls
   let start = Date.now();
-  const downloadedBuffers = await Promise.all([downloadAsArrayBuffer(modelFile), downloadAsArrayBuffer(shortlistFile)]);
+  const downloadedBuffers = await Promise.all([_downloadAsArrayBuffer(modelFile), _downloadAsArrayBuffer(shortlistFile)]);
   const modelBuffer = downloadedBuffers[0];
   const shortListBuffer = downloadedBuffers[1];
 
   const downloadedVocabBuffers = [];
   for (let item of uniqueVocabFiles.values()) {
-    downloadedVocabBuffers.push(await downloadAsArrayBuffer(item));
+    downloadedVocabBuffers.push(await _downloadAsArrayBuffer(item));
   }
   log(`Total Download time for all files of '${languagePair}': ${(Date.now() - start) / 1000} secs`);
 
   // Construct AlignedMemory objects with downloaded buffers
-  let constructedAlignedMemories = await Promise.all([prepareAlignedMemoryFromBuffer(modelBuffer, 256),
-                                                      prepareAlignedMemoryFromBuffer(shortListBuffer, 64)]);
+  let constructedAlignedMemories = await Promise.all([_prepareAlignedMemoryFromBuffer(modelBuffer, 256),
+                                                      _prepareAlignedMemoryFromBuffer(shortListBuffer, 64)]);
   let alignedModelMemory = constructedAlignedMemories[0];
   let alignedShortlistMemory = constructedAlignedMemories[1];
   let alignedVocabsMemoryList = new Module.AlignedMemoryList;
   for(let item of downloadedVocabBuffers) {
-    let alignedMemory = await prepareAlignedMemoryFromBuffer(item, 64);
+    let alignedMemory = await _prepareAlignedMemoryFromBuffer(item, 64);
     alignedVocabsMemoryList.push_back(alignedMemory);
   }
   for (let vocabs=0; vocabs < alignedVocabsMemoryList.size(); vocabs++) {
@@ -206,29 +222,15 @@ gemm-precision: int8shiftAll
 
   log(`Translation Model config: ${modelConfig}`);
   var translationModel = new Module.TranslationModel(modelConfig, alignedModelMemory, alignedShortlistMemory, alignedVocabsMemoryList);
-  translationModels.set(languagePair, translationModel);
+  languagePairToTranslationModels.set(languagePair, translationModel);
 }
 
-const translate = (from, to, paragraphs) => {
-  // If none of the languages is English then perform translation with
-  // English as a pivot language.
-  if (from !== 'en' && to !== 'en') {
-    log(`Translating '${from}${to}' via pivoting: '${from}en' -> 'en${to}'`);
-    let translatedParagraphsInEnglish = translateInvolvingEnglish(from, 'en', paragraphs);
-    return translateInvolvingEnglish('en', to, translatedParagraphsInEnglish);
-  }
-  else {
-    log(`Translating '${from}${to}'`);
-    return translateInvolvingEnglish(from, to, paragraphs);
-  }
-}
-
-const translateInvolvingEnglish = (from, to, paragraphs) => {
+const _translateInvolvingEnglish = (from, to, paragraphs) => {
   const languagePair = `${from}${to}`;
-  if (!translationModels.has(languagePair)) {
+  if (!languagePairToTranslationModels.has(languagePair)) {
     throw Error(`Please load translation model '${languagePair}' before translating`);
   }
-  translationModel = translationModels.get(languagePair);
+  translationModel = languagePairToTranslationModels.get(languagePair);
 
   // Instantiate the arguments of translate() API i.e. ResponseOptions and input (vector<string>)
   var responseOptions = new Module.ResponseOptions();
@@ -254,8 +256,8 @@ const translateInvolvingEnglish = (from, to, paragraphs) => {
   const sourceSentencesOfParagraphs = [];
   for (let i = 0; i < result.size(); i++) {
     translatedParagraphs.push(result.get(i).getTranslatedText());
-    translatedSentencesOfParagraphs.push(getAllTranslatedSentencesOfParagraph(result.get(i)));
-    sourceSentencesOfParagraphs.push(getAllSourceSentencesOfParagraph(result.get(i)));
+    translatedSentencesOfParagraphs.push(_getAllTranslatedSentencesOfParagraph(result.get(i)));
+    sourceSentencesOfParagraphs.push(_getAllSourceSentencesOfParagraph(result.get(i)));
   }
 
   responseOptions.delete();
@@ -263,8 +265,8 @@ const translateInvolvingEnglish = (from, to, paragraphs) => {
   return translatedParagraphs;
 }
 
-// This function extracts all the translated sentences from the Response and returns them.
-const getAllTranslatedSentencesOfParagraph = (response) => {
+// Extracts all the translated sentences from the Response and returns them.
+const _getAllTranslatedSentencesOfParagraph = (response) => {
   const sentences = [];
   const text = response.getTranslatedText();
   for (let sentenceIndex = 0; sentenceIndex < response.size(); sentenceIndex++) {
@@ -274,8 +276,8 @@ const getAllTranslatedSentencesOfParagraph = (response) => {
   return sentences;
 }
 
-// This function extracts all the source sentences from the Response and returns them.
-const getAllSourceSentencesOfParagraph = (response) => {
+// Extracts all the source sentences from the Response and returns them.
+const _getAllSourceSentencesOfParagraph = (response) => {
   const sentences = [];
   const text = response.getOriginalText();
   for (let sentenceIndex = 0; sentenceIndex < response.size(); sentenceIndex++) {
@@ -285,8 +287,10 @@ const getAllSourceSentencesOfParagraph = (response) => {
   return sentences;
 }
 
-// This function returns a substring of text (a string). The substring is represented by
-// byteRange (begin and end endices) within the utf-8 encoded version of the text.
+/*
+ * Returns a substring of text (a string). The substring is represented by
+ * byteRange (begin and end endices) within the utf-8 encoded version of the text.
+ */
 const _getSentenceFromByteRange = (text, byteRange) => {
   const utf8BytesView = encoder.encode(text);
   const utf8SentenceBytes = utf8BytesView.subarray(byteRange.begin, byteRange.end);

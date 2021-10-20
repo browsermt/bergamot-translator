@@ -129,9 +129,10 @@ void translationCache(AsyncService &service, Ptr<TranslationModel> model) {
   auto statsSecondRun = service.cacheStats();
   LOG(info, "Cache Hits/Misses = {}/{}", statsSecondRun.hits, statsSecondRun.misses);
   ABORT_IF(statsSecondRun.hits <= 0, "At least one hit expected, none found.");
-  ABORT_IF(statsSecondRun.hits != statsFirstRun.misses,
-           "Mismatch in expected hits. This test is supposed to check if all previous misses are hit in second run. "
-           "Ensure you give an input file and cache-size caps within reasonable limits.");
+  if (statsSecondRun.hits != statsFirstRun.misses) {
+    std::cerr << "Mismatch in expected hits (Hits, Misses = " << statsSecondRun.hits << ", " << statsSecondRun.misses
+              << "). This can happen due to random eviction." << std::endl;
+  }
 
   ABORT_IF(firstResponse.target.text != secondResponse.target.text,
            "Recompiled string provided different output when operated with cache. On the same hardware while using "

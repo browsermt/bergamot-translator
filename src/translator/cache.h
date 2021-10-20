@@ -15,11 +15,9 @@ class AtomicCache {
   struct Stats {
     size_t hits{0};
     size_t misses{0};
-    size_t activeRecords{0};
-    size_t evictedRecords{0};
   };
 
-  explicit AtomicCache(size_t size, size_t buckets) : records_(size), mutexBuckets_(buckets), used_(size, false) {}
+  explicit AtomicCache(size_t size, size_t buckets) : records_(size), mutexBuckets_(buckets) {}
 
   std::pair<bool, Value> find(const Key &key) const {
     Value value;
@@ -58,21 +56,11 @@ class AtomicCache {
     std::lock_guard<std::mutex> lock(mutexBuckets_[mutexId]);
     Record &candidate = records_[index];
 
-    if (!used_[index]) {
-      // If this index is not used yet, we have one more active record.
-      stats_.activeRecords += 1;
-      used_[index] = true;
-    } else {
-      // If we got a used-index, we're evicting something.
-      stats_.evictedRecords += 1;
-    }
-
     candidate.first = key;
     candidate.second = value;
   }
 
   std::vector<Record> records_;
-  std::vector<bool> used_;
 
   mutable std::vector<std::mutex> mutexBuckets_;
   mutable Stats stats_;

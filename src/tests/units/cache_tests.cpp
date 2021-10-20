@@ -50,11 +50,8 @@ TEST_CASE("Test Cache in a threaded setting") {
   // This is non-deterministic due to threads.
   std::cout << "Hit-Rate:" << hitRate << "\n";
   std::cout << "(Hits, Misses) = " << stats.hits << " " << stats.misses << "\n";
-  std::cout << "(Active, Evicted) = " << stats.activeRecords << " " << stats.evictedRecords << "\n";
 
   // Can we create a specialization of the actual cache-type we want? Does it compile, at least?
   // We already have Ptr<History>, it's easier to move Ptr<History> to cache.
-  // This is typedef-ed in cache.h now.
-  // using TranslationCache = AtomicCache<size_t, std::shared_ptr<marian::History>>;
   TranslationCache translationCache(/*size=*/300, /*mutexBuckets=*/16);
 }

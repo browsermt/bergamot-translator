@@ -47,6 +47,24 @@ class BlockingService {
   std::vector<Response> translateMultiple(std::shared_ptr<TranslationModel> translationModel,
                                           std::vector<std::string> &&source, const ResponseOptions &responseOptions);
 
+  /// With the supplied two translation models, translate using first and then the second generating a response as if it
+  /// were translated from first's source language to second's target langauge. Requires first's target to be second's
+  /// source to work correctly - effectively implementing pivoting translation via an intermediate language.
+  ///
+  /// Requires that `max-length-break` * `max-length-factor` for the second to be greater than the value for the first
+  /// model.
+  ///
+  /// @param[in] first: TranslationModel capable of translating from source language to pivot language.
+  /// @param[in] second: TranslationModel capable of translating between pivot and target language.
+  /// @param[move] sources: The input source texts to be translated.
+  /// @param[in] options: Options indicating whether or not to include optional members in response and pass additional
+  /// configurations. See ResponseOptions.
+  ///
+  /// @returns responses corresponding to the source-text which can be used as if they were translated with
+  /// translateMultiple.
+  std::vector<Response> pivotMultiple(std::shared_ptr<TranslationModel> first, std::shared_ptr<TranslationModel> second,
+                                      std::vector<std::string> &&sources, const ResponseOptions &responseOptions);
+
  private:
   ///  Numbering requests processed through this instance. Used to keep account of arrival times of the request. This
   ///  allows for using this quantity in priority based ordering.
@@ -80,8 +98,8 @@ class AsyncService {
   }
 
   /// With the supplied TranslationModel, translate an input. A Response is constructed with optional items set/unset
-  /// indicated via ResponseOptions. Upon completion translation of the input, the client supplied callback is triggered
-  /// with the constructed Response. Concurrent-calls to this function are safe.
+  /// indicated via ResponseOptions. Upon completion translation of the input, the client supplied callback is
+  /// triggered with the constructed Response. Concurrent-calls to this function are safe.
   ///
   /// @param [in] translationModel: TranslationModel to use for the request.
   /// @param [in] source: rvalue reference of the string to be translated. This is available as-is to the client later
@@ -91,6 +109,23 @@ class AsyncService {
   /// specify any additional configurable parameters.
   void translate(std::shared_ptr<TranslationModel> translationModel, std::string &&source, CallbackType callback,
                  const ResponseOptions &options = ResponseOptions());
+
+  /// With the supplied two translation models, translate using first and then the second generating a response as if it
+  /// were translated from first's source language to second's target langauge. Requires first's target to be second's
+  /// source to work correctly - effectively implementing pivoting translation via an intermediate language.
+  ///
+  /// Requires that `max-length-break` * `max-length-factor` for the second to be greater than the value for the first
+  /// model.
+  ///
+  /// @param[in] first: TranslationModel capable of translating from source language to pivot language.
+  /// @param[in] second: TranslationModel capable of translating between pivot and target language.
+  /// @param[move] source: The source text to be translated
+  /// @param[in] clientCallback: The callback to be called with the constructed Response. Expects the callback to
+  /// consume the Response.
+  /// @param[in] options: Options indicating whether or not to include optional members in response and pass additional
+  /// configurations. See ResponseOptions.
+  void pivot(std::shared_ptr<TranslationModel> first, std::shared_ptr<TranslationModel> second, std::string &&source,
+             CallbackType clientCallback, const ResponseOptions &options = ResponseOptions());
 
   /// Thread joins and proper shutdown are required to be handled explicitly.
   ~AsyncService();

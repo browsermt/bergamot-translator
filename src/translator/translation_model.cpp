@@ -97,6 +97,17 @@ Ptr<Request> TranslationModel::makeRequest(size_t requestId, std::string &&sourc
   return request;
 }
 
+Ptr<Request> TranslationModel::makePivotRequest(size_t requestId, CallbackType callback, AnnotatedText &&previousTarget,
+                                                const ResponseOptions &responseOptions) {
+  Segments segments;
+
+  textProcessor_.processFromAnnotation(previousTarget, segments);
+  ResponseBuilder responseBuilder(responseOptions, std::move(previousTarget), vocabs_, callback, *qualityEstimator_);
+
+  Ptr<Request> request = New<Request>(requestId, std::move(segments), std::move(responseBuilder));
+  return request;
+}
+
 Ptr<marian::data::CorpusBatch> TranslationModel::convertToMarianBatch(Batch &batch) {
   std::vector<data::SentenceTuple> batchVector;
   auto &sentences = batch.sentences();

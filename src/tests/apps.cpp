@@ -56,6 +56,49 @@ void annotatedTextSentences(AsyncService &service, Ptr<TranslationModel> model, 
   }
 }
 
+void pivotTranslate(AsyncService &service, std::vector<Ptr<TranslationModel>> &models) {
+  ABORT_IF(models.size() != 2, "Forward and backward test needs two models.");
+  ResponseOptions responseOptions;
+  responseOptions.alignment = true;
+  std::string source = readFromStdin();
+  std::promise<Response> responsePromise;
+  std::future<Response> responseFuture = responsePromise.get_future();
+
+  auto callback = [&responsePromise](Response &&response) { responsePromise.set_value(std::move(response)); };
+  service.pivot(models.front(), models.back(), std::move(source), callback, responseOptions);
+
+  responseFuture.wait();
+
+  Response response = responseFuture.get();
+  for (size_t sentenceId = 0; sentenceId < response.source.numSentences(); sentenceId++) {
+    std::cout << "> " << response.source.sentence(sentenceId) << "\n";
+    std::cout << "< " << response.target.sentence(sentenceId) << "\n\n";
+
+    // For each target token, find argmax s, i.e find argmax p(s | t), max p(s | t)
+    for (size_t t = 0; t < response.alignments[sentenceId].size(); t++) {
+      bool valid = false;
+      float maxV = 0.0f;
+      auto argmaxV = std::make_pair(-1, -1);
+      for (size_t s = 0; s < response.alignments[sentenceId][t].size(); s++) {
+        auto v = response.alignments[sentenceId][t][s];
+        if (v > maxV) {
+          maxV = v;
+          argmaxV = std::make_pair(t, s);
+        }
+      }
+
+      if (argmaxV.first != -1) {
+        std::cout << response.source.word(sentenceId, argmaxV.second) << " "
+                  << response.target.word(sentenceId, argmaxV.first) << "=" << maxV;
+        std::cout << std::endl;
+      }
+    }
+  }
+
+  std::cout << response.source.text;
+  std::cout << response.target.text;
+}
+
 void forwardAndBackward(AsyncService &service, std::vector<Ptr<TranslationModel>> &models) {
   ABORT_IF(models.size() != 2, "Forward and backward test needs two models.");
   ResponseOptions responseOptions;

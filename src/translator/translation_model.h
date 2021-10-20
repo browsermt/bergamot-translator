@@ -68,6 +68,9 @@ class TranslationModel {
   Ptr<Request> makeRequest(size_t requestId, std::string&& source, CallbackType callback,
                            const ResponseOptions& responseOptions);
 
+  Ptr<Request> makePivotRequest(size_t requestId, CallbackType callback, AnnotatedText&& previousTarget,
+                                const ResponseOptions& responseOptions);
+
   /// Relays a request to the batching-pool specific to this translation model.
   /// @param [in] request: Request constructed through makeRequest
   void enqueueRequest(Ptr<Request> request) { batchingPool_.enqueueRequest(request); };

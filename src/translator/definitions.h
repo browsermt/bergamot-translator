@@ -42,7 +42,7 @@ struct ByteRange {
 };
 
 class Response;
-using CallbackType = std::function<void(Response&&)>;
+using CallbackType = std::function<void(Response &&)>;
 
 }  // namespace bergamot
 }  // namespace marian

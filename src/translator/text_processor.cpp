@@ -138,5 +138,38 @@ void TextProcessor::wrap(Segment &segment, std::vector<string_view> &wordRanges,
   }
 }
 
+void TextProcessor::processFromAnnotation(AnnotatedText &source, Segments &segments) const {
+  std::string copySource = source.text;
+  AnnotatedText replacement(std::move(copySource));
+
+  for (size_t s = 0; s < source.numSentences(); s++) {
+    // This is our sentenceStream
+    ByteRange sentenceByteRange = source.sentenceAsByteRange(s);
+
+    // Fool tokenization using ByteRanges into looking at replacement. They're same, so okay.
+    marian::string_view sentence{&replacement.text[sentenceByteRange.begin], sentenceByteRange.size()};
+
+    std::vector<string_view> wordRanges;
+    Segment segment = tokenize(sentence, wordRanges);
+
+    // Manually add EoS
+    Word sourceEosId = vocabs_.sources().front()->getEosId();
+    segment.push_back(sourceEosId);
+    if (!wordRanges.empty()) {
+      string_view &last = wordRanges.back();  // this is a possible segfault if wordRanges is empty. So guard.
+      const char *end = last.data() + last.size();
+      wordRanges.emplace_back(end, 0);
+    } else {
+      const char *end = &(replacement.text[sentenceByteRange.begin]);
+      wordRanges.emplace_back(end, 0);
+    }
+
+    segments.push_back(std::move(segment));
+    replacement.recordExistingSentence(wordRanges.begin(), wordRanges.end(), wordRanges.begin()->data());
+  }
+
+  source = replacement;
+}
+
 }  // namespace bergamot
 }  // namespace marian

@@ -24,6 +24,7 @@ std::istringstream &operator>>(std::istringstream &in, OpMode &mode) {
       {"test-quality-estimator-words", OpMode::TEST_QUALITY_ESTIMATOR_WORDS},
       {"test-quality-estimator-scores", OpMode::TEST_QUALITY_ESTIMATOR_SCORES},
       {"test-forward-backward", OpMode::TEST_FORWARD_BACKWARD_FOR_OUTBOUND},
+      {"test-pivot", OpMode::TEST_PIVOT},
   };
 
   auto query = table.find(modeString);

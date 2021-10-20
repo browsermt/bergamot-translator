@@ -31,6 +31,9 @@ int main(int argc, char *argv[]) {
     case OpMode::TEST_FORWARD_BACKWARD_FOR_OUTBOUND:
       testapp::forwardAndBackward(service, models);
       break;
+    case OpMode::TEST_PIVOT:
+      testapp::pivotTranslate(service, models);
+      break;
     case OpMode::TEST_QUALITY_ESTIMATOR_WORDS:
       testapp::qualityEstimatorWords(service, models.front());
       break;

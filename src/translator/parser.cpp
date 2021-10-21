@@ -87,7 +87,7 @@ void ConfigParser::addOptionsBoundToConfig(CLI::App &app, CLIConfig &config) {
   app_.add_option("--bergamot-mode", config.opMode, "Operating mode for bergamot: [wasm, native, decoder]");
 
   app_.add_option("--cache-translations", config.cacheEnabled, "Whether to cache translations or not.");
-  app_.add_option("--cache-size", config.cacheEnabled, "Number of entries to store in cache.");
+  app_.add_option("--cache-size", config.cacheSize, "Number of entries to store in cache.");
   app_.add_option("--cache-mutex-buckets", config.cacheMutexBuckets,
                   "Number of mutex buckets to control locking granularity");
 }

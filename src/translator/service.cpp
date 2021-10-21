@@ -11,7 +11,7 @@ namespace marian {
 namespace bergamot {
 
 BlockingService::BlockingService(const BlockingService::Config &config)
-    : requestId_(0), batchingPool_(), cache_(config.cacheSize, /*mutexBuckets=*/1) {}
+    : config_(config), requestId_(0), batchingPool_(), cache_(config.cacheSize, /*mutexBuckets=*/1) {}
 
 std::vector<Response> BlockingService::translateMultiple(std::shared_ptr<TranslationModel> translationModel,
                                                          std::vector<std::string> &&sources,

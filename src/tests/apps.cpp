@@ -57,6 +57,8 @@ void annotatedTextSentences(AsyncService &service, Ptr<TranslationModel> model, 
 }
 
 void pivotTranslate(AsyncService &service, std::vector<Ptr<TranslationModel>> &models) {
+  // We expect a source -> pivot; pivot -> source model to get source -> source and build this test using accuracy of
+  // matches.
   ABORT_IF(models.size() != 2, "Forward and backward test needs two models.");
   ResponseOptions responseOptions;
   responseOptions.alignment = true;
@@ -69,10 +71,25 @@ void pivotTranslate(AsyncService &service, std::vector<Ptr<TranslationModel>> &m
 
   responseFuture.wait();
 
+  const float EPS = 1e-5;
+  size_t totalOutcomes = 0;
+  size_t favourableOutcomes = 0;
+
   Response response = responseFuture.get();
   for (size_t sentenceId = 0; sentenceId < response.source.numSentences(); sentenceId++) {
     std::cout << "> " << response.source.sentence(sentenceId) << "\n";
     std::cout << "< " << response.target.sentence(sentenceId) << "\n\n";
+
+    // Assert what we have is a probability distribution over source-tokens given a target token.
+    for (size_t t = 0; t < response.alignments[sentenceId].size(); t++) {
+      float sum = 0.0f;
+      for (size_t s = 0; s < response.alignments[sentenceId][t].size(); s++) {
+        sum += response.alignments[sentenceId][t][s];
+      }
+
+      std::cerr << fmt::format("Sum @ (target-token = {}, sentence = {}) = {}", t, sentenceId, sum) << std::endl;
+      ABORT_IF((std::abs(sum - 1.0f) > EPS), "Not a probability distribution, something's going wrong");
+    }
 
     // For each target token, find argmax s, i.e find argmax p(s | t), max p(s | t)
     for (size_t t = 0; t < response.alignments[sentenceId].size(); t++) {
@@ -87,13 +104,27 @@ void pivotTranslate(AsyncService &service, std::vector<Ptr<TranslationModel>> &m
         }
       }
 
-      if (argmaxV.first != -1) {
-        std::cout << response.source.word(sentenceId, argmaxV.second) << " "
-                  << response.target.word(sentenceId, argmaxV.first) << "=" << maxV;
-        std::cout << std::endl;
+      auto sourceToken = response.source.word(sentenceId, argmaxV.second);
+      auto targetToken = response.target.word(sentenceId, argmaxV.first);
+      if (sourceToken == targetToken) {
+        favourableOutcomes += 1;
       }
+
+      std::cerr << sourceToken << " " << targetToken << " " << maxV << std::endl;
+
+      totalOutcomes += 1;
     }
+
+    // Assert each alignment over target is a valid probability distribution.
   }
+
+  // Measure accuracy of word match.
+  float accuracy = static_cast<float>(favourableOutcomes) / static_cast<float>(totalOutcomes);
+
+  // This is arbitrary value chosen by @jerinphilip, but should be enough to check if things fail.
+  // This value is calibrated on bergamot input in BRT. All this is supposed to do is let the developers know if
+  // something's largely amiss to the point alignments are not working.
+  ABORT_IF(accuracy < 0.70, "Accuracy {} not enough. Please check if something's off.", accuracy * 100);
 
   std::cout << response.source.text;
   std::cout << response.target.text;

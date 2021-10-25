@@ -155,12 +155,13 @@ void TextProcessor::processFromAnnotation(AnnotatedText &source, Segments &segme
     // Manually add EoS
     Word sourceEosId = vocabs_.sources().front()->getEosId();
     segment.push_back(sourceEosId);
+
     if (!wordRanges.empty()) {
       string_view &last = wordRanges.back();  // this is a possible segfault if wordRanges is empty. So guard.
       const char *end = last.data() + last.size();
       wordRanges.emplace_back(end, 0);
     } else {
-      const char *end = &(replacement.text[sentenceByteRange.begin]);
+      const char *end = sentence.data() + sentence.size();
       wordRanges.emplace_back(end, 0);
     }
 

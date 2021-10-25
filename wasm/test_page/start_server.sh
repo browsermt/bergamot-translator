@@ -19,13 +19,13 @@ if [ ! -e "$1" ]; then
     exit
 fi
 
-WASM_ARTIFACTS="$1/bergamot-translator-worker.*"
+WASM_ARTIFACTS="$1/bergamot-translator-worker.js $1/bergamot-translator-worker.wasm"
 for i in $WASM_ARTIFACTS; do
     [ -f "$i" ] || breaks
-    cp $i .
+    cp $i js/.
     echo "Copied \"$i\""
 done
 
 npm install
 echo "Start httpserver"
-node bergamot-httpserver.js
+node bergamot-httpserver.js 80 1 0

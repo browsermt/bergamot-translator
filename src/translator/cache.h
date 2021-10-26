@@ -38,7 +38,7 @@ class AtomicCache {
 
     std::lock_guard<std::mutex> lock(mutexBuckets_[mutexId]);
     const Record &candidate = records_[index];
-    if (key == candidate.first) {
+    if (equals_(key, candidate.first)) {
       value = candidate.second;
       stats_.hits += 1;
       return true;

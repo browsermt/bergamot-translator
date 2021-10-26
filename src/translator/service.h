@@ -29,8 +29,9 @@ class AsyncService;
 class BlockingService {
  public:
   struct Config {
-    bool cacheEnabled{false};
-    size_t cacheSize{2000};
+    bool cacheEnabled{false};  ///< Whether to enable cache or not.
+    size_t cacheSize{2000};    ///< Size in History items to be stored in the cache. Loosely corresponds to sentences to
+                               /// cache in the real world.
   };
   /// Construct a BlockingService with configuration loaded from an Options object. Does not require any keys, values to
   /// be set.
@@ -73,10 +74,13 @@ class BlockingService {
 class AsyncService {
  public:
   struct Config {
-    size_t numWorkers;
-    bool cacheEnabled{false};
-    size_t cacheSize{2000};
-    size_t cacheMutexBuckets;
+    size_t numWorkers;         ///< How many worker translation threads to spawn.
+    bool cacheEnabled{false};  ///< Whether to enable cache or not.
+    size_t cacheSize{2000};    ///< Size in History items to be stored in the cache. Loosely corresponds to sentences to
+                               /// cache in the real world.
+    size_t cacheMutexBuckets;  ///< Controls the granularity of locking to reduce contention by bucketing mutexes
+                               ///< guarding cache entry read write. Optimal at min(core, numWorkers) assuming a
+                               ///< reasonably large cache-size.
   };
   /// Construct an AsyncService with configuration loaded from Options. Expects positive integer value for
   /// `cpu-threads`. Additionally requires options which configure AggregateBatchingPool.

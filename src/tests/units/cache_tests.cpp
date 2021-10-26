@@ -30,7 +30,6 @@ TEST_CASE("Test Cache in a threaded setting") {
       }
 
       Value value = query;
-      // std::cout << "Inserting " << query << " " << query << "\n";
       cache.store(/*key=*/query, std::move(value));
     }
   };

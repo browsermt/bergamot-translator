@@ -1,5 +1,5 @@
 // All variables specific to translation service
-var translationService, responseOptions, input = undefined;
+var translationService = undefined;
 // A map of language-pair to TranslationModel object
 var languagePairToTranslationModels = new Map();
 
@@ -51,14 +51,14 @@ onmessage = async function(e) {
   } else if (command === 'translate') {
       const from = e.data[1];
       const to = e.data[2];
-      const inputParagraphs = e.data[3];
+      const input = e.data[3];
       let inputWordCount = 0;
-      inputParagraphs.forEach(sentence => {
+      input.forEach(sentence => {
         inputWordCount += sentence.trim().split(" ").filter(word => word.trim() !== "").length;
       })
       let start = Date.now();
       try {
-        result = translate(from, to, inputParagraphs);
+        result = translate(from, to, input);
         const secs = (Date.now() - start) / 1000;
         log(`Translation '${from}${to}' Successful. Speed: ${Math.round(inputWordCount / secs)} WPS (${inputWordCount} words in ${secs} secs)`);
       } catch (error) {
@@ -102,17 +102,17 @@ const constructTranslationModel = async (from, to) => {
 }
 
 // Translates text from source language to target language.
-const translate = (from, to, paragraphs) => {
+const translate = (from, to, input) => {
   // If none of the languages is English then perform translation with
   // English as a pivot language.
   if (from !== 'en' && to !== 'en') {
     log(`Translating '${from}${to}' via pivoting: '${from}en' -> 'en${to}'`);
-    let translatedParagraphsInEnglish = _translateInvolvingEnglish(from, 'en', paragraphs);
-    return _translateInvolvingEnglish('en', to, translatedParagraphsInEnglish);
+    let translatedTextInEnglish = _translateInvolvingEnglish(from, 'en', input);
+    return _translateInvolvingEnglish('en', to, translatedTextInEnglish);
   }
   else {
     log(`Translating '${from}${to}'`);
-    return _translateInvolvingEnglish(from, to, paragraphs);
+    return _translateInvolvingEnglish(from, to, input);
   }
 }
 
@@ -225,44 +225,56 @@ gemm-precision: int8shiftAlphaAll
   languagePairToTranslationModels.set(languagePair, translationModel);
 }
 
-const _translateInvolvingEnglish = (from, to, paragraphs) => {
+const _translateInvolvingEnglish = (from, to, input) => {
   const languagePair = `${from}${to}`;
   if (!languagePairToTranslationModels.has(languagePair)) {
     throw Error(`Please load translation model '${languagePair}' before translating`);
   }
   translationModel = languagePairToTranslationModels.get(languagePair);
 
-  // Instantiate the arguments of translate() API i.e. ResponseOptions and input (vector<string>)
-  var responseOptions = new Module.ResponseOptions();
-  let input = new Module.VectorString;
+  // Prepare the arguments of translate() API i.e. ResponseOptions and listSourceText (vector<string>)
+  var responseOptions = {qualityScores: true, alignment: false, alignmentThreshold: 0.2};
+  let listSourceText = new Module.VectorString;
 
-  // Initialize the input
-  paragraphs.forEach(paragraph => {
+  // Initialize the listSourceText
+  input.forEach(paragraph => {
     // prevent empty paragraph - it breaks the translation
     if (paragraph.trim() === "") {
       return;
     }
-    input.push_back(paragraph.trim())
+    listSourceText.push_back(paragraph.trim())
   })
 
-  // Access input (just for debugging)
-  log(`Input size: ${input.size()}`);
+  // Access listSourceText (just for debugging)
+  log(`Size of source text list: ${listSourceText.size()}`);
 
-  // Translate the input, which is a vector<String>; the result is a vector<Response>
-  let result = translationService.translate(translationModel, input, responseOptions);
+  // Translate the listSourceText, which is a vector<String>; the result is a vector<Response>
+  let result = translationService.translate(translationModel, listSourceText, responseOptions);
 
-  const translatedParagraphs = [];
-  const translatedSentencesOfParagraphs = [];
-  const sourceSentencesOfParagraphs = [];
+  const listTranslatedText = [];
+  const listTranslatedTextSentences = [];
+  const listSourceTextSentences = [];
+  const listTranslatedTextSentenceQualityScores = [];
   for (let i = 0; i < result.size(); i++) {
-    translatedParagraphs.push(result.get(i).getTranslatedText());
-    translatedSentencesOfParagraphs.push(_getAllTranslatedSentencesOfParagraph(result.get(i)));
-    sourceSentencesOfParagraphs.push(_getAllSourceSentencesOfParagraph(result.get(i)));
+    let response = result.get(i);
+    listTranslatedText.push(response.getTranslatedText());
+    listTranslatedTextSentences.push(_getAllTranslatedSentencesOfParagraph(response));
+    listSourceTextSentences.push(_getAllSourceSentencesOfParagraph(response));
+    let sentenceQualityScores = response.getQualityScores();
+    log(`No. of sentences: "${sentenceQualityScores.size()}"`);
+    const stringifiedSentenceQualityScores = [];
+    for (let sentenceIndex=0; sentenceIndex < sentenceQualityScores.size(); sentenceIndex++) {
+      let sentenceQualityScore = sentenceQualityScores.get(sentenceIndex);
+      stringifiedSentenceQualityScores.push(sentenceQualityScore);
+    }
+    listTranslatedTextSentenceQualityScores.push(stringifiedSentenceQualityScores);
   }
 
-  responseOptions.delete();
-  input.delete();
-  return translatedParagraphs;
+  log(`Translated sentences: ${JSON.stringify(listTranslatedTextSentences)}`);
+  log(`Source sentences: ${JSON.stringify(listSourceTextSentences)}`);
+  log(`Translated sentence quality scores: ${JSON.stringify(listTranslatedTextSentenceQualityScores)}`);
+  listSourceText.delete();
+  return listTranslatedText;
 }
 
 // Extracts all the translated sentences from the Response and returns them.

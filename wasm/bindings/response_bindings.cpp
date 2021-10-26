@@ -37,8 +37,8 @@ EMSCRIPTEN_BINDINGS(response) {
       .function("getTranslatedSentence", &Response::getTargetSentenceAsByteRange);
 
   value_object<SentenceQualityScore>("SentenceQualityScore")
-      //.field("wordScores", &SentenceQualityScore::wordScores)
-      //.field("wordByteRanges", &SentenceQualityScore::wordByteRanges)
+      .field("wordScores", &SentenceQualityScore::wordScores)
+      .field("wordByteRanges", &SentenceQualityScore::wordByteRanges)
       .field("sentenceScore", &SentenceQualityScore::sentenceScore);
 
   register_vector<Response>("VectorResponse");

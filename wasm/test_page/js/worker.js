@@ -232,69 +232,123 @@ const _translateInvolvingEnglish = (from, to, input) => {
   }
   translationModel = languagePairToTranslationModels.get(languagePair);
 
-  // Prepare the arguments of translate() API i.e. ResponseOptions and listSourceText (vector<string>)
-  var responseOptions = {qualityScores: true, alignment: false, alignmentThreshold: 0.2};
-  let listSourceText = new Module.VectorString;
+  // Prepare the arguments of translate() API i.e. ResponseOptions and vectorSourceText (i.e. a vector<string>)
+  let responseOptions = _prepareResponseOptions();
+  let vectorSourceText = _prepareSourceText(input);
 
-  // Initialize the listSourceText
+  // Call translate() API; result is vector<Response> where every item of vector<Response> corresponds to an item of vectorSourceText in the same order
+  let vectorResponse = translationService.translate(translationModel, vectorSourceText, responseOptions);
+
+  // Parse all relevant information from vectorResponse
+  const listTranslatedText = _parseTranslatedText(vectorResponse);
+  const listTranslatedTextSentences = _parseTranslatedTextSentences(vectorResponse);
+  const listSourceTextSentences = _parseSourceTextSentences(vectorResponse);
+  const listTranslatedTextSentenceQualityScores = _parseTranslatedTextSentenceQualityScores(vectorResponse);
+
+  log(`Translated text: ${listTranslatedText}`);
+  log(`Translated sentences: ${JSON.stringify(listTranslatedTextSentences)}`);
+  log(`Source sentences: ${JSON.stringify(listSourceTextSentences)}`);
+  log(`Translated sentence quality scores: ${JSON.stringify(listTranslatedTextSentenceQualityScores)}`);
+
+  // Delete prepared SourceText to avoid memory leak
+  vectorSourceText.delete();
+
+  return listTranslatedText;
+}
+
+const _parseTranslatedText = (vectorResponse) => {
+  const result = [];
+  for (let i = 0; i < vectorResponse.size(); i++) {
+    let response = vectorResponse.get(i);
+    result.push(response.getTranslatedText());
+  }
+  return result;
+}
+
+// Parse all sentences of translated text from vector<Response>
+const _parseTranslatedTextSentences = (vectorResponse) => {
+  const result = [];
+  for (let i = 0; i < vectorResponse.size(); i++) {
+    let response = vectorResponse.get(i);
+    result.push(_getTranslatedSentences(response));
+  }
+  return result;
+}
+
+const _parseSourceTextSentences = (vectorResponse) => {
+  const result = [];
+  for (let i = 0; i < vectorResponse.size(); i++) {
+    let response = vectorResponse.get(i);
+    result.push(_getSourceSentences(response));
+  }
+  return result;
+}
+
+const _parseTranslatedTextSentenceQualityScores = (vectorResponse) => {
+  const result = [];
+  for (let i = 0; i < vectorResponse.size(); i++) {
+    let response = vectorResponse.get(i);
+    let vectorSentenceQualityScore = response.getQualityScores();
+    log(`No. of sentences: "${vectorSentenceQualityScore.size()}"`);
+    const sentenceQualityScores = [];
+    for (let sentenceIndex=0; sentenceIndex < vectorSentenceQualityScore.size(); sentenceIndex++) {
+      let sentenceQualityScoreObject = vectorSentenceQualityScore.get(sentenceIndex);
+      let wordScoreList = [];
+      let wordByteRangeList = [];
+      let vectorWordScore = sentenceQualityScoreObject.wordScores;
+      let vectorWordByteRange = sentenceQualityScoreObject.wordByteRanges;
+
+      for (let wordIndex = 0; wordIndex < vectorWordScore.size(); wordIndex++) {
+        let wordScore = vectorWordScore.get(wordIndex);
+        let wordByteRange = vectorWordByteRange.get(wordIndex);
+        wordScoreList.push(wordScore);
+        wordByteRangeList.push(wordByteRange);
+      }
+
+      const sentenceQualityScore = {
+        wordScores:wordScoreList,
+        wordByteRanges:wordByteRangeList,
+        sentenceScore: sentenceQualityScoreObject.sentenceScore
+      };
+      sentenceQualityScores.push(sentenceQualityScore);
+    }
+    result.push(sentenceQualityScores);
+  }
+  return result;
+}
+
+const _prepareResponseOptions = () => {
+  return {qualityScores: true, alignment: false, alignmentThreshold: 0.2};
+}
+
+const _prepareSourceText = (input) => {
+  let vectorSourceText = new Module.VectorString;
   input.forEach(paragraph => {
     // prevent empty paragraph - it breaks the translation
     if (paragraph.trim() === "") {
       return;
     }
-    listSourceText.push_back(paragraph.trim())
+    vectorSourceText.push_back(paragraph.trim())
   })
-
-  // Access listSourceText (just for debugging)
-  log(`Size of source text list: ${listSourceText.size()}`);
-
-  // Translate the listSourceText, which is a vector<String>; the result is a vector<Response>
-  let result = translationService.translate(translationModel, listSourceText, responseOptions);
-
-  const listTranslatedText = [];
-  const listTranslatedTextSentences = [];
-  const listSourceTextSentences = [];
-  const listTranslatedTextSentenceQualityScores = [];
-  for (let i = 0; i < result.size(); i++) {
-    let response = result.get(i);
-    listTranslatedText.push(response.getTranslatedText());
-    listTranslatedTextSentences.push(_getAllTranslatedSentencesOfParagraph(response));
-    listSourceTextSentences.push(_getAllSourceSentencesOfParagraph(response));
-    let sentenceQualityScores = response.getQualityScores();
-    log(`No. of sentences: "${sentenceQualityScores.size()}"`);
-    const stringifiedSentenceQualityScores = [];
-    for (let sentenceIndex=0; sentenceIndex < sentenceQualityScores.size(); sentenceIndex++) {
-      let sentenceQualityScore = sentenceQualityScores.get(sentenceIndex);
-      stringifiedSentenceQualityScores.push(sentenceQualityScore);
-    }
-    listTranslatedTextSentenceQualityScores.push(stringifiedSentenceQualityScores);
-  }
-
-  log(`Translated sentences: ${JSON.stringify(listTranslatedTextSentences)}`);
-  log(`Source sentences: ${JSON.stringify(listSourceTextSentences)}`);
-  log(`Translated sentence quality scores: ${JSON.stringify(listTranslatedTextSentenceQualityScores)}`);
-  listSourceText.delete();
-  return listTranslatedText;
+  return vectorSourceText;
 }
 
-// Extracts all the translated sentences from the Response and returns them.
-const _getAllTranslatedSentencesOfParagraph = (response) => {
+const _getTranslatedSentences = (response) => {
   const sentences = [];
   const text = response.getTranslatedText();
   for (let sentenceIndex = 0; sentenceIndex < response.size(); sentenceIndex++) {
     const utf8SentenceByteRange = response.getTranslatedSentence(sentenceIndex);
-    sentences.push(_getSentenceFromByteRange(text, utf8SentenceByteRange));
+    sentences.push(_getSubString(text, utf8SentenceByteRange));
   }
   return sentences;
 }
 
-// Extracts all the source sentences from the Response and returns them.
-const _getAllSourceSentencesOfParagraph = (response) => {
+const _getSourceSentences = (response) => {
   const sentences = [];
   const text = response.getOriginalText();
   for (let sentenceIndex = 0; sentenceIndex < response.size(); sentenceIndex++) {
     const utf8SentenceByteRange = response.getSourceSentence(sentenceIndex);
-    sentences.push(_getSentenceFromByteRange(text, utf8SentenceByteRange));
+    sentences.push(_getSubString(text, utf8SentenceByteRange));
   }
   return sentences;
 }
@@ -303,8 +357,8 @@ const _getAllSourceSentencesOfParagraph = (response) => {
  * Returns a substring of text (a string). The substring is represented by
  * byteRange (begin and end endices) within the utf-8 encoded version of the text.
  */
-const _getSentenceFromByteRange = (text, byteRange) => {
-  const utf8BytesView = encoder.encode(text);
-  const utf8SentenceBytes = utf8BytesView.subarray(byteRange.begin, byteRange.end);
-  return decoder.decode(utf8SentenceBytes);
+const _getSubString = (text, utf8ByteRange) => {
+  const textUtf8ByteView = encoder.encode(text);
+  const substringUtf8ByteView = textUtf8ByteView.subarray(utf8ByteRange.begin, utf8ByteRange.end);
+  return decoder.decode(substringUtf8ByteView);
 }

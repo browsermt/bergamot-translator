@@ -110,7 +110,6 @@ void qualityEstimatorScores(AsyncService &service, Ptr<TranslationModel> model) 
   }
 }
 
-
 void generatorForTagTree(AsyncService &service, Ptr<TranslationModel> model) {
   ResponseOptions responseOptions;
   responseOptions.alignment = true;
@@ -128,7 +127,7 @@ void generatorForTagTree(AsyncService &service, Ptr<TranslationModel> model) {
   std::cout << "std::string source = \"" << response.source.text << "\";\n";
   std::cout << "std::string target = \"" << response.target.text << "\";\n";
 
-  std::cout <<"source string length: " <<response.source.text.size() <<std::endl;
+  std::cout << "source string length: " << response.source.text.size() << std::endl;
   std::vector<size_t> char2TokenTable(response.source.text.size(), 0);
 
   for (size_t sentenceId = 0; sentenceId < 1; sentenceId++) {
@@ -157,8 +156,8 @@ void generatorForTagTree(AsyncService &service, Ptr<TranslationModel> model) {
 
     // Step 3: call inside-outside algorithm
     auto &alignments = response.alignments[sentenceId];
-    TagProcessor tp = TagProcessor(alignments, ttOriginalTokenLevel,
-                                   response.source.numWords(sentenceId), response.target.numWords(sentenceId));
+    TagProcessor tp = TagProcessor(alignments, ttOriginalTokenLevel, response.source.numWords(sentenceId),
+                                   response.target.numWords(sentenceId));
     int exitStatus = tp.traverseAndQuery();
     TagTree ttTranslatedTokenLevel = tp.getTargetRoot();
     std::cout << "Translated token-level tag tree:" << std::endl;
@@ -172,15 +171,14 @@ void generatorForTagTree(AsyncService &service, Ptr<TranslationModel> model) {
     for (ByteRange br : brvecTranslatedTokenLevel) {
       size_t charBegin = response.target.wordAsByteRange(sentenceId, br.begin).begin;
       size_t charEnd = response.target.wordAsByteRange(sentenceId, br.end).begin;
-//      std::cout <<br.begin <<" " <<br.end <<std::endl;
+      //      std::cout <<br.begin <<" " <<br.end <<std::endl;
       brvecTranslatedCharLevel.push_back(ByteRange{charBegin, charEnd});
     }
     std::cout << "Translated character-level ByteRange array:" << std::endl;
     for (ByteRange br : brvecTranslatedCharLevel) {
       std::cout << br.begin << " " << br.end;
-      for (size_t pos = br.begin; pos < br.end; pos++)
-      {
-        std::cout <<response.target.text[pos];
+      for (size_t pos = br.begin; pos < br.end; pos++) {
+        std::cout << response.target.text[pos];
       }
       std::cout << std::endl;
     }

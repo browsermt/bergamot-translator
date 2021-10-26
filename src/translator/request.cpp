@@ -13,8 +13,7 @@ namespace marian {
 namespace bergamot {
 
 size_t hashForCache(const TranslationModel &model, const marian::Words &words) {
-  size_t seed = 42;
-  util::hash_combine<size_t>(seed, model.modelId());
+  size_t seed = model.modelId();
   for (auto &word : words) {
     size_t hashWord = static_cast<size_t>(word.toWordIndex());
     util::hash_combine<size_t>(seed, hashWord);

@@ -217,7 +217,7 @@ class TagProcessor {
       for (size_t l = outer.begin; l <= inner.begin; l++) {
         double logProductDynamic = 0;
         for (size_t s = l; s < tgtLength_; s++) {
-          logProductDynamic += log(inside_[flattenOffset(query.begin, query.end - 1, s)]);
+          logProductDynamic += std::log(inside_[flattenOffset(query.begin, query.end - 1, s)]);
         }
         for (size_t r = outer.end; r > l && r >= inner.end; r--) {
           double logProductFast = logProductBase + logProductDynamic;
@@ -226,7 +226,7 @@ class TagProcessor {
             maxBound.begin = l;
             maxBound.end = r;
           }
-          logProductDynamic = logProductDynamic - log(inside_[flattenOffset(query.begin, query.end - 1, r - 1)]) +
+          logProductDynamic = logProductDynamic - std::log(inside_[flattenOffset(query.begin, query.end - 1, r - 1)]) +
                               log1p(-inside_[flattenOffset(query.begin, query.end - 1, r - 1)]);
         }
         logProductBase += log1p(-inside_[flattenOffset(query.begin, query.end - 1, l)]);
@@ -245,9 +245,9 @@ class TagProcessor {
             double logProduct = 0;
             for (size_t t = 0; t < tgtLength_; t++) {
               if (t < d) {
-                logProduct += log(inside_[flattenOffset(0, query.begin - 1, t)]);
+                logProduct += std::log(inside_[flattenOffset(0, query.begin - 1, t)]);
               } else {
-                logProduct += log(inside_[flattenOffset(query.begin, srcLength_ - 1, t)]);
+                logProduct += std::log(inside_[flattenOffset(query.begin, srcLength_ - 1, t)]);
               }
             }
             if (max < logProduct) {

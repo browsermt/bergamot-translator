@@ -39,6 +39,10 @@ jobs:
         working-directory: build-wasm
         run: bash ../wasm/patch-artifacts-enable-wormhole.sh
 
+      - name: Import GEMM library from a separate wasm module
+        working-directory: build-wasm
+        run: bash ../wasm/patch-artifacts-import-gemm-module.sh
+
       - name: Check artifacts
         working-directory: build-wasm
         run: |

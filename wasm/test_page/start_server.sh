@@ -1,11 +1,11 @@
 #!/bin/bash
 
-usage="Copy wasm artifacts from build directory and start httpserver
+usage="Copy wasm artifacts from the given folder and start httpserver
 
-Usage: $(basename "$0") [WASM_ARTIFACTS_FOLDER]
+Usage: $(basename "$0") [ARTIFACTS_SOURCE_FOLDER]
 
     where:
-    WASM_ARTIFACTS_FOLDER    Folder containing pre-built wasm artifacts"
+    ARTIFACTS_SOURCE_FOLDER    Directory containing pre-built wasm artifacts"
 
 if [ "$#" -ne 1 ]; then
     echo "Illegal number of parameters passed"
@@ -13,19 +13,26 @@ if [ "$#" -ne 1 ]; then
     exit
 fi
 
-# Check if WASM_ARTIFACTS_FOLDER is valid or not
+# Check if ARTIFACTS_SOURCE_FOLDER is valid or not
 if [ ! -e "$1" ]; then
     echo "Error: Folder \""$1"\" doesn't exist"
     exit
 fi
 
-WASM_ARTIFACTS="$1/bergamot-translator-worker.js $1/bergamot-translator-worker.wasm"
-for i in $WASM_ARTIFACTS; do
+# Prepare a list all wasm artifacts to be copied and copy them to the destination folder
+ARTIFACTS_BASE_NAME="bergamot-translator-worker"
+ARTIFACTS="$1/$ARTIFACTS_BASE_NAME.js $1/$ARTIFACTS_BASE_NAME.wasm"
+ARTIFACTS_DESTINATION_FOLDER=$SCRIPT_ABSOLUTE_PATH/js
+
+for i in $ARTIFACTS; do
     [ -f "$i" ] || breaks
-    cp $i js/.
-    echo "Copied \"$i\""
+    cp $i $ARTIFACTS_DESTINATION_FOLDER
+    echo "Copied \"$i\" to \"$ARTIFACTS_DESTINATION_FOLDER\""
 done
 
-npm install
-echo "Start httpserver"
-node bergamot-httpserver.js 80 1 0
+# Start http server
+SCRIPT_ABSOLUTE_PATH="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
+(cd $SCRIPT_ABSOLUTE_PATH;
+npm install;
+echo "Start httpserver";
+node bergamot-httpserver.js 80 1 0)

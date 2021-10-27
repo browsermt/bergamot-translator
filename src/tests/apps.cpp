@@ -183,7 +183,7 @@ void generatorForTagTree(AsyncService &service, Ptr<TranslationModel> model) {
       std::cout << std::endl;
     }
   }
-}  // namespace testapp
+}
 
 }  // namespace testapp
 }  // namespace bergamot

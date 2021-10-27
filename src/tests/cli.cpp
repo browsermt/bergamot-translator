@@ -5,7 +5,11 @@ int main(int argc, char *argv[]) {
   marian::bergamot::ConfigParser configParser;
   configParser.parseArgs(argc, argv);
   auto &config = configParser.getConfig();
-  AsyncService::Config serviceConfig{config.numWorkers};
+  AsyncService::Config serviceConfig;
+  serviceConfig.numWorkers = config.numWorkers;
+  serviceConfig.cacheEnabled = config.cacheEnabled;
+  serviceConfig.cacheMutexBuckets = config.cacheMutexBuckets;
+  serviceConfig.cacheSize = config.cacheSize;
   AsyncService service(serviceConfig);
   std::vector<std::shared_ptr<TranslationModel>> models;
 
@@ -37,6 +41,10 @@ int main(int argc, char *argv[]) {
     case OpMode::TEST_QUALITY_ESTIMATOR_SCORES:
       testapp::qualityEstimatorScores(service, models.front());
       break;
+    case OpMode::TEST_TRANSLATION_CACHE:
+      testapp::translationCache(service, models.front());
+      break;
+
     default:
       ABORT("Incompatible op-mode. Choose one of the test modes.");
       break;

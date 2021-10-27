@@ -37,6 +37,8 @@ void qualityEstimatorWords(AsyncService &service, Ptr<TranslationModel> model);
 // Reads from stdin and translates the read content. Prints the quality scores for each sentence.
 void qualityEstimatorScores(AsyncService &service, Ptr<TranslationModel> model);
 
+// Tests if cache is active and functional
+void translationCache(AsyncService &service, Ptr<TranslationModel> model);
 }  // namespace testapp
 }  // namespace bergamot
 }  // namespace marian

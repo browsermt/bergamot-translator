@@ -17,14 +17,10 @@ using namespace emscripten;
 
 // Binding code
 EMSCRIPTEN_BINDINGS(byte_range) {
-  value_object<ByteRange>("ByteRange")
-      .field("begin", &ByteRange::begin)
-      .field("end", &ByteRange::end);
+  value_object<ByteRange>("ByteRange").field("begin", &ByteRange::begin).field("end", &ByteRange::end);
 }
 
-std::vector<SentenceQualityScore> getQualityScores(const Response& response) {
-  return response.qualityScores;
-}
+std::vector<SentenceQualityScore> getQualityScores(const Response& response) { return response.qualityScores; }
 
 EMSCRIPTEN_BINDINGS(response) {
   class_<Response>("Response")

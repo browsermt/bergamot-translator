@@ -13,8 +13,8 @@ using namespace emscripten;
 
 // Binding code
 EMSCRIPTEN_BINDINGS(response_options) {
-    value_object<ResponseOptions>("ResponseOptions")
-    .field("qualityScores", &ResponseOptions::qualityScores)
-    .field("alignment", &ResponseOptions::alignment)
-    .field("alignmentThreshold", &ResponseOptions::alignmentThreshold);
+  value_object<ResponseOptions>("ResponseOptions")
+      .field("qualityScores", &ResponseOptions::qualityScores)
+      .field("alignment", &ResponseOptions::alignment)
+      .field("alignmentThreshold", &ResponseOptions::alignmentThreshold);
 }

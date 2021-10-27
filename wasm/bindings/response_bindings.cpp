@@ -9,25 +9,36 @@
 
 #include "response.h"
 
-typedef marian::bergamot::Response Response;
+using Response = marian::bergamot::Response;
+using SentenceQualityScore = marian::bergamot::Response::SentenceQualityScore;
+using ByteRange = marian::bergamot::ByteRange;
 
 using namespace emscripten;
 
 // Binding code
 EMSCRIPTEN_BINDINGS(byte_range) {
-  value_object<marian::bergamot::ByteRange>("ByteRange")
-      .field("begin", &marian::bergamot::ByteRange::begin)
-      .field("end", &marian::bergamot::ByteRange::end);
+  value_object<ByteRange>("ByteRange").field("begin", &ByteRange::begin).field("end", &ByteRange::end);
 }
+
+std::vector<SentenceQualityScore> getQualityScores(const Response& response) { return response.qualityScores; }
 
 EMSCRIPTEN_BINDINGS(response) {
   class_<Response>("Response")
       .constructor<>()
       .function("size", &Response::size)
+      .function("getQualityScores", &getQualityScores)
       .function("getOriginalText", &Response::getOriginalText)
       .function("getTranslatedText", &Response::getTranslatedText)
       .function("getSourceSentence", &Response::getSourceSentenceAsByteRange)
       .function("getTranslatedSentence", &Response::getTargetSentenceAsByteRange);
 
+  value_object<SentenceQualityScore>("SentenceQualityScore")
+      .field("wordScores", &SentenceQualityScore::wordScores)
+      .field("wordByteRanges", &SentenceQualityScore::wordByteRanges)
+      .field("sentenceScore", &SentenceQualityScore::sentenceScore);
+
   register_vector<Response>("VectorResponse");
+  register_vector<SentenceQualityScore>("VectorSentenceQualityScore");
+  register_vector<float>("VectorFloat");
+  register_vector<ByteRange>("VectorByteRange");
 }

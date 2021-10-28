@@ -30,12 +30,16 @@ class ResponseBuilder {
   /// @param [in] qualityEstimator: the QualityEstimator model that can be used
   /// to provide translation quality probability.
   ResponseBuilder(ResponseOptions responseOptions, AnnotatedText &&source, const Vocabs &vocabs,
-                  std::function<void(Response &&)> callback, const QualityEstimator &qualityEstimator)
+                  std::function<void(Response &&)> callback, const QualityEstimator &qualityEstimator,
+                  const std::vector<ByteRange> &tagPositionSource)
       : responseOptions_(responseOptions),
         source_(std::move(source)),
         vocabs_(vocabs),
         callback_(std::move(callback)),
-        qualityEstimator_(qualityEstimator) {}
+        qualityEstimator_(qualityEstimator) {
+    // Holds tag positions info for later alignment
+    source_.tagPositionSource_ = tagPositionSource;
+  }
 
   /// Constructs and sets the promise of a Response object from obtained
   /// histories after translating.

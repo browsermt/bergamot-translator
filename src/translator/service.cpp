@@ -13,17 +13,17 @@ namespace bergamot {
 BlockingService::BlockingService(const BlockingService::Config &config)
     : config_(config), requestId_(0), batchingPool_(), cache_(config.cacheSize, /*mutexBuckets=*/1) {}
 
-std::vector<Response> BlockingService::translateMultiple(std::shared_ptr<TranslationModel> translationModel,
-                                                         std::vector<std::string> &&sources,
-                                                         const ResponseOptions &responseOptions) {
+std::vector<Response> BlockingService::translateMultiple(
+    std::shared_ptr<TranslationModel> translationModel, std::vector<std::string> &&sources,
+    const ResponseOptions &responseOptions, const std::vector<std::vector<ByteRange>> &tagPositionSources) {
   std::vector<Response> responses;
   responses.resize(sources.size());
 
   for (size_t i = 0; i < sources.size(); i++) {
     auto callback = [i, &responses](Response &&response) { responses[i] = std::move(response); };  //
     TranslationCache *cache = config_.cacheEnabled ? &cache_ : nullptr;
-    Ptr<Request> request =
-        translationModel->makeRequest(requestId_++, std::move(sources[i]), callback, responseOptions, cache);
+    Ptr<Request> request = translationModel->makeRequest(requestId_++, std::move(sources[i]), callback, responseOptions,
+                                                         cache, tagPositionSources[i]);
     batchingPool_.enqueueRequest(translationModel, request);
   }
 

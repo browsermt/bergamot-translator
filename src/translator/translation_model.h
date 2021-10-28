@@ -65,9 +65,11 @@ class TranslationModel {
   /// @param [in] callback: Callback (from client) to be issued upon completion of translation of all sentences in the
   /// created Request.
   /// @param [in] responseOptions: Configuration used to prepare the Response corresponding to the created request.
+  /// @param [in] tagPositionSource: contains tag positions at char-level in the source text (can be empty)
   //  @returns Request created from the query parameters wrapped within a shared-pointer.
   Ptr<Request> makeRequest(size_t requestId, std::string&& source, CallbackType callback,
-                           const ResponseOptions& responseOptions, TranslationCache* cache);
+                           const ResponseOptions& responseOptions, TranslationCache* cache,
+                           const std::vector<ByteRange>& tagPositionSource = {});
 
   /// Relays a request to the batching-pool specific to this translation model.
   /// @param [in] request: Request constructed through makeRequest

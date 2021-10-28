@@ -122,6 +122,9 @@ struct AnnotatedText {
   std::string text;       ///< Blob of string elements in annotation refers to.
   Annotation annotation;  ///< sentence and (sub-) word annotations.
 
+  /// Tag positions at char-level in the source text
+  std::vector<ByteRange> tagPositionSource_;
+
   /// Construct an empty AnnotatedText. This is useful when the target string or
   /// ByteRanges are not known yet, but the public members can be used to
   /// populate it. One use-case, when translated-text is created decoding from

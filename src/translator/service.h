@@ -49,8 +49,10 @@ class BlockingService {
   /// @param [in] source: rvalue reference of the string to be translated
   /// @param [in] responseOptions: ResponseOptions indicating whether or not to include some member in the Response,
   /// also specify any additional configurable parameters.
+  /// @param [in] tagPositionSources: contains tag positions at char-level in the source text (can be empty)
   std::vector<Response> translateMultiple(std::shared_ptr<TranslationModel> translationModel,
-                                          std::vector<std::string> &&source, const ResponseOptions &responseOptions);
+                                          std::vector<std::string> &&source, const ResponseOptions &responseOptions,
+                                          const std::vector<std::vector<ByteRange>> &tagPositionSources = {});
 
   TranslationCache::Stats cacheStats() { return cache_.stats(); }
 

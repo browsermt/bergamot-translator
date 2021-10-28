@@ -10,12 +10,13 @@
 namespace marian {
 namespace bergamot {
 
-/// Holding Tag information
+/// Holding Tag information in a tree structure.
+/// Now tag positions are at token-level to be consistent with Marian.
 class TagTree {
  public:
   friend class TagProcessor;  // allow TagProcessor class to access private members
 
-  TagTree(const ByteRange &bound) : bound_(bound) {}
+  TagTree(const TokenIndexRange &bound) : bound_(bound) {}
 
   // for debugging
   void print(size_t indent = 0) const {
@@ -26,11 +27,11 @@ class TagTree {
     }
   }
 
-  std::vector<ByteRange> flatten() {
-    std::vector<ByteRange> currentFlat;
+  std::vector<TokenIndexRange> flatten() {
+    std::vector<TokenIndexRange> currentFlat;
     currentFlat.push_back(bound_);
     for (auto &i : subtree_) {
-      std::vector<ByteRange> childFlat = i.flatten();
+      std::vector<TokenIndexRange> childFlat = i.flatten();
       currentFlat.insert(currentFlat.end(), childFlat.begin(), childFlat.end());
     }
     return currentFlat;
@@ -41,7 +42,7 @@ class TagTree {
 
   // copy the skeleton (false) or the whole tree (true)
   TagTree copy(bool copyBound) const {
-    ByteRange newBound = copyBound ? bound_ : ByteRange{0, 0};
+    TokenIndexRange newBound = copyBound ? bound_ : TokenIndexRange();
     TagTree newCurrent(newBound);
     for (auto &i : subtree_) {
       TagTree subCopy = i.copy(copyBound);
@@ -62,15 +63,15 @@ class TagTree {
   friend bool operator!=(const TagTree &lhs, const TagTree &rhs) { return !(lhs == rhs); }
 
  private:
-  // holds tag positions given by the token indices [begin, end):
+  // TokenIndexRange bound_ holds tag positions given by the token indices [begin, end):
   // for a tag pair, bound_.begin means the position of the opening tag,
   //                 bound_.end means the position of the closing tag (excluding the current token)
   // for an empty tag, bound_.begin = bound_.end. The tag is placed before the token, e.g., <b>word
-  ByteRange bound_;
+  TokenIndexRange bound_;
   std::vector<TagTree> subtree_;  // holds the children nodes
 };
 
-/// Building TagTree from a ByteRange vector (passing from the browser)
+/// Building TagTree from a ByteRange vector (passing from the browser).
 class TagTreeBuilder {
  public:
   TagTreeBuilder(std::vector<ByteRange> brv) {
@@ -112,13 +113,13 @@ class TagTreeBuilder {
     }
 
     //    tt_ = TagTree(brv[0]);
-    brv_ = brv;
+    tokenBoundVector_ = brv;
   }
 
   TagTree getTagTree() { return growTagTree(0); }
 
   TagTree growTagTree(size_t index) {
-    TagTree tt(brv_[index]);
+    TagTree tt(tokenBoundVector_[index]);
     for (size_t childIndex = 0; childIndex < nTags_; childIndex++) {
       if (childIndex != index && parentVector_[childIndex] == index) {
         tt.addSubtree(growTagTree(childIndex));
@@ -156,9 +157,10 @@ class TagTreeBuilder {
   std::vector<bool> coverageMatrix_;
   std::vector<size_t> parentVector_;
   bool treeValid_;
-  std::vector<ByteRange> brv_;
+  std::vector<TokenIndexRange> tokenBoundVector_;
 };
 
+/// The main implementation of inside-outside algorithm
 class TagProcessor {
   TagTree sourceRoot_;  // holds the tree structure of the tag positions in the source sentence
   TagTree targetRoot_;  // holds the tree structure of the tag positions in the target sentence
@@ -181,8 +183,8 @@ class TagProcessor {
   const TagTree &getTargetRoot() const { return targetRoot_; }
 
   int traverseAndQuery() {
-    ByteRange targetRootRange{};
-    return traverseAndQuery(sourceRoot_, targetRoot_, ByteRange{0, tgtLength_}, targetRootRange);
+    TokenIndexRange targetRootRange{};
+    return traverseAndQuery(sourceRoot_, targetRoot_, TokenIndexRange{0, tgtLength_}, targetRootRange);
   }
 
  private:
@@ -190,7 +192,7 @@ class TagProcessor {
   // As inside_[srcLength][srcLength] is an upper triangle matrix,
   // f(i,j) offset is (2*n-i-1) * i/2 + j
   inline size_t flattenOffset(size_t i, size_t j, size_t k) const {
-    return ((((srcLength_ << 1) - i - 1) * i >> 1) + j) * tgtLength_ + k;
+    return ((((srcLength_ * 2) - i - 1) * i / 2) + j) * tgtLength_ + k;
   }
 
   void fillInsideNaive(const marian::data::SoftAlignment &align) {
@@ -208,9 +210,9 @@ class TagProcessor {
   // outer is determined by the parent node, as the current bound must be inside the parent bound
   // inner is determined by all the children nodes, as the current tag bound cannot be overlapped
   // with the other children bounds
-  ByteRange maxProduct(ByteRange query, ByteRange outer, ByteRange inner) {
+  TokenIndexRange maxProduct(TokenIndexRange query, TokenIndexRange outer, TokenIndexRange inner) {
     double max = -std::numeric_limits<double>::infinity();
-    ByteRange maxBound{};
+    TokenIndexRange maxBound{};
 
     if (query.begin < query.end) {
       double logProductBase = 0;
@@ -263,18 +265,20 @@ class TagProcessor {
   }
 
   // return 0 if query solution is found; return 1 if no solution found
-  int traverseAndQuery(TagTree sourceTagTree, TagTree &targetTagTree, ByteRange selfOuter, ByteRange &currentRange) {
+  int traverseAndQuery(const TagTree &sourceTagTree, TagTree &targetTagTree, ByteRange selfOuter,
+                       ByteRange &currentRange) {
     ByteRange childOuter = selfOuter;
     ByteRange selfInner{};  // the constraints from all children nodes
 
     // cannot place the current tag as the parent bound is less than 0
+
     if (selfOuter.size() <= 0) return 1;
 
     selfInner.begin = selfOuter.end;
     selfInner.end = selfOuter.begin;
 
     for (size_t cid = 0; cid < sourceTagTree.subtree_.size(); cid++) {
-      ByteRange childRange{};  // the constraints from all traversed children nodes
+      TokenIndexRange childRange{};  // the constraints from all traversed children nodes
       // traverse child node from left to right recursively
       int childExitStatus =
           traverseAndQuery(sourceTagTree.subtree_[cid], targetTagTree.subtree_[cid], childOuter, childRange);

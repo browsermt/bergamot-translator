@@ -25,7 +25,7 @@ std::istringstream &operator>>(std::istringstream &in, OpMode &mode) {
       {"test-quality-estimator-scores", OpMode::TEST_QUALITY_ESTIMATOR_SCORES},
       {"test-forward-backward", OpMode::TEST_FORWARD_BACKWARD_FOR_OUTBOUND},
       {"test-translation-cache", OpMode::TEST_TRANSLATION_CACHE},
-      {"test-tagtree-generate", OpMode::TEST_TAGTREE_GENERATE},
+      {"test-tag-translation-blockingservice", OpMode::TEST_TAG_TRANSLATION_BLOCKINGSERVICE},
   };
 
   auto query = table.find(modeString);

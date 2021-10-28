@@ -24,6 +24,7 @@ std::istringstream &operator>>(std::istringstream &in, OpMode &mode) {
       {"test-quality-estimator-words", OpMode::TEST_QUALITY_ESTIMATOR_WORDS},
       {"test-quality-estimator-scores", OpMode::TEST_QUALITY_ESTIMATOR_SCORES},
       {"test-forward-backward", OpMode::TEST_FORWARD_BACKWARD_FOR_OUTBOUND},
+      {"test-translation-cache", OpMode::TEST_TRANSLATION_CACHE},
       {"test-tagtree-generate", OpMode::TEST_TAGTREE_GENERATE},
   };
 
@@ -85,6 +86,11 @@ void ConfigParser::addOptionsBoundToConfig(CLI::App &app, CLIConfig &config) {
   app.add_option("--cpu-threads", config.numWorkers, "Number of worker threads to use for translation");
 
   app_.add_option("--bergamot-mode", config.opMode, "Operating mode for bergamot: [wasm, native, decoder]");
+
+  app_.add_option("--cache-translations", config.cacheEnabled, "Whether to cache translations or not.");
+  app_.add_option("--cache-size", config.cacheSize, "Number of entries to store in cache.");
+  app_.add_option("--cache-mutex-buckets", config.cacheMutexBuckets,
+                  "Number of mutex buckets to control locking granularity");
 }
 
 std::shared_ptr<marian::Options> parseOptionsFromFilePath(const std::string &configPath, bool validate /*= true*/) {

@@ -13,10 +13,6 @@ void ResponseBuilder::buildQualityScores(Histories &histories, Response &respons
 void buildTagAlignment(Response &response) {
   ABORT_IF(response.source.numSentences() != 1, "Cross-sentence tag alignment is under development at the moment.");
 
-  std::cout << "std::string source = \"" << response.source.text << "\";\n";
-  std::cout << "std::string target = \"" << response.target.text << "\";\n";
-
-  std::cout << "source string length: " << response.source.text.size() << std::endl;
   std::vector<size_t> char2TokenTable(response.source.text.size(), 0);
 
   for (size_t sentenceId = 0; sentenceId < response.source.numSentences(); sentenceId++) {
@@ -40,9 +36,6 @@ void buildTagAlignment(Response &response) {
     // Step 2: build token-level tag tree
     TagTreeBuilder ttb(tagPosSourceTokenLevel);
     TagTree tagTreeSource = ttb.getTagTree();
-    // tagTreeSource.print();
-    std::cout << "Original token-level tag tree:" << std::endl;
-    tagTreeSource.print();
 
     // Step 3: call inside-outside algorithm
     auto &alignments = response.alignments[sentenceId];
@@ -51,8 +44,6 @@ void buildTagAlignment(Response &response) {
 
     int exitStatus = tp.traverseAndQuery();
     TagTree tagTreeTarget = tp.getTargetRoot();
-    std::cout << "Translated token-level tag tree:" << std::endl;
-    tagTreeTarget.print();
 
     // Step 4: flatten the token-level tag tree for the translated text to a token-level ByteRange vector
     std::vector<TokenIndexRange> tagPosTargetTokenLevel = tagTreeTarget.flatten();

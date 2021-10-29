@@ -49,7 +49,7 @@ void buildTagAlignment(Response &response) {
   }
 
   // Step 1: convert char indices to token indices
-  std::vector<ByteRange> tagPosSourceCharLevel = response.source.tagPositionSource_;
+  std::vector<ByteRange> tagPosSourceCharLevel = response.source.tagPosition_;
   std::vector<TokenIndexRange> tagPosSourceTokenLevel;
   for (size_t tagIdx = 0; tagIdx < tagPosSourceCharLevel.size(); tagIdx++) {
     size_t charIdxBegin = tagPosSourceCharLevel[tagIdx].begin;
@@ -94,7 +94,7 @@ void ResponseBuilder::buildAlignments(Histories &histories, Response &response) 
     auto hyp = std::get<1>(result);
     auto softAlignment = hyp->tracebackAlignment();
     response.alignments.push_back(std::move(softAlignment));
-    if (!response.source.tagPositionSource_.empty()) buildTagAlignment(response);
+    if (!response.source.tagPosition_.empty()) buildTagAlignment(response);
   }
 }
 

@@ -38,7 +38,7 @@ class ResponseBuilder {
         callback_(std::move(callback)),
         qualityEstimator_(qualityEstimator) {
     // Holds tag positions info for later alignment
-    source_.tagPositionSource_ = tagPositionSource;
+    source_.tagPosition_ = std::move(tagPositionSource);
   }
 
   /// Constructs and sets the promise of a Response object from obtained

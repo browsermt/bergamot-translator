@@ -123,7 +123,7 @@ struct AnnotatedText {
   Annotation annotation;  ///< sentence and (sub-) word annotations.
 
   /// Tag positions at char-level in the source text
-  std::vector<ByteRange> tagPositionSource_;
+  std::vector<ByteRange> tagPosition_;
 
   /// Construct an empty AnnotatedText. This is useful when the target string or
   /// ByteRanges are not known yet, but the public members can be used to

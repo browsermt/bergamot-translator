@@ -41,6 +41,13 @@ struct ByteRange {
   const size_t size() const { return end - begin; }
 };
 
+/// A simple way to differ TokenIndexRange from ByteRange (since their data structures are basically the same)
+/// TokenIndexRange holds tag positions given by the token indices [begin, end):
+/// For a tag pair, bound_.begin means the position of the opening tag,
+/// bound_.end means the position of the closing tag (excluding the current token)
+/// For an empty tag, bound_.begin = bound_.end. The tag is placed before the token, e.g., <b>word
+using TokenIndexRange = ByteRange;
+
 class Response;
 using CallbackType = std::function<void(Response&&)>;
 

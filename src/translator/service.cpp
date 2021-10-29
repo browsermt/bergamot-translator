@@ -22,8 +22,13 @@ std::vector<Response> BlockingService::translateMultiple(
   for (size_t i = 0; i < sources.size(); i++) {
     auto callback = [i, &responses](Response &&response) { responses[i] = std::move(response); };  //
     TranslationCache *cache = config_.cacheEnabled ? &cache_ : nullptr;
-    Ptr<Request> request = translationModel->makeRequest(requestId_++, std::move(sources[i]), callback, responseOptions,
-                                                         cache, tagPositionSources[i]);
+    Ptr<Request> request;
+    if (!tagPositionSources.empty() && !tagPositionSources[i].empty()) {
+      request = translationModel->makeRequest(requestId_++, std::move(sources[i]), callback, responseOptions, cache,
+                                              tagPositionSources[i]);
+    } else {
+      request = translationModel->makeRequest(requestId_++, std::move(sources[i]), callback, responseOptions, cache);
+    }
     batchingPool_.enqueueRequest(translationModel, request);
   }
 

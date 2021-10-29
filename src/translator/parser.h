@@ -25,6 +25,7 @@ enum OpMode {
   TEST_QUALITY_ESTIMATOR_WORDS,
   TEST_QUALITY_ESTIMATOR_SCORES,
   TEST_FORWARD_BACKWARD_FOR_OUTBOUND,
+  TEST_TRANSLATION_CACHE,
 };
 
 /// Overload for CL11, convert a read from a stringstream into opmode.
@@ -37,6 +38,11 @@ struct CLIConfig {
   bool validateByteArray;
   size_t numWorkers;
   OpMode opMode;
+
+  // Cache parameters
+  bool cacheEnabled{false};
+  size_t cacheSize{20};
+  size_t cacheMutexBuckets{4};
 };
 
 /// ConfigParser for bergamot. Internally stores config options with CLIConfig. CLI11 parsing binds the parsing code to

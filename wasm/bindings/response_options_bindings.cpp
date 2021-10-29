@@ -7,9 +7,14 @@
 
 #include "response_options.h"
 
-typedef marian::bergamot::ResponseOptions ResponseOptions;
+using ResponseOptions = marian::bergamot::ResponseOptions;
 
 using namespace emscripten;
 
 // Binding code
-EMSCRIPTEN_BINDINGS(response_options) { class_<ResponseOptions>("ResponseOptions").constructor<>(); }
+EMSCRIPTEN_BINDINGS(response_options) {
+  value_object<ResponseOptions>("ResponseOptions")
+      .field("qualityScores", &ResponseOptions::qualityScores)
+      .field("alignment", &ResponseOptions::alignment)
+      .field("alignmentThreshold", &ResponseOptions::alignmentThreshold);
+}

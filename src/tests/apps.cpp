@@ -1,7 +1,5 @@
 #include "apps.h"
 
-#include <translator/tag_processor.h>
-
 namespace marian {
 namespace bergamot {
 
@@ -147,8 +145,17 @@ void tagTranslationBlockingService(Ptr<TranslationModel> model) {
   ResponseOptions responseOptions;
   responseOptions.alignment = true;
 
-  // Set up data: "A <i><b>republican</b> strategy</i> to counteract the re-election of Obama."
-  std::string source = "A republican strategy to counteract the re-election of Obama.";
+  // Set up data:
+  //      "<div>A <i><b>republican</b> strategy to counteract the re-election of Obama."
+  //      "The leaders of the Republicans justify their</i> policy with the need to combat electoral fraud.</div>"
+  //      "However, the  Center's latter is in favour of a myth, confirming that electoral fraud in the United States "
+  //      "is more rare than the number of people killed by the crack.";
+
+  std::string source =
+      "A republican strategy to counteract the re-election of Obama. "
+      "The leaders of the Republicans justify their policy with the need to combat electoral fraud. "
+      "However, the  Center's latter is in favour of a myth, confirming that electoral fraud in the United States "
+      "is more rare than the number of people killed by the crack.";
   source.erase(std::remove(source.begin(), source.end(), '\n'), source.end());
   std::vector<std::string> texts = {source};
 
@@ -156,14 +163,15 @@ void tagTranslationBlockingService(Ptr<TranslationModel> model) {
   BlockingService service(serviceConfig);
 
   std::vector<ByteRange> tagPosSourceCharLevel;
-  tagPosSourceCharLevel.push_back(ByteRange{2, 21});
+  tagPosSourceCharLevel.push_back(ByteRange{0, 154});
+  tagPosSourceCharLevel.push_back(ByteRange{2, 106});
   tagPosSourceCharLevel.push_back(ByteRange{2, 12});
 
   auto results = service.translateMultiple(model, std::move(texts), responseOptions, {tagPosSourceCharLevel});
 
   std::cout << "Translated character-level ByteRange array:" << std::endl;
   for (ByteRange br : results[0].tagPositionTarget) {
-    std::cout << br.begin << " " << br.end;
+    std::cout << "["<< br.begin << "," << br.end << ")";
     for (size_t pos = br.begin; pos < br.end; pos++) {
       std::cout << results[0].target.text[pos];
     }

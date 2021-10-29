@@ -171,7 +171,7 @@ void tagTranslationBlockingService(Ptr<TranslationModel> model) {
 
   std::cout << "Translated character-level ByteRange array:" << std::endl;
   for (ByteRange br : results[0].tagPositionTarget) {
-    std::cout << "["<< br.begin << "," << br.end << ")";
+    std::cout << "[" << br.begin << "," << br.end << ")";
     for (size_t pos = br.begin; pos < br.end; pos++) {
       std::cout << results[0].target.text[pos];
     }

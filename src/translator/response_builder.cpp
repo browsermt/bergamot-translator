@@ -10,15 +10,12 @@ void ResponseBuilder::buildQualityScores(Histories &histories, Response &respons
 }
 
 void buildTagAlignment(Response &response) {
-//  ABORT_IF(response.source.numSentences() != 1, "Cross-sentence tag alignment is under development at the moment.");
-
   // Step 0: set up look-up tables
   ABORT_IF(response.source.numSentences() == 0, "No sentence in source");
   std::vector<size_t> tokenOffsetTable(response.source.numSentences(), 0);
   size_t numSourceTokens = response.source.numWords(0);
-  for (size_t i = 1; i < response.source.numSentences(); i++)
-  {
-    tokenOffsetTable[i] = tokenOffsetTable[i-1] + response.source.numWords(i);
+  for (size_t i = 1; i < response.source.numSentences(); i++) {
+    tokenOffsetTable[i] = tokenOffsetTable[i - 1] + response.source.numWords(i);
     numSourceTokens += response.source.numWords(i);
   }
   ABORT_IF(numSourceTokens == 0, "No token in source");
@@ -26,17 +23,13 @@ void buildTagAlignment(Response &response) {
   std::vector<size_t> targetTokenSidTable;
   std::vector<size_t> targetTokenTidTable;
   size_t numTargetTokens = 0;
-  for (size_t i = 0; i < response.target.numSentences(); i++)
-  {
+  for (size_t i = 0; i < response.target.numSentences(); i++) {
     for (size_t j = 0; j < response.target.numWords(i); j++) {
       targetTokenSidTable.push_back(i);
       targetTokenTidTable.push_back(j);
     }
     numTargetTokens += response.target.numWords(i);
   }
-  std::cout <<"Target token table lengths: " <<numTargetTokens
-            <<" " <<targetTokenSidTable.size()
-            <<" " <<targetTokenTidTable.size() <<std::endl;
 
   std::vector<size_t> char2TokenTable(response.source.text.size(), 0);
   std::vector<bool> char2TokenTableValid(response.source.text.size(), 0);
@@ -51,11 +44,8 @@ void buildTagAlignment(Response &response) {
     }
   }
 
-  std::cout <<"char -> token table" <<std::endl;
   for (size_t i = 0; i < char2TokenTable.size(); i++) {
-    if (i > 0 && !char2TokenTableValid[i])
-      char2TokenTable[i] = char2TokenTable[i-1] + 1;
-    std::cout <<i <<" " <<response.source.text[i] <<" " <<char2TokenTable[i] <<std::endl;
+    if (i > 0 && !char2TokenTableValid[i]) char2TokenTable[i] = char2TokenTable[i - 1] + 1;
   }
 
   // Step 1: convert char indices to token indices
@@ -67,21 +57,13 @@ void buildTagAlignment(Response &response) {
     tagPosSourceTokenLevel.push_back(TokenIndexRange{char2TokenTable[charIdxBegin], char2TokenTable[charIdxEnd]});
   }
 
-  std::cout <<"token-level source tags" <<std::endl;
-  for (size_t i = 0; i < tagPosSourceTokenLevel.size(); i++) {
-    std::cout <<i <<" " <<tagPosSourceTokenLevel[i].begin <<" " <<tagPosSourceTokenLevel[i].end <<std::endl;
-  }
-
   // Step 2: scale the positions
   double ratio = (double)numTargetTokens / numSourceTokens;
-  std::cout <<"ratio: " <<numTargetTokens <<"/" <<numSourceTokens <<" " <<ratio <<std::endl;
-  std::cout <<"token-level target tags" <<std::endl;
   std::vector<TokenIndexRange> tagPosTargetTokenLevel;
   for (size_t i = 0; i < tagPosSourceTokenLevel.size(); i++) {
     size_t tokenBegin = (size_t)(tagPosSourceTokenLevel[i].begin * ratio);
     size_t tokenEnd = (size_t)(tagPosSourceTokenLevel[i].end * ratio);
     tagPosTargetTokenLevel.push_back(ByteRange{tokenBegin, tokenEnd});
-    std::cout <<i <<" " <<tagPosTargetTokenLevel[i].begin <<" " <<tagPosTargetTokenLevel[i].end <<std::endl;
   }
 
   // Step 3: convert token-level tags to the character level one
@@ -112,8 +94,7 @@ void ResponseBuilder::buildAlignments(Histories &histories, Response &response) 
     auto hyp = std::get<1>(result);
     auto softAlignment = hyp->tracebackAlignment();
     response.alignments.push_back(std::move(softAlignment));
-    if(!response.source.tagPositionSource_.empty())
-      buildTagAlignment(response);
+    if (!response.source.tagPositionSource_.empty()) buildTagAlignment(response);
   }
 }
 

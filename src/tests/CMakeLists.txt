@@ -10,6 +10,7 @@ if (COMPILE_UNIT_TESTS)
 endif (COMPILE_UNIT_TESTS)
 
 
+
 if(NOT MSVC)
   # Testing apps
   set(APP_TESTS)
@@ -28,3 +29,4 @@ if(NOT MSVC)
   target_link_libraries(intgemm-resolve PRIVATE bergamot-translator)
   set_target_properties(intgemm-resolve PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
 endif(NOT MSVC)
+

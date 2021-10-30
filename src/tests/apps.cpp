@@ -171,15 +171,12 @@ void tagTranslationBlockingService(AsyncService &service, Ptr<TranslationModel> 
     placeTags(tags, splitPoint, r, k);
   };
 
-  // Set up data:
-  //      "<div>A <i><b>republican</b> strategy to counteract the re-election of Obama."
-  //      "The leaders of the Republicans justify their</i> policy with the need to combat electoral fraud.</div>"
-  //      "However, the  Center's latter is in favour of a myth, confirming that electoral fraud in the United States "
-  //      "is more rare than the number of people killed by the crack.";
-  //
   std::vector<ByteRange> tagPosSourceCharLevel;
-  placeTags(tagPosSourceCharLevel, 0, source.size(), /*nodes=*/5);
+  tagPosSourceCharLevel.push_back({0, source.size()});
+  placeTags(tagPosSourceCharLevel, 0, source.size() - 1, /*nodes=*/5);
 
+  std::cout << source;
+  std::cout << "size: " << source.size() << std::endl;
   bool first = true;
   std::cout << "Source tag - traversal { ";
   for (auto &r : tagPosSourceCharLevel) {

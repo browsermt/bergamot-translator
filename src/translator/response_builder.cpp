@@ -31,8 +31,8 @@ void buildTagAlignment(Response &response) {
     numTargetTokens += response.target.numWords(i);
   }
 
-  std::vector<size_t> char2TokenTable(response.source.text.size(), 0);
-  std::vector<bool> char2TokenTableValid(response.source.text.size(), 0);
+  std::vector<size_t> char2TokenTable(response.source.text.size() + 1, 0);
+  std::vector<bool> char2TokenTableValid(response.source.text.size() + 1, 0);
   for (size_t sentenceId = 0; sentenceId < response.source.numSentences(); sentenceId++) {
     // Step 0: create or update char-> token table
     for (size_t s = 0; s < response.source.numWords(sentenceId); s++) {
@@ -49,11 +49,12 @@ void buildTagAlignment(Response &response) {
   }
 
   // Step 1: convert char indices to token indices
-  std::vector<ByteRange> &tagPosSourceCharLevel = response.source.tagPositions;
+  const TagPositions &tagPosSourceCharLevel = response.source.tagPositions;
   std::vector<TokenIndexRange> tagPosSourceTokenLevel;
   for (size_t tagIdx = 0; tagIdx < tagPosSourceCharLevel.size(); tagIdx++) {
     size_t charIdxBegin = tagPosSourceCharLevel[tagIdx].begin;
     size_t charIdxEnd = tagPosSourceCharLevel[tagIdx].end;
+    // if (charIdxEnd == response.source.text.size()) charIdxEnd--;
     tagPosSourceTokenLevel.push_back(TokenIndexRange{char2TokenTable[charIdxBegin], char2TokenTable[charIdxEnd]});
   }
 
@@ -67,7 +68,7 @@ void buildTagAlignment(Response &response) {
   }
 
   // Step 3: convert token-level tags to the character level one
-  std::vector<ByteRange> tagPosTargetCharLevel;
+  TagPositions tagPosTargetCharLevel;
   for (TokenIndexRange tokenBound : tagPosTargetTokenLevel) {
     size_t charBeginSid = targetTokenSidTable[tokenBound.begin];
     size_t charBeginTid = targetTokenTidTable[tokenBound.begin];

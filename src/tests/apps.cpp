@@ -144,23 +144,53 @@ void translationCache(AsyncService &service, Ptr<TranslationModel> model) {
 void tagTranslationBlockingService(AsyncService &service, Ptr<TranslationModel> model) {
   ResponseOptions responseOptions;
   responseOptions.alignment = true;
+  std::string source = readFromStdin();
+
+  std::mt19937 g;  // seed the generator
+  g.seed(42);
+
+  // This function is local here, so we will use std::function to gain some recursion in lambda.
+  std::function<void(std::vector<ByteRange> &, int, int, int)> placeTags;
+  placeTags = [&g, &placeTags](std::vector<ByteRange> &tags, int l, int r, int remaining) {
+    if (remaining == 0) return;
+
+    if (remaining == 1) {
+      tags.push_back({static_cast<size_t>(l), static_cast<size_t>(r)});
+      return;
+    }
+
+    // Choose a random split-point in [l, r).
+    std::uniform_int_distribution<> dist(l, r);
+    int splitPoint = dist(g);
+
+    std::uniform_int_distribution<> pdist(1, remaining - 1);
+    int k = pdist(g);
+
+    tags.push_back({static_cast<size_t>(l), static_cast<size_t>(r)});
+    placeTags(tags, l, splitPoint, remaining - 1 - k);
+    placeTags(tags, splitPoint, r, k);
+  };
 
   // Set up data:
   //      "<div>A <i><b>republican</b> strategy to counteract the re-election of Obama."
   //      "The leaders of the Republicans justify their</i> policy with the need to combat electoral fraud.</div>"
   //      "However, the  Center's latter is in favour of a myth, confirming that electoral fraud in the United States "
   //      "is more rare than the number of people killed by the crack.";
-
-  std::string source =
-      "A republican strategy to counteract the re-election of Obama. "
-      "The leaders of the Republicans justify their policy with the need to combat electoral fraud. "
-      "However, the  Center's latter is in favour of a myth, confirming that electoral fraud in the United States "
-      "is more rare than the number of people killed by the crack.";
-
+  //
   std::vector<ByteRange> tagPosSourceCharLevel;
-  tagPosSourceCharLevel.push_back(ByteRange{0, 154});
-  tagPosSourceCharLevel.push_back(ByteRange{2, 106});
-  tagPosSourceCharLevel.push_back(ByteRange{2, 12});
+  placeTags(tagPosSourceCharLevel, 0, source.size(), /*nodes=*/5);
+
+  bool first = true;
+  std::cout << "Source tag - traversal { ";
+  for (auto &r : tagPosSourceCharLevel) {
+    if (!first) {
+      std::cout << ", ";
+    } else {
+      first = false;
+    }
+    std::cout << fmt::format("[{}, {})", r.begin, r.end);
+  }
+  std::cout << "} " << std::endl;
 
   Response response =
       translateForResponse(service, model, std::move(source), responseOptions, std::move(tagPosSourceCharLevel));

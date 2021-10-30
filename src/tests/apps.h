@@ -41,7 +41,7 @@ void qualityEstimatorScores(AsyncService &service, Ptr<TranslationModel> model);
 void translationCache(AsyncService &service, Ptr<TranslationModel> model);
 
 // Test/example to show tag alignment workflow
-void tagTranslationBlockingService(Ptr<TranslationModel> model);
+void tagTranslationBlockingService(AsyncService &service, Ptr<TranslationModel> model);
 }  // namespace testapp
 }  // namespace bergamot
 }  // namespace marian

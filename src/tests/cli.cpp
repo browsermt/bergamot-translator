@@ -45,7 +45,7 @@ int main(int argc, char *argv[]) {
       testapp::translationCache(service, models.front());
       break;
     case OpMode::TEST_TAG_TRANSLATION_BLOCKINGSERVICE:
-      testapp::tagTranslationBlockingService(models.front());
+      testapp::tagTranslationBlockingService(service, models.front());
       break;
     default:
       ABORT("Incompatible op-mode. Choose one of the test modes.");

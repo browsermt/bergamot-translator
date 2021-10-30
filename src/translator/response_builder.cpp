@@ -62,6 +62,7 @@ void buildTagAlignment(Response &response) {
     size_t charIdxEnd = tagPosSourceCharLevel[tagIdx].end;
     ABORT_IF(charIdxBegin > response.source.text.length(), "Invalid tag position");
     ABORT_IF(charIdxEnd > response.source.text.length(), "Invalid tag position");
+    tagPosSourceTokenLevel.push_back(TokenIndexRange{char2TokenTable[charIdxBegin], char2TokenTable[charIdxEnd]});
   }
 
   // Step 2: scale the positions

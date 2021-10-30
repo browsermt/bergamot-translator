@@ -11,7 +11,11 @@ void ResponseBuilder::buildQualityScores(Histories &histories, Response &respons
 
 void buildTagAlignment(Response &response) {
   // Step 0: set up look-up tables
-  ABORT_IF(response.source.numSentences() == 0, "No sentence in source");
+  if (response.source.numSentences() == 0) {
+    response.target.tagPositions = response.source.tagPositions;
+    return;
+  }
+
   std::vector<size_t> tokenOffsetTable(response.source.numSentences(), 0);
   size_t numSourceTokens = response.source.numWords(0);
   for (size_t i = 1; i < response.source.numSentences(); i++) {

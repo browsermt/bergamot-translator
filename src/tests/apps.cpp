@@ -170,7 +170,7 @@ void tagTranslationBlockingService(Ptr<TranslationModel> model) {
   auto results = service.translateMultiple(model, std::move(texts), responseOptions, {tagPosSourceCharLevel});
 
   std::cout << "Translated character-level ByteRange array:" << std::endl;
-  for (ByteRange br : results[0].tagPositionTarget) {
+  for (ByteRange br : results[0].target.tagPositions) {
     std::cout << "[" << br.begin << "," << br.end << ")";
     for (size_t pos = br.begin; pos < br.end; pos++) {
       std::cout << results[0].target.text[pos];

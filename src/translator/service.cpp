@@ -20,7 +20,10 @@ std::vector<Response> BlockingService::translateMultiple(std::shared_ptr<Transla
   std::vector<Response> responses;
   responses.resize(sources.size());
 
-  assert(sources.size() == tagPositionSources.size());
+  if (tagPositionSources.empty()) {
+    // Resizes with empty vectors to avoid segfault.
+    tagPositionSources.resize(sources.size(), {});
+  }
 
   for (size_t i = 0; i < sources.size(); i++) {
     auto callback = [i, &responses](Response &&response) { responses[i] = std::move(response); };  //

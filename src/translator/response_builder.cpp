@@ -77,8 +77,7 @@ void buildTagAlignment(Response &response) {
       size_t charBeginSid = targetTokenSidTable[tokenBound.begin];
       size_t charBeginTid = targetTokenTidTable[tokenBound.begin];
       charBegin = response.target.wordAsByteRange(charBeginSid, charBeginTid).begin;
-    }
-    else {
+    } else {
       charBegin = response.target.text.length() + 1;
     }
 
@@ -87,8 +86,7 @@ void buildTagAlignment(Response &response) {
       size_t charEndSid = targetTokenSidTable[tokenBound.end];
       size_t charEndTid = targetTokenTidTable[tokenBound.end];
       charEnd = response.target.wordAsByteRange(charEndSid, charEndTid).begin;
-    }
-    else {
+    } else {
       charEnd = response.target.text.length() + 1;
     }
 

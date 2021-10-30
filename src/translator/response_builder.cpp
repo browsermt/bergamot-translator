@@ -47,6 +47,8 @@ void buildTagAlignment(Response &response) {
   for (size_t i = 0; i < char2TokenTable.size(); i++) {
     if (i > 0 && !char2TokenTableValid[i]) char2TokenTable[i] = char2TokenTable[i - 1] + 1;
   }
+  // Walk around the case where the tag appears at the end.
+  char2TokenTable.push_back(char2TokenTable[char2TokenTable.size() - 1] + 1);
 
   // Step 1: convert char indices to token indices
   std::vector<ByteRange> tagPosSourceCharLevel = response.source.tagPosition_;
@@ -54,6 +56,8 @@ void buildTagAlignment(Response &response) {
   for (size_t tagIdx = 0; tagIdx < tagPosSourceCharLevel.size(); tagIdx++) {
     size_t charIdxBegin = tagPosSourceCharLevel[tagIdx].begin;
     size_t charIdxEnd = tagPosSourceCharLevel[tagIdx].end;
+    ABORT_IF(charIdxBegin > response.source.text.length(), "Invalid tag position");
+    ABORT_IF(charIdxEnd > response.source.text.length(), "Invalid tag position");
     tagPosSourceTokenLevel.push_back(TokenIndexRange{char2TokenTable[charIdxBegin], char2TokenTable[charIdxEnd]});
   }
 
@@ -69,12 +73,26 @@ void buildTagAlignment(Response &response) {
   // Step 3: convert token-level tags to the character level one
   std::vector<ByteRange> tagPosTargetCharLevel;
   for (TokenIndexRange tokenBound : tagPosTargetTokenLevel) {
-    size_t charBeginSid = targetTokenSidTable[tokenBound.begin];
-    size_t charBeginTid = targetTokenTidTable[tokenBound.begin];
-    size_t charEndSid = targetTokenSidTable[tokenBound.end];
-    size_t charEndTid = targetTokenTidTable[tokenBound.end];
-    size_t charBegin = response.target.wordAsByteRange(charBeginSid, charBeginTid).begin;
-    size_t charEnd = response.target.wordAsByteRange(charEndSid, charEndTid).begin;
+    size_t charBegin;
+    if (tokenBound.begin < targetTokenSidTable.size()) {
+      size_t charBeginSid = targetTokenSidTable[tokenBound.begin];
+      size_t charBeginTid = targetTokenTidTable[tokenBound.begin];
+      charBegin = response.target.wordAsByteRange(charBeginSid, charBeginTid).begin;
+    }
+    else {
+      charBegin = response.target.text.length() + 1;
+    }
+
+    size_t charEnd;
+    if (tokenBound.end < targetTokenSidTable.size()) {
+      size_t charEndSid = targetTokenSidTable[tokenBound.end];
+      size_t charEndTid = targetTokenTidTable[tokenBound.end];
+      charEnd = response.target.wordAsByteRange(charEndSid, charEndTid).begin;
+    }
+    else {
+      charEnd = response.target.text.length() + 1;
+    }
+
     tagPosTargetCharLevel.push_back(ByteRange{charBegin, charEnd});
   }
   response.tagPositionTarget = tagPosTargetCharLevel;

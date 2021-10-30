@@ -47,6 +47,7 @@ struct ByteRange {
 /// bound_.end means the position of the closing tag (excluding the current token)
 /// For an empty tag, bound_.begin = bound_.end. The tag is placed before the token, e.g., <b>word
 using TokenIndexRange = ByteRange;
+using TagPositions = std::vector<ByteRange>;
 
 class Response;
 using CallbackType = std::function<void(Response&&)>;

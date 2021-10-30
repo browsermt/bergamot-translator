@@ -69,7 +69,7 @@ class TranslationModel {
   //  @returns Request created from the query parameters wrapped within a shared-pointer.
   Ptr<Request> makeRequest(size_t requestId, std::string&& source, CallbackType callback,
                            const ResponseOptions& responseOptions, TranslationCache* cache,
-                           const std::vector<ByteRange>& tagPositionSource = {});
+                           TagPositions&& tagPositionSource);
 
   /// Relays a request to the batching-pool specific to this translation model.
   /// @param [in] request: Request constructed through makeRequest

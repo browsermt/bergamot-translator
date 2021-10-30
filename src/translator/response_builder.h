@@ -36,10 +36,7 @@ class ResponseBuilder {
         source_(std::move(source)),
         vocabs_(vocabs),
         callback_(std::move(callback)),
-        qualityEstimator_(qualityEstimator) {
-    // Holds tag positions info for later alignment
-    source_.tagPosition_ = std::move(tagPositionSource);
-  }
+        qualityEstimator_(qualityEstimator) {}
 
   /// Constructs and sets the promise of a Response object from obtained
   /// histories after translating.

@@ -51,7 +51,7 @@ void buildTagAlignment(Response &response) {
   char2TokenTable.push_back(char2TokenTable[char2TokenTable.size() - 1] + 1);
 
   // Step 1: convert char indices to token indices
-  std::vector<ByteRange> tagPosSourceCharLevel = response.source.tagPosition_;
+  std::vector<ByteRange> &tagPosSourceCharLevel = response.source.tagPositions;
   std::vector<TokenIndexRange> tagPosSourceTokenLevel;
   for (size_t tagIdx = 0; tagIdx < tagPosSourceCharLevel.size(); tagIdx++) {
     size_t charIdxBegin = tagPosSourceCharLevel[tagIdx].begin;
@@ -95,7 +95,8 @@ void buildTagAlignment(Response &response) {
 
     tagPosTargetCharLevel.push_back(ByteRange{charBegin, charEnd});
   }
-  response.tagPositionTarget = tagPosTargetCharLevel;
+
+  response.target.tagPositions = std::move(tagPosTargetCharLevel);
 }
 
 void ResponseBuilder::buildAlignments(Histories &histories, Response &response) {
@@ -119,7 +120,7 @@ void ResponseBuilder::buildAlignments(Histories &histories, Response &response) 
     }
 
     response.alignments.push_back(std::move(unified_alignment));
-    if (!response.source.tagPosition_.empty()) buildTagAlignment(response);
+    if (!response.source.tagPositions.empty()) buildTagAlignment(response);
   }
 }
 

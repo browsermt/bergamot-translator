@@ -70,9 +70,6 @@ struct Response {
   /// to (sub-)words accessible through Annotation.
   std::vector<Alignment> alignments;
 
-  /// Tag positions at char-level in the translated text (in the same order as in the source text)
-  std::vector<ByteRange> tagPositionTarget;
-
   /// Returns the source sentence (in terms of byte range) corresponding to sentenceIdx.
   ///
   /// @param [in] sentenceIdx: The index representing the sentence where 0 <= sentenceIdx < Response::size()

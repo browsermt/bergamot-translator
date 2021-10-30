@@ -52,7 +52,7 @@ class BlockingService {
   /// @param [in] tagPositionSources: contains tag positions at char-level in the source text (can be empty)
   std::vector<Response> translateMultiple(std::shared_ptr<TranslationModel> translationModel,
                                           std::vector<std::string> &&source, const ResponseOptions &responseOptions,
-                                          const std::vector<std::vector<ByteRange>> &tagPositionSources = {});
+                                          std::vector<TagPositions> &&tagPositionSources = {});
 
   TranslationCache::Stats cacheStats() { return cache_.stats(); }
 
@@ -106,8 +106,9 @@ class AsyncService {
   /// @param [in] callback: A callback function provided by the client which accepts an rvalue of a Response.
   /// @param [in] responseOptions: Options indicating whether or not to include some member in the Response, also
   /// specify any additional configurable parameters.
+  /// @param [in] tagPositionSources: contains tag positions at char-level in the source text (can be empty)
   void translate(std::shared_ptr<TranslationModel> translationModel, std::string &&source, CallbackType callback,
-                 const ResponseOptions &options = ResponseOptions());
+                 const ResponseOptions &options = ResponseOptions(), TagPositions &&tagPositionSources = {});
 
   /// Thread joins and proper shutdown are required to be handled explicitly.
   ~AsyncService();

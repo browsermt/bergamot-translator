@@ -91,11 +91,13 @@ void TranslationModel::loadBackend(size_t idx) {
 // Make request process is shared between Async and Blocking workflow of translating.
 Ptr<Request> TranslationModel::makeRequest(size_t requestId, std::string &&source, CallbackType callback,
                                            const ResponseOptions &responseOptions, TranslationCache *cache,
-                                           const std::vector<ByteRange> &tagPositionSource) {
+                                           TagPositions &&tagPositionSource) {
   Segments segments;
   AnnotatedText annotatedSource;
 
   textProcessor_.process(std::move(source), annotatedSource, segments);
+  annotatedSource.tagPositions = std::move(tagPositionSource);
+
   ResponseBuilder responseBuilder(responseOptions, std::move(annotatedSource), vocabs_, callback, *qualityEstimator_,
                                   tagPositionSource);
 

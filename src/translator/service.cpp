@@ -13,22 +13,21 @@ namespace bergamot {
 BlockingService::BlockingService(const BlockingService::Config &config)
     : config_(config), requestId_(0), batchingPool_(), cache_(config.cacheSize, /*mutexBuckets=*/1) {}
 
-std::vector<Response> BlockingService::translateMultiple(
-    std::shared_ptr<TranslationModel> translationModel, std::vector<std::string> &&sources,
-    const ResponseOptions &responseOptions, const std::vector<std::vector<ByteRange>> &tagPositionSources) {
+std::vector<Response> BlockingService::translateMultiple(std::shared_ptr<TranslationModel> translationModel,
+                                                         std::vector<std::string> &&sources,
+                                                         const ResponseOptions &responseOptions,
+                                                         std::vector<TagPositions> &&tagPositionSources) {
   std::vector<Response> responses;
   responses.resize(sources.size());
+
+  assert(sources.size() == tagPositionSources.size());
 
   for (size_t i = 0; i < sources.size(); i++) {
     auto callback = [i, &responses](Response &&response) { responses[i] = std::move(response); };  //
     TranslationCache *cache = config_.cacheEnabled ? &cache_ : nullptr;
     Ptr<Request> request;
-    if (!tagPositionSources.empty() && !tagPositionSources[i].empty()) {
-      request = translationModel->makeRequest(requestId_++, std::move(sources[i]), callback, responseOptions, cache,
-                                              tagPositionSources[i]);
-    } else {
-      request = translationModel->makeRequest(requestId_++, std::move(sources[i]), callback, responseOptions, cache);
-    }
+    request = translationModel->makeRequest(requestId_++, std::move(sources[i]), callback, responseOptions, cache,
+                                            std::move(tagPositionSources[i]));
     batchingPool_.enqueueRequest(translationModel, request);
   }
 
@@ -67,11 +66,12 @@ AsyncService::~AsyncService() {
 }
 
 void AsyncService::translate(std::shared_ptr<TranslationModel> translationModel, std::string &&source,
-                             CallbackType callback, const ResponseOptions &responseOptions) {
+                             CallbackType callback, const ResponseOptions &responseOptions,
+                             TagPositions &&tagPositionSources) {
   // Producer thread, a call to this function adds new work items. If batches are available, notifies workers waiting.
   TranslationCache *cache = config_.cacheEnabled ? &cache_ : nullptr;
-  Ptr<Request> request =
-      translationModel->makeRequest(requestId_++, std::move(source), callback, responseOptions, cache);
+  Ptr<Request> request = translationModel->makeRequest(requestId_++, std::move(source), callback, responseOptions,
+                                                       cache, std::move(tagPositionSources));
   safeBatchingPool_.enqueueRequest(translationModel, request);
 }
 

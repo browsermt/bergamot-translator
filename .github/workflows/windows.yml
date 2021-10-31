@@ -63,5 +63,4 @@ jobs:
       working-directory: build
       run: |
         .\app\bergamot.exe --version
-        dir *.exe
       shell: cmd

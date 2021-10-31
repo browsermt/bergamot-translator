@@ -62,6 +62,6 @@ jobs:
     - name: Print versions
       working-directory: build
       run: |
-        .\app\service-cli.exe --version
+        .\app\bergamot.exe --version
         dir *.exe
       shell: cmd

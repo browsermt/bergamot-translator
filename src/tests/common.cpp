@@ -42,12 +42,12 @@ void TestSuite<Service>::TestSuite::run(const std::string &opModeAsString, std::
     forwardAndBackward(models);
   } else if (opModeAsString == "test-quality-estimator-words") {
     qualityEstimatorWords(models.front());
-  } else if (opModeAsString == "test-quality-estimator-scoress") {
+  } else if (opModeAsString == "test-quality-estimator-scores") {
     qualityEstimatorScores(models.front());
   } else if (opModeAsString == "test-translation-cache") {
     translationCache(models.front());
   } else {
-    std::cerr << "Incompatible test mode. Choose from the following test-modes:\n";
+    std::cerr << "Incompatible test mode. Choose from the one of the valid test-modes";
     std::abort();
   }
 }

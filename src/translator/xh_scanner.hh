@@ -5,12 +5,14 @@
 //|
 //| (C) Andrew Fedoniouk @ terrainformatica.com
 //|
+#include <string.h>
 
 namespace markup {
     struct instream {
         const char *p;
         const char *end;
         explicit instream(const char *src) : p(src), end(src+strlen(src)) {}
+        instream(const char *begin, const char *end) : p(begin), end(end) {}
         char get_char() { return p < end ? *p++ : 0; }
     };
 
@@ -29,8 +31,7 @@ namespace markup {
             //            ^-- or here
             TT_ATTR,        // <tag attr="value" >
             //                  ^-- happens here
-            TT_WORD,
-            TT_SPACE,
+            TT_TEXT,
 
             TT_DATA,        // content of followings:
             // (also content of TT_TAG_START and TT_TAG_END, if the tag is 'script' or 'style')
@@ -59,7 +60,11 @@ namespace markup {
         // get next token
         token_type get_token() { return (this->*c_scan)(); }
 
-        // get value of TT_WORD, TT_SPACE, TT_ATTR and TT_DATA
+        // get text span backed by original input.
+        const char *get_text_begin() { return text_begin; }
+        const char *get_text_end() { return text_end; }
+
+        // get value of TT_ATTR and TT_DATA
         const char *get_value();
 
         // get attribute name
@@ -121,5 +126,6 @@ namespace markup {
 
         bool got_tail; // aux flag used in scan_comment, etc.
 
+        const char *text_begin, *text_end;
     };
 }

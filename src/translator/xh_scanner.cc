@@ -29,9 +29,12 @@ namespace markup {
     }
 
     scanner::token_type scanner::scan_body() {
+        text_begin = input.p;
+        if (input_char) {
+          --text_begin;
+        }
+        text_end = text_begin;
         char c = get_char();
-
-        value_length = 0;
 
         bool ws;
 
@@ -41,11 +44,9 @@ namespace markup {
         //     c = scan_entity();
         //     ws = is_whitespace(c);
         // }
-        else
-            ws = is_whitespace(c);
 
         while (true) {
-            append_value(c);
+            ++text_end;
             c = get_char();
             if (c == 0) {
                 push_back(c);
@@ -55,18 +56,13 @@ namespace markup {
                 push_back(c);
                 break;
             }
-            if (c == '&') {
+            // TODO entity parsing.
+/*            if (c == '&') {
                 push_back(c);
                 break;
-            }
-
-            if (is_whitespace(c) != ws) {
-                push_back(c);
-                break;
-            }
-
+            }*/
         }
-        return ws ? TT_SPACE : TT_WORD;
+        return TT_TEXT;
     }
 
     scanner::token_type scanner::scan_head() {

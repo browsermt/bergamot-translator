@@ -15,7 +15,6 @@ add_library(bergamot-translator STATIC
     annotation.cpp
     service.cpp
     parser.cpp
-    utils.cpp
 )
 if (USE_WASM_COMPATIBLE_SOURCE)
   # Using wasm compatible sources should include this compile definition;

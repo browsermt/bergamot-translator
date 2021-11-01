@@ -14,18 +14,6 @@
 namespace marian {
 namespace bergamot {
 
-/// Alignment is stored as a sparse matrix, this pretty much aligns with marian
-/// internals but is brought here to maintain translator
-/// agnosticism/independence.
-struct Point {
-  size_t src;  ///< Index pointing to source ByteRange
-  size_t tgt;  ///< Index pointing to target ByteRange
-  float prob;  ///< Score between [0, 1] on indicating degree of alignment.
-};
-
-/// Alignment is a sparse matrix, where Points represent entries with values.
-typedef std::vector<Point> Alignment;
-
 /// Response holds AnnotatedText(s) of source-text and translated text,
 /// alignment information between source and target sub-words and sentences.
 ///
@@ -65,10 +53,10 @@ struct Response {
   /// source or target.
   std::vector<SentenceQualityScore> qualityScores;
 
-  /// Alignments between source and target. Each Alignment is a
-  /// sparse matrix representation with indices corresponding
-  /// to (sub-)words accessible through Annotation.
-  std::vector<Alignment> alignments;
+  /// Alignments between source and target. This is a collection of dense matrices providing
+  ///    P[t][s] = p(source-token s  | target token t)
+  /// with an alignment matrix for each sentence.
+  std::vector<std::vector<std::vector<float>>> alignments;
 
   /// Returns the source sentence (in terms of byte range) corresponding to sentenceIdx.
   ///

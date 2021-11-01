@@ -80,13 +80,13 @@ class BlockingService {
 class AsyncService {
  public:
   struct Config {
-    size_t numWorkers;         ///< How many worker translation threads to spawn.
+    size_t numWorkers{2};      ///< How many worker translation threads to spawn.
     bool cacheEnabled{false};  ///< Whether to enable cache or not.
     size_t cacheSize{2000};    ///< Size in History items to be stored in the cache. Loosely corresponds to sentences to
                                /// cache in the real world.
-    size_t cacheMutexBuckets;  ///< Controls the granularity of locking to reduce contention by bucketing mutexes
-                               ///< guarding cache entry read write. Optimal at min(core, numWorkers) assuming a
-                               ///< reasonably large cache-size.
+    size_t cacheMutexBuckets{8};  ///< Controls the granularity of locking to reduce contention by bucketing mutexes
+                                  ///< guarding cache entry read write. Optimal at min(core, numWorkers) assuming a
+                                  ///< reasonably large cache-size.
     template <class App>
     static void addOptions(App &app, Config &config) {
       app.add_option("--cpu-threads", config.numWorkers, "Workers to form translation backend");

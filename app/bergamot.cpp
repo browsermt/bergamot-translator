@@ -21,8 +21,12 @@ int main(int argc, char *argv[]) {
 
   ResponseOptions responseOptions;
   std::string input = readFromStdin();
-  Response response = TranslateForResponse<AsyncService>()(service, model, std::move(input), responseOptions);
 
-  std::cout << response.target.text;
+  auto callback = [](Response &&response) { std::cout << response.target.text; };
+
+  service.translate(model, std::move(input), callback, responseOptions);
+
+  // We will wait on destruction for thread-to join, so callback will be fired.
+
   return 0;
 }

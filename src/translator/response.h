@@ -56,7 +56,7 @@ struct Response {
   /// Alignments between source and target. This is a collection of dense matrices providing
   ///    P[t][s] = p(source-token s  | target token t)
   /// with an alignment matrix for each sentence.
-  std::vector<marian::data::SoftAlignment> alignments;
+  std::vector<std::vector<std::vector<float>>> alignments;
 
   /// Returns the source sentence (in terms of byte range) corresponding to sentenceIdx.
   ///

@@ -323,7 +323,7 @@ const _parseTranslatedTextSentenceQualityScores = (vectorResponse) => {
 }
 
 const _prepareResponseOptions = () => {
-  return {qualityScores: true, alignment: false, alignmentThreshold: 0.2};
+  return {qualityScores: true, alignment: false};
 }
 
 const _prepareSourceText = (input) => {

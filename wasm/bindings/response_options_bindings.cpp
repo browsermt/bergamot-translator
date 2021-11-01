@@ -15,6 +15,5 @@ using namespace emscripten;
 EMSCRIPTEN_BINDINGS(response_options) {
   value_object<ResponseOptions>("ResponseOptions")
       .field("qualityScores", &ResponseOptions::qualityScores)
-      .field("alignment", &ResponseOptions::alignment)
-      .field("alignmentThreshold", &ResponseOptions::alignmentThreshold);
+      .field("alignment", &ResponseOptions::alignment);
 }

@@ -141,7 +141,7 @@ void translationCache(AsyncService &service, Ptr<TranslationModel> model) {
   std::cout << firstResponse.target.text;
 }
 
-void tagTranslationBlockingService(AsyncService &service, Ptr<TranslationModel> model) {
+void tagTranslation(AsyncService &service, Ptr<TranslationModel> model) {
   ResponseOptions responseOptions;
   responseOptions.alignment = true;
   std::string source = readFromStdin();

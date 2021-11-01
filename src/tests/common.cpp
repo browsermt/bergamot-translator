@@ -24,64 +24,30 @@ Response Bridge<AsyncService>::translate(AsyncService &service, std::shared_ptr<
 }
 
 template <class Service>
-TestSuite<Service>::TestSuite(Service &service)
-    : service_{service},
-      testAppRegistry_{
-          {"wasm", OpMode::TEST_WASM_PATH},
-          {"decoder", OpMode::TEST_BENCHMARK_DECODER},
-          {"test-response-source-sentences", OpMode::TEST_SOURCE_SENTENCES},
-          {"test-response-target-sentences", OpMode::TEST_TARGET_SENTENCES},
-          {"test-response-source-words", OpMode::TEST_SOURCE_WORDS},
-          {"test-response-target-words", OpMode::TEST_TARGET_WORDS},
-          {"test-quality-estimator-words", OpMode::TEST_QUALITY_ESTIMATOR_WORDS},
-          {"test-quality-estimator-scores", OpMode::TEST_QUALITY_ESTIMATOR_SCORES},
-          {"test-forward-backward", OpMode::TEST_FORWARD_BACKWARD_FOR_OUTBOUND},
-          {"test-translation-cache", OpMode::TEST_TRANSLATION_CACHE},
-      } {}
+TestSuite<Service>::TestSuite(Service &service) : service_{service} {}
 
 template <class Service>
 void TestSuite<Service>::TestSuite::run(const std::string &opModeAsString, std::vector<Ptr<TranslationModel>> &models) {
-  auto query = testAppRegistry_.find(opModeAsString);
-  if (query != testAppRegistry_.end()) {
-    switch (query->second) {
-      case OpMode::TEST_BENCHMARK_DECODER:
-        benchmarkDecoder(models.front());
-        break;
-      case OpMode::TEST_SOURCE_SENTENCES:
-        annotatedTextSentences(models.front(), /*source=*/true);
-        break;
-      case OpMode::TEST_TARGET_SENTENCES:
-        annotatedTextSentences(models.front(), /*source=*/false);
-        break;
-      case OpMode::TEST_SOURCE_WORDS:
-        annotatedTextWords(models.front(), /*source=*/true);
-        break;
-      case OpMode::TEST_TARGET_WORDS:
-        annotatedTextWords(models.front(), /*source=*/false);
-        break;
-      case OpMode::TEST_FORWARD_BACKWARD_FOR_OUTBOUND:
-        forwardAndBackward(models);
-        break;
-      case OpMode::TEST_QUALITY_ESTIMATOR_WORDS:
-        qualityEstimatorWords(models.front());
-        break;
-      case OpMode::TEST_QUALITY_ESTIMATOR_SCORES:
-        qualityEstimatorScores(models.front());
-        break;
-      case OpMode::TEST_TRANSLATION_CACHE:
-        translationCache(models.front());
-        break;
-      default:
-        // Never happens.
-        break;
-    }
-
+  if (opModeAsString == "decoder") {
+    benchmarkDecoder(models.front());
+  } else if (opModeAsString == "test-response-source-sentences") {
+    annotatedTextSentences(models.front(), /*source=*/true);
+  } else if (opModeAsString == "test-response-target-sentences") {
+    annotatedTextSentences(models.front(), /*source=*/false);
+  } else if (opModeAsString == "test-response-source-words") {
+    annotatedTextWords(models.front(), /*source=*/true);
+  } else if (opModeAsString == "test-response-target-words") {
+    annotatedTextWords(models.front(), /*source=*/false);
+  } else if (opModeAsString == "test-forward-backward") {
+    forwardAndBackward(models);
+  } else if (opModeAsString == "test-quality-estimator-words") {
+    qualityEstimatorWords(models.front());
+  } else if (opModeAsString == "test-quality-estimator-scoress") {
+    qualityEstimatorScores(models.front());
+  } else if (opModeAsString == "test-translation-cache") {
+    translationCache(models.front());
   } else {
     std::cerr << "Incompatible test mode. Choose from the following test-modes:\n";
-    for (auto &p : testAppRegistry_) {
-      std::cerr << "  " << p.first << "\n";
-    }
-
     std::abort();
   }
 }

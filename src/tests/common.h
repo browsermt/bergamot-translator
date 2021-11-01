@@ -55,21 +55,6 @@ class TestSuite {
   Bridge<Service> bridge_;
   Service &service_;
 
-  enum OpMode {
-    TEST_BENCHMARK_DECODER,
-    TEST_WASM_PATH,
-    TEST_SOURCE_SENTENCES,
-    TEST_TARGET_SENTENCES,
-    TEST_SOURCE_WORDS,
-    TEST_TARGET_WORDS,
-    TEST_QUALITY_ESTIMATOR_WORDS,
-    TEST_QUALITY_ESTIMATOR_SCORES,
-    TEST_FORWARD_BACKWARD_FOR_OUTBOUND,
-    TEST_TRANSLATION_CACHE,
-  };
-
-  const std::unordered_map<std::string, OpMode> testAppRegistry_;
-
  public:
   TestSuite(Service &service);
   void run(const std::string &opModeAsString, std::vector<Ptr<TranslationModel>> &models);

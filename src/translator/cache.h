@@ -1,4 +1,5 @@
 #pragma once
+#include <atomic>
 #include <memory>
 #include <mutex>
 #include <vector>
@@ -26,7 +27,7 @@ class AtomicCache {
 
   void store(const Key &key, Value value) { atomicStore(key, value); }
 
-  const Stats stats() const { return stats_; }
+  const Stats stats() const { return Stats{hits_.load(), misses_.load()}; }
 
  private:
   using Record = std::pair<Key, Value>;
@@ -40,10 +41,10 @@ class AtomicCache {
     const Record &candidate = records_[index];
     if (equals_(key, candidate.first)) {
       value = candidate.second;
-      stats_.hits += 1;
+      ++hits_;
       return true;
     } else {
-      stats_.misses += 1;
+      ++misses_;
     }
 
     return false;
@@ -64,7 +65,8 @@ class AtomicCache {
   std::vector<Record> records_;
 
   mutable std::vector<std::mutex> mutexBuckets_;
-  mutable Stats stats_;
+  mutable std::atomic<size_t> hits_{0};
+  mutable std::atomic<size_t> misses_{0};
 
   Hash hash_;
   Equals equals_;

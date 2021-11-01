@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "annotation.h"
+#include "cache.h"
 #include "common/logging.h"
 #include "data/types.h"
 #include "definitions.h"
@@ -15,6 +16,8 @@
 
 namespace marian {
 namespace bergamot {
+
+class TranslationModel;
 
 /// A Request is an internal representation used to represent a request after
 /// processed by TextProcessor into sentences constituted by marian::Words.
@@ -42,11 +45,16 @@ class Request {
   ///
   ///
   /// @param [in] Id: Identifier assigned to Request by Service.
+  /// @param [in] model: TranslationModel for identifying a unique translation unit key (model, words in a sentence) for
+  /// cache.
   /// @param [in] segments: Each segment is a unit to be translated.
   /// @param [in] responseBuilder: Callback function (of ResponseBuilder type)
   /// to be triggered upon the completion of translation of all units in a
   /// Request.
-  Request(size_t Id, Segments &&segments, ResponseBuilder &&responseBuilder);
+  /// @param [in] cache: Cache supplied externally to attempt to fetch translations or store them after completion for
+  /// reuse later.
+  Request(size_t Id, const TranslationModel &model, Segments &&segments, ResponseBuilder &&responseBuilder,
+          TranslationCache *cache);
 
   /// Obtain the count of tokens in the segment correponding to index. Used to
   /// insert sentence from multiple requests into the corresponding size bucket.
@@ -67,8 +75,13 @@ class Request {
   /// compiled from requests.
   void processHistory(size_t index, Ptr<History> history);
 
+  bool cacheHitPrefilled(size_t index) const { return histories_[index] != nullptr; }
+
  private:
   size_t Id_;
+
+  /// TranslationModel associated with this request
+  const TranslationModel &model_;
 
   /// Multiple translation-workers can concurrently access the same Request. The
   /// following atomic atomically operates on the variable holding sentences
@@ -86,6 +99,9 @@ class Request {
   /// Constructing Response requires the vocabs_ used to generate Request.
   /// std::vector<Ptr<Vocab const>> *vocabs_;
   ResponseBuilder responseBuilder_;
+
+  /// Cache used to hold unit translations. If nullptr, means no-caching.
+  TranslationCache *cache_;
 };
 
 /// A RequestSentence provides a view to a sentence within a Request. Existence

@@ -46,6 +46,11 @@ To build a version that translates with higher speeds on Firefox Nightly browser
        bash ../wasm/patch-artifacts-enable-wormhole.sh
        ```
 
+   3. Patch generated artifacts to import GEMM library from a separate wasm module
+       ```bash
+       bash ../wasm/patch-artifacts-import-gemm-module.sh
+       ```
+
 To build a version that runs on all browsers (including Firefox Nightly) but translates slowly, follow these instructions:
 
   1. Create a folder where you want to build all the artifacts (`build-wasm` in this case) and compile
@@ -55,6 +60,11 @@ To build a version that runs on all browsers (including Firefox Nightly) but tra
       emcmake cmake -DCOMPILE_WASM=on -DWORMHOLE=off ../
       emmake make -j2
       ```
+
+  2. Patch generated artifacts to import GEMM library from a separate wasm module
+       ```bash
+       bash ../wasm/patch-artifacts-import-gemm-module.sh
+       ```
 
 #### Recompiling
 As long as you don't update any submodule, just follow [Compile](#Compile) steps.\

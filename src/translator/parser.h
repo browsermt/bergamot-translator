@@ -26,6 +26,7 @@ enum OpMode {
   TEST_QUALITY_ESTIMATOR_WORDS,
   TEST_QUALITY_ESTIMATOR_SCORES,
   TEST_FORWARD_BACKWARD_FOR_OUTBOUND,
+  TEST_TRANSLATION_CACHE,
 };
 
 /// Overload for CL11, convert a read from a stringstream into opmode.

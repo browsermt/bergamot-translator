@@ -2,6 +2,7 @@
 
 #include "batch.h"
 #include "byte_array_util.h"
+#include "cache.h"
 #include "common/logging.h"
 #include "data/corpus.h"
 #include "data/text_input.h"
@@ -11,9 +12,12 @@
 namespace marian {
 namespace bergamot {
 
+std::atomic<size_t> TranslationModel::modelCounter_ = 0;
+
 TranslationModel::TranslationModel(const Config &options, MemoryBundle &&memory /*=MemoryBundle{}*/,
                                    size_t replicas /*=1*/)
-    : options_(options),
+    : modelId_(modelCounter_++),
+      options_(options),
       memory_(std::move(memory)),
       vocabs_(options, std::move(memory_.vocabs)),
       textProcessor_(options, vocabs_, std::move(memory_.ssplitPrefixFile)),
@@ -86,14 +90,15 @@ void TranslationModel::loadBackend(size_t idx) {
 
 // Make request process is shared between Async and Blocking workflow of translating.
 Ptr<Request> TranslationModel::makeRequest(size_t requestId, std::string &&source, CallbackType callback,
-                                           const ResponseOptions &responseOptions) {
+                                           const ResponseOptions &responseOptions, TranslationCache *cache) {
   Segments segments;
   AnnotatedText annotatedSource;
 
   textProcessor_.process(std::move(source), annotatedSource, segments);
   ResponseBuilder responseBuilder(responseOptions, std::move(annotatedSource), vocabs_, callback, *qualityEstimator_);
 
-  Ptr<Request> request = New<Request>(requestId, std::move(segments), std::move(responseBuilder));
+  Ptr<Request> request =
+      New<Request>(requestId, /*model=*/*this, std::move(segments), std::move(responseBuilder), cache);
   return request;
 }
 

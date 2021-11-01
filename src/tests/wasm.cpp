@@ -36,15 +36,13 @@ int main(int argc, char *argv[]) {
     models.push_back(model);
   }
 
-  switch (config.opMode) {
-    /// WASM is one special case where WASM path is being checked, involving translateMultiple and a multi-line feed.
-    /// Hence we do not bind it at a single input-blob single Response constraint imposed by the TestSuite.
-    case OpMode::TEST_WASM_PATH:
-      wasm(service, models.front());
-      break;
-    default:
-      testSuite.run(config.opMode, models);
-      break;
+  /// WASM is one special case where WASM path is being checked, involving translateMultiple and a multi-line feed.
+  /// Hence we do not bind it at a single input-blob single Response constraint imposed by the TestSuite.
+  if (config.opMode == "wasm") {
+    wasm(service, models.front());
+  } else {
+    testSuite.run(config.opMode, models);
   }
+
   return 0;
 }

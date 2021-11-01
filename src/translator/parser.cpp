@@ -10,33 +10,6 @@
 namespace marian {
 namespace bergamot {
 
-std::istringstream &operator>>(std::istringstream &in, OpMode &mode) {
-  std::string modeString;
-  in >> modeString;
-  const std::unordered_map<std::string, OpMode> table = {
-      {"native", OpMode::APP_NATIVE},
-      {"wasm", OpMode::TEST_WASM_PATH},
-      {"decoder", OpMode::TEST_BENCHMARK_DECODER},
-      {"test-response-source-sentences", OpMode::TEST_SOURCE_SENTENCES},
-      {"test-response-target-sentences", OpMode::TEST_TARGET_SENTENCES},
-      {"test-response-source-words", OpMode::TEST_SOURCE_WORDS},
-      {"test-response-target-words", OpMode::TEST_TARGET_WORDS},
-      {"test-quality-estimator-words", OpMode::TEST_QUALITY_ESTIMATOR_WORDS},
-      {"test-quality-estimator-scores", OpMode::TEST_QUALITY_ESTIMATOR_SCORES},
-      {"test-forward-backward", OpMode::TEST_FORWARD_BACKWARD_FOR_OUTBOUND},
-      {"test-translation-cache", OpMode::TEST_TRANSLATION_CACHE},
-  };
-
-  auto query = table.find(modeString);
-  if (query != table.end()) {
-    mode = query->second;
-  } else {
-    ABORT("Unknown mode {}", modeString);
-  }
-
-  return in;
-}
-
 std::shared_ptr<marian::Options> parseOptionsFromFilePath(const std::string &configPath, bool validate /*= true*/) {
   // Read entire string and redirect to parseOptionsFromString
   std::ifstream readStream(configPath);

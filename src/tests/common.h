@@ -4,6 +4,7 @@
 #include <future>
 #include <iostream>
 #include <sstream>
+#include <unordered_map>
 
 #include "common/definitions.h"
 #include "common/timer.h"
@@ -71,41 +72,82 @@ class TestSuite {
   Bridge<Service> bridge_;
   Service &service_;
 
- public:
-  TestSuite(Service &service) : service_(service), bridge_() {}
+  enum OpMode {
+    APP_NATIVE,
+    TEST_BENCHMARK_DECODER,
+    TEST_WASM_PATH,
+    TEST_SOURCE_SENTENCES,
+    TEST_TARGET_SENTENCES,
+    TEST_SOURCE_WORDS,
+    TEST_TARGET_WORDS,
+    TEST_QUALITY_ESTIMATOR_WORDS,
+    TEST_QUALITY_ESTIMATOR_SCORES,
+    TEST_FORWARD_BACKWARD_FOR_OUTBOUND,
+    TEST_TRANSLATION_CACHE,
+  };
 
-  void run(const OpMode opMode, std::vector<Ptr<TranslationModel>> &models) {
-    switch (opMode) {
-      case OpMode::TEST_BENCHMARK_DECODER:
-        benchmarkDecoder(models.front());
-        break;
-      case OpMode::TEST_SOURCE_SENTENCES:
-        annotatedTextSentences(models.front(), /*source=*/true);
-        break;
-      case OpMode::TEST_TARGET_SENTENCES:
-        annotatedTextSentences(models.front(), /*source=*/false);
-        break;
-      case OpMode::TEST_SOURCE_WORDS:
-        annotatedTextWords(models.front(), /*source=*/true);
-        break;
-      case OpMode::TEST_TARGET_WORDS:
-        annotatedTextWords(models.front(), /*source=*/false);
-        break;
-      case OpMode::TEST_FORWARD_BACKWARD_FOR_OUTBOUND:
-        forwardAndBackward(models);
-        break;
-      case OpMode::TEST_QUALITY_ESTIMATOR_WORDS:
-        qualityEstimatorWords(models.front());
-        break;
-      case OpMode::TEST_QUALITY_ESTIMATOR_SCORES:
-        qualityEstimatorScores(models.front());
-        break;
-      case OpMode::TEST_TRANSLATION_CACHE:
-        translationCache(models.front());
-        break;
-      default:
-        ABORT("Incompatible op-mode. Choose one of the test modes.");
-        break;
+  const std::unordered_map<std::string, OpMode> testAppRegistry_;
+
+ public:
+  TestSuite(Service &service)
+      : service_{service},
+        testAppRegistry_{
+            {"native", OpMode::APP_NATIVE},
+            {"wasm", OpMode::TEST_WASM_PATH},
+            {"decoder", OpMode::TEST_BENCHMARK_DECODER},
+            {"test-response-source-sentences", OpMode::TEST_SOURCE_SENTENCES},
+            {"test-response-target-sentences", OpMode::TEST_TARGET_SENTENCES},
+            {"test-response-source-words", OpMode::TEST_SOURCE_WORDS},
+            {"test-response-target-words", OpMode::TEST_TARGET_WORDS},
+            {"test-quality-estimator-words", OpMode::TEST_QUALITY_ESTIMATOR_WORDS},
+            {"test-quality-estimator-scores", OpMode::TEST_QUALITY_ESTIMATOR_SCORES},
+            {"test-forward-backward", OpMode::TEST_FORWARD_BACKWARD_FOR_OUTBOUND},
+            {"test-translation-cache", OpMode::TEST_TRANSLATION_CACHE},
+        } {}
+
+  void run(const std::string &opModeAsString, std::vector<Ptr<TranslationModel>> &models) {
+    auto query = testAppRegistry_.find(opModeAsString);
+    if (query != testAppRegistry_.end()) {
+      switch (query->second) {
+        case OpMode::TEST_BENCHMARK_DECODER:
+          benchmarkDecoder(models.front());
+          break;
+        case OpMode::TEST_SOURCE_SENTENCES:
+          annotatedTextSentences(models.front(), /*source=*/true);
+          break;
+        case OpMode::TEST_TARGET_SENTENCES:
+          annotatedTextSentences(models.front(), /*source=*/false);
+          break;
+        case OpMode::TEST_SOURCE_WORDS:
+          annotatedTextWords(models.front(), /*source=*/true);
+          break;
+        case OpMode::TEST_TARGET_WORDS:
+          annotatedTextWords(models.front(), /*source=*/false);
+          break;
+        case OpMode::TEST_FORWARD_BACKWARD_FOR_OUTBOUND:
+          forwardAndBackward(models);
+          break;
+        case OpMode::TEST_QUALITY_ESTIMATOR_WORDS:
+          qualityEstimatorWords(models.front());
+          break;
+        case OpMode::TEST_QUALITY_ESTIMATOR_SCORES:
+          qualityEstimatorScores(models.front());
+          break;
+        case OpMode::TEST_TRANSLATION_CACHE:
+          translationCache(models.front());
+          break;
+        default:
+          // Never happens.
+          break;
+      }
+
+    } else {
+      std::cerr << "Incompatible test mode. Choose from the following test-modes:\n";
+      for (auto &p : testAppRegistry_) {
+        std::cerr << "  " << p.first << "\n";
+      }
+
+      std::abort();
     }
   }
 
@@ -238,6 +280,6 @@ class TestSuite {
 
     std::cout << firstResponse.target.text;
   }
-};
+};  // namespace marian::bergamot
 
 }  // namespace marian::bergamot

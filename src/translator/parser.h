@@ -15,29 +15,12 @@
 namespace marian {
 namespace bergamot {
 
-enum OpMode {
-  APP_NATIVE,
-  TEST_BENCHMARK_DECODER,
-  TEST_WASM_PATH,
-  TEST_SOURCE_SENTENCES,
-  TEST_TARGET_SENTENCES,
-  TEST_SOURCE_WORDS,
-  TEST_TARGET_WORDS,
-  TEST_QUALITY_ESTIMATOR_WORDS,
-  TEST_QUALITY_ESTIMATOR_SCORES,
-  TEST_FORWARD_BACKWARD_FOR_OUTBOUND,
-  TEST_TRANSLATION_CACHE,
-};
-
-/// Overload for CL11, convert a read from a stringstream into opmode.
-std::istringstream &operator>>(std::istringstream &in, OpMode &mode);
-
 template <class Service>
 struct CLIConfig {
   using ServiceConfig = typename Service::Config;
   using ModelConfigPaths = std::vector<std::string>;
 
-  OpMode opMode;
+  std::string opMode;
   bool byteArray{false};
 
   // For marian-models we retain the old marian-yml configs to a large extent. These are supplied as file-paths to the
@@ -53,7 +36,7 @@ struct CLIConfig {
   /// into the picture until the parser is instantiated.
   template <class App>
   static void addOptions(App &app, CLIConfig<Service> &config) {
-    app.add_option("--bergamot-mode", config.opMode, "Operating mode for bergamot: [wasm, native, decoder]");
+    app.add_option("--bergamot-mode", config.opMode, "");
     app.add_option("--model-config-paths", config.modelConfigPaths,
                    "Configuration files list, can be used for pivoting multiple models or multiple model workflows");
 

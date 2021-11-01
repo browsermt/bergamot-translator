@@ -7,6 +7,7 @@
 
 #include "cache.h"
 #include "data/types.h"
+#include "logging.h"
 #include "quality_estimator.h"
 #include "response.h"
 #include "response_builder.h"
@@ -71,6 +72,8 @@ class BlockingService {
 
   Config config_;
 
+  // Logger which shuts down cleanly with service.
+  Logger logger_;
   TranslationCache cache_;
 };
 
@@ -143,6 +146,8 @@ class AsyncService {
   /// object for thread-safety.
   ThreadsafeBatchingPool<AggregateBatchingPool> safeBatchingPool_;
 
+  // Logger which shuts down cleanly with service.
+  Logger logger_;
   TranslationCache cache_;
 };
 

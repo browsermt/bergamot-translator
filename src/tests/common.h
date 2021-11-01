@@ -34,13 +34,45 @@ namespace marian::bergamot {
 /// constrained by the following.
 
 template <class Service>
+struct Bridge : public std::false_type {};
+
+template <>
+struct Bridge<BlockingService> : public std::true_type {
+  Response translate(BlockingService &service, std::shared_ptr<TranslationModel> &model, std::string &&source,
+                     const ResponseOptions &responseOptions) {
+    // project source to a vector of std::string, send in, unpack the first element from
+    // vector<Response>, return.
+    std::vector<std::string> sources = {source};
+    return service.translateMultiple(model, std::move(sources), responseOptions).front();
+  }
+};
+
+template <>
+struct Bridge<AsyncService> : public std::true_type {
+  Response translate(AsyncService &service, std::shared_ptr<TranslationModel> &model, std::string &&source,
+                     const ResponseOptions &responseOptions) {
+    // downgrade to blocking via promise, future, wait and return response;
+    std::promise<Response> responsePromise;
+    std::future<Response> responseFuture = responsePromise.get_future();
+
+    auto callback = [&responsePromise](Response &&response) { responsePromise.set_value(std::move(response)); };
+    service.translate(model, std::move(source), callback, responseOptions);
+
+    responseFuture.wait();
+
+    Response response = responseFuture.get();
+    return response;
+  }
+};
+
+template <class Service>
 class TestSuite {
  private:
-  TranslateForResponse<Service> translateForResponse_;
+  Bridge<Service> bridge_;
   Service &service_;
 
  public:
-  TestSuite(Service &service) : service_(service), translateForResponse_() {}
+  TestSuite(Service &service) : service_(service), bridge_() {}
 
   void run(const OpMode opMode, std::vector<Ptr<TranslationModel>> &models) {
     switch (opMode) {
@@ -83,7 +115,7 @@ class TestSuite {
     std::string source = readFromStdin();
 
     ResponseOptions responseOptions;
-    Response response = translateForResponse_(service_, model, std::move(source), responseOptions);
+    Response response = bridge_.translate(service_, model, std::move(source), responseOptions);
 
     for (size_t sentenceIdx = 0; sentenceIdx < response.size(); sentenceIdx++) {
       std::cout << response.target.sentence(sentenceIdx) << "\n";
@@ -97,7 +129,7 @@ class TestSuite {
   void annotatedTextWords(Ptr<TranslationModel> model, bool sourceSide = true) {
     ResponseOptions responseOptions;
     std::string source = readFromStdin();
-    Response response = translateForResponse_(service_, model, std::move(source), responseOptions);
+    Response response = bridge_.translate(service_, model, std::move(source), responseOptions);
     AnnotatedText &annotatedText = sourceSide ? response.source : response.target;
     for (size_t s = 0; s < annotatedText.numSentences(); s++) {
       for (size_t w = 0; w < annotatedText.numWords(s); w++) {
@@ -113,7 +145,7 @@ class TestSuite {
   void annotatedTextSentences(Ptr<TranslationModel> model, bool sourceSide = true) {
     ResponseOptions responseOptions;
     std::string source = readFromStdin();
-    Response response = translateForResponse_(service_, model, std::move(source), responseOptions);
+    Response response = bridge_.translate(service_, model, std::move(source), responseOptions);
     AnnotatedText &annotatedText = sourceSide ? response.source : response.target;
     for (size_t s = 0; s < annotatedText.numSentences(); s++) {
       std::cout << annotatedText.sentence(s) << "\n";
@@ -124,11 +156,11 @@ class TestSuite {
     ABORT_IF(models.size() != 2, "Forward and backward test needs two models.");
     ResponseOptions responseOptions;
     std::string source = readFromStdin();
-    Response forwardResponse = translateForResponse_(service_, models.front(), std::move(source), responseOptions);
+    Response forwardResponse = bridge_.translate(service_, models.front(), std::move(source), responseOptions);
 
     // Make a copy of target
     std::string target = forwardResponse.target.text;
-    Response backwardResponse = translateForResponse_(service_, models.back(), std::move(target), responseOptions);
+    Response backwardResponse = bridge_.translate(service_, models.back(), std::move(target), responseOptions);
 
     // Print both onto the command-line
     std::cout << forwardResponse.source.text;
@@ -143,7 +175,7 @@ class TestSuite {
     ResponseOptions responseOptions;
     responseOptions.qualityScores = true;
     std::string source = readFromStdin();
-    const Response response = translateForResponse_(service_, model, std::move(source), responseOptions);
+    const Response response = bridge_.translate(service_, model, std::move(source), responseOptions);
 
     for (const auto &sentenceQualityEstimate : response.qualityScores) {
       std::cout << "[SentenceBegin]\n";
@@ -162,7 +194,7 @@ class TestSuite {
     responseOptions.qualityScores = true;
 
     std::string source = readFromStdin();
-    const Response response = translateForResponse_(service_, model, std::move(source), responseOptions);
+    const Response response = bridge_.translate(service_, model, std::move(source), responseOptions);
 
     for (const auto &sentenceQualityEstimate : response.qualityScores) {
       std::cout << std::fixed << std::setprecision(3) << sentenceQualityEstimate.sentenceScore << "\n";
@@ -182,7 +214,7 @@ class TestSuite {
 
     // Round 1
     std::string buffer = source;
-    Response firstResponse = translateForResponse_(service_, model, std::move(buffer), responseOptions);
+    Response firstResponse = bridge_.translate(service_, model, std::move(buffer), responseOptions);
 
     auto statsFirstRun = service_.cacheStats();
     LOG(info, "Cache Hits/Misses = {}/{}", statsFirstRun.hits, statsFirstRun.misses);
@@ -190,7 +222,7 @@ class TestSuite {
 
     // Round 2; There should be cache hits
     buffer = source;
-    Response secondResponse = translateForResponse_(service_, model, std::move(buffer), responseOptions);
+    Response secondResponse = bridge_.translate(service_, model, std::move(buffer), responseOptions);
 
     auto statsSecondRun = service_.cacheStats();
     LOG(info, "Cache Hits/Misses = {}/{}", statsSecondRun.hits, statsSecondRun.misses);

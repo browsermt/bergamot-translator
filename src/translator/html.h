@@ -18,6 +18,7 @@ class HTML {
  public:
   explicit HTML(std::string &&source, bool process_markup);
   void Restore(Response &response);
+
  private:
   // TODO: store stuff here to be used for restoration.
 };

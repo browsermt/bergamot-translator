@@ -1,4 +1,5 @@
 #include "html.h"
+
 #include "xh_scanner.h"
 
 namespace marian {
@@ -27,5 +28,5 @@ bool HTML::Strip(std::string &&source) {
   // TODO unescape entities.  See warc2text
 }
 
-} // namespace bergamot
-} // namespace marian
+}  // namespace bergamot
+}  // namespace marian

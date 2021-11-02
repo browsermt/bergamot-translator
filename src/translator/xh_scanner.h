@@ -8,124 +8,119 @@
 #include <string.h>
 
 namespace markup {
-    struct instream {
-        const char *p;
-        const char *end;
-        explicit instream(const char *src) : p(src), end(src+strlen(src)) {}
-        instream(const char *begin, const char *end) : p(begin), end(end) {}
-        char get_char() { return p < end ? *p++ : 0; }
-    };
+struct instream {
+  const char *p;
+  const char *end;
+  explicit instream(const char *src) : p(src), end(src + strlen(src)) {}
+  instream(const char *begin, const char *end) : p(begin), end(end) {}
+  char get_char() { return p < end ? *p++ : 0; }
+};
 
+class scanner {
+ public:
+  enum token_type {
+    TT_ERROR = -1,
+    TT_EOF = 0,
 
-    class scanner {
-    public:
-        enum token_type {
-            TT_ERROR = -1,
-            TT_EOF = 0,
+    TT_TAG_START,  // <tag ...
+    //     ^-- happens here
+    TT_TAG_END,  // </tag>
+    //       ^-- happens here
+    // <tag ... />
+    //            ^-- or here
+    TT_ATTR,  // <tag attr="value" >
+    //                  ^-- happens here
+    TT_TEXT,
 
-            TT_TAG_START,   // <tag ...
-            //     ^-- happens here
-            TT_TAG_END,     // </tag>
-            //       ^-- happens here
-            // <tag ... />
-            //            ^-- or here
-            TT_ATTR,        // <tag attr="value" >
-            //                  ^-- happens here
-            TT_TEXT,
+    TT_DATA,  // content of followings:
+    // (also content of TT_TAG_START and TT_TAG_END, if the tag is 'script' or 'style')
 
-            TT_DATA,        // content of followings:
-            // (also content of TT_TAG_START and TT_TAG_END, if the tag is 'script' or 'style')
+    TT_COMMENT_START,
+    TT_COMMENT_END,  // after "<!--" and "-->"
+    TT_CDATA_START,
+    TT_CDATA_END,  // after "<![CDATA[" and "]]>"
+    TT_PI_START,
+    TT_PI_END,  // after "<?" and "?>"
+    TT_ENTITY_START,
+    TT_ENTITY_END,  // after "<!ENTITY" and ">"
 
-            TT_COMMENT_START, TT_COMMENT_END, // after "<!--" and "-->"
-            TT_CDATA_START, TT_CDATA_END,     // after "<![CDATA[" and "]]>"
-            TT_PI_START, TT_PI_END,           // after "<?" and "?>"
-            TT_ENTITY_START, TT_ENTITY_END,   // after "<!ENTITY" and ">"
+  };
 
-        };
+  enum $ { MAX_TOKEN_SIZE = 1024, MAX_NAME_SIZE = 128 };
 
-        enum $ {
-            MAX_TOKEN_SIZE = 1024, MAX_NAME_SIZE = 128
-        };
+ public:
+  explicit scanner(instream &is)
+      : value_length(0), tag_name_length(0), attr_name_length(0), input(is), input_char(0), got_tail(false) {
+    c_scan = &scanner::scan_body;
+  }
 
-    public:
+  // get next token
+  token_type get_token() { return (this->*c_scan)(); }
 
-        explicit scanner(instream &is) :
-                value_length(0),
-                tag_name_length(0),
-                attr_name_length(0),
-                input(is),
-                input_char(0),
-                got_tail(false) { c_scan = &scanner::scan_body; }
+  // get text span backed by original input.
+  const char *get_text_begin() { return text_begin; }
+  const char *get_text_end() { return text_end; }
 
-        // get next token
-        token_type get_token() { return (this->*c_scan)(); }
+  // get value of TT_ATTR and TT_DATA
+  const char *get_value();
 
-        // get text span backed by original input.
-        const char *get_text_begin() { return text_begin; }
-        const char *get_text_end() { return text_end; }
+  // get attribute name
+  const char *get_attr_name();
 
-        // get value of TT_ATTR and TT_DATA
-        const char *get_value();
+  // get tag name
+  const char *get_tag_name();
 
-        // get attribute name
-        const char *get_attr_name();
+ private: /* methods */
+  typedef token_type (scanner::*scan)();
 
-        // get tag name
-        const char *get_tag_name();
+  scan c_scan;  // current 'reader'
 
-    private: /* methods */
+  // content 'readers'
+  token_type scan_body();
 
-        typedef token_type (scanner::*scan)();
+  token_type scan_head();
 
-        scan c_scan; // current 'reader'
+  token_type scan_comment();
 
-        // content 'readers'
-        token_type scan_body();
+  token_type scan_cdata();
 
-        token_type scan_head();
+  token_type scan_special();
 
-        token_type scan_comment();
+  token_type scan_pi();
 
-        token_type scan_cdata();
+  token_type scan_tag();
 
-        token_type scan_special();
+  token_type scan_entity_decl();
 
-        token_type scan_pi();
+  char skip_whitespace();
 
-        token_type scan_tag();
+  void push_back(char c);
 
-        token_type scan_entity_decl();
+  char get_char();
 
-        char skip_whitespace();
+  static bool is_whitespace(char c);
 
-        void push_back(char c);
+  void append_value(char c);
 
-        char get_char();
+  void append_attr_name(char c);
 
-        static bool is_whitespace(char c);
+  void append_tag_name(char c);
 
-        void append_value(char c);
+ private: /* data */
+  char value[MAX_TOKEN_SIZE]{};
+  unsigned int value_length;
 
-        void append_attr_name(char c);
+  char tag_name[MAX_NAME_SIZE]{};
+  unsigned int tag_name_length;
 
-        void append_tag_name(char c);
+  char attr_name[MAX_NAME_SIZE]{};
+  unsigned int attr_name_length;
 
-    private: /* data */
+  instream &input;
+  char input_char;
 
-        char value[MAX_TOKEN_SIZE]{};
-        unsigned int value_length;
+  bool got_tail;  // aux flag used in scan_comment, etc.
 
-        char tag_name[MAX_NAME_SIZE]{};
-        unsigned int tag_name_length;
-
-        char attr_name[MAX_NAME_SIZE]{};
-        unsigned int attr_name_length;
-
-        instream &input;
-        char input_char;
-
-        bool got_tail; // aux flag used in scan_comment, etc.
-
-        const char *text_begin, *text_end;
-    };
-}
+  const char *text_begin, *text_end;
+};
+}  // namespace markup

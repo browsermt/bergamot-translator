@@ -3,7 +3,7 @@
 
 #include <cctype>
 #include <cstring>
-#include "xh_scanner.hh"
+#include "xh_scanner.h"
 
 namespace markup {
 

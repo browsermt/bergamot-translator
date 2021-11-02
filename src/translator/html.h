@@ -1,16 +1,25 @@
 #ifndef SRC_BERGAMOT_HTML_H_
 #define SRC_BERGAMOT_HTML_H_
 
+#include <stdexcept>
 #include <string>
 
 namespace marian {
 namespace bergamot {
 
-// TODO plan is have an object that stores tag information in the internal Request object, then restores it later
+class Response;
+
+class BadHTML : public std::runtime_error {
+ public:
+  explicit BadHTML(const char *what) : std::runtime_error(what) {}
+};
+
 class HTML {
  public:
-  // Returns true on successful parse
-  static bool Strip(std::string &&source);
+  explicit HTML(std::string &&source, bool process_markup);
+  void Restore(Response &response);
+ private:
+  // TODO: store stuff here to be used for restoration.
 };
 
 }  // namespace bergamot

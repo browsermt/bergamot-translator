@@ -95,11 +95,9 @@ Ptr<Request> TranslationModel::makeRequest(size_t requestId, std::string &&sourc
   Segments segments;
   AnnotatedText annotatedSource;
 
-  if (responseOptions.HTML) {
-    HTML::Strip(std::move(source));
-  }
+  HTML html(std::move(source), responseOptions.HTML);
   textProcessor_.process(std::move(source), annotatedSource, segments);
-  ResponseBuilder responseBuilder(responseOptions, std::move(annotatedSource), vocabs_, callback, *qualityEstimator_);
+  ResponseBuilder responseBuilder(responseOptions, std::move(annotatedSource), vocabs_, callback, *qualityEstimator_, std::move(html));
 
   Ptr<Request> request =
       New<Request>(requestId, /*model=*/*this, std::move(segments), std::move(responseBuilder), cache);

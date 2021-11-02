@@ -97,7 +97,8 @@ Ptr<Request> TranslationModel::makeRequest(size_t requestId, std::string &&sourc
 
   HTML html(std::move(source), responseOptions.HTML);
   textProcessor_.process(std::move(source), annotatedSource, segments);
-  ResponseBuilder responseBuilder(responseOptions, std::move(annotatedSource), vocabs_, callback, *qualityEstimator_, std::move(html));
+  ResponseBuilder responseBuilder(responseOptions, std::move(annotatedSource), vocabs_, callback, *qualityEstimator_,
+                                  std::move(html));
 
   Ptr<Request> request =
       New<Request>(requestId, /*model=*/*this, std::move(segments), std::move(responseBuilder), cache);

@@ -7,7 +7,7 @@
 namespace marian {
 namespace bergamot {
 
-class Response;
+struct Response;
 
 class BadHTML : public std::runtime_error {
  public:

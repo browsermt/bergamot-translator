@@ -1,5 +1,6 @@
 #include "html.h"
 
+#include "response.h"
 #include "xh_scanner.h"
 
 namespace marian {

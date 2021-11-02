@@ -6,6 +6,7 @@
 #include "common/logging.h"
 #include "data/corpus.h"
 #include "data/text_input.h"
+#include "html.h"
 #include "parser.h"
 #include "translator/beam_search.h"
 
@@ -94,6 +95,9 @@ Ptr<Request> TranslationModel::makeRequest(size_t requestId, std::string &&sourc
   Segments segments;
   AnnotatedText annotatedSource;
 
+  if (responseOptions.HTML) {
+    HTML::Strip(source);
+  }
   textProcessor_.process(std::move(source), annotatedSource, segments);
   ResponseBuilder responseBuilder(responseOptions, std::move(annotatedSource), vocabs_, callback, *qualityEstimator_);
 

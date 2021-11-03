@@ -1,0 +1,1 @@
+namespace go_bergamot {}  // go_bergamot

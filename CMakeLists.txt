@@ -46,6 +46,9 @@ cmake_dependent_option(USE_WASM_COMPATIBLE_SOURCE "Use wasm compatible sources" 
 cmake_dependent_option(COMPILE_UNIT_TESTS "Compile unit tests" OFF "USE_WASM_COMPATIBLE_SOURCE" ON)
 option(COMPILE_TESTS "Compile bergamot-tests" OFF)
 
+# Go
+option(COMPILE_GO "Compile go bindings" OFF)
+
 # Set 3rd party submodule specific cmake options for this project
 SET(COMPILE_CUDA OFF CACHE BOOL "Compile GPU version")
 SET(USE_SENTENCEPIECE ON CACHE BOOL "Download and compile SentencePiece")
@@ -101,6 +104,8 @@ add_subdirectory(src)
 
 if(COMPILE_WASM)
   add_subdirectory(wasm)
+elseif(COMPILE_GO)
+  add_subdirectory(go)
 else()
   add_subdirectory(app)
 endif(COMPILE_WASM)

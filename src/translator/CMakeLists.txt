@@ -2,7 +2,7 @@
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/project_version.h.in
                ${CMAKE_CURRENT_BINARY_DIR}/project_version.h @ONLY)
 
-add_library(bergamot-translator STATIC
+add_library(bergamot-translator SHARED
     byte_array_util.cpp
     text_processor.cpp
     translation_model.cpp 
@@ -15,6 +15,7 @@ add_library(bergamot-translator STATIC
     annotation.cpp
     service.cpp
     parser.cpp
+    adapter.cc
 )
 if (USE_WASM_COMPATIBLE_SOURCE)
   # Using wasm compatible sources should include this compile definition;

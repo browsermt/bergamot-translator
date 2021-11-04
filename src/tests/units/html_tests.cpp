@@ -216,7 +216,44 @@ TEST_CASE("Test reconstruction of multiple sentences") {
 }
 
 TEST_CASE("Test case html entities") {
-	std::string input("<p>This is a sentence &lt;with&gt; a &#35; of &#63;</p>");
+	// These are all entities I would expect in innerHTML, since all other entities
+	// can be encoded as UTF-8 so there's no need to encode them through &...; when
+	// innerHTML encodes the DOM as HTML.
+	std::string input("<p data-attr=\"&quot;&apos;\">This is a sentence &lt;with&gt; named &amp; entities</p>");
 	HTML html(std::move(input), true);
-	CHECK(input == "This is a sentence <with> a # of ?");
+	CHECK(input == "This is a sentence <with> named & entities");
+
+	Response response;
+	response.source = AnnotatedText(std::move(input));
+
+	RecordSentenceFromByteRange(response.source, {
+		ByteRange{ 0,  4}, // 0.0 "This"
+		ByteRange{ 4,  7}, // 0.1 " is"
+		ByteRange{ 7,  9}, // 0.2 " a"
+		ByteRange{ 9, 18}, // 0.3 " sentence"
+		ByteRange{18, 20}, // 0.4 " <"
+		ByteRange{20, 24}, // 0.5 "with"
+		ByteRange{24, 25}, // 0.6 ">"
+		ByteRange{25, 31}, // 0.7 " named"
+		ByteRange{31, 33}, // 0.8 " &"
+		ByteRange{33, 42}, // 0.9 " entities"
+		ByteRange{42, 42} // 0.10 ""
+	});
+
+	html.Restore(response);
+
+	std::vector<std::string> html_tokens{
+		"<p data-attr=\"&quot;&apos;\">This",
+		" is",
+		" a",
+		" sentence",
+		" &lt;", // Oh trouble! The < is completely 'consumed'
+		"with",
+		"&gt;"," named",
+		" &amp;",
+		" entities",
+		"</p>"
+	};
+
+	CHECK(AsWords(response.source) == html_tokens);
 }

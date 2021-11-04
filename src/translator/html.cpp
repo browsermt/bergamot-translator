@@ -3,6 +3,38 @@
 #include "response.h"
 #include "xh_scanner.h"
 
+namespace {
+  std::unordered_map<std::string,char> named_entities{
+    {"&lt;", '<'},
+    {"&gt;", '>'},
+    {"&amp;", '&'},
+    {"&quot;", '"'}, // NOTE will we ever decode these? We ignore attributes
+    {"&apos;", '\''} // NOTE idem.
+  };
+
+  bool DecodeEntity(std::string &out, const char * &pos, const char *end) {
+    const char *entity_begin = pos;
+    const char *entity_end = pos;
+    
+    for (; entity_end != end; ++entity_end)
+      if (*entity_end == ';')
+        break;
+
+    if (entity_end == end)
+      return false;
+    
+    // Look up entity (including '&' and ';', hence + 1)
+    std::string key(entity_begin, entity_end + 1);
+    auto entry = named_entities.find(key);
+    if (entry == named_entities.end())
+      return false;
+    
+    out.push_back(entry->second);
+    pos = entity_end; // Note: *pos == ';' because loop ends with pos++
+    return true;
+  }
+}
+
 namespace marian {
 namespace bergamot {
 
@@ -24,7 +56,11 @@ HTML::HTML(std::string &&source, bool process_markup)
         break;
       case markup::scanner::TT_TEXT:
         // Note these are byte offsets in the original input can can be used to adjust values.
-        source.append(scanner.get_text_begin(), scanner.get_text_end());
+        // Scan text, searching for "&...;" entities
+        for (char const *c = scanner.get_text_begin(); c != scanner.get_text_end(); ++c) {
+          if (*c != '&' || !DecodeEntity(source, c, scanner.get_text_end()))
+            source.push_back(*c);
+        }
         spans_.emplace_back(
           ByteRange{
             static_cast<std::size_t>(scanner.get_text_begin() - original_.data()),

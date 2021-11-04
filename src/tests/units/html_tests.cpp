@@ -214,3 +214,9 @@ TEST_CASE("Test reconstruction of multiple sentences") {
 
 	CHECK(AsWords(response.source) == html_tokens);
 }
+
+TEST_CASE("Test case html entities") {
+	std::string input("<p>This is a sentence &lt;with&gt; a &#35; of &#63;</p>");
+	HTML html(std::move(input), true);
+	CHECK(input == "This is a sentence <with> a # of ?");
+}

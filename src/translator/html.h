@@ -3,6 +3,7 @@
 
 #include <stdexcept>
 #include <string>
+#include "definitions.h"
 
 namespace marian {
 namespace bergamot {
@@ -17,10 +18,17 @@ class BadHTML : public std::runtime_error {
 class HTML {
  public:
   explicit HTML(std::string &&source, bool process_markup);
-  void Restore(Response &response);
+  void Restore(Response &response); // Restore source offsets
+
+  // TODO Currently exposed just for tests
+  inline const std::vector<std::pair<ByteRange,ByteRange>> spans() const {
+    return spans_;
+  };  
 
  private:
   // TODO: store stuff here to be used for restoration.
+  std::vector<std::pair<ByteRange,ByteRange>> spans_;
+  std::string original_;
 };
 
 }  // namespace bergamot

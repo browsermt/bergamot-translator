@@ -170,3 +170,47 @@ TEST_CASE("Test reconstruction") {
 	CHECK(restored_tokens == reconstructed_tokens);
 	*/
 }
+
+TEST_CASE("Test reconstruction of multiple sentences") {
+	std::string input("<p>This <em>is a sentence. And so is</em> this.</p>\n");
+
+	HTML html(std::move(input), true);
+	CHECK(input == "This is a sentence. And so is this.\n");
+
+	Response response;
+	response.source = AnnotatedText(std::move(input));
+
+	RecordSentenceFromByteRange(response.source, {
+		ByteRange{ 0,  4}, // 0.0 "This"
+		ByteRange{ 4,  7}, // 0.1 " is"
+		ByteRange{ 7,  9}, // 0.2 " a"
+		ByteRange{ 9, 18}, // 0.3 " sentence"
+		ByteRange{18, 19}, // 0.4 "."
+		ByteRange{19, 19}  // 0.5 ""
+	});
+
+	RecordSentenceFromByteRange(response.source, {
+		ByteRange{20, 23}, // 1.0 "And"
+		ByteRange{23, 26}, // 1.1 " so"
+		ByteRange{26, 29}, // 1.2 " is"
+		ByteRange{29, 34}, // 1.3 " this"
+		ByteRange{34, 35}, // 1.4 "."
+		ByteRange{35, 35}  // 1.5 ""
+	});
+
+	std::vector<std::string> tokens{
+		"This", " is", " a", " sentence", ".", "",
+		"And", " so", " is", " this", ".", ""
+	};
+
+	CHECK(AsWords(response.source) == tokens);
+
+	html.Restore(response);
+
+	std::vector<std::string> html_tokens{
+		"<p>This", " <em>is", " a", " sentence", ".", "",
+		"And", " so", " is", "</em> this", ".", "</p>"
+	};
+
+	CHECK(AsWords(response.source) == html_tokens);
+}

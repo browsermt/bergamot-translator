@@ -17,12 +17,32 @@ std::ostream &operator<<(std::ostream &out, ByteRange const &b) {
 	return out << '{' << b.begin << ',' << b.end << '}';
 }
 
-std::vector<ByteRange> AsVector(Annotation const &annotation) {
+std::vector<ByteRange> AsByteRanges(Annotation const &annotation) {
 	std::vector<ByteRange> words;
 	for (std::size_t sentenceIdx = 0; sentenceIdx < annotation.numSentences(); ++sentenceIdx)
 		for (std::size_t wordIdx = 0; wordIdx < annotation.numWords(sentenceIdx); ++wordIdx)
 			words.push_back(annotation.word(sentenceIdx, wordIdx));
 	return words;
+}
+
+std::vector<std::string> AsWords(AnnotatedText const &annotation) {
+	std::vector<std::string> words;
+	for (std::size_t sentenceIdx = 0; sentenceIdx < annotation.numSentences(); ++sentenceIdx)
+		for (std::size_t wordIdx = 0; wordIdx < annotation.numWords(sentenceIdx); ++wordIdx)
+			words.emplace_back(annotation.word(sentenceIdx, wordIdx));
+	return words;
+}
+
+void RecordSentenceFromByteRange(AnnotatedText &text, std::vector<ByteRange> const &ranges) {
+	assert(ranges.size() > 0);
+
+	std::vector<string_view> tokens;
+	tokens.reserve(ranges.size());
+
+	for (auto &&range : ranges)
+		tokens.emplace_back(text.text.data() + range.begin, range.size());
+
+	text.recordExistingSentence(tokens.begin(), tokens.end(), text.text.data() + ranges[0].begin);
 }
 
 TEST_CASE("Test identifying text spans") {
@@ -90,7 +110,21 @@ TEST_CASE("Test reconstruction") {
 	CHECK(response.source.text.size() == restored_tokens.back().end + 1); // 59 + \n
 	CHECK(response.source.annotation.numSentences() == 1);
 	CHECK(response.source.annotation.numWords(0) == restored_tokens.size());
-	CHECK(AsVector(response.source.annotation) == restored_tokens);
+	CHECK(AsByteRanges(response.source.annotation) == restored_tokens);
+
+	// Same test as above, but easier to read. Will use this further down.
+	std::vector<std::string> restored_tokens_str{
+		"<p><input>H<u>e</u>ll",
+		"o",
+		" <b>world",
+		"</b> how",
+		" <u>are",
+		" you",
+		"</u>?",
+		"</p>" // (TODO no newline?)
+	};
+
+	CHECK(AsWords(response.source) == restored_tokens_str);
 
 
 	/*

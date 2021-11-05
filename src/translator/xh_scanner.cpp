@@ -45,8 +45,8 @@ scanner::token_type scanner::scan_body() {
 
   while (true) {
     append_value(c);
-
     ++text_end;
+    
     c = get_char();
     
     if (c == 0) {
@@ -238,10 +238,16 @@ scanner::token_type scanner::scan_entity() {
       break;
   }
 
+  // Keep the text_end that scanner::scan_body uses similarly up-to-date. Since
+  // scan_entity() is only called from scan_body we assume text_begin is already
+  // set correctly by it.
+  text_end += buflen;
+  
   // If we found the end of the entity, and we can identify it, then
   // resolve_entity() will emit the char it encoded.
-  if (buffer[buflen-1] == ';' && resolve_entity(buffer, buflen))
+  if (buffer[buflen-1] == ';' && resolve_entity(buffer, buflen)) {
     return TT_TEXT;
+  }
   
   // Otherwise, we just emit whatever we read as text, except for the last
   // character that caused us to break. That may be another &, or a <, which we
@@ -249,6 +255,7 @@ scanner::token_type scanner::scan_entity() {
   for (unsigned int i = 0; i < buflen - 1; ++i)
     append_value(buffer[i]);
   push_back(buffer[buflen-1]);
+  --text_end; // because push_back()
   return TT_TEXT;
 }
 

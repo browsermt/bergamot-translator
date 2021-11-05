@@ -223,6 +223,19 @@ TEST_CASE("Test case html entities") {
 	HTML html(std::move(input), true);
 	CHECK(input == "This is a sentence <with> named & entities\n");
 
+	std::vector<std::pair<ByteRange,ByteRange>> spans{
+		std::make_pair(ByteRange{28,28+19}, ByteRange{ 0,   19}), // This is a sentence_
+		std::make_pair(ByteRange{47,47+ 4}, ByteRange{19,19+ 1}), // <
+		std::make_pair(ByteRange{51,51+ 4}, ByteRange{20,20+ 4}), // with
+		std::make_pair(ByteRange{55,55+ 4}, ByteRange{24,24+ 1}), // >
+		std::make_pair(ByteRange{59,59+ 7}, ByteRange{25,25+ 7}), // _named_
+		std::make_pair(ByteRange{66,66+ 5}, ByteRange{32,32+ 1}), // &
+		std::make_pair(ByteRange{71,71+ 9}, ByteRange{33,33+ 9}), // _entities
+		std::make_pair(ByteRange{84,84+ 1}, ByteRange{42,42+ 1})  // \n
+	};
+
+	CHECK(html.spans() == spans);
+
 	Response response;
 	response.source = AnnotatedText(std::move(input));
 

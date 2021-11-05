@@ -39,7 +39,7 @@ jobs:
     - name: Prepare vcpkg
       uses: lukka/run-vcpkg@v7.4
       with:
-        vcpkgArguments: protobuf pcre2
+        vcpkgArguments: protobuf pcre2 --overlay-ports="${{ github.workspace }}\vcpkg-override\ports\pcre2"
         vcpkgGitCommitId: 8dddc6c899ce6fdbeab38b525a31e7f23cb2d5bb
         vcpkgDirectory: ${{ github.workspace }}/vcpkg/
         vcpkgTriplet: x64-windows-static

@@ -219,9 +219,9 @@ TEST_CASE("Test case html entities") {
 	// These are all entities I would expect in innerHTML, since all other entities
 	// can be encoded as UTF-8 so there's no need to encode them through &...; when
 	// innerHTML encodes the DOM as HTML.
-	std::string input("<p data-attr=\"&quot;&apos;\">This is a sentence &lt;with&gt; named &amp; entities</p>");
+	std::string input("<p data-attr=\"&quot;&apos;\">This is a sentence &lt;with&gt; named &amp; entities</p>\n");
 	HTML html(std::move(input), true);
-	CHECK(input == "This is a sentence <with> named & entities");
+	CHECK(input == "This is a sentence <with> named & entities\n");
 
 	Response response;
 	response.source = AnnotatedText(std::move(input));

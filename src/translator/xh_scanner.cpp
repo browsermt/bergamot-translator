@@ -33,22 +33,22 @@ scanner::token_type scanner::scan_body() {
     --text_begin;
   }
   text_end = text_begin;
+  value_length = 0;
   char c = get_char();
-
-  bool ws;
 
   if (c == 0)
     return TT_EOF;
   else if (c == '<')
     return scan_tag();
-  // else if (c == '&') {
-  //     c = scan_entity();
-  //     ws = is_whitespace(c);
-  // }
+  else if (c == '&')
+    return scan_entity();
 
   while (true) {
+    append_value(c);
+
     ++text_end;
     c = get_char();
+    
     if (c == 0) {
       push_back(c);
       break;
@@ -57,11 +57,10 @@ scanner::token_type scanner::scan_body() {
       push_back(c);
       break;
     }
-    // TODO entity parsing.
-    /*            if (c == '&') {
-                    push_back(c);
-                    break;
-                }*/
+    if (c == '&') {
+      push_back(c);
+      break;
+    }
   }
   return TT_TEXT;
 }
@@ -211,6 +210,80 @@ scanner::token_type scanner::scan_tag() {
 
   c_scan = &scanner::scan_head;
   return TT_TAG_START;
+}
+
+scanner::token_type scanner::scan_entity() {
+  // note that when scan_entity() is called, & is already consumed.
+  
+  char buffer[8];
+  unsigned int buflen = 0;
+  buffer[buflen++] = '&'; // (just makes resolve_entity and append_value(buffer) easier)
+
+  bool has_end = false;
+
+  while (true) {
+    char c = get_char();
+    buffer[buflen++] = c;
+
+    // Found end of entity
+    if (c == ';')
+      break;
+
+    // Too long to be entity
+    if (buflen == sizeof(buffer))
+      break;
+
+    // Not a character we'd expect in an entity (esp '&' or '<')
+    if (!isalpha(c))
+      break;
+  }
+
+  // If we found the end of the entity, and we can identify it, then
+  // resolve_entity() will emit the char it encoded.
+  if (buffer[buflen-1] == ';' && resolve_entity(buffer, buflen))
+    return TT_TEXT;
+  
+  // Otherwise, we just emit whatever we read as text, except for the last
+  // character that caused us to break. That may be another &, or a <, which we
+  // would want to scan properly.
+  for (unsigned int i = 0; i < buflen - 1; ++i)
+    append_value(buffer[i]);
+  push_back(buffer[buflen-1]);
+  return TT_TEXT;
+}
+
+bool scanner::resolve_entity(char *buffer, unsigned int len) {
+  switch (len) {
+    case 4:
+      if (equal(buffer, "&lt;", 2)) {
+        append_value('<');
+        return true;
+      }
+      if (equal(buffer, "&gt;", 2)) {
+        append_value('>');
+        return true;
+      }
+      break;
+    
+    case 5:
+      if (equal(buffer, "&amp;", 3)) {
+        append_value('&');
+        return true;
+      }
+      break;
+
+    case 6:
+      if (equal(buffer, "&quot;", 4)) {
+        append_value('"');
+        return true;
+      }
+      if (equal(buffer, "&apos;", 4)) {
+        append_value('\'');
+        return true;
+      }
+      break;
+  }
+  return false;
 }
 
 // skip whitespaces.

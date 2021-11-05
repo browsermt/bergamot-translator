@@ -61,7 +61,7 @@ class scanner {
   const char *get_text_begin() { return text_begin; }
   const char *get_text_end() { return text_end; }
 
-  // get value of TT_ATTR and TT_DATA
+  // get value of TT_TEXT, TT_ATTR and TT_DATA
   const char *get_value();
 
   // get attribute name
@@ -90,6 +90,8 @@ class scanner {
 
   token_type scan_tag();
 
+  token_type scan_entity();
+
   token_type scan_entity_decl();
 
   char skip_whitespace();
@@ -97,6 +99,8 @@ class scanner {
   void push_back(char c);
 
   char get_char();
+
+  bool resolve_entity(char *buffer, unsigned int len);
 
   static bool is_whitespace(char c);
 

@@ -5,7 +5,7 @@ set(PATCHES
 )
 
 vcpkg_download_distfile(ARCHIVE
-    URLS "https://sourceforge.net/projects/pcre/files/pcre/${PCRE_VERSION}/pcre-${PCRE_VERSION}.zip"
+    URLS "https://sourceforge.net/projects/pcre/files/pcre2/${PCRE2_VERSION}/pcre2-${PCRE2_VERSION}.zip"
     FILENAME "pcre2-${PCRE2_VERSION}.zip"
     SHA512 ${EXPECTED_SHA}
     SILENT_EXIT

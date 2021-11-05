@@ -115,7 +115,6 @@ void ResponseBuilder::buildAlignments(Histories &histories, Response &response) 
     auto hyp = std::get<1>(result);
     auto softAlignment = hyp->tracebackAlignment();
     response.alignments.push_back(std::move(softAlignment));
-
   }
 }
 

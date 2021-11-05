@@ -58,14 +58,26 @@ void HTML::Restore(Response &response) {
       ByteRange word = response.source.wordAsByteRange(sentenceIdx, wordIdx);
       ByteRange out{word.begin + added_offset, word.end + added_offset};
       
+      // While there is overlap with a span of text from the original HTML, there
+      // might be HTML that we'll need to account for in our Annotation ranges.
       while (
         span_it != spans_.end()
         && span_it->second.begin >= word.begin
         && span_it->second.begin < word.end
       ) {
+        // Slice in the HTML that comes before this text segment
         std:size_t added_html_size = span_it->first.begin - (span_it == spans_.begin() ? 0 : prev_it->first.end);
+        
+        // If this text segment is HTML with entities, the HTML will be longer
+        // than the text version.
+        assert(span_it->first.size() >= span_it->second.size()); // HTML is always longer than text
+        added_html_size += span_it->first.size() - span_it->second.size();
+          
+        // Extend this word byterange to include all HTML that goes before it
+        // and inside it (&..; entities, that is)
         out.end += added_html_size;
         added_offset += added_html_size;
+
         prev_it = span_it++;
       }
 

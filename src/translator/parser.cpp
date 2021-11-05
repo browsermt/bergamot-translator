@@ -90,6 +90,7 @@ void ConfigParser::addOptionsBoundToConfig(CLI::App &app, CLIConfig &config) {
   app_.add_option("--cache-size", config.cacheSize, "Number of entries to store in cache.");
   app_.add_option("--cache-mutex-buckets", config.cacheMutexBuckets,
                   "Number of mutex buckets to control locking granularity");
+  app_.add_option("--cache-collect-stats", config.cacheCollectStats, "Whether to collect cache statistics or not");
 }
 
 std::shared_ptr<marian::Options> parseOptionsFromFilePath(const std::string &configPath, bool validate /*= true*/) {

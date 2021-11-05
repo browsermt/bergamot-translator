@@ -43,6 +43,7 @@ struct CLIConfig {
   bool cacheEnabled{false};
   size_t cacheSize{20};
   size_t cacheMutexBuckets{4};
+  bool cacheCollectStats{false};
 };
 
 /// ConfigParser for bergamot. Internally stores config options with CLIConfig. CLI11 parsing binds the parsing code to

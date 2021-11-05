@@ -9,6 +9,7 @@ int main(int argc, char *argv[]) {
   serviceConfig.numWorkers = config.numWorkers;
   serviceConfig.cacheEnabled = config.cacheEnabled;
   serviceConfig.cacheMutexBuckets = config.cacheMutexBuckets;
+  serviceConfig.cacheCollectStats = config.cacheCollectStats;
   serviceConfig.cacheSize = config.cacheSize;
   AsyncService service(serviceConfig);
   std::vector<std::shared_ptr<TranslationModel>> models;

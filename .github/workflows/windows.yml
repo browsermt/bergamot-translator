@@ -39,7 +39,7 @@ jobs:
     - name: Prepare vcpkg
       uses: lukka/run-vcpkg@v7.4
       with:
-        vcpkgArguments: protobuf 
+        vcpkgArguments: protobuf pcre2 --overlay-ports="${{ github.workspace }}\vcpkg-override\ports\pcre2"
         vcpkgGitCommitId: 8dddc6c899ce6fdbeab38b525a31e7f23cb2d5bb
         vcpkgDirectory: ${{ github.workspace }}/vcpkg/
         vcpkgTriplet: x64-windows-static
@@ -51,7 +51,6 @@ jobs:
         buildDirectory: ${{ github.workspace }}/build
         cmakeAppendedArgs: '-G Ninja
           -DCMAKE_BUILD_TYPE="Release"
-          -DSSPLIT_USE_INTERNAL_PCRE2="ON"
           -DUSE_WASM_COMPATIBLE_SOURCE="OFF"
           -DUSE_STATIC_LIBS="TRUE"'
         cmakeListsOrSettingsJson: CMakeListsTxtAdvanced

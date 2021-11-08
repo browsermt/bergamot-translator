@@ -10,7 +10,6 @@ namespace bergamot {
 HTML::HTML(std::string &&source, bool process_markup)
 : original_(std::move(source)) {
   if (!process_markup) return;
-  std::string original(std::move(source));
   markup::instream in(original_.data(), original_.data() + original_.size());
   markup::scanner scanner(in);
   source.clear();

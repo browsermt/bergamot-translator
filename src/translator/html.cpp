@@ -138,7 +138,9 @@ void HTML::RestoreSource(Response &response) {
 void HTML::RestoreTarget(Response &response) {
   AnnotatedText target;
   std::string html;
-
+  std::string sentence;
+  std::vector<ByteRange> tokens;
+    
   double ratio = (double) response.target.text.size() / response.source.text.size();
 
   auto span_it = spans_.begin();
@@ -146,8 +148,8 @@ void HTML::RestoreTarget(Response &response) {
   std::size_t added_offset = 0;
   
   for (std::size_t sentenceIdx = 0; sentenceIdx < response.target.numSentences(); ++sentenceIdx) {
-    std::string sentence;
-    std::vector<ByteRange> tokens;
+    sentence.clear();
+    tokens.clear();
     std::size_t added_html_size = 0;
     std::size_t sentence_offset = response.target.sentenceAsByteRange(sentenceIdx).begin;
 
@@ -161,8 +163,9 @@ void HTML::RestoreTarget(Response &response) {
       // Do encoding of any entities that popped up in the translation
       EncodeEntities(response.target.word(sentenceIdx, wordIdx), html);
       if (html.size() > word.size()) {
-        token.end += html.size() - word.size();
-        added_html_size += html.size() - word.size();
+        std::size_t html_size = html.size() - word.size(); // number of additional bytes due to encoding entities
+        token.end += html_size;
+        added_html_size += html_size;
       }
 
       std::size_t html_prefix_size = 0; // bytes of html added to the beginning of this token.

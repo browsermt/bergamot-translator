@@ -189,6 +189,8 @@ void HTML::RestoreTarget(Response &response) {
       tokens.push_back(token);
     }
 
+    // TODO: append ending whitespace?
+
     // If there's additional HTML at the end, add it to the back of the last token
     // of the last sentence.
     if (sentenceIdx == response.source.numSentences() - 1 && span_it != spans_.end()) {
@@ -204,7 +206,7 @@ void HTML::RestoreTarget(Response &response) {
     for (auto token : tokens)
       token_views.emplace_back(sentence.data() + token.begin, token.size());
 
-    target.appendSentence(sentence, token_views.begin(), token_views.end());
+    target.appendSentence(string_view(), token_views.begin(), token_views.end());
   }
 
   response.target = target;

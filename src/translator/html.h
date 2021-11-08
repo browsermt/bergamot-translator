@@ -18,7 +18,7 @@ class BadHTML : public std::runtime_error {
 class HTML {
  public:
   explicit HTML(std::string &&source, bool process_markup);
-  void Restore(Response &response); // Restore source offsets
+  void Restore(Response &response);
 
   // TODO Currently exposed just for tests
   inline const std::vector<std::pair<ByteRange,ByteRange>> spans() const {
@@ -26,7 +26,9 @@ class HTML {
   };  
 
  private:
-  // TODO: store stuff here to be used for restoration.
+  void RestoreTarget(Response &response);
+  void RestoreSource(Response &response);
+  
   std::vector<std::pair<ByteRange,ByteRange>> spans_;
   std::string original_;
 };

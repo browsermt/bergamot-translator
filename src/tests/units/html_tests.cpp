@@ -270,3 +270,87 @@ TEST_CASE("Test case html entities") {
 
 	CHECK(AsWords(response.source) == html_tokens);
 }
+
+TEST_CASE("Test reconstruction of target sentence") {
+	std::string input("<p>hello <b>world</b></p>\n");
+	HTML html(std::move(input), true);
+	CHECK(input == "hello world\n");
+
+	AnnotatedText source("hello world\n");
+	RecordSentenceFromByteRange(source, {
+		ByteRange{ 0,  4},  // 0.0 "hell"
+		ByteRange{ 4,  5},  // 0.1 "o"
+		ByteRange{ 5, 11},  // 0.2 " world"
+		ByteRange{11, 11}   // 0.3 ""
+	});
+
+	AnnotatedText target("hallo Welt\n");
+	RecordSentenceFromByteRange(target, {
+		ByteRange{ 0,  4},  // 0.0 "hall"
+		ByteRange{ 4,  5},  // 0.1 "o"
+		ByteRange{ 5, 10},  // 0.2 " Welt"
+		ByteRange{10, 10}   // 0.3 ""
+	});
+
+	Response response;
+	response.source = source;
+	response.target = target;
+
+	html.Restore(response);
+
+	std::vector<std::string> html_tokens_source{
+		"<p>hell", "o", " <b>world", "</b></p>"
+	};
+
+	std::vector<std::string> html_tokens_target{
+		"<p>hall", "o", "<b> Welt", "</b></p>"
+	};
+
+	CHECK(AsWords(response.source) == html_tokens_source);
+	CHECK(AsWords(response.target) == html_tokens_target);
+}
+
+TEST_CASE("Test reconstruction of target sentence with entities") {
+	std::string input("<p>hello <b>world &amp; friends!</b></p>\n");
+	HTML html(std::move(input), true);
+	CHECK(input == "hello world & friends!\n");
+
+	AnnotatedText source("hello world & friends!\n");
+	RecordSentenceFromByteRange(source, {
+		ByteRange{ 0,  4},  // 0.0 "hell"
+		ByteRange{ 4,  5},  // 0.1 "o"
+		ByteRange{ 5, 11},  // 0.2 " world"
+		ByteRange{11, 13},  // 0.3 " &"
+		ByteRange{13, 21},  // 0.4 " friends"
+		ByteRange{21, 22},  // 0.5 "!"
+		ByteRange{22, 22}   // 0.6 ""
+	});
+
+	AnnotatedText target("hallo Welt & Freunde!\n");
+	RecordSentenceFromByteRange(target, {
+		ByteRange{ 0,  4},  // 0.0 "hall"
+		ByteRange{ 4,  5},  // 0.1 "o"
+		ByteRange{ 5, 10},  // 0.2 " Welt"
+		ByteRange{10, 12},  // 0.3 " &"
+		ByteRange{12, 20},  // 0.4 " Freunde"
+		ByteRange{20, 21},  // 0.5 "!"
+		ByteRange{21, 21}   // 0.6 ""
+	});
+
+	Response response;
+	response.source = source;
+	response.target = target;
+
+	html.Restore(response);
+
+	std::vector<std::string> html_tokens_source{
+		"<p>hell", "o", " <b>world", " &amp;", " friends", "!", "</b></p>"
+	};
+
+	std::vector<std::string> html_tokens_target{
+		"<p>hall", "o", "<b> Welt", " &amp;", " Freunde", "!", "</b></p>"
+	};
+
+	CHECK(AsWords(response.source) == html_tokens_source);
+	CHECK(AsWords(response.target) == html_tokens_target);
+}

@@ -133,7 +133,6 @@ struct AnnotatedText {
   /// constructor is disallowed).
   AnnotatedText(std::string &&text);
 
-
   /// Apply a function to each token, making sure the token offsets are kept
   /// correctly as each token's text grows or shrinks. Returns an updated copy,
   /// leaves `this` intact.
@@ -145,7 +144,7 @@ struct AnnotatedText {
     out.annotation.gap_ = annotation.gap_;
 
     for (std::size_t i = 1; i < annotation.token_begin_.size(); ++i) {
-      ByteRange range{annotation.token_begin_[i-1], annotation.token_begin_[i]};
+      ByteRange range{annotation.token_begin_[i - 1], annotation.token_begin_[i]};
       bool last = i + 1 == annotation.token_begin_.size();
       out.text.append(operation(range, asStringView(range), last));
       out.annotation.token_begin_.push_back(out.text.size());

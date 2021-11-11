@@ -3,6 +3,7 @@
 
 #include <stdexcept>
 #include <string>
+
 #include "definitions.h"
 
 namespace marian {
@@ -21,12 +22,10 @@ class HTML {
   void Restore(Response &response);
 
   // TODO Currently exposed just for tests
-  inline const std::vector<std::pair<ByteRange,ByteRange>> spans() const {
-    return spans_;
-  };  
+  inline const std::vector<std::pair<ByteRange, ByteRange>> spans() const { return spans_; };
 
  private:
-  std::vector<std::pair<ByteRange,ByteRange>> spans_;
+  std::vector<std::pair<ByteRange, ByteRange>> spans_;
   std::string original_;
 };
 

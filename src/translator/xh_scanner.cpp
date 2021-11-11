@@ -46,9 +46,9 @@ scanner::token_type scanner::scan_body() {
   while (true) {
     append_value(c);
     ++text_end;
-    
+
     c = get_char();
-    
+
     if (c == 0) {
       push_back(c);
       break;
@@ -214,10 +214,10 @@ scanner::token_type scanner::scan_tag() {
 
 scanner::token_type scanner::scan_entity() {
   // note that when scan_entity() is called, & is already consumed.
-  
+
   char buffer[8];
   unsigned int buflen = 0;
-  buffer[buflen++] = '&'; // (just makes resolve_entity and append_value(buffer) easier)
+  buffer[buflen++] = '&';  // (just makes resolve_entity and append_value(buffer) easier)
 
   bool has_end = false;
 
@@ -226,36 +226,32 @@ scanner::token_type scanner::scan_entity() {
     buffer[buflen++] = c;
 
     // Found end of entity
-    if (c == ';')
-      break;
+    if (c == ';') break;
 
     // Too long to be entity
-    if (buflen == sizeof(buffer))
-      break;
+    if (buflen == sizeof(buffer)) break;
 
     // Not a character we'd expect in an entity (esp '&' or '<')
-    if (!isalpha(c))
-      break;
+    if (!isalpha(c)) break;
   }
 
   // Keep the text_end that scanner::scan_body uses similarly up-to-date. Since
   // scan_entity() is only called from scan_body we assume text_begin is already
   // set correctly by it.
   text_end += buflen;
-  
+
   // If we found the end of the entity, and we can identify it, then
   // resolve_entity() will emit the char it encoded.
-  if (buffer[buflen-1] == ';' && resolve_entity(buffer, buflen)) {
+  if (buffer[buflen - 1] == ';' && resolve_entity(buffer, buflen)) {
     return TT_TEXT;
   }
-  
+
   // Otherwise, we just emit whatever we read as text, except for the last
   // character that caused us to break. That may be another &, or a <, which we
   // would want to scan properly.
-  for (unsigned int i = 0; i < buflen - 1; ++i)
-    append_value(buffer[i]);
-  push_back(buffer[buflen-1]);
-  --text_end; // because push_back()
+  for (unsigned int i = 0; i < buflen - 1; ++i) append_value(buffer[i]);
+  push_back(buffer[buflen - 1]);
+  --text_end;  // because push_back()
   return TT_TEXT;
 }
 
@@ -271,7 +267,7 @@ bool scanner::resolve_entity(char *buffer, unsigned int len) {
         return true;
       }
       break;
-    
+
     case 5:
       if (equal(buffer, "&amp;", 3)) {
         append_value('&');

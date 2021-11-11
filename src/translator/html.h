@@ -26,9 +26,6 @@ class HTML {
   };  
 
  private:
-  void RestoreTarget(Response &response);
-  void RestoreSource(Response &response);
-  
   std::vector<std::pair<ByteRange,ByteRange>> spans_;
   std::string original_;
 };

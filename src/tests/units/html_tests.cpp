@@ -17,20 +17,27 @@ std::ostream &operator<<(std::ostream &out, ByteRange const &b) {
 	return out << '{' << b.begin << ',' << b.end << '}';
 }
 
-std::vector<ByteRange> AsByteRanges(Annotation const &annotation) {
+std::vector<ByteRange> AsByteRanges(AnnotatedText const &annotation) {
 	std::vector<ByteRange> words;
-	for (std::size_t sentenceIdx = 0; sentenceIdx < annotation.numSentences(); ++sentenceIdx)
-		for (std::size_t wordIdx = 0; wordIdx < annotation.numWords(sentenceIdx); ++wordIdx)
-			words.push_back(annotation.word(sentenceIdx, wordIdx));
+	annotation.apply([&](ByteRange range, string_view token, bool end) {
+		words.emplace_back(range);
+		return std::string();
+	});
 	return words;
 }
 
-std::vector<std::string> AsWords(AnnotatedText const &annotation) {
-	std::vector<std::string> words;
-	for (std::size_t sentenceIdx = 0; sentenceIdx < annotation.numSentences(); ++sentenceIdx)
-		for (std::size_t wordIdx = 0; wordIdx < annotation.numWords(sentenceIdx); ++wordIdx)
-			words.emplace_back(annotation.word(sentenceIdx, wordIdx));
-	return words;
+std::vector<std::string> AsTokens(AnnotatedText const &annotation) {
+	std::vector<std::string> tokens;
+
+	// Abusing apply() here to map over all tokens. I don't care for the output.
+	// Also, this is just a test case. There is no use for accessing individual
+	// tokens as opposed to words outside of these tests.
+	annotation.apply([&](ByteRange range, string_view token, bool end) {
+		tokens.emplace_back(token);
+		return std::string();
+	});
+
+	return tokens;
 }
 
 void RecordSentenceFromByteRange(AnnotatedText &text, std::vector<ByteRange> const &ranges) {
@@ -95,9 +102,10 @@ TEST_CASE("Test reconstruction") {
 	response.source = source;
 
 	html.Restore(response);
-	CHECK(response.source.text == input);
+	CHECK(response.source.text == input); // fails because <u></u> has been moved to the front of the token
 
 	std::vector<ByteRange> restored_tokens{
+		ByteRange{ 0,     0}, // "" (That's just how Annotation works)
 		ByteRange{ 0,  0+21}, // <p><input>H<u>e</u>ll
 		ByteRange{21, 21+ 1}, // o
 		ByteRange{22, 22+ 9}, // _<b>world
@@ -105,70 +113,27 @@ TEST_CASE("Test reconstruction") {
 		ByteRange{39, 39+ 7}, // _<u>are
 		ByteRange{46, 46+ 4}, // _you
 		ByteRange{50, 50+ 5}, // </u>?
-		ByteRange{55, 55+ 4}, // "</p>\n" (but 0 length for newline?)
+		ByteRange{55, 55+ 0}, // "" because end of sentence. Gap that follows contains "</p>\n" 
+		ByteRange{55, 55+ 5}, // "</p>\n" 
 	};
-	CHECK(response.source.text.size() == restored_tokens.back().end + 1); // 59 + \n
-	CHECK(response.source.annotation.numSentences() == 1);
-	CHECK(response.source.annotation.numWords(0) == restored_tokens.size());
-	CHECK(AsByteRanges(response.source.annotation) == restored_tokens);
+	CHECK(response.source.text.size() == restored_tokens.back().end); // 60 including \n
+	CHECK(AsByteRanges(response.source) == restored_tokens);
 
 	// Same test as above, but easier to read. Will use this further down.
 	std::vector<std::string> restored_tokens_str{
-		"<p><input>H<u>e</u>ll",
+		"",
+		"<p><input><u></u>Hell",  // Should really be "<p><input>H<u>e</u>ll"
 		"o",
-		" <b>world",
+		"<b> world",
 		"</b> how",
-		" <u>are",
+		"<u> are",
 		" you",
 		"</u>?",
-		"</p>" // (TODO no newline?)
+		"", // end of sentence
+		"</p>\n" // newline in post-sentence gap
 	};
 
-	CHECK(AsWords(response.source) == restored_tokens_str);
-
-
-	/*
-	std::vector<ByteRange> reconstructed_tokens;
-	
-	auto span_it = spans.begin();
-	auto prev_it = spans.end();
-	std::size_t offset = 0;
-	for (auto token_it = tokens.begin(); token_it != tokens.end(); ++token_it) {
-		ByteRange token{
-			static_cast<std::size_t>(token_it->data() - source.text.data()),
-			static_cast<std::size_t>(token_it->data() - source.text.data()) + token_it->size()
-		};
-
-		ByteRange reconstructed{
-			token.begin + offset,
-			token.end + offset
-		};
-
-		while (
-			span_it != spans.end()
-			&& span_it->second.begin >= token.begin
-			&& span_it->second.begin < token.end 
-		) {
-			// std::cerr << "Adding "
-			// 				  << (span_it - spans.begin()) << " to " << (token_it - tokens.begin())
-			// 				  << " because span " << *span_it << " falls in token " << token
-			// 				  << std::endl;
-			std::size_t additional_html = span_it->first.begin - (prev_it == spans.end() ? 0 : prev_it->first.end);
-			reconstructed.end += additional_html;
-			offset += additional_html;
-			prev_it = span_it++;
-		}
-
-		reconstructed_tokens.push_back(reconstructed);
-	}
-
-	if (span_it != spans.end()) {
-		std::size_t additional_html = span_it->first.begin - (prev_it == spans.end() ? 0 : prev_it->first.end);
-		reconstructed_tokens.back().end += additional_html;
-	}
-
-	CHECK(restored_tokens == reconstructed_tokens);
-	*/
+	CHECK(AsTokens(response.source) == restored_tokens_str);
 }
 
 TEST_CASE("Test reconstruction of multiple sentences") {
@@ -186,7 +151,6 @@ TEST_CASE("Test reconstruction of multiple sentences") {
 		ByteRange{ 7,  9}, // 0.2 " a"
 		ByteRange{ 9, 18}, // 0.3 " sentence"
 		ByteRange{18, 19}, // 0.4 "."
-		ByteRange{19, 19}  // 0.5 ""
 	});
 
 	RecordSentenceFromByteRange(response.source, {
@@ -195,24 +159,29 @@ TEST_CASE("Test reconstruction of multiple sentences") {
 		ByteRange{26, 29}, // 1.2 " is"
 		ByteRange{29, 34}, // 1.3 " this"
 		ByteRange{34, 35}, // 1.4 "."
-		ByteRange{35, 35}  // 1.5 ""
 	});
 
 	std::vector<std::string> tokens{
-		"This", " is", " a", " sentence", ".", "",
-		"And", " so", " is", " this", ".", ""
+		"",
+		"This", " is", " a", " sentence", ".",
+		" ",
+		"And", " so", " is", " this", ".",
+		"\n"
 	};
 
-	CHECK(AsWords(response.source) == tokens);
+	CHECK(AsTokens(response.source) == tokens);
 
 	html.Restore(response);
 
 	std::vector<std::string> html_tokens{
-		"<p>This", " <em>is", " a", " sentence", ".", "",
-		"And", " so", " is", "</em> this", ".", "</p>"
+		"",
+		"<p>This", "<em> is", " a", " sentence", ".",
+		" ",
+		"And", " so", " is", "</em> this", ".",
+		"</p>\n", // </p> got moved into post-sentence gap
 	};
 
-	CHECK(AsWords(response.source) == html_tokens);
+	CHECK(AsTokens(response.source) == html_tokens);
 }
 
 TEST_CASE("Test case html entities") {
@@ -256,6 +225,7 @@ TEST_CASE("Test case html entities") {
 	html.Restore(response);
 
 	std::vector<std::string> html_tokens{
+		"",
 		"<p data-attr=\"&quot;&apos;\">This",
 		" is",
 		" a",
@@ -265,10 +235,11 @@ TEST_CASE("Test case html entities") {
 		"&gt;"," named",
 		" &amp;",
 		" entities",
-		"</p>"
+		"",
+		"</p>\n"
 	};
 
-	CHECK(AsWords(response.source) == html_tokens);
+	CHECK(AsTokens(response.source) == html_tokens);
 }
 
 TEST_CASE("Test reconstruction of target sentence") {
@@ -299,15 +270,15 @@ TEST_CASE("Test reconstruction of target sentence") {
 	html.Restore(response);
 
 	std::vector<std::string> html_tokens_source{
-		"<p>hell", "o", " <b>world", "</b></p>"
+		"", "<p>hell", "o", "<b> world", "", "</b></p>\n"
 	};
 
 	std::vector<std::string> html_tokens_target{
-		"<p>hall", "o", "<b> Welt", "</b></p>"
+		"", "<p>hall", "o", "<b> Welt", "", "</b></p>\n"
 	};
 
-	CHECK(AsWords(response.source) == html_tokens_source);
-	CHECK(AsWords(response.target) == html_tokens_target);
+	CHECK(AsTokens(response.source) == html_tokens_source);
+	CHECK(AsTokens(response.target) == html_tokens_target);
 }
 
 TEST_CASE("Test reconstruction of target sentence with entities") {
@@ -344,13 +315,92 @@ TEST_CASE("Test reconstruction of target sentence with entities") {
 	html.Restore(response);
 
 	std::vector<std::string> html_tokens_source{
-		"<p>hell", "o", " <b>world", " &amp;", " friends", "!", "</b></p>"
+		"", "<p>hell", "o", "<b> world", " &amp;", " friends", "!", "", "</b></p>\n"
 	};
 
 	std::vector<std::string> html_tokens_target{
-		"<p>hall", "o", "<b> Welt", " &amp;", " Freunde", "!", "</b></p>"
+		"", "<p>hall", "o", "<b> Welt", " &amp;", " Freunde", "!", "", "</b></p>\n"
 	};
 
-	CHECK(AsWords(response.source) == html_tokens_source);
-	CHECK(AsWords(response.target) == html_tokens_target);
+	CHECK(AsTokens(response.source) == html_tokens_source);
+	CHECK(AsTokens(response.target) == html_tokens_target);
+}
+
+TEST_CASE("Test reconstruction of target with multiple sentences") {
+	std::string input("<p>hello <b>world!</b> How does this <img> <b>deal <u>with multiple sentences?</u></b> Will it work?</p>\n");
+	HTML html(std::move(input), true);
+
+	AnnotatedText source("hello world! How does this  deal with multiple sentences? Will it work?\n");
+	CHECK(source.text == input);
+
+	RecordSentenceFromByteRange(source, {
+		ByteRange{ 0,  4},  // 0.0 "hell"
+		ByteRange{ 4,  5},  // 0.1 "o"
+		ByteRange{ 5, 11},  // 0.2 " world"
+		ByteRange{11, 12},  // 0.3 "!"
+		ByteRange{12, 12}   // 0.4 ""
+	});
+	RecordSentenceFromByteRange(source, {
+		ByteRange{13, 16},  // 1.0 "How"
+		ByteRange{16, 21},  // 1.1 " does"
+		ByteRange{21, 26},  // 1.2 " this"
+		ByteRange{26, 32},  // 1.3 "  deal"
+		ByteRange{32, 37},  // 1.4 " with"
+		ByteRange{37, 46},  // 1.5 " multiple"
+		ByteRange{46, 55},  // 1.6 " sentence"
+		ByteRange{55, 56},  // 1.7 "s"
+		ByteRange{56, 57},  // 1.8 "?"
+		ByteRange{57, 57}   // 1.9 ""
+	});
+	RecordSentenceFromByteRange(source, {
+		ByteRange{58, 62},  // 2.0 "Will"
+		ByteRange{62, 65},  // 2.1 " it"
+		ByteRange{65, 70},  // 2.2 " work"
+		ByteRange{70, 71},  // 2.3 "?"
+		ByteRange{71, 71}   // 2.4 ""
+	});
+
+	AnnotatedText target("hallo Welt! Wie geht das mit mehreren Sätzen um? Wird es funktionieren?\n");
+	RecordSentenceFromByteRange(target, {
+		ByteRange{ 0,  4},  // 0.0 "hall"
+		ByteRange{ 4,  5},  // 0.1 "o"
+		ByteRange{ 5, 10},  // 0.2 " Welt"
+		ByteRange{10, 11},  // 0.3 "!"
+		ByteRange{11, 11},  // 0.4 ""
+	});
+	RecordSentenceFromByteRange(target, {
+		ByteRange{12, 15},  // 1.0 "Wie"
+		ByteRange{15, 20},  // 1.1 " geht"
+		ByteRange{20, 24},  // 1.2 " das"
+		ByteRange{24, 28},  // 1.3 " mit"
+		ByteRange{28, 37},  // 1.4 " mehreren"
+		ByteRange{37, 44},  // 1.5 " Sätze"
+		ByteRange{44, 45},  // 1.6 "n"
+		ByteRange{45, 48},  // 1.7 " um"
+		ByteRange{48, 49},  // 1.8 "?"
+		ByteRange{49, 49},  // 1.9 ""
+	});
+	RecordSentenceFromByteRange(target, {
+		ByteRange{50, 54},  // 2.0 "Wird"
+		ByteRange{54, 57},  // 2.1 " es"
+		ByteRange{57, 71},  // 2.2 " funktionieren"
+		ByteRange{71, 72},  // 2.3 "?"
+		ByteRange{72, 72},  // 2.4 ""
+	});
+
+	std::vector<std::string> text_tokens_source{
+		"", "hall", "o", " Welt", "!", "", " ", "Wie", " geht", " das", " mit", " mehreren", " Sätze", "n", " um", "?", "", " ", "Wird", " es", " funktionieren", "?", "", "\n"
+	};
+
+	CHECK(AsTokens(target) == text_tokens_source);
+
+	Response response;
+	response.source = source;
+	response.target = target;
+	html.Restore(response);
+
+	std::vector<std::string> html_tokens_source{
+		"", "<p>hell", "o", "<b> world", "!", "", "</b> ", "How", " does", " this", "<img><b>  deal", /* note how both spaces moved to __deal */ "<u> with", " multiple", " sentence", "s", "?", "", "</u></b> ", "Will", " it", " work", "?", "", "</p>\n"
+	};
+	CHECK(AsTokens(response.source) == html_tokens_source);
 }

@@ -50,6 +50,22 @@ void RecordSentenceFromByteRange(AnnotatedText &text, std::vector<ByteRange> con
   text.recordExistingSentence(tokens.begin(), tokens.end(), text.text.data() + ranges[0].begin);
 }
 
+TEST_CASE("Ignore HTML if process_markup is false") {
+  std::string html_code("<p>This text &amp; has <b>HTML</b> in it</p>");
+
+  std::string input(html_code);
+  HTML html(std::move(input), false);
+  CHECK(input == html_code);
+
+  Response response;
+  response.source.text = html_code;
+  response.target.text = html_code;
+  html.Restore(response);
+
+  // Assert that Restore() does not mess with my HTML code
+  CHECK(response.source.text == html_code);
+}
+
 TEST_CASE("Test identifying text spans") {
   std::string html_code("<p>Hello <b>world</b></p>\n");
 

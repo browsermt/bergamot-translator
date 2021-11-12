@@ -86,8 +86,9 @@ bool IsBlockElement(const char *name) { return inline_ish_elements.find(name) ==
 namespace marian {
 namespace bergamot {
 
-HTML::HTML(std::string &&source, bool process_markup) : original_(std::move(source)) {
+HTML::HTML(std::string &&source, bool process_markup) {
   if (!process_markup) return;
+  original_ = std::move(source);
   markup::instream in(original_.data(), original_.data() + original_.size());
   markup::scanner scanner(in);
   source.clear();
@@ -127,6 +128,7 @@ HTML::HTML(std::string &&source, bool process_markup) : original_(std::move(sour
 }
 
 void HTML::Restore(Response &response) {
+  if (original_.empty()) return;
   if (!response.source.text.empty()) {
     if (!response.target.text.empty())
       ::Reconstruct(spans_, original_, response.target,

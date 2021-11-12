@@ -36,6 +36,12 @@ void EncodeEntities(string_view const &input, std::string &output) {
   }
 }
 
+size_t CountPrefixWhitespaces(string_view const &input) {
+  size_t size = 0;
+  while (size < input.size() && input[size] == ' ') ++size;
+  return size;
+}
+
 void Reconstruct(std::vector<std::pair<ByteRange, ByteRange>> const &spans, std::string const &original,
                  AnnotatedText &text, double ratio) {
   auto span_it = spans.begin();
@@ -44,23 +50,31 @@ void Reconstruct(std::vector<std::pair<ByteRange, ByteRange>> const &spans, std:
   std::string html;  // workspace
 
   auto inRange = [&](ByteRange range) {
-    return span_it->second.begin >= static_cast<std::size_t>(ratio * range.begin) &&
-           span_it->second.begin < static_cast<std::size_t>(ratio * range.end);
+    return span_it->second.begin >= static_cast<size_t>(ratio * range.begin) &&
+           span_it->second.begin < static_cast<size_t>(ratio * range.end);
   };
 
   text = text.apply([&](ByteRange range, string_view token, bool last) {
     // Do encoding of any entities that popped up in the translation
     EncodeEntities(token, html);
 
-    std::size_t html_prefix_size = 0;  // bytes of html added to the beginning of this token.
+    size_t html_prefix_size = 0;  // bytes of html added to the beginning of this token.
+    size_t whitespace_size = CountPrefixWhitespaces(token);
 
     while (span_it != spans.end() && (last || inRange(range))) {
-    // Slice in the HTML that comes before this text segment, but do make
-    // sure to insert it after any previously inserted HTML as to maintain
-    // the order the HTML occurred in in the input.
-    std:
+      // Slice in the HTML that comes before this text segment, but do make
+      // sure to insert it after any previously inserted HTML as to maintain
+      // the order the HTML occurred in in the input.
       size_t html_size = span_it->first.begin - (span_it == spans.begin() ? 0 : prev_it->first.end);
-      html.insert(html_prefix_size, original, span_it == spans.begin() ? 0 : prev_it->first.end, html_size);
+      string_view html_view{original.data() + (span_it == spans.begin() ? 0 : prev_it->first.end), html_size};
+
+      // if this is an open tag, try to append it *after* any spaces, i.e.
+      // "a b" + "<b>" => "a <b>b" as opposed to "a<b> b"
+      if (html_view.size() > 2 && html_view[1] != '/')
+        html.insert(html_prefix_size + whitespace_size, html_view.data(), html_view.size());
+      else
+        html.insert(html_prefix_size, html_view.data(), html_view.size());
+
       html_prefix_size += html_size;
 
       prev_it = span_it++;
@@ -105,8 +119,8 @@ HTML::HTML(std::string &&source, bool process_markup) {
 
       case markup::scanner::TT_TEXT:
         source.append(scanner.get_value());
-        spans_.emplace_back(ByteRange{static_cast<std::size_t>(scanner.get_text_begin() - original_.data()),
-                                      static_cast<std::size_t>(scanner.get_text_end() - original_.data())},
+        spans_.emplace_back(ByteRange{static_cast<size_t>(scanner.get_text_begin() - original_.data()),
+                                      static_cast<size_t>(scanner.get_text_end() - original_.data())},
                             ByteRange{begin, source.size()});
         break;
 

@@ -117,7 +117,7 @@ TEST_CASE("Test reconstruction") {
 
   html.Restore(response);
   // CHECK(response.source.text == input);  // fails because <u></u> has been moved to the front of the token
-  CHECK(response.source.text == "<p><input><u></u>Hello<b> world</b> how<u> are you</u>?</p>\n");
+  CHECK(response.source.text == "<p><input><u></u>Hello <b>world</b> how <u>are you</u>?</p>\n");
 
   std::vector<ByteRange> restored_tokens{
       ByteRange{0, 0},        // "" (That's just how Annotation works)
@@ -139,9 +139,9 @@ TEST_CASE("Test reconstruction") {
       "",
       "<p><input><u></u>Hell",  // Should really be "<p><input>H<u>e</u>ll"
       "o",
-      "<b> world",
+      " <b>world",
       "</b> how",
-      "<u> are",
+      " <u>are",
       " you",
       "</u>?",
       "",       // end of sentence
@@ -184,7 +184,7 @@ TEST_CASE("Test reconstruction of multiple sentences") {
   html.Restore(response);
 
   std::vector<std::string> html_tokens{
-      "",       "<p>This", "<em> is", " a", " sentence", ".", " ", "And", " so", " is", "</em> this", ".",
+      "",       "<p>This", " <em>is", " a", " sentence", ".", " ", "And", " so", " is", "</em> this", ".",
       "</p>\n",  // </p> got moved into post-sentence gap
   };
 
@@ -277,9 +277,9 @@ TEST_CASE("Test reconstruction of target sentence") {
 
   html.Restore(response);
 
-  std::vector<std::string> html_tokens_source{"", "<p>hell", "o", "<b> world", "", "</b></p>\n"};
+  std::vector<std::string> html_tokens_source{"", "<p>hell", "o", " <b>world", "", "</b></p>\n"};
 
-  std::vector<std::string> html_tokens_target{"", "<p>hall", "o", "<b> Welt", "", "</b></p>\n"};
+  std::vector<std::string> html_tokens_target{"", "<p>hall", "o", " <b>Welt", "", "</b></p>\n"};
 
   CHECK(AsTokens(response.source) == html_tokens_source);
   CHECK(AsTokens(response.target) == html_tokens_target);
@@ -318,10 +318,11 @@ TEST_CASE("Test reconstruction of target sentence with entities") {
 
   html.Restore(response);
 
-  std::vector<std::string> html_tokens_source{"",         "<p>hell", "o", "<b> world", " &amp;",
+  std::vector<std::string> html_tokens_source{"",         "<p>hell", "o", " <b>world", " &amp;",
                                               " friends", "!",       "",  "</b></p>\n"};
 
-  std::vector<std::string> html_tokens_target{"",         "<p>hall", "o", "<b> Welt",  " &amp;",
+  std::vector<std::string> html_tokens_target{"",         "<p>hall", "o", " <b>Welt",  " &amp;",
+
                                               " Freunde", "!",       "",  "</b></p>\n"};
 
   CHECK(AsTokens(response.source) == html_tokens_source);
@@ -405,15 +406,15 @@ TEST_CASE("Test reconstruction of target with multiple sentences") {
   std::vector<std::string> html_tokens_source{"",
                                               "<p>hell",
                                               "o",
-                                              "<b> world",
+                                              " <b>world",
                                               "!",
                                               "",
                                               "</b> ",
                                               "How",
                                               " does",
                                               " this",
-                                              "<img><b>  deal",  // note how both spaces moved to __deal
-                                              "<u> with",
+                                              "  <img><b>deal",  // note how both spaces moved to __deal
+                                              " <u>with",
                                               " multiple",
                                               " sentence",
                                               "s",

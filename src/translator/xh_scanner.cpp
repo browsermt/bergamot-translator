@@ -322,7 +322,9 @@ void scanner::append_attr_name(char c) {
 }
 
 void scanner::append_tag_name(char c) {
-  if (tag_name_length < (MAX_NAME_SIZE - 1)) tag_name[tag_name_length++] = char(c);
+  if (tag_name_length < (MAX_NAME_SIZE - 1))
+    tag_name[tag_name_length++] =
+        std::tolower(static_cast<unsigned char>(c));  // cast because std::tolower has undefined behaviour otherwise
 }
 
 scanner::token_type scanner::scan_comment() {

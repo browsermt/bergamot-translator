@@ -67,7 +67,7 @@ class scanner {
   // get attribute name
   const char *get_attr_name();
 
-  // get tag name
+  // get tag name (always lowercase)
   const char *get_tag_name();
 
  private: /* methods */

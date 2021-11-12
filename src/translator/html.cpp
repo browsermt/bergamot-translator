@@ -71,6 +71,16 @@ void Reconstruct(std::vector<std::pair<ByteRange, ByteRange>> const &spans, std:
 
   assert(span_it == spans.end());
 }
+
+// List of elements that we expect might occur inside words, and that should
+// not introduce spacings around them. Not strictly inline elements, nor flow
+// elements. See also https://developer.mozilla.org/en-US/docs/Web/Guide/HTML/Content_categories
+std::unordered_set<std::string> inline_ish_elements{"abbr",   "a", "b",    "em",    "i",    "kbd",    "mark", "math",
+                                                    "output", "q", "ruby", "small", "span", "strong", "sub",  "sup",
+                                                    "time",   "u", "var",  "wbr",   "ins",  "del"};
+
+bool IsBlockElement(const char *name) { return inline_ish_elements.find(name) == inline_ish_elements.end(); }
+
 }  // namespace
 
 namespace marian {
@@ -87,16 +97,28 @@ HTML::HTML(std::string &&source, bool process_markup) : original_(std::move(sour
     switch (scanner.get_token()) {
       case markup::scanner::TT_ERROR:
         throw BadHTML("HTML parse error");
+
       case markup::scanner::TT_EOF:
         stop = true;
         break;
+
       case markup::scanner::TT_TEXT:
         source.append(scanner.get_value());
         spans_.emplace_back(ByteRange{static_cast<std::size_t>(scanner.get_text_begin() - original_.data()),
                                       static_cast<std::size_t>(scanner.get_text_end() - original_.data())},
                             ByteRange{begin, source.size()});
         break;
-        // TODO convert space-like tags such as <br/> and <img> to space.
+
+      case markup::scanner::TT_TAG_START:
+        // If it makes sense to treat this element as a break in a word (e.g.
+        // <br>, <img>, <li>) make sure it does so in this text as well.
+        // TODO: Strong assumption here that the language uses spaces to
+        // separate words
+        if (IsBlockElement(scanner.get_tag_name()) && !source.empty() && source.back() != ' ') source.push_back(' ');
+        break;
+
+      // Note: self-closing tags will also call TT_TAG_END but HTML5 doesn't
+      // require singular tags to be self-closing anymore.
       default:
         break;
     }

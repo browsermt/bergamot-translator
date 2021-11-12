@@ -227,6 +227,13 @@ TEST_CASE("Test case html entities") {
   CHECK(AsTokens(response.source) == html_tokens);
 }
 
+TEST_CASE("Test self-closing tags should be treated as spaces") {
+  std::string input("<p>Space<br>please?</p>\n");
+
+  HTML html(std::move(input), true);
+  CHECK(input == "Space please?\n");
+}
+
 TEST_CASE("Test reconstruction of target sentence") {
   std::string input("<p>hello <b>world</b></p>\n");
   HTML html(std::move(input), true);

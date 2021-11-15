@@ -7,9 +7,11 @@ function createWasmGemm() {
     const FALLBACK_GEMM =  "asm";
 
     if (WebAssembly[OPTIMIZED_GEMM]) {
+        console.log(`Using optimized gemm (${OPTIMIZED_GEMM}) implementation`);
         return new WebAssembly.instance(WebAssembly[OPTIMIZED_GEMM](), {"": {memory: wasmMemory}}).exports;
     }
     else {
+        console.log(`Using fallback gemm implementation`);
         return {
             "int8_prepare_a": (...a) => Module[FALLBACK_GEMM]["int8PrepareAFallback"](...a),
             "int8_prepare_b": (...a) => Module[FALLBACK_GEMM]["int8PrepareBFallback"](...a),

@@ -30,14 +30,8 @@ if [ ! -e "$ARTIFACT" ]; then
 fi
 
 echo "Importing integer (8-bit) gemm implementation"
+SCRIPT_ABSOLUTE_PATH="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 sed -i.bak 's/"env"[[:space:]]*:[[:space:]]*asmLibraryArg,/"env": asmLibraryArg,\
-    "wasm_gemm":{\
-    "int8_prepare_a": (...a) => Module["asm"].int8PrepareAFallback(...a),\
-    "int8_prepare_b": (...a) => Module["asm"].int8PrepareBFallback(...a),\
-    "int8_prepare_b_from_transposed": (...a) => Module["asm"].int8PrepareBFromTransposedFallback(...a),\
-    "int8_prepare_b_from_quantized_transposed": (...a) => Module["asm"].int8PrepareBFromQuantizedTransposedFallback(...a),\
-    "int8_prepare_bias": (...a) => Module["asm"].int8PrepareBiasFallback(...a),\
-    "int8_multiply_and_add_bias": (...a) => Module["asm"].int8MultiplyAndAddBiasFallback(...a),\
-    "int8_select_columns_of_b": (...a) => Module["asm"].int8SelectColumnsOfBFallback(...a),\
-    },/g' ${ARTIFACT}
+    "wasm_gemm": createWasmGemm(),/g' ${ARTIFACT}
+cat $SCRIPT_ABSOLUTE_PATH/import-gemm-module.js >> ${ARTIFACT}
 echo "SUCCESS"

@@ -7,6 +7,8 @@ Usage: $(basename "$0") [ARTIFACTS_SOURCE_FOLDER]
     where:
     ARTIFACTS_SOURCE_FOLDER    Directory containing pre-built wasm artifacts"
 
+SCRIPT_ABSOLUTE_PATH="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
+
 if [ "$#" -ne 1 ]; then
     echo "Illegal number of parameters passed"
     echo "$usage"
@@ -31,7 +33,6 @@ for i in $ARTIFACTS; do
 done
 
 # Start http server
-SCRIPT_ABSOLUTE_PATH="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 (cd $SCRIPT_ABSOLUTE_PATH;
 npm install;
 echo "Start httpserver";

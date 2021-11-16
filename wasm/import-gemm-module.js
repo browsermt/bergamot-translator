@@ -8,7 +8,7 @@ function createWasmGemm() {
 
     if (WebAssembly[OPTIMIZED_GEMM]) {
         console.log(`Using optimized gemm (${OPTIMIZED_GEMM}) implementation`);
-        return new WebAssembly.instance(WebAssembly[OPTIMIZED_GEMM](), {"": {memory: wasmMemory}}).exports;
+        return new WebAssembly.Instance(WebAssembly[OPTIMIZED_GEMM](), {"": {memory: wasmMemory}}).exports;
     }
     else {
         console.log(`Using fallback gemm implementation`);

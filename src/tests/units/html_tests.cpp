@@ -66,7 +66,6 @@ TEST_CASE("Ignore HTML if process_markup is false") {
   CHECK(response.source.text == html_code);
 }
 
-
 TEST_CASE("Test reconstruction") {
   std::string input("<p><input>H<u>e</u>llo <b>world</b> how <u>are you</u>?</p>\n");
 
@@ -391,4 +390,9 @@ TEST_CASE("Test reconstruction of target with multiple sentences") {
                                               "",
                                               "</p>\n"};
   CHECK(AsTokens(response.source) == html_tokens_source);
+}
+
+TEST_CASE("Test self-closing tag (HTML5)") {
+  std::string input("<p>hello <img> <b>world</b> <u>and other <a href=\"#\">creatures</a></u></p>\n");
+  HTML html(std::move(input), true);
 }

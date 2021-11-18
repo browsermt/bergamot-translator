@@ -21,9 +21,6 @@ class HTML {
   explicit HTML(std::string &&source, bool process_markup);
   void Restore(Response &response);
 
-  // TODO Currently exposed just for tests
-  inline const std::vector<std::pair<ByteRange, ByteRange>> spans() const { return spans_; };
-
  private:
   std::vector<std::pair<ByteRange, ByteRange>> spans_;
   std::string original_;

@@ -66,36 +66,12 @@ TEST_CASE("Ignore HTML if process_markup is false") {
   CHECK(response.source.text == html_code);
 }
 
-TEST_CASE("Test identifying text spans") {
-  std::string html_code("<p>Hello <b>world</b></p>\n");
-
-  std::vector<std::pair<ByteRange, ByteRange>> spans{
-      std::make_pair(ByteRange{3, 3 + 6}, ByteRange{0, 6}),         // Hello_
-      std::make_pair(ByteRange{12, 12 + 5}, ByteRange{6, 6 + 5}),   // world
-      std::make_pair(ByteRange{25, 25 + 1}, ByteRange{11, 11 + 1})  // \n
-  };
-
-  HTML html(std::move(html_code), true);
-  CHECK(html.spans() == spans);
-}
 
 TEST_CASE("Test reconstruction") {
   std::string input("<p><input>H<u>e</u>llo <b>world</b> how <u>are you</u>?</p>\n");
 
-  std::vector<std::pair<ByteRange, ByteRange>> spans{
-      std::make_pair(ByteRange{10, 10 + 1}, ByteRange{0, 1}),        // H
-      std::make_pair(ByteRange{14, 14 + 1}, ByteRange{1, 1 + 1}),    // e
-      std::make_pair(ByteRange{19, 19 + 4}, ByteRange{2, 2 + 4}),    // llo_
-      std::make_pair(ByteRange{26, 26 + 5}, ByteRange{6, 6 + 5}),    // world
-      std::make_pair(ByteRange{35, 35 + 5}, ByteRange{11, 11 + 5}),  // _how_
-      std::make_pair(ByteRange{43, 43 + 7}, ByteRange{16, 16 + 7}),  // are you
-      std::make_pair(ByteRange{54, 54 + 1}, ByteRange{23, 23 + 1}),  // ?
-      std::make_pair(ByteRange{59, 59 + 1}, ByteRange{24, 24 + 1})   // \n
-  };
-
   std::string text(input);
   HTML html(std::move(text), true);  // TODO: move, but really a reference?
-  CHECK(html.spans() == spans);
   CHECK(text == "Hello world how are you?\n");
 
   AnnotatedText source(std::move(text));
@@ -198,19 +174,6 @@ TEST_CASE("Test case html entities") {
   std::string input("<p data-attr=\"&quot;&apos;\">This is a sentence &lt;with&gt; named &amp; entities</p>\n");
   HTML html(std::move(input), true);
   CHECK(input == "This is a sentence <with> named & entities\n");
-
-  std::vector<std::pair<ByteRange, ByteRange>> spans{
-      std::make_pair(ByteRange{28, 28 + 19}, ByteRange{0, 19}),      // This is a sentence_
-      std::make_pair(ByteRange{47, 47 + 4}, ByteRange{19, 19 + 1}),  // <
-      std::make_pair(ByteRange{51, 51 + 4}, ByteRange{20, 20 + 4}),  // with
-      std::make_pair(ByteRange{55, 55 + 4}, ByteRange{24, 24 + 1}),  // >
-      std::make_pair(ByteRange{59, 59 + 7}, ByteRange{25, 25 + 7}),  // _named_
-      std::make_pair(ByteRange{66, 66 + 5}, ByteRange{32, 32 + 1}),  // &
-      std::make_pair(ByteRange{71, 71 + 9}, ByteRange{33, 33 + 9}),  // _entities
-      std::make_pair(ByteRange{84, 84 + 1}, ByteRange{42, 42 + 1})   // \n
-  };
-
-  CHECK(html.spans() == spans);
 
   Response response;
   response.source = AnnotatedText(std::move(input));

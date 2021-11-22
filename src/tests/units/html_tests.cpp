@@ -395,3 +395,101 @@ TEST_CASE("Test self-closing tag (HTML5)") {
   std::string input("<p>hello <img> <b>world</b> <u>and other <a href=\"#\">creatures</a></u></p>\n");
   HTML html(std::move(input), true);
 }
+
+TEST_CASE("End-to-end translation") {
+  std::string input("<p>I <b>like</b> to <u>drive</u> this car.</p>\n");
+  HTML html(std::move(input), true);
+  CHECK(input == "I like to drive this car.\n");
+
+  Response response;
+
+  response.alignments = std::vector<std::vector<std::vector<float>>>{{
+    {0.982376,  0.00742467, 0.00682965, 0.00121767, 0.000848056,6.51436e-05,7.53791e-06,0.00123162},
+    {0.165639,  0.368694,   0.230394,   0.222476,   0.00349563, 0.00105052, 0.000603092,0.00764845},
+    {0.00493271,0.0805876,  0.0139988,  0.89116,    0.000928116,0.00200724, 0.000512013,0.00587302},
+    {0.0194648, 0.411029,   0.087059,   0.0477847,  0.26596,    0.111161,   0.000392092,0.0571499},
+    {0.00879706,0.492504,   0.0448291,  0.007779,   0.423114,   0.0125523,  0.00119587, 0.00922804},
+    {0.00181909,0.00603626, 0.0335758,  0.037193,   0.747266,   0.102497,   0.0585782,  0.0130341},
+    {4.1348e-06,0.000156165,2.16369e-05,0.00275059, 0.00183456, 0.992357,   0.0023765,  0.000499018},
+    {0.00149043,0.000719392,0.0168534,  0.00430164, 0.00200343, 0.0106381,  0.948566,   0.0154279},
+    {0.0903136, 0.0550843,  0.0699474,  0.0792285,  0.223006,   0.207565,   0.129241,   0.145614},
+  }};
+
+  {
+    std::string sentence_str("I like to drive this car.");
+    std::vector<string_view> sentence{
+      string_view(sentence_str.data() +  0, 1),  // 0.0 "I"
+      string_view(sentence_str.data() +  1, 5),  // 0.1 " like"
+      string_view(sentence_str.data() +  6, 3),  // 0.2 " to"
+      string_view(sentence_str.data() +  9, 6),  // 0.3 " drive"
+      string_view(sentence_str.data() + 15, 5),  // 0.4 " this"
+      string_view(sentence_str.data() + 20, 4),  // 0.5 " car"
+      string_view(sentence_str.data() + 24, 1),  // 0.6 "."
+      string_view(sentence_str.data() + 25, 0),  // 0.7 ""
+    };
+    response.source.appendSentence("", sentence.begin(), sentence.end());
+    response.source.appendEndingWhitespace("\n");
+  }
+
+  {
+    std::string sentence_str("Ich fahre gerne dieses Auto.");
+    std::vector<string_view> sentence{
+      string_view(sentence_str.data() +  0, 3),  // 0.0 "Ich"
+      string_view(sentence_str.data() +  3, 1),  // 0.1 " "
+      string_view(sentence_str.data() +  4, 4),  // 0.2 "fahr"
+      string_view(sentence_str.data() +  8, 1),  // 0.3 "e"
+      string_view(sentence_str.data() +  9, 6),  // 0.4 " gerne"
+      string_view(sentence_str.data() + 15, 7),  // 0.5 " dieses"
+      string_view(sentence_str.data() + 22, 5),  // 0.6 " Auto"
+      string_view(sentence_str.data() + 27, 1),  // 0.7 "."
+      string_view(sentence_str.data() + 28, 0),  // 0.8 ""
+    };
+    response.target.appendSentence("", sentence.begin(), sentence.end());
+    response.target.appendEndingWhitespace("\n");
+  }
+
+  html.Restore(response);
+
+  {
+    AnnotatedText source;
+    std::string sentence_str("<p>I <b>like</b> to <u>drive</u> this car.");
+    std::vector<string_view> sentence{
+      string_view(sentence_str.data() + 0, 4),  // 0.0 "<p>I"
+      string_view(sentence_str.data() + 4, 8),  // 0.1 " <b>like"
+      string_view(sentence_str.data() + 12, 7),  // 0.2 "</b> to"
+      string_view(sentence_str.data() + 19, 9),  // 0.3 " <u>drive"
+      string_view(sentence_str.data() + 28, 9),  // 0.4 "</u> this"
+      string_view(sentence_str.data() + 37, 4),  // 0.5 " car"
+      string_view(sentence_str.data() + 41, 1),  // 0.6 "."
+      string_view(sentence_str.data() + 42, 0),  // 0.7 ""
+    };
+    source.appendSentence("", sentence.begin(), sentence.end());
+    source.appendEndingWhitespace("</p>\n");
+
+    CHECK(AsTokens(response.source) == AsTokens(source));
+  }
+
+  {
+    AnnotatedText target;
+    std::string sentence_str("<p>Ich <u>fahre</u> <b>gerne</b> dieses Auto.");
+    std::vector<string_view> sentence{
+      string_view(sentence_str.data() +  0,  6),  // 0.0 "<p>Ich"
+      string_view(sentence_str.data() +  6,  1),  // 0.1 " "
+      string_view(sentence_str.data() +  7,  7),  // 0.2 "<u>fahr"
+      string_view(sentence_str.data() + 14,  1),  // 0.3 "e"
+      string_view(sentence_str.data() + 15, 13),  // 0.4 "</u> <b>gerne"
+      string_view(sentence_str.data() + 28, 11),  // 0.5 "</b> dieses"
+      string_view(sentence_str.data() + 39,  5),  // 0.6 " Auto"
+      string_view(sentence_str.data() + 44,  1),  // 0.7 "."
+      string_view(sentence_str.data() + 45,  0),  // 0.8 ""
+    };
+    target.appendSentence("", sentence.begin(), sentence.end());
+    target.appendEndingWhitespace("</p>\n");
+
+    CHECK(AsTokens(response.target) == AsTokens(target));
+  }
+
+
+}
+
+// TEST_CASE("")

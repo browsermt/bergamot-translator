@@ -245,7 +245,7 @@ HTML::HTML(std::string &&source, bool process_markup) {
   if (!stack.empty()) throw BadHTML(format("Not all tags were closed: {}", stack));
 
   // Add a trailing span (that's empty) to signify all closed tags.
-  spans_.emplace_back(Span{source.size(), source.size(), stack});
+  spans_.emplace_back(Span{source.size() + 1, source.size() + 1, stack});
 
   // Test case: Swap some spans, see whether we still end up with valid HTML
   // std::swap(spans_[0], spans_[4]);
@@ -301,8 +301,7 @@ void HTML::Restore(Response &response) {
   // 5. Reconstruct the target HTML with these tainted tokens
 
   std::vector<Taint> token_tags;
-  token_tags.emplace_back();  // Empty stack
-
+  
   auto span_it = spans_.begin();
   auto prev_it = spans_.begin();  // using end() to indicate first token
 
@@ -343,7 +342,7 @@ void HTML::Restore(Response &response) {
         offset += open_tag.size();
       }
 
-      if (span_it + 1 != spans_.end() && (span_it + 1)->begin < range.end) {
+      if (span_it + 1 != spans_.end() && ((span_it + 1)->begin < range.end || last)) {
         span_it++;
         continue;
       }
@@ -358,6 +357,62 @@ void HTML::Restore(Response &response) {
     return html;
   });
 
+  // Find for every token in target the token in source that best matches.
+  std::vector<Taint> token_tags_target;
+  std::vector<std::vector<size_t>> alignments; // TODO remove debugging only
+  token_tags_target.emplace_back(); // add empty one to the beginning for easy life
+
+  if (!response.alignments.empty()) {
+    assert(response.source.numSentences() == response.target.numSentences());
+
+    size_t token_offset = 0;
+    for (size_t sentenceIdx = 0; sentenceIdx < response.target.numSentences(); ++sentenceIdx) {
+      alignments.emplace_back();
+      assert(response.alignments[sentenceIdx].size() == response.target.numWords(sentenceIdx));
+
+      assert(token_offset < token_tags.size());
+      token_tags_target.push_back(token_tags[token_offset]); // token_tag for sentence ending gap
+
+      for (size_t t = 0; t < response.alignments[sentenceIdx].size(); ++t) {
+        size_t s_max = 0;
+        for (size_t s = 1; s < response.alignments[sentenceIdx][t].size(); ++s) {
+          if (response.alignments[sentenceIdx][t][s] > response.alignments[sentenceIdx][t][s_max])
+            s_max = s;
+        }
+
+        assert(token_offset + s_max < token_tags.size());
+        token_tags_target.push_back(token_tags[token_offset + 1 + s_max]); // +1 for prefix gap
+        alignments.back().push_back(s_max);
+      }
+
+      token_offset += response.source.numWords(sentenceIdx) + 1; // +1 for prefix gap
+    }
+
+    assert(token_offset < token_tags.size());
+    token_tags_target.push_back(token_tags[token_offset]); // token_tag for ending whitespace
+  } else {
+    size_t token_offset = 0;
+
+    for (size_t sentenceIdx = 0; sentenceIdx < response.target.numSentences(); ++sentenceIdx) {
+      alignments.emplace_back();
+      double ratio = response.target.numWords(sentenceIdx) / response.source.numWords(sentenceIdx);
+
+      assert(token_offset < token_tags.size());
+      token_tags_target.push_back(token_tags[token_offset + 0]); // sentence prefix gap
+      
+      for (size_t wordIdx = 0; wordIdx < response.target.numWords(sentenceIdx); ++wordIdx) {
+        size_t source_token_idx = static_cast<size_t>(ratio * wordIdx);
+        assert(token_offset + 1 + source_token_idx < token_tags.size());
+        token_tags_target.push_back(token_tags[token_offset + 1 + source_token_idx]);
+        alignments.back().push_back(source_token_idx);
+      }
+
+      token_offset += response.source.numWords(sentenceIdx) + 1; // +1 for prefix gap
+    }
+
+    assert(token_offset < token_tags.size());
+    token_tags_target.push_back(token_tags[token_offset]); // token_tag for ending whitespace
+  }
 
   auto token_prev_it = token_tags_target.begin();
   auto token_tags_it = token_tags_target.begin() + 1;

@@ -18,25 +18,24 @@ std::ostream &operator<<(std::ostream &out, ByteRange const &b) { return out << 
 
 std::vector<ByteRange> AsByteRanges(AnnotatedText const &annotation) {
   std::vector<ByteRange> words;
-  annotation.apply([&](ByteRange range, string_view token, bool end) {
-    words.emplace_back(range);
-    return std::string();
-  });
+  words.emplace_back(annotation.annotation.gap(0));
+  for (size_t sentenceIdx = 0; sentenceIdx < annotation.numSentences(); ++sentenceIdx) {
+    for (size_t wordIdx = 0; wordIdx < annotation.numWords(sentenceIdx); ++wordIdx)
+      words.emplace_back(annotation.wordAsByteRange(sentenceIdx, wordIdx));
+    words.emplace_back(annotation.annotation.gap(sentenceIdx + 1));
+  }
   return words;
 }
 
 std::vector<std::string> AsTokens(AnnotatedText const &annotation) {
-  std::vector<std::string> tokens;
-
-  // Abusing apply() here to map over all tokens. I don't care for the output.
-  // Also, this is just a test case. There is no use for accessing individual
-  // tokens as opposed to words outside of these tests.
-  annotation.apply([&](ByteRange range, string_view token, bool end) {
-    tokens.emplace_back(token);
-    return std::string();
-  });
-
-  return tokens;
+  std::vector<std::string> words;
+  words.emplace_back(annotation.gap(0));
+  for (size_t sentenceIdx = 0; sentenceIdx < annotation.numSentences(); ++sentenceIdx) {
+    for (size_t wordIdx = 0; wordIdx < annotation.numWords(sentenceIdx); ++wordIdx)
+      words.emplace_back(annotation.word(sentenceIdx, wordIdx));
+    words.emplace_back(annotation.gap(sentenceIdx + 1));
+  }
+  return words;
 }
 
 void RecordSentenceFromByteRange(AnnotatedText &text, std::vector<ByteRange> const &ranges) {
@@ -95,18 +94,18 @@ TEST_CASE("Test reconstruction") {
   CHECK(response.source.text == "<p><input><u></u>Hello <b>world</b> how <u>are you</u>?</p>\n");
 
   std::vector<ByteRange> restored_tokens{
-      ByteRange{0, 0},        // "" (That's just how Annotation works)
-      ByteRange{0, 0 + 21},   // <p><input>H<u>e</u>ll
+      ByteRange{ 0, 0 +  0},  // (start of sentence)
+      ByteRange{ 0, 0 + 21},  // <p><input>H<u>e</u>ll
       ByteRange{21, 21 + 1},  // o
       ByteRange{22, 22 + 9},  // _<b>world
       ByteRange{31, 31 + 8},  // </b>_how
       ByteRange{39, 39 + 7},  // _<u>are
       ByteRange{46, 46 + 4},  // _you
       ByteRange{50, 50 + 5},  // </u>?
-      ByteRange{55, 55 + 0},  // "" because end of sentence. Gap that follows contains "</p>\n"
-      ByteRange{55, 55 + 5},  // "</p>\n"
+      ByteRange{55, 55 + 0},  // ""
+      ByteRange{55, 55 + 5},  // </p>\n
   };
-  CHECK(response.source.text.size() == restored_tokens.back().end);  // 60 including \n
+  CHECK(response.source.text.size() == restored_tokens.back().end);
   CHECK(AsByteRanges(response.source) == restored_tokens);
 
   // Same test as above, but easier to read. Will use this further down.
@@ -120,7 +119,7 @@ TEST_CASE("Test reconstruction") {
       " you",
       "</u>?",
       "",       // end of sentence
-      "</p>\n"  // newline in post-sentence gap
+      "</p>\n"
   };
 
   CHECK(AsTokens(response.source) == restored_tokens_str);

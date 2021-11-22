@@ -127,6 +127,47 @@ void FilterEmpty(HTML::Taint &stack) {
   stack.resize(dst - stack.begin());
 }
 
+template <typename Fun>
+AnnotatedText Apply(AnnotatedText const &in, Fun fun) {
+  AnnotatedText out;
+
+  for (size_t sentenceIdx = 0; sentenceIdx < in.numSentences(); ++sentenceIdx) {
+    std::string sentence;
+    std::vector<ByteRange> tokens;
+
+    std::string prefix = fun(in.annotation.gap(sentenceIdx),
+                             in.gap(sentenceIdx),
+                             false);
+
+    for (size_t wordIdx = 0; wordIdx < in.numWords(sentenceIdx); ++wordIdx) {
+      std::string token = fun(in.wordAsByteRange(sentenceIdx, wordIdx),
+                              in.word(sentenceIdx, wordIdx),
+                              false);
+      tokens.push_back(ByteRange{sentence.size(), sentence.size() + token.size()});
+      sentence += token;
+    }
+
+    // Convert our ByteRanges to string_views since that's what appendSentence
+    // expects
+    // TODO: extend AnnotatedText::appendSentence to accept str + ByteRanges
+    // directly
+    std::vector<string_view> token_views(tokens.size());
+    std::transform(tokens.begin(), tokens.end(), token_views.begin(), [&](ByteRange const &range) {
+      return string_view(sentence.data() + range.begin, range.size());
+    });
+    
+    out.appendSentence(prefix, token_views.begin(), token_views.end());
+  }
+
+  out.appendEndingWhitespace(fun(in.annotation.gap(in.numSentences()),
+                                 in.gap(in.numSentences()),
+                                 true));
+
+  std::cerr << "::: " << out.text << " :::\n";
+
+  return out;
+}
+
 }  // namespace
 
 namespace marian {
@@ -267,7 +308,7 @@ void HTML::Restore(Response &response) {
 
   std::string html;  // workspace
 
-  response.source = response.source.apply([&](ByteRange range, string_view token, bool last) {
+  AnnotatedText source = Apply(response.source, [&](ByteRange range, string_view token, bool last) {
     Taint opening, closing;
 
     // Do encoding of any entities that popped up in the translation
@@ -317,12 +358,13 @@ void HTML::Restore(Response &response) {
     return html;
   });
 
-  auto token_prev_it = token_tags.begin();
-  auto token_tags_it = token_tags.begin() + 1;
 
-  response.target = response.target.apply([&](ByteRange range, string_view token, bool last) {
+  auto token_prev_it = token_tags_target.begin();
+  auto token_tags_it = token_tags_target.begin() + 1;
+
+  AnnotatedText target = Apply(response.target, [&](ByteRange range, string_view token, bool last) {
     Taint opening, closing;
-
+    
     // Do encoding of any entities that popped up in the translation
     // (Also effectively clears html from previous call)
     EncodeEntities(token, html);
@@ -330,7 +372,8 @@ void HTML::Restore(Response &response) {
     size_t offset = 0;  // Size added by prepending HTML
     size_t whitespace_size = CountPrefixWhitespaces(token);
 
-    DiffTags(*token_prev_it++, *token_tags_it++, opening, closing);
+    assert(token_tags_it != token_tags_target.end());
+    DiffTags(*token_prev_it, *token_tags_it, opening, closing);
 
     for (auto cit = closing.crbegin(); cit != closing.crend(); ++cit) {
       std::string close_tag = format("</{}>", (*cit)->name);
@@ -344,8 +387,23 @@ void HTML::Restore(Response &response) {
       offset += open_tag.size();
     }
 
+    // If this is the last token of the response, close all open tags.
+    if (last) {
+      for (auto cit = token_tags_it->crbegin(); cit != token_tags_it->crend(); ++cit) {
+        html += format("</{}>", (*cit)->name);
+      }
+    }
+
+    ++token_prev_it;
+    ++token_tags_it;
+
     return html;
   });
+
+  assert(token_tags_it == token_tags_target.end());
+
+  response.source = source;
+  response.target = target;
 }
 
 }  // namespace bergamot

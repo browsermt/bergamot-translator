@@ -133,27 +133,6 @@ struct AnnotatedText {
   /// constructor is disallowed).
   AnnotatedText(std::string &&text);
 
-  /// Apply a function to each token, making sure the token offsets are kept
-  /// correctly as each token's text grows or shrinks. Returns an updated copy,
-  /// leaves `this` intact.
-  template <typename T>
-  AnnotatedText apply(T /*std::string (*operation)(ByteRange, string_view, bool)*/ operation) const {
-    AnnotatedText out;
-    out.annotation.token_begin_.pop_back();
-    out.annotation.token_begin_.reserve(annotation.token_begin_.size());
-    out.annotation.gap_ = annotation.gap_;
-
-    for (std::size_t i = 1; i < annotation.token_begin_.size(); ++i) {
-      ByteRange range{annotation.token_begin_[i - 1], annotation.token_begin_[i]};
-      bool last = i + 1 == annotation.token_begin_.size();
-      out.text.append(operation(range, asStringView(range), last));
-      out.annotation.token_begin_.push_back(out.text.size());
-    }
-
-    assert(out.annotation.token_begin_.size() == annotation.token_begin_.size());
-    return out;
-  }
-
   /// Appends a sentence to the existing text and transparently rebases
   /// string_views.  Since this tracks only prefix, remember
   /// appendEndingWhitespace.

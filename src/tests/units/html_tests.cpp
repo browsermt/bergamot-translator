@@ -94,8 +94,8 @@ TEST_CASE("Test reconstruction") {
   CHECK(response.source.text == "<p><input><u></u>Hello <b>world</b> how <u>are you</u>?</p>\n");
 
   std::vector<ByteRange> restored_tokens{
-      ByteRange{ 0, 0 +  0},  // (start of sentence)
-      ByteRange{ 0, 0 + 21},  // <p><input>H<u>e</u>ll
+      ByteRange{0, 0 + 0},    // (start of sentence)
+      ByteRange{0, 0 + 21},   // <p><input>H<u>e</u>ll
       ByteRange{21, 21 + 1},  // o
       ByteRange{22, 22 + 9},  // _<b>world
       ByteRange{31, 31 + 8},  // </b>_how
@@ -109,18 +109,16 @@ TEST_CASE("Test reconstruction") {
   CHECK(AsByteRanges(response.source) == restored_tokens);
 
   // Same test as above, but easier to read. Will use this further down.
-  std::vector<std::string> restored_tokens_str{
-      "",
-      "<p><input><u></u>Hell",  // Should really be "<p><input>H<u>e</u>ll"
-      "o",
-      " <b>world",
-      "</b> how",
-      " <u>are",
-      " you",
-      "</u>?",
-      "",       // end of sentence
-      "</p>\n"
-  };
+  std::vector<std::string> restored_tokens_str{"",
+                                               "<p><input><u></u>Hell",  // Should really be "<p><input>H<u>e</u>ll"
+                                               "o",
+                                               " <b>world",
+                                               "</b> how",
+                                               " <u>are",
+                                               " you",
+                                               "</u>?",
+                                               "",  // end of sentence
+                                               "</p>\n"};
 
   CHECK(AsTokens(response.source) == restored_tokens_str);
 }
@@ -403,6 +401,7 @@ TEST_CASE("End-to-end translation") {
 
   Response response;
 
+  // clang-format off
   response.alignments = std::vector<std::vector<std::vector<float>>>{{
     {0.982376,  0.00742467, 0.00682965, 0.00121767, 0.000848056,6.51436e-05,7.53791e-06,0.00123162},
     {0.165639,  0.368694,   0.230394,   0.222476,   0.00349563, 0.00105052, 0.000603092,0.00764845},
@@ -414,18 +413,19 @@ TEST_CASE("End-to-end translation") {
     {0.00149043,0.000719392,0.0168534,  0.00430164, 0.00200343, 0.0106381,  0.948566,   0.0154279},
     {0.0903136, 0.0550843,  0.0699474,  0.0792285,  0.223006,   0.207565,   0.129241,   0.145614},
   }};
+  // clang-format on
 
   {
     std::string sentence_str("I like to drive this car.");
     std::vector<string_view> sentence{
-      string_view(sentence_str.data() +  0, 1),  // 0.0 "I"
-      string_view(sentence_str.data() +  1, 5),  // 0.1 " like"
-      string_view(sentence_str.data() +  6, 3),  // 0.2 " to"
-      string_view(sentence_str.data() +  9, 6),  // 0.3 " drive"
-      string_view(sentence_str.data() + 15, 5),  // 0.4 " this"
-      string_view(sentence_str.data() + 20, 4),  // 0.5 " car"
-      string_view(sentence_str.data() + 24, 1),  // 0.6 "."
-      string_view(sentence_str.data() + 25, 0),  // 0.7 ""
+        string_view(sentence_str.data() + 0, 1),   // 0.0 "I"
+        string_view(sentence_str.data() + 1, 5),   // 0.1 " like"
+        string_view(sentence_str.data() + 6, 3),   // 0.2 " to"
+        string_view(sentence_str.data() + 9, 6),   // 0.3 " drive"
+        string_view(sentence_str.data() + 15, 5),  // 0.4 " this"
+        string_view(sentence_str.data() + 20, 4),  // 0.5 " car"
+        string_view(sentence_str.data() + 24, 1),  // 0.6 "."
+        string_view(sentence_str.data() + 25, 0),  // 0.7 ""
     };
     response.source.appendSentence("", sentence.begin(), sentence.end());
     response.source.appendEndingWhitespace("\n");
@@ -434,15 +434,15 @@ TEST_CASE("End-to-end translation") {
   {
     std::string sentence_str("Ich fahre gerne dieses Auto.");
     std::vector<string_view> sentence{
-      string_view(sentence_str.data() +  0, 3),  // 0.0 "Ich"
-      string_view(sentence_str.data() +  3, 1),  // 0.1 " "
-      string_view(sentence_str.data() +  4, 4),  // 0.2 "fahr"
-      string_view(sentence_str.data() +  8, 1),  // 0.3 "e"
-      string_view(sentence_str.data() +  9, 6),  // 0.4 " gerne"
-      string_view(sentence_str.data() + 15, 7),  // 0.5 " dieses"
-      string_view(sentence_str.data() + 22, 5),  // 0.6 " Auto"
-      string_view(sentence_str.data() + 27, 1),  // 0.7 "."
-      string_view(sentence_str.data() + 28, 0),  // 0.8 ""
+        string_view(sentence_str.data() + 0, 3),   // 0.0 "Ich"
+        string_view(sentence_str.data() + 3, 1),   // 0.1 " "
+        string_view(sentence_str.data() + 4, 4),   // 0.2 "fahr"
+        string_view(sentence_str.data() + 8, 1),   // 0.3 "e"
+        string_view(sentence_str.data() + 9, 6),   // 0.4 " gerne"
+        string_view(sentence_str.data() + 15, 7),  // 0.5 " dieses"
+        string_view(sentence_str.data() + 22, 5),  // 0.6 " Auto"
+        string_view(sentence_str.data() + 27, 1),  // 0.7 "."
+        string_view(sentence_str.data() + 28, 0),  // 0.8 ""
     };
     response.target.appendSentence("", sentence.begin(), sentence.end());
     response.target.appendEndingWhitespace("\n");
@@ -454,14 +454,14 @@ TEST_CASE("End-to-end translation") {
     AnnotatedText source;
     std::string sentence_str("<p>I <b>like</b> to <u>drive</u> this car.");
     std::vector<string_view> sentence{
-      string_view(sentence_str.data() + 0, 4),  // 0.0 "<p>I"
-      string_view(sentence_str.data() + 4, 8),  // 0.1 " <b>like"
-      string_view(sentence_str.data() + 12, 7),  // 0.2 "</b> to"
-      string_view(sentence_str.data() + 19, 9),  // 0.3 " <u>drive"
-      string_view(sentence_str.data() + 28, 9),  // 0.4 "</u> this"
-      string_view(sentence_str.data() + 37, 4),  // 0.5 " car"
-      string_view(sentence_str.data() + 41, 1),  // 0.6 "."
-      string_view(sentence_str.data() + 42, 0),  // 0.7 ""
+        string_view(sentence_str.data() + 0, 4),   // 0.0 "<p>I"
+        string_view(sentence_str.data() + 4, 8),   // 0.1 " <b>like"
+        string_view(sentence_str.data() + 12, 7),  // 0.2 "</b> to"
+        string_view(sentence_str.data() + 19, 9),  // 0.3 " <u>drive"
+        string_view(sentence_str.data() + 28, 9),  // 0.4 "</u> this"
+        string_view(sentence_str.data() + 37, 4),  // 0.5 " car"
+        string_view(sentence_str.data() + 41, 1),  // 0.6 "."
+        string_view(sentence_str.data() + 42, 0),  // 0.7 ""
     };
     source.appendSentence("", sentence.begin(), sentence.end());
     source.appendEndingWhitespace("</p>\n");
@@ -473,23 +473,21 @@ TEST_CASE("End-to-end translation") {
     AnnotatedText target;
     std::string sentence_str("<p>Ich <u>fahre</u> <b>gerne</b> dieses Auto.");
     std::vector<string_view> sentence{
-      string_view(sentence_str.data() +  0,  6),  // 0.0 "<p>Ich"
-      string_view(sentence_str.data() +  6,  4),  // 0.1 " <u>"
-      string_view(sentence_str.data() + 10,  4),  // 0.2 "fahr"
-      string_view(sentence_str.data() + 14,  1),  // 0.3 "e"
-      string_view(sentence_str.data() + 15, 13),  // 0.4 "</u> <b>gerne"
-      string_view(sentence_str.data() + 28, 11),  // 0.5 "</b> dieses"
-      string_view(sentence_str.data() + 39,  5),  // 0.6 " Auto"
-      string_view(sentence_str.data() + 44,  1),  // 0.7 "."
-      string_view(sentence_str.data() + 45,  0),  // 0.8 ""
+        string_view(sentence_str.data() + 0, 6),    // 0.0 "<p>Ich"
+        string_view(sentence_str.data() + 6, 4),    // 0.1 " <u>"
+        string_view(sentence_str.data() + 10, 4),   // 0.2 "fahr"
+        string_view(sentence_str.data() + 14, 1),   // 0.3 "e"
+        string_view(sentence_str.data() + 15, 13),  // 0.4 "</u> <b>gerne"
+        string_view(sentence_str.data() + 28, 11),  // 0.5 "</b> dieses"
+        string_view(sentence_str.data() + 39, 5),   // 0.6 " Auto"
+        string_view(sentence_str.data() + 44, 1),   // 0.7 "."
+        string_view(sentence_str.data() + 45, 0),   // 0.8 ""
     };
     target.appendSentence("", sentence.begin(), sentence.end());
     target.appendEndingWhitespace("</p>\n");
 
     CHECK(AsTokens(response.target) == AsTokens(target));
   }
-
-
 }
 
 // TEST_CASE("")

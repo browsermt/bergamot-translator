@@ -8,6 +8,7 @@ using marian::string_view;
 using marian::bergamot::AnnotatedText;
 using marian::bergamot::ByteRange;
 using marian::bergamot::HTML;
+using marian::bergamot::Response;
 
 void EncodeEntities(string_view const &input, std::string &output) {
   output.clear();
@@ -107,10 +108,6 @@ void DiffTags(HTML::Taint const &prev, HTML::Taint const &curr, HTML::Taint &ope
   std::copy_if(prev.begin() + i, prev.end(), std::back_inserter(closing), [&](HTML::Tag *tag) { return !tag->empty; });
 
   opening.insert(opening.end(), curr.begin() + i, curr.end());
-
-  // std::cerr << "Comparing " << prev << " to " << curr
-  //           << ": closing " << closing << ", opening " << opening
-  //           << std::endl;
 }
 
 bool Intersects(ByteRange const &range, HTML::Span const &span) {
@@ -135,14 +132,10 @@ AnnotatedText Apply(AnnotatedText const &in, Fun fun) {
     std::string sentence;
     std::vector<ByteRange> tokens;
 
-    std::string prefix = fun(in.annotation.gap(sentenceIdx),
-                             in.gap(sentenceIdx),
-                             false);
+    std::string prefix = fun(in.annotation.gap(sentenceIdx), in.gap(sentenceIdx), false);
 
     for (size_t wordIdx = 0; wordIdx < in.numWords(sentenceIdx); ++wordIdx) {
-      std::string token = fun(in.wordAsByteRange(sentenceIdx, wordIdx),
-                              in.word(sentenceIdx, wordIdx),
-                              false);
+      std::string token = fun(in.wordAsByteRange(sentenceIdx, wordIdx), in.word(sentenceIdx, wordIdx), false);
       tokens.push_back(ByteRange{sentence.size(), sentence.size() + token.size()});
       sentence += token;
     }
@@ -152,24 +145,261 @@ AnnotatedText Apply(AnnotatedText const &in, Fun fun) {
     // TODO: extend AnnotatedText::appendSentence to accept str + ByteRanges
     // directly
     std::vector<string_view> token_views(tokens.size());
-    std::transform(tokens.begin(), tokens.end(), token_views.begin(), [&](ByteRange const &range) {
-      return string_view(sentence.data() + range.begin, range.size());
-    });
-    
+    std::transform(tokens.begin(), tokens.end(), token_views.begin(),
+                   [&](ByteRange const &range) { return string_view(sentence.data() + range.begin, range.size()); });
+
     out.appendSentence(prefix, token_views.begin(), token_views.end());
   }
 
-  out.appendEndingWhitespace(fun(in.annotation.gap(in.numSentences()),
-                                 in.gap(in.numSentences()),
-                                 true));
-
-  std::cerr << "::: " << out.text << " :::\n";
+  out.appendEndingWhitespace(fun(in.annotation.gap(in.numSentences()), in.gap(in.numSentences()), true));
 
   return out;
 }
 
-bool IsContinuation(string_view str) {
-  return str.compare(0, 1, " ", 1) != 0;
+bool IsContinuation(string_view str) { return str.compare(0, 1, " ", 1) != 0; }
+
+void HardAlignments(Response const &response, std::vector<std::vector<size_t>> &alignments) {
+  // For each sentence...
+  for (size_t sentenceIdx = 0; sentenceIdx < response.target.numSentences(); ++sentenceIdx) {
+    alignments.emplace_back();
+    assert(response.alignments[sentenceIdx].size() == response.target.numWords(sentenceIdx));
+
+    // Hard-align: find for each target token the most prevalent source token
+    for (size_t t = 0; t < response.alignments[sentenceIdx].size(); ++t) {
+      size_t s_max = 0;
+      for (size_t s = 1; s < response.alignments[sentenceIdx][t].size(); ++s) {
+        if (response.alignments[sentenceIdx][t][s] > response.alignments[sentenceIdx][t][s_max]) {
+          s_max = s;
+        }
+      }
+
+      alignments.back().push_back(s_max);
+    }
+
+    // Next, we try to smooth out these selected alignments with a few heuristics
+    for (size_t t = 0; t < response.target.numWords(sentenceIdx); ++t) {
+      // If this token is a continuation of a previous token, pick the tags from the most
+      // prevalent token for the whole word.
+      if (t > 0 && IsContinuation(response.target.word(sentenceIdx, t))) {
+        // Note: only looking at the previous token since that will already
+        // have this treatment applied to it.
+        size_t s_curr = alignments.back()[t];
+        size_t s_prev = alignments.back()[t - 1];
+        float score_curr = response.alignments[sentenceIdx][t][s_curr];
+        float score_prev = response.alignments[sentenceIdx][t - 1][s_prev];
+
+        size_t s_max = score_curr > score_prev ? s_curr : s_prev;
+
+        // Apply this to all previous tokens in the word
+        for (size_t i = t; i >= 0; --i) {
+          alignments.back()[i] = s_max;
+
+          // Stop if this was the beginning of the word
+          if (!IsContinuation(response.target.word(sentenceIdx, i))) break;
+        }
+      }
+    }
+  }
+}
+
+void InterpolateAlignments(Response const &response, std::vector<std::vector<size_t>> &alignments) {
+  for (size_t sentenceIdx = 0; sentenceIdx < response.target.numSentences(); ++sentenceIdx) {
+    alignments.emplace_back();
+    double ratio = (double)response.source.numWords(sentenceIdx) / response.target.numWords(sentenceIdx);
+
+    for (size_t wordIdx = 0; wordIdx < response.target.numWords(sentenceIdx); ++wordIdx) {
+      size_t source_token_idx = static_cast<size_t>(ratio * wordIdx);
+      assert(source_token_idx < response.source.numWords(sentenceIdx));
+      alignments.back().push_back(source_token_idx);
+    }
+  }
+}
+
+void CopyTaint(Response const &response, std::vector<std::vector<size_t>> const &alignments,
+               std::vector<HTML::Taint> const &token_tags, std::vector<HTML::Taint> &token_tags_target) {
+  size_t token_offset = 0;
+
+  // Fill token_tags_target based on the alignments we just made up.
+  // NOTE: this should match the exact order of Apply()
+  for (size_t sentenceIdx = 0; sentenceIdx < response.target.numSentences(); ++sentenceIdx) {
+    token_tags_target.push_back(token_tags[token_offset]);  // token_tag for sentence ending gap
+    for (size_t t = 0; t < response.target.numWords(sentenceIdx); ++t) {
+      size_t s = alignments[sentenceIdx][t];
+      assert(s < response.source.numWords(sentenceIdx));
+      token_tags_target.push_back(token_tags[token_offset + 1 + s]);  // +1 for prefix gap
+    }
+
+    token_offset += response.source.numWords(sentenceIdx) + 1;  // +1 for prefix gap
+  }
+
+  assert(token_offset < token_tags.size());
+  token_tags_target.push_back(token_tags[token_offset]);  // token_tag for ending whitespace
+}
+
+AnnotatedText RestoreSource(AnnotatedText const &in, std::vector<HTML::Taint> &token_tags,
+                            std::vector<HTML::Span>::const_iterator span_it,
+                            std::vector<HTML::Span>::const_iterator span_end) {
+  auto prev_it = span_it;  // safe because first span is always empty span, and
+                           // and the while-loop below will do the rest
+
+  // workspace variables for lambda
+  std::string html;
+  HTML::Taint opening, closing;
+
+  return Apply(in, [&](ByteRange range, string_view token, bool last) {
+    // Do encoding of any entities that popped up in the translation
+    // (Also effectively clears html from previous call)
+    EncodeEntities(token, html);
+
+    size_t offset = 0;  // Size added by prepending HTML
+    size_t whitespace_size = CountPrefixWhitespaces(token);
+
+    // Potential issue: spans and tokens can intersect, e.g.
+    //
+    //    text  <p> h <u> e </u> ll o </p>
+    //   spans     |1|   |2|    |3333| (so only 2 is tainted with <p><u>, others only <p>)
+    //  tokens     |111111111111111|2|
+    //
+    // Now 1 covers span 1 to 3, so what taint should it get? Just <p>, or <p><u>?
+
+    // Seek to the last span that overlaps with this token
+    while (true) {
+      DiffTags(prev_it->tags, span_it->tags, opening, closing);
+      prev_it = span_it;
+
+      for (auto cit = closing.crbegin(); cit != closing.crend(); ++cit) {
+        std::string close_tag = format("</{}>", (*cit)->name);
+        html.insert(offset, close_tag);
+        offset += close_tag.size();
+      }
+
+      for (HTML::Tag const *tag : opening) {
+        std::string open_tag = format("<{}{}>", tag->name, tag->attributes);
+        html.insert(offset + whitespace_size, open_tag);
+        offset += open_tag.size();
+      }
+
+      if (span_it + 1 != span_end && ((span_it + 1)->begin < range.end || last)) {
+        span_it++;
+        continue;
+      }
+
+      break;
+    }
+
+    // TODO: This is just the taint of the last span, not the ones in between
+    // I don't know if that is okay for transferring taints. We'll need to test.
+    token_tags.push_back(prev_it->tags);
+
+    return html;
+  });
+}
+
+AnnotatedText RestoreTarget(AnnotatedText const &in, std::vector<HTML::Taint> const &token_tags_target) {
+  auto token_prev_it = token_tags_target.begin();
+  auto token_tags_it = token_tags_target.begin() + 1;
+
+  // workspace for lambda
+  std::string html;
+  HTML::Taint opening, closing;
+
+  AnnotatedText out = Apply(in, [&](ByteRange range, string_view token, bool last) {
+    // Do encoding of any entities that popped up in the translation
+    // (Also effectively clears html from previous call)
+    EncodeEntities(token, html);
+
+    size_t offset = 0;  // Size added by prepending HTML
+    size_t whitespace_size = CountPrefixWhitespaces(token);
+
+    assert(token_tags_it != token_tags_target.end());
+    DiffTags(*token_prev_it, *token_tags_it, opening, closing);
+
+    for (auto cit = closing.crbegin(); cit != closing.crend(); ++cit) {
+      std::string close_tag = format("</{}>", (*cit)->name);
+      html.insert(offset, close_tag);
+      offset += close_tag.size();
+    }
+
+    for (HTML::Tag const *tag : opening) {
+      std::string open_tag = format("<{}{}>", tag->name, tag->attributes);
+      html.insert(offset + whitespace_size, open_tag);
+      offset += open_tag.size();
+    }
+
+    // If this is the last token of the response, close all open tags.
+    if (last) {
+      for (auto cit = token_tags_it->crbegin(); cit != token_tags_it->crend(); ++cit) {
+        html += format("</{}>", (*cit)->name);
+      }
+    }
+
+    ++token_prev_it;
+    ++token_tags_it;
+
+    return html;
+  });
+
+  // Assert that we did in fact use all our taints
+  assert(token_tags_it == token_tags_target.end());
+
+  return out;
+}
+
+std::ostream &DebugPrintMapping(std::ostream &out, Response const &response,
+                                std::vector<std::vector<size_t>> const &alignments,
+                                std::vector<HTML::Taint> const &token_tags_target) {
+  auto taints = token_tags_target.begin();
+  for (size_t sentenceIdx = 0; sentenceIdx < response.target.numSentences(); ++sentenceIdx) {
+    out << "Mapped sentence prefix with tags: ";
+    for (auto &&taint : *(++taints)) out << '/' << taint->name;
+    out << '\n';
+
+    for (size_t wordIdx = 0; wordIdx < response.target.numWords(sentenceIdx); ++wordIdx) {
+      assert(sentenceIdx < alignments.size());
+      assert(wordIdx < alignments[sentenceIdx].size());
+
+      out << "Mapped ";
+      out << std::setw(10) << std::setfill(' ') << response.target.word(sentenceIdx, wordIdx);
+      out << " to ";
+      out << std::setw(10) << std::setfill(' ') << response.source.word(sentenceIdx, alignments[sentenceIdx][wordIdx]);
+      out << " with tags: ";
+      for (auto &&taint : *(++taints)) out << '/' << taint->name;
+      out << '\n';
+    }
+  }
+
+  out << "Mapped end-of-input with tags: ";
+  for (auto &&taint : *(++taints)) out << '/' << taint->name;
+  out << '\n';
+
+  assert(++taints == token_tags_target.end());
+  return out;
+}
+
+std::ostream &DebugPrintAlignmentScores(std::ostream &out, Response const &response) {
+  out << "std::vector<std::vector<std::vector<float>>> alignments{\n";
+  for (size_t sentenceIdx = 0; sentenceIdx < response.source.numSentences(); ++sentenceIdx) {
+    out << "  {\n";
+    for (size_t t = 0; t < response.alignments[sentenceIdx].size(); ++t) {
+      out << "    {";
+      for (size_t s = 0; s < response.alignments[sentenceIdx][t].size(); ++s) {
+        out << std::fixed << std::setw(8) << std::setprecision(8) << std::setfill(' ')
+            << response.alignments[sentenceIdx][t][s];
+        out << ", ";
+      }
+      out << "},\n";
+    }
+    out << "  },\n";
+  }
+  return out << "};\n";
+}
+
+size_t DebugCountTokens(AnnotatedText const &text) {
+  size_t tokens = 1;  // for the ending gap
+  for (size_t sentenceIdx = 0; sentenceIdx < text.numSentences(); ++sentenceIdx) {
+    tokens += 1 + text.numWords(sentenceIdx);  // pre-sentence prefix/gap + each word
+  }
+  return tokens;
 }
 
 }  // namespace
@@ -250,48 +480,6 @@ HTML::HTML(std::string &&source, bool process_markup) {
 
   // Add a trailing span (that's empty) to signify all closed tags.
   spans_.emplace_back(Span{source.size() + 1, source.size() + 1, stack});
-
-  // Test case: Swap some spans, see whether we still end up with valid HTML
-  // std::swap(spans_[0], spans_[4]);
-  /*
-  {
-    std::cerr << "Input: " << original << "\n";
-    std::cerr << "Reconstructed: ";
-
-    auto it = spans_.begin();
-    auto prev = spans_.end();
-
-    for (;it != spans_.end(); prev = it++) {
-      Taint opening;
-      Taint closing;
-
-      if (prev != spans_.end()) {
-        size_t i = 0;
-
-        // Find first difference
-        for (; i < prev->tags.size(); ++i)
-          if (i >= it->tags.size() || prev->tags[i] != it->tags[i])
-            break;
-
-        closing.insert(closing.end(), prev->tags.begin() + i, prev->tags.end());
-        opening.insert(opening.end(), it->tags.begin() + i, it->tags.end());
-      } else {
-        opening.insert(opening.end(), it->tags.begin(), it->tags.end());
-      }
-
-      for (auto cit = closing.crbegin(); cit != closing.crend(); ++cit)
-        std::cerr << "</" << (*cit)->name << ">";
-      for (Tag const *tag : opening)
-        std::cerr << "<" << tag->name << ">";
-      std::cerr << source.substr(it->begin, it->size());
-    }
-
-    for (Tag *tag : spans_.back().tags)
-      std::cerr << "</" << tag->name << ">";
-
-    std::cerr << "\n";
-  }
-  */
 }
 
 void HTML::Restore(Response &response) {
@@ -304,198 +492,37 @@ void HTML::Restore(Response &response) {
   // 4. Transfer the taint from the source tokens to the target tokens using alignment information
   // 5. Reconstruct the target HTML with these tainted tokens
 
-  std::vector<Taint> token_tags;
-  
-  auto span_it = spans_.begin();
-  auto prev_it = spans_.begin();  // using end() to indicate first token
+  std::vector<Taint> token_tags;  // List of HTML tags active per token in source
+                                  // Calculating these is a side-effect of restoring
+                                  // the HTML in response.source.
 
-  std::string html;  // workspace
-
-  AnnotatedText source = Apply(response.source, [&](ByteRange range, string_view token, bool last) {
-    Taint opening, closing;
-
-    // Do encoding of any entities that popped up in the translation
-    // (Also effectively clears html from previous call)
-    EncodeEntities(token, html);
-
-    size_t offset = 0;  // Size added by prepending HTML
-    size_t whitespace_size = CountPrefixWhitespaces(token);
-
-    // Potential issue: spans and tokens can intersect, e.g.
-    //
-    //    text  <p> h <u> e </u> ll o </p>
-    //   spans     |1|   |2|    |3333| (so only 2 is tainted with <p><u>, others only <p>)
-    //  tokens     |111111111111111|2|
-    //
-    // Now 1 covers span 1 to 3, so what taint should it get? Just <p>, or <p><u>?
-
-    // Seek to the last span that overlaps with this token
-    while (true) {
-      DiffTags(prev_it->tags, span_it->tags, opening, closing);
-      prev_it = span_it;
-
-      for (auto cit = closing.crbegin(); cit != closing.crend(); ++cit) {
-        std::string close_tag = format("</{}>", (*cit)->name);
-        html.insert(offset, close_tag);
-        offset += close_tag.size();
-      }
-
-      for (Tag const *tag : opening) {
-        std::string open_tag = format("<{}{}>", tag->name, tag->attributes);
-        html.insert(offset + whitespace_size, open_tag);
-        offset += open_tag.size();
-      }
-
-      if (span_it + 1 != spans_.end() && ((span_it + 1)->begin < range.end || last)) {
-        span_it++;
-        continue;
-      }
-
-      break;
-    }
-
-    // TODO: This is just the taint of the last span, not the ones in between
-    // I don't know if that is okay for transferring taints. We'll need to test.
-    token_tags.push_back(prev_it->tags);
-
-    return html;
-  });
+  AnnotatedText source = RestoreSource(response.source, token_tags, spans_.cbegin(), spans_.cend());
+  assert(token_tags.size() == DebugCountTokens(response.source));
 
   // Find for every token in target the token in source that best matches.
-  std::vector<Taint> token_tags_target;
-  std::vector<std::vector<size_t>> alignments; // TODO remove debugging only
-  token_tags_target.emplace_back(); // add empty one to the beginning for easy life
+  std::vector<std::vector<size_t>> alignments;
 
   // If we do have alignment information from the model, we use that to taint
   // tokens with the tags from their source token counterpart. If there is no
   // alignment information available, we just interpolate based on sentence
   // length (badly).
   if (!response.alignments.empty()) {
-    assert(response.source.numSentences() == response.target.numSentences());
-
-    size_t token_offset = 0;
-    
-    // For each sentence...
-    for (size_t sentenceIdx = 0; sentenceIdx < response.target.numSentences(); ++sentenceIdx) {
-      alignments.emplace_back();
-      assert(response.alignments[sentenceIdx].size() == response.target.numWords(sentenceIdx));
-
-      // Hard-align: find for each target token the most prevalent source token
-      for (size_t t = 0; t < response.alignments[sentenceIdx].size(); ++t) {
-        size_t s_max = 0;
-        for (size_t s = 1; s < response.alignments[sentenceIdx][t].size(); ++s) {
-          if (response.alignments[sentenceIdx][t][s] > response.alignments[sentenceIdx][t][s_max])
-            s_max = s;
-        }
-
-        assert(token_offset + s_max < token_tags.size());
-        
-        alignments.back().push_back(s_max);
-      }
-
-      // Next, we try to smooth out these selected alignments with a few heuristics
-      for (size_t t = 0; t < response.target.numWords(sentenceIdx); ++t) {
-        // If this token is a continuation of a previous token, pick the tags from the most
-        // prevalent token for the whole word.
-        if (t > 0 && IsContinuation(response.target.word(sentenceIdx, t))) {
-          // Note: only looking at the previous token since that will already
-          // have this treatment applied to it.
-          size_t s_curr = alignments.back()[t];
-          size_t s_prev = alignments.back()[t - 1];
-          float score_curr = response.alignments[sentenceIdx][t][s_curr];
-          float score_prev = response.alignments[sentenceIdx][t - 1][s_prev];
-          
-          size_t s_max = score_curr > score_prev ? s_curr : s_prev;
-
-          // Apply this to all previous tokens in the word
-          for (size_t i = t; i >= 0; --i) {
-            alignments.back()[i] = s_max;
-            
-            // Stop if this was the beginning of the word
-            if (!IsContinuation(response.target.word(sentenceIdx, i))) break;
-          }
-        }
-      }
-
-      // Fill token_tags_target based on the alignments we just made up
-      assert(token_offset < token_tags.size());
-      token_tags_target.push_back(token_tags[token_offset]); // token_tag for sentence ending gap
-      for (size_t t = 0; t < response.target.numWords(sentenceIdx); ++t) {
-        size_t s = alignments.back()[t];
-        token_tags_target.push_back(token_tags[token_offset + 1 + s]); // +1 for prefix gap
-      }
-      
-      token_offset += response.source.numWords(sentenceIdx) + 1; // +1 for prefix gap
-    }
-
-    assert(token_offset < token_tags.size());
-    token_tags_target.push_back(token_tags[token_offset]); // token_tag for ending whitespace
+    // DebugPrintAlignmentScores(std::cerr, response);
+    HardAlignments(response, alignments);
   } else {
-    size_t token_offset = 0;
-
-    for (size_t sentenceIdx = 0; sentenceIdx < response.target.numSentences(); ++sentenceIdx) {
-      alignments.emplace_back();
-      double ratio = response.target.numWords(sentenceIdx) / response.source.numWords(sentenceIdx);
-
-      assert(token_offset < token_tags.size());
-      token_tags_target.push_back(token_tags[token_offset + 0]); // sentence prefix gap
-      
-      for (size_t wordIdx = 0; wordIdx < response.target.numWords(sentenceIdx); ++wordIdx) {
-        size_t source_token_idx = static_cast<size_t>(ratio * wordIdx);
-        assert(token_offset + 1 + source_token_idx < token_tags.size());
-        token_tags_target.push_back(token_tags[token_offset + 1 + source_token_idx]);
-        alignments.back().push_back(source_token_idx);
-      }
-
-      token_offset += response.source.numWords(sentenceIdx) + 1; // +1 for prefix gap
-    }
-
-    assert(token_offset < token_tags.size());
-    token_tags_target.push_back(token_tags[token_offset]); // token_tag for ending whitespace
+    InterpolateAlignments(response, alignments);
   }
 
-  auto token_prev_it = token_tags_target.begin();
-  auto token_tags_it = token_tags_target.begin() + 1;
+  std::vector<Taint> token_tags_target;
+  token_tags_target.emplace_back();  // add empty one to the beginning for easy
+                                     // life later on (we start iterating at 1,
+                                     // and can then do i - 1 for empty.
+  CopyTaint(response, alignments, token_tags, token_tags_target);
+  assert(token_tags_target.size() == DebugCountTokens(response.target) + 1);
 
-  AnnotatedText target = Apply(response.target, [&](ByteRange range, string_view token, bool last) {
-    Taint opening, closing;
-    
-    // Do encoding of any entities that popped up in the translation
-    // (Also effectively clears html from previous call)
-    EncodeEntities(token, html);
+  // DebugPrintMapping(std::cerr, response, alignments, token_tags_target);
 
-    size_t offset = 0;  // Size added by prepending HTML
-    size_t whitespace_size = CountPrefixWhitespaces(token);
-
-    assert(token_tags_it != token_tags_target.end());
-    DiffTags(*token_prev_it, *token_tags_it, opening, closing);
-
-    for (auto cit = closing.crbegin(); cit != closing.crend(); ++cit) {
-      std::string close_tag = format("</{}>", (*cit)->name);
-      html.insert(offset, close_tag);
-      offset += close_tag.size();
-    }
-
-    for (Tag const *tag : opening) {
-      std::string open_tag = format("<{}{}>", tag->name, tag->attributes);
-      html.insert(offset + whitespace_size, open_tag);
-      offset += open_tag.size();
-    }
-
-    // If this is the last token of the response, close all open tags.
-    if (last) {
-      for (auto cit = token_tags_it->crbegin(); cit != token_tags_it->crend(); ++cit) {
-        html += format("</{}>", (*cit)->name);
-      }
-    }
-
-    ++token_prev_it;
-    ++token_tags_it;
-
-    return html;
-  });
-
-  assert(token_tags_it == token_tags_target.end());
+  AnnotatedText target = RestoreTarget(response.target, token_tags_target);
 
   response.source = source;
   response.target = target;

@@ -168,6 +168,10 @@ AnnotatedText Apply(AnnotatedText const &in, Fun fun) {
   return out;
 }
 
+bool IsContinuation(string_view str) {
+  return str.compare(0, 1, " ", 1) != 0;
+}
+
 }  // namespace
 
 namespace marian {
@@ -362,17 +366,21 @@ void HTML::Restore(Response &response) {
   std::vector<std::vector<size_t>> alignments; // TODO remove debugging only
   token_tags_target.emplace_back(); // add empty one to the beginning for easy life
 
+  // If we do have alignment information from the model, we use that to taint
+  // tokens with the tags from their source token counterpart. If there is no
+  // alignment information available, we just interpolate based on sentence
+  // length (badly).
   if (!response.alignments.empty()) {
     assert(response.source.numSentences() == response.target.numSentences());
 
     size_t token_offset = 0;
+    
+    // For each sentence...
     for (size_t sentenceIdx = 0; sentenceIdx < response.target.numSentences(); ++sentenceIdx) {
       alignments.emplace_back();
       assert(response.alignments[sentenceIdx].size() == response.target.numWords(sentenceIdx));
 
-      assert(token_offset < token_tags.size());
-      token_tags_target.push_back(token_tags[token_offset]); // token_tag for sentence ending gap
-
+      // Hard-align: find for each target token the most prevalent source token
       for (size_t t = 0; t < response.alignments[sentenceIdx].size(); ++t) {
         size_t s_max = 0;
         for (size_t s = 1; s < response.alignments[sentenceIdx][t].size(); ++s) {
@@ -381,10 +389,42 @@ void HTML::Restore(Response &response) {
         }
 
         assert(token_offset + s_max < token_tags.size());
-        token_tags_target.push_back(token_tags[token_offset + 1 + s_max]); // +1 for prefix gap
+        
         alignments.back().push_back(s_max);
       }
 
+      // Next, we try to smooth out these selected alignments with a few heuristics
+      for (size_t t = 0; t < response.target.numWords(sentenceIdx); ++t) {
+        // If this token is a continuation of a previous token, pick the tags from the most
+        // prevalent token for the whole word.
+        if (t > 0 && IsContinuation(response.target.word(sentenceIdx, t))) {
+          // Note: only looking at the previous token since that will already
+          // have this treatment applied to it.
+          size_t s_curr = alignments.back()[t];
+          size_t s_prev = alignments.back()[t - 1];
+          float score_curr = response.alignments[sentenceIdx][t][s_curr];
+          float score_prev = response.alignments[sentenceIdx][t - 1][s_prev];
+          
+          size_t s_max = score_curr > score_prev ? s_curr : s_prev;
+
+          // Apply this to all previous tokens in the word
+          for (size_t i = t; i >= 0; --i) {
+            alignments.back()[i] = s_max;
+            
+            // Stop if this was the beginning of the word
+            if (!IsContinuation(response.target.word(sentenceIdx, i))) break;
+          }
+        }
+      }
+
+      // Fill token_tags_target based on the alignments we just made up
+      assert(token_offset < token_tags.size());
+      token_tags_target.push_back(token_tags[token_offset]); // token_tag for sentence ending gap
+      for (size_t t = 0; t < response.target.numWords(sentenceIdx); ++t) {
+        size_t s = alignments.back()[t];
+        token_tags_target.push_back(token_tags[token_offset + 1 + s]); // +1 for prefix gap
+      }
+      
       token_offset += response.source.numWords(sentenceIdx) + 1; // +1 for prefix gap
     }
 

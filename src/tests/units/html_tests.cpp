@@ -474,8 +474,8 @@ TEST_CASE("End-to-end translation") {
     std::string sentence_str("<p>Ich <u>fahre</u> <b>gerne</b> dieses Auto.");
     std::vector<string_view> sentence{
       string_view(sentence_str.data() +  0,  6),  // 0.0 "<p>Ich"
-      string_view(sentence_str.data() +  6,  1),  // 0.1 " "
-      string_view(sentence_str.data() +  7,  7),  // 0.2 "<u>fahr"
+      string_view(sentence_str.data() +  6,  4),  // 0.1 " <u>"
+      string_view(sentence_str.data() + 10,  4),  // 0.2 "fahr"
       string_view(sentence_str.data() + 14,  1),  // 0.3 "e"
       string_view(sentence_str.data() + 15, 13),  // 0.4 "</u> <b>gerne"
       string_view(sentence_str.data() + 28, 11),  // 0.5 "</b> dieses"

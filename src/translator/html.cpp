@@ -25,6 +25,9 @@ void EncodeEntities(string_view const &input, std::string &output) {
       case '>':
         output.append("&gt;");
         break;
+      // case ???:
+      //   output.append("&nbsp;");
+      //   break;
       // case '"':
       //   output.append("&quot;");
       //   break;
@@ -44,7 +47,12 @@ size_t CountPrefixWhitespaces(string_view const &input) {
   return size;
 }
 
-std::ostream &operator<<(std::ostream &out, HTML::Tag const *tag) { return out << '<' << tag->name << '>'; }
+std::ostream &operator<<(std::ostream &out, HTML::Tag const *tag) {
+  if (tag == nullptr) return out << "[nullptr]";
+  out << '<' << tag->name << tag->attributes;
+  if (tag->empty) out << '/';
+  return out << '>';
+}
 
 std::ostream &operator<<(std::ostream &out, HTML::Taint const &tags) {
   for (auto it = tags.begin(); it != tags.end(); ++it) {
@@ -75,7 +83,7 @@ std::string format(std::string const &format_str, Arg arg, Args... args) {
   return os.str();
 }
 
-bool IsBlockElement(const char *name) {
+bool IsBlockElement(std::string const &name) {
   // List of elements that we expect might occur inside words, and that should
   // not introduce spacings around them. Not strictly inline elements, nor flow
   // elements. See also https://developer.mozilla.org/en-US/docs/Web/Guide/HTML/Content_categories
@@ -86,7 +94,7 @@ bool IsBlockElement(const char *name) {
   return inline_ish_elements.find(name) == inline_ish_elements.end();
 }
 
-bool IsEmtpyElement(const char *name) {
+bool IsEmtpyElement(std::string const &name) {
   // List of elements for which we do not expect a closing tag, or self-closing
   // elements in XHTML. See also https://developer.mozilla.org/en-US/docs/Glossary/Empty_element
   static std::unordered_set<std::string> empty_elements{"area",  "base", "br",   "col",   "embed",  "hr",    "img",
@@ -156,7 +164,7 @@ AnnotatedText Apply(AnnotatedText const &in, Fun fun) {
   return out;
 }
 
-bool IsContinuation(string_view str) { return str.compare(0, 1, " ", 1) != 0; }
+bool IsContinuation(string_view str) { return !str.empty() && str.compare(0, 1, " ", 1) != 0; }
 
 void HardAlignments(Response const &response, std::vector<std::vector<size_t>> &alignments) {
   // For each sentence...
@@ -457,12 +465,11 @@ HTML::HTML(std::string &&source, bool process_markup) {
           throw BadHTML(format("Encountered more closing tags ({}) than opening tags", scanner.get_tag_name()));
 
         if (stack.back()->name != scanner.get_tag_name())
-          throw BadHTML(format("Encountered unexpected closing tag <{}>, top of stack is <{}>", scanner.get_tag_name(),
-                               stack.back()));
-
         // TODO: what to do with "<u></u>" case, where tag is immediately closed
         // so it never makes it into the taint of any of the spans? Add it as
         // an empty tag to the previous/following?
+          throw BadHTML(format("Encountered unexpected closing tag </{}>, stack is {}", scanner.get_tag_name(),
+                               stack));
         stack.pop_back();
         break;
 

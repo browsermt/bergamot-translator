@@ -258,30 +258,34 @@ scanner::token_type scanner::scan_entity() {
 bool scanner::resolve_entity(char *buffer, unsigned int len) {
   switch (len) {
     case 4:
-      if (equal(buffer, "&lt;", 2)) {
+      if (equal(buffer, "&lt;", 4)) {
         append_value('<');
         return true;
       }
-      if (equal(buffer, "&gt;", 2)) {
+      if (equal(buffer, "&gt;", 4)) {
         append_value('>');
         return true;
       }
       break;
 
     case 5:
-      if (equal(buffer, "&amp;", 3)) {
+      if (equal(buffer, "&amp;", 5)) {
         append_value('&');
         return true;
       }
       break;
 
     case 6:
-      if (equal(buffer, "&quot;", 4)) {
+      if (equal(buffer, "&quot;", 6)) {
         append_value('"');
         return true;
       }
-      if (equal(buffer, "&apos;", 4)) {
+      if (equal(buffer, "&apos;", 6)) {
         append_value('\'');
+        return true;
+      }
+      if (equal(buffer, "&nbsp;", 6)) {
+        append_value(' ');  // TODO: handle non-breaking spaces better than just converting them to spaces
         return true;
       }
       break;

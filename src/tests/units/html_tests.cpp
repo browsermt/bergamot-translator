@@ -392,6 +392,28 @@ TEST_CASE("Test reconstruction of target with multiple sentences") {
 TEST_CASE("Test self-closing tag (HTML5)") {
   std::string input("<p>hello <img> <b>world</b> <u>and other <a href=\"#\">creatures</a></u></p>\n");
   HTML html(std::move(input), true);
+  CHECK(input == "hello  world and other creatures\n");  // Note double space between "hello" and "world"
+}
+
+TEST_CASE("Test empty tag") {
+  std::string input("<p id=\"1\">hello <img id=\"1.1\"><span id=\"1.2\"><u id=\"1.2.1\"></u><b id=\"1.2.2\"></b><img id=\"1.2.3\">world</span></p>\n");
+  HTML html(std::move(input), true);
+  CHECK(input == "hello world\n");
+
+  Response response;
+
+  std::string sentence_str("hello world");
+  std::vector<string_view> sentence{
+      string_view(sentence_str.data() + 0, 4),   // 0.0 hell
+      string_view(sentence_str.data() + 4, 1),   // 0.1 o
+      string_view(sentence_str.data() + 5, 6),   // 0.2 _world
+      string_view(sentence_str.data() + 11, 0),  // 0.3 ""
+  };
+  response.source.appendSentence("", sentence.begin(), sentence.end());
+  response.source.appendEndingWhitespace("\n");
+
+  html.Restore(response);
+  CHECK(response.source.text == "<p id=\"1\">hello <img id=\"1.1\"><span id=\"1.2\"><u id=\"1.2.1\"></u><b id=\"1.2.2\"></b><img id=\"1.2.3\">world</span></p>\n");
 }
 
 TEST_CASE("End-to-end translation") {

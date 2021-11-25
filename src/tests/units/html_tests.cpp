@@ -395,8 +395,10 @@ TEST_CASE("Test self-closing tag (HTML5)") {
   CHECK(input == "hello  world and other creatures\n");  // Note double space between "hello" and "world"
 }
 
-  std::string input("<p id=\"1\">hello <img id=\"1.1\"><span id=\"1.2\"><u id=\"1.2.1\"></u><b id=\"1.2.2\"></b><img id=\"1.2.3\">world</span></p>\n");
 TEST_CASE("Test empty tag", "[!mayfail]") {
+  std::string input(
+      "<p id=\"1\">hello <img id=\"1.1\"><span id=\"1.2\"><u id=\"1.2.1\"></u><b id=\"1.2.2\"></b><img "
+      "id=\"1.2.3\">world</span></p>\n");
   HTML html(std::move(input), true);
   CHECK(input == "hello world\n");
 
@@ -413,7 +415,9 @@ TEST_CASE("Test empty tag", "[!mayfail]") {
   response.source.appendEndingWhitespace("\n");
 
   html.Restore(response);
-  CHECK(response.source.text == "<p id=\"1\">hello <img id=\"1.1\"><span id=\"1.2\"><u id=\"1.2.1\"></u><b id=\"1.2.2\"></b><img id=\"1.2.3\">world</span></p>\n");
+  CHECK(response.source.text ==
+        "<p id=\"1\">hello <img id=\"1.1\"><span id=\"1.2\"><u id=\"1.2.1\"></u><b id=\"1.2.2\"></b><img "
+        "id=\"1.2.3\">world</span></p>\n");
 }
 
 TEST_CASE("End-to-end translation") {

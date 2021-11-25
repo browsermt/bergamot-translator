@@ -464,12 +464,11 @@ HTML::HTML(std::string &&source, bool process_markup) {
         if (stack.empty())
           throw BadHTML(format("Encountered more closing tags ({}) than opening tags", scanner.get_tag_name()));
 
-        if (stack.back()->name != scanner.get_tag_name())
         // TODO: what to do with "<u></u>" case, where tag is immediately closed
         // so it never makes it into the taint of any of the spans? Add it as
         // an empty tag to the previous/following?
-          throw BadHTML(format("Encountered unexpected closing tag </{}>, stack is {}", scanner.get_tag_name(),
-                               stack));
+        if (stack.back()->name != scanner.get_tag_name())
+          throw BadHTML(format("Encountered unexpected closing tag </{}>, stack is {}", scanner.get_tag_name(), stack));
         stack.pop_back();
         break;
 

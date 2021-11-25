@@ -4,6 +4,7 @@
 #include <optional>
 
 #include "data/types.h"
+#include "html.h"
 #include "quality_estimator.h"
 #include "response.h"
 #include "response_options.h"
@@ -30,12 +31,13 @@ class ResponseBuilder {
   /// @param [in] qualityEstimator: the QualityEstimator model that can be used
   /// to provide translation quality probability.
   ResponseBuilder(ResponseOptions responseOptions, AnnotatedText &&source, const Vocabs &vocabs,
-                  std::function<void(Response &&)> callback, const QualityEstimator &qualityEstimator)
+                  std::function<void(Response &&)> callback, const QualityEstimator &qualityEstimator, HTML &&html)
       : responseOptions_(responseOptions),
         source_(std::move(source)),
         vocabs_(vocabs),
         callback_(std::move(callback)),
-        qualityEstimator_(qualityEstimator) {}
+        qualityEstimator_(qualityEstimator),
+        html_(std::move(html)) {}
 
   /// Constructs and sets the promise of a Response object from obtained
   /// histories after translating.
@@ -62,6 +64,7 @@ class ResponseBuilder {
     if (responseOptions_.alignment) {
       buildAlignments(histories, response);
     }
+    html_.Restore(response);
 
     callback_(std::move(response));
   }
@@ -94,6 +97,8 @@ class ResponseBuilder {
   AnnotatedText source_;
 
   const QualityEstimator &qualityEstimator_;
+
+  HTML html_;
 };
 }  // namespace bergamot
 }  // namespace marian

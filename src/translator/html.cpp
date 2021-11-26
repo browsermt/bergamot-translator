@@ -199,11 +199,11 @@ void HardAlignments(Response const &response, std::vector<std::vector<size_t>> &
         size_t s_max = score_curr > score_prev ? s_curr : s_prev;
 
         // Apply this to all previous tokens in the word
-        for (size_t i = t; i >= 0; --i) {
+        for (size_t i = t;; --i) {
           alignments.back()[i] = s_max;
 
-          // Stop if this was the beginning of the word
-          if (!IsContinuation(response.target.word(sentenceIdx, i))) break;
+          // Stop if this was the first token or the beginning of the word
+          if (i == 0 || !IsContinuation(response.target.word(sentenceIdx, i))) break;
         }
       }
     }

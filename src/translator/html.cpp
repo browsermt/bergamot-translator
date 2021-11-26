@@ -166,6 +166,10 @@ AnnotatedText Apply(AnnotatedText const &in, Fun fun) {
 
 bool IsContinuation(string_view str) { return !str.empty() && str.compare(0, 1, " ", 1) != 0; }
 
+bool HasAlignments(Response const &response) {
+  return !response.alignments.empty() && !response.alignments[0][0].empty();
+}
+
 void HardAlignments(Response const &response, std::vector<std::vector<size_t>> &alignments) {
   // For each sentence...
   for (size_t sentenceIdx = 0; sentenceIdx < response.target.numSentences(); ++sentenceIdx) {
@@ -512,7 +516,7 @@ void HTML::Restore(Response &response) {
   // tokens with the tags from their source token counterpart. If there is no
   // alignment information available, we just interpolate based on sentence
   // length (badly).
-  if (!response.alignments.empty()) {
+  if (HasAlignments(response)) {
     // DebugPrintAlignmentScores(std::cerr, response);
     HardAlignments(response, alignments);
   } else {

@@ -413,7 +413,6 @@ TEST_CASE("Test empty self-closing pair at end of input in parent") {
   CHECK(input == "hello ");
 }
 
-
 TEST_CASE("Test empty tag", "[!mayfail]") {
   std::string input(
       "<p id=\"1\">hello <img id=\"1.1\"><span id=\"1.2\"><u id=\"1.2.1\"></u><b id=\"1.2.2\"></b><img "

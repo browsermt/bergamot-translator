@@ -94,7 +94,7 @@ bool IsBlockElement(std::string const &name) {
   return inline_ish_elements.find(name) == inline_ish_elements.end();
 }
 
-bool IsEmtpyElement(std::string const &name) {
+bool IsEmptyElement(std::string const &name) {
   // List of elements for which we do not expect a closing tag, or self-closing
   // elements in XHTML. See also https://developer.mozilla.org/en-US/docs/Glossary/Empty_element
   static std::unordered_set<std::string> empty_elements{"area",  "base", "br",   "col",   "embed",  "hr",    "img",
@@ -130,6 +130,10 @@ void FilterEmpty(HTML::Taint &stack) {
     if (!(*src)->empty) *(dst++) = *src;
 
   stack.resize(dst - stack.begin());
+}
+
+bool ContainsTag(HTML::Taint const &stack, HTML::Tag const *tag) {
+  return std::find(stack.rbegin(), stack.rend(), tag) != stack.rend();
 }
 
 template <typename Fun>
@@ -266,6 +270,14 @@ AnnotatedText RestoreSource(AnnotatedText const &in, std::vector<HTML::Taint> &t
     size_t offset = 0;  // Size added by prepending HTML
     size_t whitespace_size = CountPrefixWhitespaces(token);
 
+    // Close tags we want to show up left (before) the token, but open tags
+    // ideally come directly after any prefix whitespace. However, some tokens
+    // match multiple spans. If a previous span has added an open tag, after any
+    // whitespace, and the next span closes said tag again, we need to close
+    // it after the whitespace. So after the first open tag, any closing tag
+    // should also align right, after whitespace, not before. Hence this bool.
+    bool close_left = true;
+
     // Potential issue: spans and tokens can intersect, e.g.
     //
     //    text  <p> h <u> e </u> ll o </p>
@@ -281,7 +293,7 @@ AnnotatedText RestoreSource(AnnotatedText const &in, std::vector<HTML::Taint> &t
 
       for (auto cit = closing.crbegin(); cit != closing.crend(); ++cit) {
         std::string close_tag = format("</{}>", (*cit)->name);
-        html.insert(offset, close_tag);
+        html.insert(offset + (close_left ? 0 : whitespace_size), close_tag);
         offset += close_tag.size();
       }
 
@@ -289,6 +301,7 @@ AnnotatedText RestoreSource(AnnotatedText const &in, std::vector<HTML::Taint> &t
         std::string open_tag = format("<{}{}>", tag->name, tag->attributes);
         html.insert(offset + whitespace_size, open_tag);
         offset += open_tag.size();
+        close_left = false;
       }
 
       if (span_it + 1 != span_end && ((span_it + 1)->begin < range.end || last)) {
@@ -299,8 +312,9 @@ AnnotatedText RestoreSource(AnnotatedText const &in, std::vector<HTML::Taint> &t
       break;
     }
 
-    // TODO: This is just the taint of the last span, not the ones in between
-    // I don't know if that is okay for transferring taints. We'll need to test.
+    // TODO: This is just the taint of the last span, not the ones in between.
+    // This makes us lose empty tags, and maybe some markup as well, in the
+    // response target HTML restoration.
     token_tags.push_back(prev_it->tags);
 
     return html;
@@ -426,6 +440,7 @@ HTML::HTML(std::string &&source, bool process_markup) {
   markup::scanner scanner(in);
   source.clear();  // source is moved out of, so should be clear anyway
 
+  Tag *tag;
   Taint stack;
   spans_.push_back(Span{0, 0, {}});
 
@@ -453,13 +468,19 @@ HTML::HTML(std::string &&source, bool process_markup) {
         // separate words
         if (IsBlockElement(scanner.get_tag_name()) && !source.empty() && source.back() != ' ') source.push_back(' ');
 
-        pool_.emplace_back(new Tag{
-            scanner.get_tag_name(), std::string(),
-            IsEmtpyElement(scanner.get_tag_name())  // TODO: detect empty elements by doing a second pass and detecting
-                                                    // non-closed elements?
-        });
+        tag = new Tag{scanner.get_tag_name(), std::string(), IsEmptyElement(scanner.get_tag_name())};
+        pool_.emplace_back(tag);  // pool_ takes ownership of our tag
 
         stack.push_back(pool_.back().get());
+
+        // Empty elements (e.g. <img>) are not applicable to a span of text
+        // so instead we "apply" them to an empty span in between, and then
+        // immediately remove them again from the stack.
+        if (tag->empty) {
+          spans_.push_back(Span{source.size(), source.size(), stack});
+          stack.pop_back();
+        }
+
         break;
 
       case markup::scanner::TT_TAG_END:
@@ -468,17 +489,20 @@ HTML::HTML(std::string &&source, bool process_markup) {
         if (stack.empty())
           throw BadHTML(format("Encountered more closing tags ({}) than opening tags", scanner.get_tag_name()));
 
-        // TODO: what to do with "<u></u>" case, where tag is immediately closed
-        // so it never makes it into the taint of any of the spans? Add it as
-        // an empty tag to the previous/following?
         if (stack.back()->name != scanner.get_tag_name())
           throw BadHTML(format("Encountered unexpected closing tag </{}>, stack is {}", scanner.get_tag_name(), stack));
+
+        // What to do with "<u></u>" case, where tag is immediately closed
+        // so it never makes it into the taint of any of the spans? This adds
+        // an empty span so it still lives.
+        if (spans_.empty() || !ContainsTag(spans_.back().tags, stack.back()))
+          spans_.push_back(Span{source.size(), source.size(), stack});
+
         stack.pop_back();
         break;
 
       case markup::scanner::TT_ATTR:
-        // TODO could be more efficient if format() accepted a destination, i.e. format_to?
-        stack.back()->attributes += format(" {}=\"{}\"", scanner.get_attr_name(), scanner.get_value());
+        tag->attributes += format(" {}=\"{}\"", scanner.get_attr_name(), scanner.get_value());
         break;
 
       default:

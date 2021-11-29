@@ -103,13 +103,13 @@ Ptr<Request> TranslationModel::makeRequest(size_t requestId, std::string &&sourc
 }
 
 Ptr<Request> TranslationModel::makePivotRequest(size_t requestId, CallbackType callback, AnnotatedText &&previousTarget,
-                                                const ResponseOptions &responseOptions) {
+                                                const ResponseOptions &responseOptions, TranslationCache *cache) {
   Segments segments;
 
   textProcessor_.processFromAnnotation(previousTarget, segments);
   ResponseBuilder responseBuilder(responseOptions, std::move(previousTarget), vocabs_, callback, *qualityEstimator_);
 
-  Ptr<Request> request = New<Request>(requestId, std::move(segments), std::move(responseBuilder));
+  Ptr<Request> request = New<Request>(requestId, *this, std::move(segments), std::move(responseBuilder), cache);
   return request;
 }
 

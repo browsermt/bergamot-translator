@@ -77,7 +77,9 @@ std::vector<Response> BlockingService::pivotMultiple(std::shared_ptr<Translation
                                     // it in allows further use in makePivotRequest
     auto callback = [i, &pivotsToTargets](Response &&response) { pivotsToTargets[i] = std::move(response); };  //
 
-    Ptr<Request> request = second->makePivotRequest(requestId_++, callback, std::move(intermediate), responseOptions);
+    TranslationCache *cache = config_.cacheEnabled ? &cache_ : nullptr;
+    Ptr<Request> request =
+        second->makePivotRequest(requestId_++, callback, std::move(intermediate), responseOptions, cache);
     batchingPool_.enqueueRequest(second, request);
   }
 
@@ -148,8 +150,9 @@ void AsyncService::pivot(std::shared_ptr<TranslationModel> first, std::shared_pt
     };
 
     // Second call.
+    TranslationCache *cache = config_.cacheEnabled ? &cache_ : nullptr;
     Ptr<Request> request =
-        second->makePivotRequest(requestId_++, joiningCallback, std::move(intermediate), responseOptions);
+        second->makePivotRequest(requestId_++, joiningCallback, std::move(intermediate), responseOptions, cache);
     safeBatchingPool_.enqueueRequest(second, request);
   };
 

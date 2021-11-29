@@ -70,7 +70,7 @@ class TranslationModel {
                            const ResponseOptions& responseOptions, TranslationCache* cache);
 
   Ptr<Request> makePivotRequest(size_t requestId, CallbackType callback, AnnotatedText&& previousTarget,
-                                const ResponseOptions& responseOptions);
+                                const ResponseOptions& responseOptions, TranslationCache* cache);
 
   /// Relays a request to the batching-pool specific to this translation model.
   /// @param [in] request: Request constructed through makeRequest

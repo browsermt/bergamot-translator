@@ -5,7 +5,9 @@
 #include <thread>
 #include <vector>
 
+#include "cache.h"
 #include "data/types.h"
+#include "logging.h"
 #include "quality_estimator.h"
 #include "response.h"
 #include "response_builder.h"
@@ -27,7 +29,11 @@ class AsyncService;
 /// bunch of texts and optional args to translate, wait till the translation finishes).
 class BlockingService {
  public:
-  struct Config {};
+  struct Config {
+    bool cacheEnabled{false};  ///< Whether to enable cache or not.
+    size_t cacheSize{2000};    ///< Size in History items to be stored in the cache. Loosely corresponds to sentences to
+                               /// cache in the real world.
+  };
   /// Construct a BlockingService with configuration loaded from an Options object. Does not require any keys, values to
   /// be set.
   BlockingService(const BlockingService::Config &config);
@@ -64,6 +70,7 @@ class BlockingService {
   /// translateMultiple.
   std::vector<Response> pivotMultiple(std::shared_ptr<TranslationModel> first, std::shared_ptr<TranslationModel> second,
                                       std::vector<std::string> &&sources, const ResponseOptions &responseOptions);
+  TranslationCache::Stats cacheStats() { return cache_.stats(); }
 
  private:
   ///  Numbering requests processed through this instance. Used to keep account of arrival times of the request. This
@@ -75,6 +82,10 @@ class BlockingService {
   AggregateBatchingPool batchingPool_;
 
   Config config_;
+
+  // Logger which shuts down cleanly with service.
+  Logger logger_;
+  TranslationCache cache_;
 };
 
 /// Effectively a threadpool, providing an API to take a translation request of a source-text, paramaterized by
@@ -83,7 +94,13 @@ class BlockingService {
 class AsyncService {
  public:
   struct Config {
-    size_t numWorkers;
+    size_t numWorkers;         ///< How many worker translation threads to spawn.
+    bool cacheEnabled{false};  ///< Whether to enable cache or not.
+    size_t cacheSize{2000};    ///< Size in History items to be stored in the cache. Loosely corresponds to sentences to
+                               /// cache in the real world.
+    size_t cacheMutexBuckets;  ///< Controls the granularity of locking to reduce contention by bucketing mutexes
+                               ///< guarding cache entry read write. Optimal at min(core, numWorkers) assuming a
+                               ///< reasonably large cache-size.
   };
   /// Construct an AsyncService with configuration loaded from Options. Expects positive integer value for
   /// `cpu-threads`. Additionally requires options which configure AggregateBatchingPool.
@@ -130,6 +147,8 @@ class AsyncService {
   /// Thread joins and proper shutdown are required to be handled explicitly.
   ~AsyncService();
 
+  TranslationCache::Stats cacheStats() { return cache_.stats(); }
+
  private:
   AsyncService::Config config_;
 
@@ -146,6 +165,10 @@ class AsyncService {
   /// requests compiled from  batching-pools of multiple translation models. The batching pool is wrapped around one
   /// object for thread-safety.
   ThreadsafeBatchingPool<AggregateBatchingPool> safeBatchingPool_;
+
+  // Logger which shuts down cleanly with service.
+  Logger logger_;
+  TranslationCache cache_;
 };
 
 }  // namespace bergamot

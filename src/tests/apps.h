@@ -39,6 +39,8 @@ void qualityEstimatorScores(AsyncService &service, Ptr<TranslationModel> model);
 
 void pivotTranslate(AsyncService &service, std::vector<Ptr<TranslationModel>> &models);
 
+// Tests if cache is active and functional
+void translationCache(AsyncService &service, Ptr<TranslationModel> model);
 }  // namespace testapp
 }  // namespace bergamot
 }  // namespace marian

@@ -55,10 +55,10 @@ struct Response {
   /// source or target.
   std::vector<SentenceQualityScore> qualityScores;
 
-  /// Alignments between source and target. Each Alignment is a
-  /// sparse matrix representation with indices corresponding
-  /// to (sub-)words accessible through Annotation.
-  std::vector<Alignment> alignments;
+  /// Alignments between source and target. This is a collection of dense matrices providing
+  ///    P[t][s] = p(source-token s  | target token t)
+  /// with an alignment matrix for each sentence.
+  std::vector<std::vector<std::vector<float>>> alignments;
 
   /// Returns the source sentence (in terms of byte range) corresponding to sentenceIdx.
   ///

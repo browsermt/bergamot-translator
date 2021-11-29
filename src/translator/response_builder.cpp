@@ -18,7 +18,7 @@ void ResponseBuilder::buildAlignments(Histories &histories, Response &response) 
     Words words = std::get<0>(result);
     auto hyp = std::get<1>(result);
     auto softAlignment = hyp->tracebackAlignment();
-    response.alignments.push_back(softAlignment);
+    response.alignments.push_back(std::move(softAlignment));
   }
 }
 

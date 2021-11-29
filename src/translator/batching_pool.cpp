@@ -54,15 +54,20 @@ size_t BatchingPool::generateBatch(Batch &batch) {
 }
 
 size_t BatchingPool::enqueueRequest(Ptr<Request> request) {
+  size_t toBeFreshlyTranslated = 0;
   for (size_t i = 0; i < request->numSegments(); i++) {
-    RequestSentence sentence(i, request);
-    size_t bucket_id = sentence.numTokens();
-    assert(bucket_id < bucket_.size());
-    bucket_[bucket_id].insert(sentence);
-    maxActiveBucketLength_ = std::max<size_t>(bucket_id, maxActiveBucketLength_);
+    if (!request->cacheHitPrefilled(i)) {
+      RequestSentence sentence(i, request);
+      size_t bucket_id = sentence.numTokens();
+      assert(bucket_id < bucket_.size());
+      bucket_[bucket_id].insert(sentence);
+      maxActiveBucketLength_ = std::max<size_t>(bucket_id, maxActiveBucketLength_);
+
+      toBeFreshlyTranslated += 1;
+    }
   }
 
-  return request->numSegments();
+  return toBeFreshlyTranslated;
 }
 
 }  // namespace bergamot

@@ -26,6 +26,12 @@ set(LINKER_FLAGS "${LINKER_FLAGS} -s ENVIRONMENT=web,worker")
 # Append version information in the Javascript artifact
 set(LINKER_FLAGS "${LINKER_FLAGS} --extern-pre-js ${CMAKE_CURRENT_BINARY_DIR}/project_version.js")
 
+# Allow importing undefined symbols dynamically
+set(LINKER_FLAGS "${LINKER_FLAGS} -s ERROR_ON_UNDEFINED_SYMBOLS=0 -s DECLARE_ASM_MODULE_EXPORTS=0")
+
+# Export all the functions of fallback implementation of GEMM for wasm target
+set(LINKER_FLAGS "${LINKER_FLAGS} -s EXPORTED_FUNCTIONS=[_int8PrepareAFallback,_int8PrepareBFallback,_int8PrepareBFromTransposedFallback,_int8PrepareBFromQuantizedTransposedFallback,_int8PrepareBiasFallback,_int8MultiplyAndAddBiasFallback,_int8SelectColumnsOfBFallback]")
+
 set_target_properties(bergamot-translator-worker PROPERTIES
                         SUFFIX ".js"
                         LINK_FLAGS ${LINKER_FLAGS}

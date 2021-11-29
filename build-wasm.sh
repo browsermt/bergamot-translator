@@ -78,5 +78,8 @@ if [ "$WORMHOLE" = true ]; then
   bash ../wasm/patch-artifacts-enable-wormhole.sh
 fi
 
+#     3. Import GEMM library from a separate wasm module
+bash ../wasm/patch-artifacts-import-gemm-module.sh
+
 # The artifacts (.js and .wasm files) will be available in the build directory
 exit 0

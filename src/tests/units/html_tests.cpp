@@ -395,6 +395,24 @@ TEST_CASE("Test self-closing tag (HTML5)") {
   CHECK(input == "hello  world and other creatures\n");  // Note double space between "hello" and "world"
 }
 
+TEST_CASE("Test empty self-closing tag at end of input") {
+  std::string input("hello <br>");
+  HTML html(std::move(input), true);
+  CHECK(input == "hello ");
+}
+
+TEST_CASE("Test empty tag pair at end of input") {
+  std::string input("hello <u></u>");
+  HTML html(std::move(input), true);
+  CHECK(input == "hello ");
+}
+
+TEST_CASE("Test empty self-closing pair at end of input in parent") {
+  std::string input("<p>hello <br></p>");
+  HTML html(std::move(input), true);
+  CHECK(input == "hello ");
+}
+
 TEST_CASE("Test empty tag", "[!mayfail]") {
   std::string input(
       "<p id=\"1\">hello <img id=\"1.1\"><span id=\"1.2\"><u id=\"1.2.1\"></u><b id=\"1.2.2\"></b><img "

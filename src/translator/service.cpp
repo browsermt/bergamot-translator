@@ -9,6 +9,14 @@
 
 namespace marian {
 namespace bergamot {
+namespace {
+ResponseOptions sanitize(const ResponseOptions &options) {
+  ResponseOptions result = options;
+  result.alignment = options.HTML ? true : options.alignment;
+  return result;
+}
+
+}  // namespace
 
 BlockingService::BlockingService(const BlockingService::Config &config)
     : config_(config), requestId_(0), batchingPool_(), cache_(config.cacheSize, /*mutexBuckets=*/1) {}
@@ -23,7 +31,7 @@ std::vector<Response> BlockingService::translateMultiple(std::shared_ptr<Transla
     auto callback = [i, &responses](Response &&response) { responses[i] = std::move(response); };  //
     TranslationCache *cache = config_.cacheEnabled ? &cache_ : nullptr;
     Ptr<Request> request =
-        translationModel->makeRequest(requestId_++, std::move(sources[i]), callback, responseOptions, cache);
+        translationModel->makeRequest(requestId_++, std::move(sources[i]), callback, sanitize(responseOptions), cache);
     batchingPool_.enqueueRequest(translationModel, request);
   }
 
@@ -66,7 +74,7 @@ void AsyncService::translate(std::shared_ptr<TranslationModel> translationModel,
   // Producer thread, a call to this function adds new work items. If batches are available, notifies workers waiting.
   TranslationCache *cache = config_.cacheEnabled ? &cache_ : nullptr;
   Ptr<Request> request =
-      translationModel->makeRequest(requestId_++, std::move(source), callback, responseOptions, cache);
+      translationModel->makeRequest(requestId_++, std::move(source), callback, sanitize(responseOptions), cache);
   safeBatchingPool_.enqueueRequest(translationModel, request);
 }
 

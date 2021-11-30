@@ -38,10 +38,7 @@ Alignment transferThroughCharacters(const std::vector<ByteRange> &sourceSidePivo
       size_t charCount = right - left;
       size_t probSpread = targetSidePivot.size();
       for (size_t t = 0; t < pivotGivenTargets.size(); t++) {
-        double logprob = std::log(static_cast<double>(charCount)) +
-                         std::log(static_cast<double>(pivotGivenTargets[t][qt])) -
-                         std::log(static_cast<double>(probSpread));
-        remapped[t][sq] += std::exp(logprob);
+        remapped[t][sq] += charCount * pivotGivenTargets[t][qt] / static_cast<float>(probSpread);
       }
 
       // Which one is ahead? sq or qt or both end at same point?
@@ -62,7 +59,7 @@ Alignment transferThroughCharacters(const std::vector<ByteRange> &sourceSidePivo
     // There is a case of EOS not being predicted. In this case the two pointer algorithm will fail. The just author
     // will redistribute the surplus among subjects.
 
-    assert(qt.size() == 0);  // assert in DEBUG, that this is only EOS.
+    assert(qt == 0);  // assert in DEBUG, that this is only EOS.
     for (size_t t = 0; t < pivotGivenTargets.size(); t++) {
       float gift = pivotGivenTargets[t][qt] / sourceSidePivots.size();
       for (size_t sq = 0; sq < sourceSidePivots.size(); sq++) {

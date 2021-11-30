@@ -22,11 +22,21 @@ int main(int argc, char *argv[]) {
   ResponseOptions responseOptions;
   std::string input = readFromStdin();
 
-  auto callback = [](Response &&response) { std::cout << response.target.text; };
+  // Create a barrier using future/promise.
+  std::promise<Response> promise;
+  std::future<Response> future = p.get_future();
+  auto callback = [&promise](Response &&response) {
+    // Fulfill promise.
+    promise.set_value(std::move(response));
+  };
 
   service.translate(model, std::move(input), callback, responseOptions);
 
-  // We will wait on destruction for thread-to join, so callback will be fired.
+  // Wait until promise sets the response.
+  Response response = future.get();
+
+  // Print (only) translated text.
+  std::cout << response.target.text;
 
   return 0;
 }

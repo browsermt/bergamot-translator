@@ -20,6 +20,13 @@
 namespace marian {
 namespace bergamot {
 
+namespace {
+Ptr<Options> applyDefaults(Ptr<Options> options) {
+  options->set<std::string>("alignment", "soft");
+  return options;
+}
+}  // namespace
+
 /// A TranslationModel is associated with the translation of a single language direction. Holds the graph and other
 /// structures required to run the forward pass of the neural network, along with preprocessing logic (TextProcessor)
 /// and a BatchingPool to create batches that are to be used in conjuction with an instance.
@@ -47,7 +54,8 @@ class TranslationModel {
   ///
   /// TODO(@jerinphilip): Clean this up.
   TranslationModel(const std::string& config, MemoryBundle&& memory, size_t replicas = 1)
-      : TranslationModel(parseOptionsFromString(config, /*validate=*/false), std::move(memory), replicas){};
+      : TranslationModel(applyDefaults(parseOptionsFromString(config, /*validate=*/false)), std::move(memory),
+                         replicas){};
 
   /// Construct TranslationModel from marian-options. If memory is empty, TranslationModel is initialized from
   /// paths available in the options object, backed by filesystem. Otherwise, TranslationModel is initialized from the

@@ -24,7 +24,7 @@ int main(int argc, char *argv[]) {
 
   // Create a barrier using future/promise.
   std::promise<Response> promise;
-  std::future<Response> future = p.get_future();
+  std::future<Response> future = promise.get_future();
   auto callback = [&promise](Response &&response) {
     // Fulfill promise.
     promise.set_value(std::move(response));

@@ -16,12 +16,7 @@ int main(int argc, char *argv[]) {
 
   for (auto &modelConfigPath : config.modelConfigPaths) {
     TranslationModel::Config modelConfig = parseOptionsFromFilePath(modelConfigPath);
-    MemoryBundle memoryBundle;
-    if (config.byteArray) {
-      memoryBundle = getMemoryBundleFromConfig(modelConfig);
-    }
-
-    std::shared_ptr<TranslationModel> model = service.createCompatibleModel(modelConfig, std::move(memoryBundle));
+    std::shared_ptr<TranslationModel> model = service.createCompatibleModel(modelConfig);
     models.push_back(model);
   }
 

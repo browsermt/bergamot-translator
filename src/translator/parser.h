@@ -21,7 +21,6 @@ struct CLIConfig {
   using ModelConfigPaths = std::vector<std::string>;
 
   std::string opMode;
-  bool byteArray{false};
 
   // For marian-models we retain the old marian-yml configs to a large extent. These are supplied as file-paths to the
   // CLI. For multiple model workflows, we allow more than one model config to be supplied. How to process the models
@@ -39,10 +38,6 @@ struct CLIConfig {
     app.add_option("--bergamot-mode", config.opMode, "");
     app.add_option("--model-config-paths", config.modelConfigPaths,
                    "Configuration files list, can be used for pivoting multiple models or multiple model workflows");
-
-    app.add_flag("--bytearray", config.byteArray,
-                 "Toggle whether to construct models using bytearrays loaded into memory instead of filesystem, "
-                 "only for testing purpose");
 
     ServiceConfig::addOptions(app, config.serviceConfig);
   };

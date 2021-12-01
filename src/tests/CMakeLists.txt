@@ -13,7 +13,7 @@ endif (COMPILE_UNIT_TESTS)
 
 if(NOT MSVC)
   # Testing apps
-  set(TEST_BINARIES native wasm intgemm-resolve)
+  set(TEST_BINARIES async blocking intgemm-resolve wasm)
   foreach(binary ${TEST_BINARIES})
       add_executable("${binary}" "${binary}.cpp")
       target_link_libraries("${binary}" bergamot-translator)

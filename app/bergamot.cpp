@@ -7,7 +7,7 @@
 
 int main(int argc, char *argv[]) {
   using namespace marian::bergamot;
-  ConfigParser<AsyncService> configParser;
+  ConfigParser<AsyncService> configParser("Bergamot CLI", /*multiOpMode=*/false);
   configParser.parseArgs(argc, argv);
   auto &config = configParser.getConfig();
 

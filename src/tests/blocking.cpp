@@ -2,7 +2,7 @@
 using namespace marian::bergamot;
 
 int main(int argc, char *argv[]) {
-  ConfigParser<BlockingService> configParser;
+  ConfigParser<BlockingService> configParser("BlockingService test-suite", /*multiOpMode=*/true);
   configParser.parseArgs(argc, argv);
 
   auto &config = configParser.getConfig();

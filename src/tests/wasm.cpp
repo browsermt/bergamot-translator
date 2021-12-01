@@ -18,7 +18,7 @@ void wasm(BlockingService &service, std::shared_ptr<TranslationModel> &model) {
 }
 
 int main(int argc, char *argv[]) {
-  ConfigParser<BlockingService> configParser;
+  ConfigParser<BlockingService> configParser("WebAssembly test-suite", /*multiOpMode=*/true);
   configParser.parseArgs(argc, argv);
 
   auto &config = configParser.getConfig();

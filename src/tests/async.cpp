@@ -6,7 +6,7 @@
 using namespace marian::bergamot;
 
 int main(int argc, char *argv[]) {
-  ConfigParser<AsyncService> configParser;
+  ConfigParser<AsyncService> configParser("AsyncService test-suite", /*multiOpMode=*/true);
   configParser.parseArgs(argc, argv);
   auto &config = configParser.getConfig();
 

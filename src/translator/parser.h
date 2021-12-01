@@ -34,8 +34,10 @@ struct CLIConfig {
   /// alongside. Since this is templated with App, we don't add a CLI11 dependency in any configs, thus CLI11 not coming
   /// into the picture until the parser is instantiated.
   template <class App>
-  static void addOptions(App &app, CLIConfig<Service> &config) {
-    app.add_option("--bergamot-mode", config.opMode, "");
+  static void addOptions(App &app, CLIConfig<Service> &config, bool multiOpMode = false) {
+    if (multiOpMode) {
+      app.add_option("--bergamot-mode", config.opMode, "");
+    }
     app.add_option("--model-config-paths", config.modelConfigPaths,
                    "Configuration files list, can be used for pivoting multiple models or multiple model workflows");
 
@@ -54,9 +56,9 @@ struct CLIConfig {
 template <class Service>
 class ConfigParser {
  public:
-  ConfigParser() : app_{"Bergamot Options"} {
+  ConfigParser(const std::string &appName, bool multiOpMode = false) : app_{appName} {
     addSpecialOptions(app_);
-    CLIConfig<Service>::addOptions(app_, config_);
+    CLIConfig<Service>::addOptions(app_, config_, multiOpMode);
   };
   void parseArgs(int argc, char *argv[]) {
     try {

@@ -1,4 +1,7 @@
 
+#ifndef BERGAMOT_TESTS_COMMON_IMPL
+#error "This is an impl file and must not be included directly!"
+#endif
 
 Response Bridge<BlockingService>::translate(BlockingService &service, std::shared_ptr<TranslationModel> &model,
                                             std::string &&source, const ResponseOptions &responseOptions) {

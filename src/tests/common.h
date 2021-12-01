@@ -81,6 +81,8 @@ class TestSuite {
   void translationCache(Ptr<TranslationModel> model);
 };
 
-#include "common.cpp"
+#define BERGAMOT_TESTS_COMMON_IMPL
+#include "common-impl.cpp"
+#undef BERGAMOT_TESTS_COMMON_IMPL
 
 }  // namespace marian::bergamot

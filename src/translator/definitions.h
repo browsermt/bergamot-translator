@@ -39,6 +39,7 @@ struct ByteRange {
   size_t begin;
   size_t end;
   const size_t size() const { return end - begin; }
+  bool operator==(ByteRange other) const { return begin == other.begin && end == other.end; }
 };
 
 class Response;

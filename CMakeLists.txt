@@ -124,6 +124,7 @@ endif(COMPILE_TESTS)
 
 add_subdirectory(3rd_party)
 add_subdirectory(src)
+add_subdirectory(distilled)
 
 if(COMPILE_WASM)
   add_subdirectory(wasm)

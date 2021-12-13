@@ -16,25 +16,37 @@ inline bool ends_with(std::string const &str, const Char_t (&suffix)[Len]) {
          std::memcmp(str.data() + offset, suffix, Len - 1) == 0;
 }
 
+template <typename Char_t, size_t Len>
+inline bool equals(std::string const &str, const Char_t (&str2)[Len]) {
+  return str.size() == Len - 1 && std::memcmp(str.data(), str2, Len - 1) == 0;
+}
+
+inline bool equals_case_insensitive(const char *lhs, const char *rhs, size_t len) {
+  for (size_t i = 0; i < len; ++i) {
+    // cast to unsigned char otherwise std::tolower has undefined behaviour
+    if (std::tolower(static_cast<unsigned char>(lhs[i])) != std::tolower(static_cast<unsigned char>(rhs[i])))
+      return false;
+  }
+
+  return true;
+}
+
+template <size_t Len>
+inline bool equals_case_insensitive(std::string const &lhs, const char (&rhs)[Len]) {
+  return lhs.size() == Len - 1 && equals_case_insensitive(lhs.data(), rhs, Len);
+}
+
 }  // end namespace
 
 namespace markup {
 
 // case sensitive string equality test
 // s_lowcase shall be lowercase string
-inline bool equal(const char *s, const char *s1, size_t length) { return strncmp(s, s1, length) == 0; }
-
 const char *scanner::get_value() { return value_.data(); }
 
-const char *scanner::get_attr_name() {
-  attr_name[attr_name_length] = 0;
-  return attr_name;
-}
+const char *scanner::get_attr_name() { return attr_name_.data(); }
 
-const char *scanner::get_tag_name() {
-  tag_name[tag_name_length] = 0;
-  return tag_name;
-}
+const char *scanner::get_tag_name() { return tag_name_.data(); }
 
 scanner::token_type scanner::scan_body() {
   text_begin = input.p;
@@ -78,12 +90,12 @@ scanner::token_type scanner::scan_head() {
   char c = skip_whitespace();
 
   if (c == '>') {
-    if (equal(tag_name, "script", 6)) {
+    if (equals_case_insensitive(tag_name_, "script")) {
       // script is special because we want to parse the attributes,
       // but not the content
       c_scan = &scanner::scan_special;
       return scan_special();
-    } else if (equal(tag_name, "style", 5)) {
+    } else if (equals_case_insensitive(tag_name_, "style")) {
       // same with style
       c_scan = &scanner::scan_special;
       return scan_special();
@@ -103,7 +115,7 @@ scanner::token_type scanner::scan_head() {
     }  // erroneous situtation - standalone '/'
   }
 
-  attr_name_length = 0;
+  attr_name_.clear();
   value_.clear();
 
   // attribute name...
@@ -123,7 +135,7 @@ scanner::token_type scanner::scan_head() {
         break;
     }
     if (c == '<') return TT_ERROR;
-    append_attr_name(c);
+    attr_name_.push_back(c);
     c = get_char();
   }
 
@@ -170,7 +182,7 @@ scanner::token_type scanner::scan_head() {
 // caller already consumed '<'
 // scan header start or tag tail
 scanner::token_type scanner::scan_tag() {
-  tag_name_length = 0;
+  tag_name_.clear();
 
   char c = get_char();
 
@@ -182,28 +194,24 @@ scanner::token_type scanner::scan_tag() {
       c = skip_whitespace();
       break;
     }
-    if (c == '/' || c == '>') break;
-    append_tag_name(c);
 
-    switch (tag_name_length) {
-      case 3:
-        if (equal(tag_name, "!--", 3)) {
-          c_scan = &scanner::scan_comment;
-          return TT_COMMENT_START;
-        }
-        break;
-      case 8:
-        if (equal(tag_name, "![CDATA[", 8)) {
-          c_scan = &scanner::scan_cdata;
-          return TT_CDATA_START;
-        }
-        break;
-      case 7:
-        if (equal(tag_name, "!ENTITY", 8)) {
-          c_scan = &scanner::scan_entity_decl;
-          return TT_ENTITY_START;
-        }
-        break;
+    if (c == '/' || c == '>') break;
+
+    tag_name_.push_back(c);
+
+    if (equals(tag_name_, "!--")) {
+      c_scan = &scanner::scan_comment;
+      return TT_COMMENT_START;
+    }
+
+    if (equals(tag_name_, "![CDATA[")) {
+      c_scan = &scanner::scan_cdata;
+      return TT_CDATA_START;
+    }
+
+    if (equals(tag_name_, "!ENTITY")) {
+      c_scan = &scanner::scan_entity_decl;
+      return TT_ENTITY_START;
     }
 
     c = get_char();
@@ -211,12 +219,9 @@ scanner::token_type scanner::scan_tag() {
 
   if (c == 0) return TT_ERROR;
 
-  if (is_tail) {
-    if (c == '>') return TT_TAG_END;
-    return TT_ERROR;
-  } else
-    push_back(c);
+  if (is_tail) return c == '>' ? TT_TAG_END : TT_ERROR;
 
+  push_back(c);
   c_scan = &scanner::scan_head;
   return TT_TAG_START;
 }
@@ -224,21 +229,21 @@ scanner::token_type scanner::scan_tag() {
 scanner::token_type scanner::scan_entity() {
   // note that when scan_entity() is called, & is already consumed.
 
-  char buffer[8];
-  unsigned int buflen = 0;
-  buffer[buflen++] = '&';  // (just makes resolve_entity and value_.append(buffer) easier)
+  std::string buffer;
+  buffer.clear();
+  buffer.push_back('&');  // (just makes resolve_entity and value_.append(buffer) easier)
 
   bool has_end = false;
 
   while (true) {
     char c = get_char();
-    buffer[buflen++] = c;
+    buffer.push_back(c);
 
     // Found end of entity
     if (c == ';') break;
 
     // Too long to be entity
-    if (buflen == sizeof(buffer)) break;
+    if (buffer.size() == MAX_ENTITY_SIZE) break;
 
     // Not a character we'd expect in an entity (esp '&' or '<')
     if (!isalpha(c)) break;
@@ -247,57 +252,45 @@ scanner::token_type scanner::scan_entity() {
   // Keep the text_end that scanner::scan_body uses similarly up-to-date. Since
   // scan_entity() is only called from scan_body we assume text_begin is already
   // set correctly by it.
-  text_end += buflen;
+  text_end += buffer.size();
 
   // If we found the end of the entity, and we can identify it, then
   // resolve_entity() will emit the char it encoded.
-  if (buffer[buflen - 1] == ';' && resolve_entity(buffer, buflen)) {
-    return TT_TEXT;
-  }
+  if (buffer.back() == ';' && resolve_entity(buffer)) return TT_TEXT;
 
   // Otherwise, we just emit whatever we read as text, except for the last
   // character that caused us to break. That may be another &, or a <, which we
   // would want to scan properly.
-  value_.append(buffer, buflen - 1);
-  push_back(buffer[buflen - 1]);
+  value_.append(buffer.data(), buffer.size() - 1);
+  push_back(buffer.back());
   --text_end;  // because push_back()
   return TT_TEXT;
 }
 
-bool scanner::resolve_entity(char *buffer, unsigned int len) {
-  switch (len) {
-    case 4:
-      if (equal(buffer, "&lt;", 4)) {
-        value_.push_back('<');
-        return true;
-      }
-      if (equal(buffer, "&gt;", 4)) {
-        value_.push_back('>');
-        return true;
-      }
-      break;
-
-    case 5:
-      if (equal(buffer, "&amp;", 5)) {
-        value_.push_back('&');
-        return true;
-      }
-      break;
-
-    case 6:
-      if (equal(buffer, "&quot;", 6)) {
-        value_.push_back('"');
-        return true;
-      }
-      if (equal(buffer, "&apos;", 6)) {
-        value_.push_back('\'');
-        return true;
-      }
-      if (equal(buffer, "&nbsp;", 6)) {
-        value_.push_back(' ');  // TODO: handle non-breaking spaces better than just converting them to spaces
-        return true;
-      }
-      break;
+bool scanner::resolve_entity(std::string const &buffer) {
+  if (equals(buffer, "&lt;")) {
+    value_.push_back('<');
+    return true;
+  }
+  if (equals(buffer, "&gt;")) {
+    value_.push_back('>');
+    return true;
+  }
+  if (equals(buffer, "&amp;")) {
+    value_.push_back('&');
+    return true;
+  }
+  if (equals(buffer, "&quot;")) {
+    value_.push_back('"');
+    return true;
+  }
+  if (equals(buffer, "&apos;")) {
+    value_.push_back('\'');
+    return true;
+  }
+  if (equals(buffer, "&nbsp;")) {
+    value_.push_back(' ');  // TODO: handle non-breaking spaces better than just converting them to spaces
+    return true;
   }
   return false;
 }
@@ -311,7 +304,10 @@ char scanner::skip_whitespace() {
   return 0;
 }
 
-void scanner::push_back(char c) { input_char = c; }
+void scanner::push_back(char c) {
+  assert(input_char == 0);
+  input_char = c;
+}
 
 char scanner::get_char() {
   if (input_char) {
@@ -324,16 +320,6 @@ char scanner::get_char() {
 
 bool scanner::is_whitespace(char c) {
   return c <= ' ' && (c == ' ' || c == '\t' || c == '\n' || c == '\r' || c == '\f');
-}
-
-void scanner::append_attr_name(char c) {
-  if (attr_name_length < (MAX_NAME_SIZE - 1)) attr_name[attr_name_length++] = char(c);
-}
-
-void scanner::append_tag_name(char c) {
-  if (tag_name_length < (MAX_NAME_SIZE - 1))
-    tag_name[tag_name_length++] =
-        std::tolower(static_cast<unsigned char>(c));  // cast because std::tolower has undefined behaviour otherwise
 }
 
 scanner::token_type scanner::scan_comment() {
@@ -371,11 +357,15 @@ scanner::token_type scanner::scan_special() {
     value_.push_back(c);
 
     // Test for </tag>
-    if (c == '>' && value_.size() >= tag_name_length + 3) {
-      size_t pos_tag_start = value_.size() - tag_name_length - 3;  // end - </tag>
-      size_t pos_tag_name = value_.size() - tag_name_length - 1;   // end - tag>
+    if (c == '>' && value_.size() >= tag_name_.size() + 3) {
+      // Test for the "</"" bit of "</tag>"
+      size_t pos_tag_start = value_.size() - tag_name_.size() - 3;
       if (std::memcmp(value_.data() + pos_tag_start, "</", 2) != 0) continue;
-      if (std::memcmp(value_.data() + pos_tag_name, tag_name, tag_name_length) != 0) continue;
+
+      // Test for the "tag" bit of "</tag>". Doing case insensitive compare because <I>...</i> is okay.
+      size_t pos_tag_name = value_.size() - tag_name_.size() - 1;  // end - tag>
+      if (!equals_case_insensitive(value_.data() + pos_tag_name, tag_name_.data(), tag_name_.size())) continue;
+
       got_tail = true;
       value_.erase(value_.begin() + pos_tag_start);
       break;

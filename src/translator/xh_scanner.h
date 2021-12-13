@@ -47,12 +47,10 @@ class scanner {
 
   };
 
-  enum $ { MAX_TOKEN_SIZE = 1024, MAX_NAME_SIZE = 128 };
+  enum $ { MAX_ENTITY_SIZE = 8 };
 
  public:
-  explicit scanner(instream &is) : tag_name_length(0), attr_name_length(0), input(is), input_char(0), got_tail(false) {
-    c_scan = &scanner::scan_body;
-  }
+  explicit scanner(instream &is) : input(is), input_char(0), got_tail(false) { c_scan = &scanner::scan_body; }
 
   // get next token
   token_type get_token() { return (this->*c_scan)(); }
@@ -100,7 +98,7 @@ class scanner {
 
   char get_char();
 
-  bool resolve_entity(char *buffer, unsigned int len);
+  bool resolve_entity(std::string const &bufer);
 
   static bool is_whitespace(char c);
 
@@ -110,12 +108,8 @@ class scanner {
 
  private: /* data */
   std::string value_;
-
-  char tag_name[MAX_NAME_SIZE]{};
-  unsigned int tag_name_length;
-
-  char attr_name[MAX_NAME_SIZE]{};
-  unsigned int attr_name_length;
+  std::string tag_name_;
+  std::string attr_name_;
 
   instream &input;
   char input_char;

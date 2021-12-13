@@ -5,7 +5,8 @@
 //|
 //| (C) Andrew Fedoniouk @ terrainformatica.com
 //|
-#include <string.h>
+#include <cstring>
+#include <string>
 
 namespace markup {
 struct instream {
@@ -49,8 +50,7 @@ class scanner {
   enum $ { MAX_TOKEN_SIZE = 1024, MAX_NAME_SIZE = 128 };
 
  public:
-  explicit scanner(instream &is)
-      : value_length(0), tag_name_length(0), attr_name_length(0), input(is), input_char(0), got_tail(false) {
+  explicit scanner(instream &is) : tag_name_length(0), attr_name_length(0), input(is), input_char(0), got_tail(false) {
     c_scan = &scanner::scan_body;
   }
 
@@ -104,15 +104,12 @@ class scanner {
 
   static bool is_whitespace(char c);
 
-  void append_value(char c);
-
   void append_attr_name(char c);
 
   void append_tag_name(char c);
 
  private: /* data */
-  char value[MAX_TOKEN_SIZE]{};
-  unsigned int value_length;
+  std::string value_;
 
   char tag_name[MAX_NAME_SIZE]{};
   unsigned int tag_name_length;

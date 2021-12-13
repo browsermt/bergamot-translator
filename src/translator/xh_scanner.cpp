@@ -5,6 +5,18 @@
 
 #include <cctype>
 #include <cstring>
+#include <iostream>
+
+namespace {
+
+template <typename Char_t, size_t Len>
+inline bool ends_with(std::string const &str, const Char_t (&suffix)[Len]) {
+  size_t offset;
+  return __builtin_sub_overflow(str.size(), Len - 1, &offset) == 0 &&
+         std::memcmp(str.data() + offset, suffix, Len - 1) == 0;
+}
+
+}  // end namespace
 
 namespace markup {
 
@@ -12,10 +24,7 @@ namespace markup {
 // s_lowcase shall be lowercase string
 inline bool equal(const char *s, const char *s1, size_t length) { return strncmp(s, s1, length) == 0; }
 
-const char *scanner::get_value() {
-  value[value_length] = 0;
-  return value;
-}
+const char *scanner::get_value() { return value_.data(); }
 
 const char *scanner::get_attr_name() {
   attr_name[attr_name_length] = 0;
@@ -33,7 +42,7 @@ scanner::token_type scanner::scan_body() {
     --text_begin;
   }
   text_end = text_begin;
-  value_length = 0;
+  value_.clear();
   char c = get_char();
 
   if (c == 0)
@@ -44,7 +53,7 @@ scanner::token_type scanner::scan_body() {
     return scan_entity();
 
   while (true) {
-    append_value(c);
+    value_.push_back(c);
     ++text_end;
 
     c = get_char();
@@ -95,7 +104,7 @@ scanner::token_type scanner::scan_head() {
   }
 
   attr_name_length = 0;
-  value_length = 0;
+  value_.clear();
 
   // attribute name...
   while (c != '=') {
@@ -126,7 +135,7 @@ scanner::token_type scanner::scan_head() {
     while (c) {
       if (c == '\"') return TT_ATTR;
       // if (c == '&') c = scan_entity();
-      append_value(c);
+      value_.push_back(c);
       c = get_char();
     }
   } else if (c == '\'')  // allowed in html
@@ -135,7 +144,7 @@ scanner::token_type scanner::scan_head() {
     while (c) {
       if (c == '\'') return TT_ATTR;
       // if (c == '&') c = scan_entity();
-      append_value(c);
+      value_.push_back(c);
       c = get_char();
     }
   } else  // scan token, allowed in html: e.g. align=center
@@ -150,7 +159,7 @@ scanner::token_type scanner::scan_head() {
         push_back(c);
         return TT_ATTR;
       }
-      append_value(c);
+      value_.push_back(c);
       c = get_char();
     } while (c);
   }
@@ -217,7 +226,7 @@ scanner::token_type scanner::scan_entity() {
 
   char buffer[8];
   unsigned int buflen = 0;
-  buffer[buflen++] = '&';  // (just makes resolve_entity and append_value(buffer) easier)
+  buffer[buflen++] = '&';  // (just makes resolve_entity and value_.append(buffer) easier)
 
   bool has_end = false;
 
@@ -249,7 +258,7 @@ scanner::token_type scanner::scan_entity() {
   // Otherwise, we just emit whatever we read as text, except for the last
   // character that caused us to break. That may be another &, or a <, which we
   // would want to scan properly.
-  for (unsigned int i = 0; i < buflen - 1; ++i) append_value(buffer[i]);
+  value_.append(buffer, buflen - 1);
   push_back(buffer[buflen - 1]);
   --text_end;  // because push_back()
   return TT_TEXT;
@@ -259,33 +268,33 @@ bool scanner::resolve_entity(char *buffer, unsigned int len) {
   switch (len) {
     case 4:
       if (equal(buffer, "&lt;", 4)) {
-        append_value('<');
+        value_.push_back('<');
         return true;
       }
       if (equal(buffer, "&gt;", 4)) {
-        append_value('>');
+        value_.push_back('>');
         return true;
       }
       break;
 
     case 5:
       if (equal(buffer, "&amp;", 5)) {
-        append_value('&');
+        value_.push_back('&');
         return true;
       }
       break;
 
     case 6:
       if (equal(buffer, "&quot;", 6)) {
-        append_value('"');
+        value_.push_back('"');
         return true;
       }
       if (equal(buffer, "&apos;", 6)) {
-        append_value('\'');
+        value_.push_back('\'');
         return true;
       }
       if (equal(buffer, "&nbsp;", 6)) {
-        append_value(' ');  // TODO: handle non-breaking spaces better than just converting them to spaces
+        value_.push_back(' ');  // TODO: handle non-breaking spaces better than just converting them to spaces
         return true;
       }
       break;
@@ -317,10 +326,6 @@ bool scanner::is_whitespace(char c) {
   return c <= ' ' && (c == ' ' || c == '\t' || c == '\n' || c == '\r' || c == '\f');
 }
 
-void scanner::append_value(char c) {
-  if (value_length < (MAX_TOKEN_SIZE - 1)) value[value_length++] = c;
-}
-
 void scanner::append_attr_name(char c) {
   if (attr_name_length < (MAX_NAME_SIZE - 1)) attr_name[attr_name_length++] = char(c);
 }
@@ -337,15 +342,15 @@ scanner::token_type scanner::scan_comment() {
     got_tail = false;
     return TT_COMMENT_END;
   }
-  for (value_length = 0; value_length < (MAX_TOKEN_SIZE - 1); ++value_length) {
+  value_.clear();
+  while (true) {
     char c = get_char();
     if (c == 0) return TT_EOF;
-    value[value_length] = c;
+    value_.push_back(c);
 
-    if (value_length >= 2 && value[value_length] == '>' && value[value_length - 1] == '-' &&
-        value[value_length - 2] == '-') {
+    if (ends_with(value_, "-->")) {
       got_tail = true;
-      value_length -= 2;
+      value_.erase(value_.end() - 3);
       break;
     }
   }
@@ -358,30 +363,21 @@ scanner::token_type scanner::scan_special() {
     got_tail = false;
     return TT_TAG_END;
   }
-  for (value_length = 0; value_length < (MAX_TOKEN_SIZE - 1); ++value_length) {
+  value_.clear();
+  while (true) {
     char c = get_char();
     if (c == 0) return TT_EOF;
 
-    // in case MAX_TOKEN_SIZE limit breaks up the end tag
-    if (c == '<' && value_length + tag_name_length + 3 >= MAX_TOKEN_SIZE) {
-      push_back(c);
-      break;
-    }
+    value_.push_back(c);
 
-    value[value_length] = c;
-
-    if (c == '>' && value_length >= tag_name_length + 2) {
-      unsigned int i = tag_name_length - 1;
-      do {
-        if (value[value_length + i - tag_name_length] != tag_name[i]) break;
-        --i;
-      } while (i > 0);
-      if (i > 0) continue;
-      if (value[value_length - tag_name_length - 1] != '/') continue;
-      if (value[value_length - tag_name_length - 2] != '<') continue;
-
+    // Test for </tag>
+    if (c == '>' && value_.size() >= tag_name_length + 3) {
+      size_t pos_tag_start = value_.size() - tag_name_length - 3;  // end - </tag>
+      size_t pos_tag_name = value_.size() - tag_name_length - 1;   // end - tag>
+      if (std::memcmp(value_.data() + pos_tag_start, "</", 2) != 0) continue;
+      if (std::memcmp(value_.data() + pos_tag_name, tag_name, tag_name_length) != 0) continue;
       got_tail = true;
-      value_length = value_length - tag_name_length - 2;
+      value_.erase(value_.begin() + pos_tag_start);
       break;
     }
   }
@@ -394,15 +390,14 @@ scanner::token_type scanner::scan_cdata() {
     got_tail = false;
     return TT_CDATA_END;
   }
-  for (value_length = 0; value_length < (MAX_TOKEN_SIZE - 1); ++value_length) {
+  value_.clear();
+  while (true) {
     char c = get_char();
     if (c == 0) return TT_EOF;
-    value[value_length] = c;
-
-    if (value_length >= 2 && value[value_length] == '>' && value[value_length - 1] == ']' &&
-        value[value_length - 2] == ']') {
+    value_.push_back(c);
+    if (ends_with(value_, "]]>")) {
       got_tail = true;
-      value_length -= 2;
+      value_.erase(value_.end() - 3);
       break;
     }
   }
@@ -415,14 +410,14 @@ scanner::token_type scanner::scan_pi() {
     got_tail = false;
     return TT_PI_END;
   }
-  for (value_length = 0; value_length < (MAX_TOKEN_SIZE - 1); ++value_length) {
+  value_.clear();
+  while (true) {
     char c = get_char();
     if (c == 0) return TT_EOF;
-    value[value_length] = c;
-
-    if (value_length >= 1 && value[value_length] == '>' && value[value_length - 1] == '?') {
+    value_.push_back(c);
+    if (ends_with(value_, "?>")) {
       got_tail = true;
-      value_length -= 1;
+      value_.erase(value_.end() - 2);
       break;
     }
   }
@@ -435,12 +430,13 @@ scanner::token_type scanner::scan_entity_decl() {
     got_tail = false;
     return TT_ENTITY_END;
   }
+  value_.clear();
   char t;
   unsigned int tc = 0;
-  for (value_length = 0; value_length < (MAX_TOKEN_SIZE - 1); ++value_length) {
+  while (true) {
     t = get_char();
     if (t == 0) return TT_EOF;
-    value[value_length] = t;
+    value_.push_back(t);
     if (t == '\"')
       tc++;
     else if (t == '>' && (tc & 1u) == 0) {

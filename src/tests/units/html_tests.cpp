@@ -233,6 +233,12 @@ TEST_CASE("Test reconstruction of target sentence") {
   Response response;
   response.source = source;
   response.target = target;
+  response.alignments = {{
+      {1.0, 0.0, 0.0, 0.0},
+      {0.0, 1.0, 0.0, 0.0},
+      {0.0, 0.0, 1.0, 0.0},
+      {0.0, 0.0, 0.0, 1.0},
+  }};
 
   html.Restore(response);
 
@@ -274,6 +280,15 @@ TEST_CASE("Test reconstruction of target sentence with entities") {
   Response response;
   response.source = source;
   response.target = target;
+  response.alignments = {{
+      {1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0},
+      {0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0},
+      {0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0},
+      {0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0},
+      {0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0},
+      {0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0},
+      {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0},
+  }};
 
   html.Restore(response);
 

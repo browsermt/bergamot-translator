@@ -178,12 +178,13 @@ void HardAlignments(Response const &response, std::vector<std::vector<size_t>> &
   // For each sentence...
   for (size_t sentenceIdx = 0; sentenceIdx < response.target.numSentences(); ++sentenceIdx) {
     alignments.emplace_back();
-    assert(response.alignments[sentenceIdx].size() == response.target.numWords(sentenceIdx));
 
     // Hard-align: find for each target token the most prevalent source token
-    for (size_t t = 0; t < response.alignments[sentenceIdx].size(); ++t) {
+    // Note: only search from 0 to N-1 because token N is end-of-sentence token
+    // that can only align with the end-of-sentence token of the target
+    for (size_t t = 0; t + 1 < response.target.numWords(sentenceIdx); ++t) {
       size_t s_max = 0;
-      for (size_t s = 1; s < response.alignments[sentenceIdx][t].size(); ++s) {
+      for (size_t s = 1; s + 1 < response.source.numWords(sentenceIdx); ++s) {
         if (response.alignments[sentenceIdx][t][s] > response.alignments[sentenceIdx][t][s_max]) {
           s_max = s;
         }
@@ -193,10 +194,10 @@ void HardAlignments(Response const &response, std::vector<std::vector<size_t>> &
     }
 
     // Next, we try to smooth out these selected alignments with a few heuristics
-    for (size_t t = 0; t < response.target.numWords(sentenceIdx); ++t) {
+    for (size_t t = 1; t + 1 < response.target.numWords(sentenceIdx); ++t) {
       // If this token is a continuation of a previous token, pick the tags from the most
       // prevalent token for the whole word.
-      if (t > 0 && IsContinuation(response.target.word(sentenceIdx, t))) {
+      if (IsContinuation(response.target.word(sentenceIdx, t))) {
         // Note: only looking at the previous token since that will already
         // have this treatment applied to it.
         size_t s_curr = alignments.back()[t];
@@ -204,30 +205,22 @@ void HardAlignments(Response const &response, std::vector<std::vector<size_t>> &
         float score_curr = response.alignments[sentenceIdx][t][s_curr];
         float score_prev = response.alignments[sentenceIdx][t - 1][s_prev];
 
-        size_t s_max = score_curr > score_prev ? s_curr : s_prev;
+        if (score_curr > score_prev) {
+          // Apply this to all previous tokens in the word
+          for (size_t i = t;; --i) {
+            alignments.back()[i] = s_curr;
 
-        // Apply this to all previous tokens in the word
-        for (size_t i = t;; --i) {
-          alignments.back()[i] = s_max;
-
-          // Stop if this was the first token or the beginning of the word
-          if (i == 0 || !IsContinuation(response.target.word(sentenceIdx, i))) break;
+            // Stop if this was the first token or the beginning of the word
+            if (i == 0 || !IsContinuation(response.target.word(sentenceIdx, i))) break;
+          }
+        } else {
+          alignments.back()[t] = s_prev;
         }
       }
     }
-  }
-}
 
-void InterpolateAlignments(Response const &response, std::vector<std::vector<size_t>> &alignments) {
-  for (size_t sentenceIdx = 0; sentenceIdx < response.target.numSentences(); ++sentenceIdx) {
-    alignments.emplace_back();
-    double ratio = (double)response.source.numWords(sentenceIdx) / response.target.numWords(sentenceIdx);
-
-    for (size_t wordIdx = 0; wordIdx < response.target.numWords(sentenceIdx); ++wordIdx) {
-      size_t source_token_idx = static_cast<size_t>(ratio * wordIdx);
-      assert(source_token_idx < response.source.numWords(sentenceIdx));
-      alignments.back().push_back(source_token_idx);
-    }
+    // Always align target end with source end
+    alignments.back().push_back(response.source.numWords(sentenceIdx) - 1);
   }
 }
 
@@ -468,10 +461,13 @@ HTML::HTML(std::string &&source, bool process_markup) {
         // separate words
         if (IsBlockElement(scanner.get_tag_name()) && !source.empty() && source.back() != ' ') source.push_back(' ');
 
-        tag = new Tag{scanner.get_tag_name(), std::string(), IsEmptyElement(scanner.get_tag_name())};
-        pool_.emplace_back(tag);  // pool_ takes ownership of our tag
+        // pool_ takes ownership of our tag, makes sure it's freed when necessary
+        pool_.emplace_back(new Tag{scanner.get_tag_name(), std::string(), IsEmptyElement(scanner.get_tag_name())});
 
-        stack.push_back(pool_.back().get());
+        // Tag *tag is used by attribute parsing
+        tag = pool_.back().get();
+
+        stack.push_back(tag);
 
         // Empty elements (e.g. <img>) are not applicable to a span of text
         // so instead we "apply" them to an empty span in between, and then
@@ -480,7 +476,6 @@ HTML::HTML(std::string &&source, bool process_markup) {
           spans_.push_back(Span{source.size(), source.size(), stack});
           stack.pop_back();
         }
-
         break;
 
       case markup::scanner::TT_TAG_END:
@@ -494,7 +489,7 @@ HTML::HTML(std::string &&source, bool process_markup) {
 
         // What to do with "<u></u>" case, where tag is immediately closed
         // so it never makes it into the taint of any of the spans? This adds
-        // an empty span so it still lives.
+        // an empty span so it still gets recorded in spans_.
         if (spans_.empty() || !ContainsTag(spans_.back().tags, stack.back()))
           spans_.push_back(Span{source.size(), source.size(), stack});
 
@@ -502,6 +497,7 @@ HTML::HTML(std::string &&source, bool process_markup) {
         break;
 
       case markup::scanner::TT_ATTR:
+        assert(tag != nullptr);
         tag->attributes += format(" {}=\"{}\"", scanner.get_attr_name(), scanner.get_value());
         break;
 
@@ -533,19 +529,16 @@ void HTML::Restore(Response &response) {
   AnnotatedText source = RestoreSource(response.source, token_tags, spans_.cbegin(), spans_.cend());
   assert(token_tags.size() == DebugCountTokens(response.source));
 
+  // We need alignment info to transfer the HTML tags from the input to the
+  // translation. If those are not available, no HTML in translations for you.
+  if (!HasAlignments(response)) {
+    response.source = source;
+    return;
+  }
+
   // Find for every token in target the token in source that best matches.
   std::vector<std::vector<size_t>> alignments;
-
-  // If we do have alignment information from the model, we use that to taint
-  // tokens with the tags from their source token counterpart. If there is no
-  // alignment information available, we just interpolate based on sentence
-  // length (badly).
-  if (HasAlignments(response)) {
-    // DebugPrintAlignmentScores(std::cerr, response);
-    HardAlignments(response, alignments);
-  } else {
-    InterpolateAlignments(response, alignments);
-  }
+  HardAlignments(response, alignments);
 
   std::vector<Taint> token_tags_target;
   token_tags_target.emplace_back();  // add empty one to the beginning for easy

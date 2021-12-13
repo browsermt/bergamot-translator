@@ -9,16 +9,12 @@
 
 namespace {
 
+// Simple replacement for str.ends_with(compile-time C string)
 template <typename Char_t, size_t Len>
 inline bool ends_with(std::string const &str, const Char_t (&suffix)[Len]) {
   size_t offset;
   return __builtin_sub_overflow(str.size(), Len - 1, &offset) == 0 &&
          std::memcmp(str.data() + offset, suffix, Len - 1) == 0;
-}
-
-template <typename Char_t, size_t Len>
-inline bool equals(std::string const &str, const Char_t (&str2)[Len]) {
-  return str.size() == Len - 1 && std::memcmp(str.data(), str2, Len - 1) == 0;
 }
 
 inline bool equals_case_insensitive(const char *lhs, const char *rhs, size_t len) {
@@ -31,6 +27,7 @@ inline bool equals_case_insensitive(const char *lhs, const char *rhs, size_t len
   return true;
 }
 
+// Alias for the above, but with compile-time known C string
 template <size_t Len>
 inline bool equals_case_insensitive(std::string const &lhs, const char (&rhs)[Len]) {
   return lhs.size() == Len - 1 && equals_case_insensitive(lhs.data(), rhs, Len);
@@ -199,17 +196,17 @@ scanner::token_type scanner::scan_tag() {
 
     tag_name_.push_back(c);
 
-    if (equals(tag_name_, "!--")) {
+    if (tag_name_ == "!--") {
       c_scan = &scanner::scan_comment;
       return TT_COMMENT_START;
     }
 
-    if (equals(tag_name_, "![CDATA[")) {
+    if (tag_name_ == "![CDATA[") {
       c_scan = &scanner::scan_cdata;
       return TT_CDATA_START;
     }
 
-    if (equals(tag_name_, "!ENTITY")) {
+    if (tag_name_ == "!ENTITY") {
       c_scan = &scanner::scan_entity_decl;
       return TT_ENTITY_START;
     }
@@ -268,27 +265,27 @@ scanner::token_type scanner::scan_entity() {
 }
 
 bool scanner::resolve_entity(std::string const &buffer) {
-  if (equals(buffer, "&lt;")) {
+  if (buffer == "&lt;") {
     value_.push_back('<');
     return true;
   }
-  if (equals(buffer, "&gt;")) {
+  if (buffer == "&gt;") {
     value_.push_back('>');
     return true;
   }
-  if (equals(buffer, "&amp;")) {
+  if (buffer == "&amp;") {
     value_.push_back('&');
     return true;
   }
-  if (equals(buffer, "&quot;")) {
+  if (buffer == "&quot;") {
     value_.push_back('"');
     return true;
   }
-  if (equals(buffer, "&apos;")) {
+  if (buffer == "&apos;") {
     value_.push_back('\'');
     return true;
   }
-  if (equals(buffer, "&nbsp;")) {
+  if (buffer == "&nbsp;") {
     value_.push_back(' ');  // TODO: handle non-breaking spaces better than just converting them to spaces
     return true;
   }

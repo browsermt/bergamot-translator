@@ -102,10 +102,6 @@ class scanner {
 
   static bool is_whitespace(char c);
 
-  void append_attr_name(char c);
-
-  void append_tag_name(char c);
-
  private: /* data */
   std::string value_;
   std::string tag_name_;

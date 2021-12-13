@@ -3,9 +3,9 @@
 
 #include "xh_scanner.h"
 
+#include <cassert>
 #include <cctype>
 #include <cstring>
-#include <iostream>
 
 namespace {
 

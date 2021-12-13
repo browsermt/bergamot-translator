@@ -39,11 +39,11 @@ namespace markup {
 
 // case sensitive string equality test
 // s_lowcase shall be lowercase string
-const char *scanner::get_value() { return value_.data(); }
+std::string const &scanner::get_value() const { return value_; }
 
-const char *scanner::get_attr_name() { return attr_name_.data(); }
+std::string const &scanner::get_attr_name() const { return attr_name_; }
 
-const char *scanner::get_tag_name() { return tag_name_.data(); }
+std::string const &scanner::get_tag_name() const { return tag_name_; }
 
 scanner::token_type scanner::scan_body() {
   text_begin = input.p;

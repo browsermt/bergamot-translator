@@ -56,17 +56,17 @@ class scanner {
   token_type get_token() { return (this->*c_scan)(); }
 
   // get text span backed by original input.
-  const char *get_text_begin() { return text_begin; }
-  const char *get_text_end() { return text_end; }
+  const char *get_text_begin() const { return text_begin; }
+  const char *get_text_end() const { return text_end; }
 
   // get value of TT_TEXT, TT_ATTR and TT_DATA
-  const char *get_value();
+  std::string const &get_value() const;
 
   // get attribute name
-  const char *get_attr_name();
+  std::string const &get_attr_name() const;
 
   // get tag name (always lowercase)
-  const char *get_tag_name();
+  std::string const &get_tag_name() const;
 
  private: /* methods */
   typedef token_type (scanner::*scan)();

@@ -7,8 +7,7 @@
 //|
 #include <cassert>
 #include <cstring>
-#include <ostream>
-#include <string>
+#include <string_view>
 
 namespace markup {
 
@@ -23,22 +22,11 @@ struct instream {
   const char *pos() const { return p; }
 };
 
-// Very simple string_view implementation that has mutable size so we can easily
-// grow or shrink it while we scan through the input.
-struct string_view {
+// Think string_view, but with a mutable range
+struct string_ref {
   const char *data;
   size_t size;
-  char back() const {
-    assert(size > 0);
-    return data[size - 1];
-  }
-  std::string str() const { return std::string(data, size); };
-
-  // operator std::string() const { return str(); }  // Note: not exposing the std::string cast make
-  // (accidental) string allocations explicit
 };
-
-inline std::ostream &operator<<(std::ostream &out, string_view str) { return out.write(str.data, str.size); }
 
 class scanner {
  public:
@@ -70,13 +58,13 @@ class scanner {
   token_type next_token() { return (this->*c_scan)(); }
 
   // get value of TT_TEXT, TT_ATTR and TT_DATA
-  string_view value() const;
+  std::string_view value() const;
 
   // get attribute name
-  string_view attr_name() const;
+  std::string_view attr_name() const;
 
   // get tag name
-  string_view tag_name() const;
+  std::string_view tag_name() const;
 
  private: /* methods */
   typedef token_type (scanner::*scan)();
@@ -103,14 +91,14 @@ class scanner {
 
   size_t skip_whitespace();
 
-  bool resolve_entity(string_view const &buffer, string_view &decoded) const;
+  bool resolve_entity(string_ref const &buffer, string_ref &decoded) const;
 
   static bool is_whitespace(char c);
 
  private: /* data */
-  string_view value_;
-  string_view tag_name_;
-  string_view attr_name_;
+  string_ref value_;
+  string_ref tag_name_;
+  string_ref attr_name_;
 
   instream &input_;
 

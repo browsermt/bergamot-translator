@@ -11,7 +11,7 @@ namespace {
 
 // Simple replacement for str.ends_with(compile-time C string)
 template <typename Char_t, size_t Len>
-inline bool ends_with(markup::string_view &str, const Char_t (&suffix)[Len]) {
+inline bool ends_with(markup::string_ref &str, const Char_t (&suffix)[Len]) {
   size_t offset;
   return __builtin_sub_overflow(str.size, Len - 1, &offset) == 0 &&
          std::memcmp(str.data + offset, suffix, Len - 1) == 0;
@@ -29,12 +29,12 @@ inline bool equals_case_insensitive(const char *lhs, const char *rhs, size_t len
 
 // Alias for the above, but with compile-time known C string
 template <size_t Len>
-inline bool equals_case_insensitive(markup::string_view &lhs, const char (&rhs)[Len]) {
+inline bool equals_case_insensitive(markup::string_ref &lhs, const char (&rhs)[Len]) {
   return lhs.size == Len - 1 && equals_case_insensitive(lhs.data, rhs, Len);
 }
 
 template <typename Char_t, size_t Len>
-bool operator==(markup::string_view const &str, const Char_t (&str2)[Len]) {
+bool operator==(markup::string_ref const &str, const Char_t (&str2)[Len]) {
   return str.size == Len - 1 && std::memcmp(str.data, str2, Len - 1) == 0;
 }
 
@@ -44,14 +44,14 @@ namespace markup {
 
 // case sensitive string equality test
 // s_lowcase shall be lowercase string
-string_view scanner::value() const { return value_; }
+std::string_view scanner::value() const { return std::string_view(value_.data, value_.size); }
 
-string_view scanner::attr_name() const { return attr_name_; }
+std::string_view scanner::attr_name() const { return std::string_view(attr_name_.data, attr_name_.size); }
 
-string_view scanner::tag_name() const { return tag_name_; }
+std::string_view scanner::tag_name() const { return std::string_view(tag_name_.data, tag_name_.size); }
 
 scanner::token_type scanner::scan_body() {
-  value_ = string_view{input_.pos(), 0};
+  value_ = string_ref{input_.pos(), 0};
 
   switch (input_.peek()) {
     case '\0':
@@ -123,8 +123,8 @@ scanner::token_type scanner::scan_attr() {
       }
   }
 
-  attr_name_ = string_view{input_.pos(), 0};
-  value_ = string_view{nullptr, 0};
+  attr_name_ = string_ref{input_.pos(), 0};
+  value_ = string_ref{nullptr, 0};
 
   // attribute name...
   while (input_.peek() != '=') {
@@ -153,7 +153,7 @@ scanner::token_type scanner::scan_attr() {
     case '"':
     case '\'':
       quote = input_.consume();
-      value_ = string_view{input_.pos(), 0};
+      value_ = string_ref{input_.pos(), 0};
       while (true) {
         if (input_.peek() == '\0') {
           return TT_ERROR;
@@ -167,7 +167,7 @@ scanner::token_type scanner::scan_attr() {
       }
       break;
     default:
-      value_ = string_view{input_.pos(), 0};
+      value_ = string_ref{input_.pos(), 0};
 
       while (true) {
         if (is_whitespace(input_.peek())) return TT_ATTR;
@@ -197,7 +197,7 @@ scanner::token_type scanner::scan_tag() {
   bool is_tail = input_.peek() == '/';
   if (is_tail) input_.consume();
 
-  tag_name_ = string_view{input_.pos(), 0};
+  tag_name_ = string_ref{input_.pos(), 0};
 
   while (input_.peek()) {
     if (skip_whitespace()) break;
@@ -223,7 +223,7 @@ scanner::token_type scanner::scan_tag() {
 
 scanner::token_type scanner::scan_entity(token_type parent_token_type) {
   // `entity` includes starting '&' and ending ';'
-  string_view entity{input_.pos(), 0};
+  string_ref entity{input_.pos(), 0};
   bool has_end = false;
 
   if (input_.consume() != '&') return TT_ERROR;
@@ -254,31 +254,31 @@ scanner::token_type scanner::scan_entity(token_type parent_token_type) {
   return parent_token_type;
 }
 
-bool scanner::resolve_entity(string_view const &buffer, string_view &decoded) const {
+bool scanner::resolve_entity(string_ref const &buffer, string_ref &decoded) const {
   static char lt = '<', gt = '>', amp = '&', quot = '"', apos = '\'', nbsp = ' ';
 
   if (buffer == "&lt;") {
-    decoded = string_view{&lt, 1};
+    decoded = string_ref{&lt, 1};
     return true;
   }
   if (buffer == "&gt;") {
-    decoded = string_view{&gt, 1};
+    decoded = string_ref{&gt, 1};
     return true;
   }
   if (buffer == "&amp;") {
-    decoded = string_view{&amp, 1};
+    decoded = string_ref{&amp, 1};
     return true;
   }
   if (buffer == "&quot;") {
-    decoded = string_view{&quot, 1};
+    decoded = string_ref{&quot, 1};
     return true;
   }
   if (buffer == "&apos;") {
-    decoded = string_view{&apos, 1};
+    decoded = string_ref{&apos, 1};
     return true;
   }
   if (buffer == "&nbsp;") {
-    decoded = string_view{&nbsp, 1};  // TODO: handle non-breaking spaces better than just converting them to spaces
+    decoded = string_ref{&nbsp, 1};  // TODO: handle non-breaking spaces better than just converting them to spaces
     return true;
   }
   return false;
@@ -306,7 +306,7 @@ scanner::token_type scanner::scan_comment() {
     return TT_COMMENT_END;
   }
 
-  value_ = string_view{input_.pos(), 0};
+  value_ = string_ref{input_.pos(), 0};
 
   while (true) {
     if (input_.consume() == '\0') return TT_EOF;
@@ -328,7 +328,7 @@ scanner::token_type scanner::scan_special() {
     return TT_TAG_END;
   }
 
-  value_ = string_view{input_.pos(), 0};
+  value_ = string_ref{input_.pos(), 0};
 
   while (true) {
     if (input_.consume() == '\0') return TT_EOF;
@@ -336,7 +336,7 @@ scanner::token_type scanner::scan_special() {
 
     // Test for </tag>
     // TODO: no whitespaces allowed? Is that okay?
-    if (value_.back() == '>' && value_.size >= tag_name_.size + 3) {
+    if (value_.data[value_.size - 1] == '>' && value_.size >= tag_name_.size + 3) {
       // Test for the "</"" bit of "</tag>"
       size_t pos_tag_start = value_.size - tag_name_.size - 3;
       if (std::memcmp(value_.data + pos_tag_start, "</", 2) != 0) continue;

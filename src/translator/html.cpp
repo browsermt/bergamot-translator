@@ -83,7 +83,7 @@ std::string format(std::string const &format_str, Arg arg, Args... args) {
   return os.str();
 }
 
-bool IsBlockElement(std::string const &name) {
+bool IsBlockElement(std::string_view const &name) {
   // List of elements that we expect might occur inside words, and that should
   // not introduce spacings around them. Not strictly inline elements, nor flow
   // elements. See also https://developer.mozilla.org/en-US/docs/Web/Guide/HTML/Content_categories
@@ -91,16 +91,16 @@ bool IsBlockElement(std::string const &name) {
       "abbr",  "a",    "b",      "em",  "i",   "kbd",  "mark", "math", "output", "q",   "ruby",
       "small", "span", "strong", "sub", "sup", "time", "u",    "var",  "wbr",    "ins", "del"};
 
-  return inline_ish_elements.find(name) == inline_ish_elements.end();
+  return inline_ish_elements.find(std::string(name)) == inline_ish_elements.end();
 }
 
-bool IsEmptyElement(std::string const &name) {
+bool IsEmptyElement(std::string_view const &name) {
   // List of elements for which we do not expect a closing tag, or self-closing
   // elements in XHTML. See also https://developer.mozilla.org/en-US/docs/Glossary/Empty_element
   static std::unordered_set<std::string> empty_elements{"area",  "base", "br",   "col",   "embed",  "hr",    "img",
                                                         "input", "link", "meta", "param", "source", "track", "wbr"};
 
-  return empty_elements.find(name) != empty_elements.end();
+  return empty_elements.find(std::string(name)) != empty_elements.end();
 }
 
 void DiffTags(HTML::Taint const &prev, HTML::Taint const &curr, HTML::Taint &opening, HTML::Taint &closing) {
@@ -449,7 +449,7 @@ HTML::HTML(std::string &&source, bool process_markup) {
 
       case markup::scanner::TT_TEXT: {
         auto begin = source.size();
-        source.append(scanner.value().data, scanner.value().size);
+        source.append(scanner.value());
         spans_.push_back(Span{begin, source.size(), stack});
         FilterEmpty(stack);
       } break;
@@ -459,10 +459,10 @@ HTML::HTML(std::string &&source, bool process_markup) {
         // <br>, <img>, <li>) make sure it does so in this text as well.
         // TODO: Strong assumption here that the language uses spaces to
         // separate words
-        if (IsBlockElement(scanner.tag_name().str()) && !source.empty() && source.back() != ' ') source.push_back(' ');
+        if (IsBlockElement(scanner.tag_name()) && !source.empty() && source.back() != ' ') source.push_back(' ');
 
         // pool_ takes ownership of our tag, makes sure it's freed when necessary
-        pool_.emplace_back(new Tag{scanner.tag_name().str(), std::string(), IsEmptyElement(scanner.tag_name().str())});
+        pool_.emplace_back(new Tag{std::string(scanner.tag_name()), std::string(), IsEmptyElement(scanner.tag_name())});
 
         // Tag *tag is used by attribute parsing
         tag = pool_.back().get();
@@ -484,7 +484,7 @@ HTML::HTML(std::string &&source, bool process_markup) {
         if (stack.empty())
           throw BadHTML(format("Encountered more closing tags ({}) than opening tags", scanner.tag_name()));
 
-        if (stack.back()->name != scanner.tag_name().str())
+        if (stack.back()->name != scanner.tag_name())
           throw BadHTML(format("Encountered unexpected closing tag </{}>, stack is {}", scanner.tag_name(), stack));
 
         // What to do with "<u></u>" case, where tag is immediately closed

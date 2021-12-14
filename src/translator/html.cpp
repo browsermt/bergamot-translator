@@ -439,7 +439,7 @@ HTML::HTML(std::string &&source, bool process_markup) {
 
   bool stop = false;
   while (!stop) {
-    switch (scanner.get_token()) {
+    switch (scanner.next_token()) {
       case markup::scanner::TT_ERROR:
         throw BadHTML("HTML parse error");
 
@@ -449,7 +449,7 @@ HTML::HTML(std::string &&source, bool process_markup) {
 
       case markup::scanner::TT_TEXT: {
         auto begin = source.size();
-        source.append(scanner.get_value());
+        source.append(scanner.value().data, scanner.value().size);
         spans_.push_back(Span{begin, source.size(), stack});
         FilterEmpty(stack);
       } break;
@@ -459,10 +459,10 @@ HTML::HTML(std::string &&source, bool process_markup) {
         // <br>, <img>, <li>) make sure it does so in this text as well.
         // TODO: Strong assumption here that the language uses spaces to
         // separate words
-        if (IsBlockElement(scanner.get_tag_name()) && !source.empty() && source.back() != ' ') source.push_back(' ');
+        if (IsBlockElement(scanner.tag_name().str()) && !source.empty() && source.back() != ' ') source.push_back(' ');
 
         // pool_ takes ownership of our tag, makes sure it's freed when necessary
-        pool_.emplace_back(new Tag{scanner.get_tag_name(), std::string(), IsEmptyElement(scanner.get_tag_name())});
+        pool_.emplace_back(new Tag{scanner.tag_name().str(), std::string(), IsEmptyElement(scanner.tag_name().str())});
 
         // Tag *tag is used by attribute parsing
         tag = pool_.back().get();
@@ -482,10 +482,10 @@ HTML::HTML(std::string &&source, bool process_markup) {
         // Note: self-closing tags emit TT_TAG_END immediately after TT_TAG_START
         // but since we're parsing HTML5, a sole <img> will never emit a TT_TAG_END
         if (stack.empty())
-          throw BadHTML(format("Encountered more closing tags ({}) than opening tags", scanner.get_tag_name()));
+          throw BadHTML(format("Encountered more closing tags ({}) than opening tags", scanner.tag_name()));
 
-        if (stack.back()->name != scanner.get_tag_name())
-          throw BadHTML(format("Encountered unexpected closing tag </{}>, stack is {}", scanner.get_tag_name(), stack));
+        if (stack.back()->name != scanner.tag_name().str())
+          throw BadHTML(format("Encountered unexpected closing tag </{}>, stack is {}", scanner.tag_name(), stack));
 
         // What to do with "<u></u>" case, where tag is immediately closed
         // so it never makes it into the taint of any of the spans? This adds
@@ -498,7 +498,7 @@ HTML::HTML(std::string &&source, bool process_markup) {
 
       case markup::scanner::TT_ATTR:
         assert(tag != nullptr);
-        tag->attributes += format(" {}=\"{}\"", scanner.get_attr_name(), scanner.get_value());
+        tag->attributes += format(" {}=\"{}\"", scanner.attr_name(), scanner.value());
         break;
 
       default:

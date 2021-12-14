@@ -12,9 +12,8 @@ namespace {
 // Simple replacement for str.ends_with(compile-time C string)
 template <typename Char_t, size_t Len>
 inline bool ends_with(markup::string_ref &str, const Char_t (&suffix)[Len]) {
-  size_t offset;
-  return __builtin_sub_overflow(str.size, Len - 1, &offset) == 0 &&
-         std::memcmp(str.data + offset, suffix, Len - 1) == 0;
+  size_t offset = str.size - (Len - 1);
+  return offset <= str.size && std::memcmp(str.data + offset, suffix, Len - 1) == 0;
 }
 
 inline bool equals_case_insensitive(const char *lhs, const char *rhs, size_t len) {

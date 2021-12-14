@@ -53,11 +53,14 @@ onmessage = async function(e) {
       const to = e.data[2];
       const input = e.data[3];
       let inputWordCount = 0;
+      let inputBlockElements = 0;
       input.forEach(sentence => {
         inputWordCount += sentence.trim().split(" ").filter(word => word.trim() !== "").length;
+        inputBlockElements++;
       })
       let start = Date.now();
       try {
+        log(`Blocks to translate: ${inputBlockElements}`);
         result = translate(from, to, input);
         const secs = (Date.now() - start) / 1000;
         log(`Translation '${from}${to}' Successful. Speed: ${Math.round(inputWordCount / secs)} WPS (${inputWordCount} words in ${secs} secs)`);
@@ -243,10 +246,12 @@ const _translateInvolvingEnglish = (from, to, input) => {
 
   // Parse all relevant information from vectorResponse
   const listTranslatedText = _parseTranslatedText(vectorResponse);
+  const listSourceText = _parseSourceText(vectorResponse);
   const listTranslatedTextSentences = _parseTranslatedTextSentences(vectorResponse);
   const listSourceTextSentences = _parseSourceTextSentences(vectorResponse);
   const listTranslatedTextSentenceQualityScores = _parseTranslatedTextSentenceQualityScores(vectorResponse);
 
+  log(`Source text: ${listSourceText}`);
   log(`Translated text: ${listTranslatedText}`);
   log(`Translated sentences: ${JSON.stringify(listTranslatedTextSentences)}`);
   log(`Source sentences: ${JSON.stringify(listSourceTextSentences)}`);
@@ -272,6 +277,15 @@ const _parseTranslatedTextSentences = (vectorResponse) => {
   for (let i = 0; i < vectorResponse.size(); i++) {
     const response = vectorResponse.get(i);
     result.push(_getTranslatedSentences(response));
+  }
+  return result;
+}
+
+const _parseSourceText = (vectorResponse) => {
+  const result = [];
+  for (let i = 0; i < vectorResponse.size(); i++) {
+    const response = vectorResponse.get(i);
+    result.push(response.getOriginalText());
   }
   return result;
 }

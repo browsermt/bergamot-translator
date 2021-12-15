@@ -109,6 +109,28 @@ TEST_CASE("Abort if alignments are missing") {
       "Response object does not contain alignments. TranslationModel or ResponseOptions is misconfigured?");
 }
 
+TEST_CASE("Do not abort if the input is just empty") {
+  std::string input("");
+  HTML html(std::move(input), true);
+  CHECK(input == "");
+
+  Response response;
+  html.Restore(response);
+  CHECK(response.source.text == "");
+  CHECK(response.target.text == "");
+}
+
+TEST_CASE("Do not abort if the input is just empty element") {
+  std::string input("<p></p>");
+  HTML html(std::move(input), true);
+  CHECK(input == "");
+
+  Response response;
+  html.Restore(response);
+  CHECK(response.source.text == "<p></p>");
+  CHECK(response.target.text == "");  // Should be <p></p> but hey not there yet.
+}
+
 TEST_CASE("Test case html entities") {
   // These are all entities I would expect in innerHTML, since all other entities
   // can be encoded as UTF-8 so there's no need to encode them through &...; when

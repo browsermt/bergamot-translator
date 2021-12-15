@@ -171,7 +171,14 @@ AnnotatedText Apply(AnnotatedText const &in, Fun fun) {
 bool IsContinuation(string_view str) { return !str.empty() && str.compare(0, 1, " ", 1) != 0; }
 
 bool HasAlignments(Response const &response) {
-  return !response.alignments.empty() && !response.alignments[0][0].empty();
+  // Test for each sentence individually as a sentence may be empty (or there)
+  // might be no sentences, so just testing for alignments.empty() would not be
+  // sufficient.
+  for (size_t sentenceIdx = 0; sentenceIdx < response.target.numSentences(); ++sentenceIdx)
+    if (response.alignments.size() <= sentenceIdx ||
+        response.alignments[sentenceIdx].size() != response.target.numWords(sentenceIdx))
+      return false;
+  return true;
 }
 
 void HardAlignments(Response const &response, std::vector<std::vector<size_t>> &alignments) {

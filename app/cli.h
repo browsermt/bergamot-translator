@@ -56,6 +56,10 @@ void wasm(const CLIConfig &config) {
       std::make_shared<TranslationModel>(options->asYamlString(), std::move(memoryBundle));
 
   ResponseOptions responseOptions;
+  if (config.html) {
+    responseOptions.HTML = true;
+    responseOptions.alignment = true;  // Necessary for HTML
+  }
   std::vector<std::string> texts;
 
   // Hide the translateMultiple operation
@@ -145,6 +149,10 @@ void native(const CLIConfig &config) {
   std::string input = std_input.str();
 
   ResponseOptions responseOptions;
+  if (config.html) {
+    responseOptions.HTML = true;
+    responseOptions.alignment = true;  // Necessary for HTML
+  }
 
   // Wait on future until Response is complete
   std::promise<Response> responsePromise;

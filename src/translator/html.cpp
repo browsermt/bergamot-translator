@@ -513,7 +513,14 @@ HTML::HTML(std::string &&source, bool process_markup) {
 }
 
 void HTML::Restore(Response &response) {
+  // No-op if process_markup was false (and thus spans_ is empty)
+  // TODO: replace this with optional<HTML> at a higher level
   if (spans_.empty()) return;
+
+  // We need alignment info to transfer the HTML tags from the input to the
+  // translation. If those are not available, no HTML in translations for you.
+  ABORT_UNLESS(HasAlignments(response),
+               "Response object does not contain alignments. TranslationModel or ResponseOptions is misconfigured?");
 
   // Reconstruction of HTML tags:
   // 1. Map each token to a Span
@@ -528,13 +535,6 @@ void HTML::Restore(Response &response) {
 
   AnnotatedText source = RestoreSource(response.source, token_tags, spans_.cbegin(), spans_.cend());
   assert(token_tags.size() == DebugCountTokens(response.source));
-
-  // We need alignment info to transfer the HTML tags from the input to the
-  // translation. If those are not available, no HTML in translations for you.
-  if (!HasAlignments(response)) {
-    response.source = source;
-    return;
-  }
 
   // Find for every token in target the token in source that best matches.
   std::vector<std::vector<size_t>> alignments;

@@ -90,6 +90,8 @@ void ConfigParser::addOptionsBoundToConfig(CLI::App &app, CLIConfig &config) {
   app_.add_option("--cache-size", config.cacheSize, "Number of entries to store in cache.");
   app_.add_option("--cache-mutex-buckets", config.cacheMutexBuckets,
                   "Number of mutex buckets to control locking granularity");
+
+  app_.add_flag("--html", config.html, "Whether input and output should be HTML");
 }
 
 std::shared_ptr<marian::Options> parseOptionsFromFilePath(const std::string &configPath, bool validate /*= true*/) {

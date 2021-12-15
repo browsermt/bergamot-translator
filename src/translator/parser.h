@@ -36,6 +36,7 @@ struct CLIConfig {
   ModelConfigPaths modelConfigPaths;
   bool byteArray;
   bool validateByteArray;
+  bool html;
   size_t numWorkers;
   OpMode opMode;
 

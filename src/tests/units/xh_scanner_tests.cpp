@@ -4,11 +4,12 @@
 #include "translator/xh_scanner.h"
 
 TEST_CASE("scan element with attributes") {
-  markup::instream in("<div id=\"test\" class=\"a b c \" hidden>");
+  markup::instream in("<div id=\"test\" class=\"a b c \">");
   markup::scanner scanner(in);
 
   CHECK(scanner.next_token() == markup::scanner::TT_TAG_START);
   CHECK(scanner.tag_name() == "div");
+
   CHECK(scanner.next_token() == markup::scanner::TT_ATTR);
   CHECK(scanner.attr_name() == "id");
   CHECK(scanner.value() == "test");
@@ -17,9 +18,41 @@ TEST_CASE("scan element with attributes") {
   CHECK(scanner.attr_name() == "class");
   CHECK(scanner.value() == "a b c ");
 
+  CHECK(scanner.next_token() == markup::scanner::TT_EOF);
+}
+
+TEST_CASE("scan element with valueless attributes") {
+  markup::instream in("<input checked hidden>");
+  markup::scanner scanner(in);
+
+  CHECK(scanner.next_token() == markup::scanner::TT_TAG_START);
+  CHECK(scanner.tag_name() == "input");
+
+  CHECK(scanner.next_token() == markup::scanner::TT_ATTR);
+  CHECK(scanner.attr_name() == "checked");
+  CHECK(scanner.value() == "");
+
   CHECK(scanner.next_token() == markup::scanner::TT_ATTR);
   CHECK(scanner.attr_name() == "hidden");
   CHECK(scanner.value() == "");
+
+  CHECK(scanner.next_token() == markup::scanner::TT_EOF);
+}
+
+TEST_CASE("scan element with unquoted attributes") {
+  markup::instream in("<div hidden=true class=test>");
+  markup::scanner scanner(in);
+
+  CHECK(scanner.next_token() == markup::scanner::TT_TAG_START);
+  CHECK(scanner.tag_name() == "div");
+
+  CHECK(scanner.next_token() == markup::scanner::TT_ATTR);
+  CHECK(scanner.attr_name() == "hidden");
+  CHECK(scanner.value() == "true");
+
+  CHECK(scanner.next_token() == markup::scanner::TT_ATTR);
+  CHECK(scanner.attr_name() == "class");
+  CHECK(scanner.value() == "test");
 
   CHECK(scanner.next_token() == markup::scanner::TT_EOF);
 }
@@ -36,7 +69,26 @@ TEST_CASE("scan element with text") {
 }
 
 TEST_CASE("scan html entities") {
-  markup::instream in("Hello &amp; &apos;world&apos;");
+  markup::instream in("&amp;&apos;&nbsp;&quot;&lt;&gt;");
+  markup::scanner scanner(in);
+
+  CHECK(scanner.next_token() == markup::scanner::TT_TEXT);
+  CHECK(scanner.value() == "&");
+  CHECK(scanner.next_token() == markup::scanner::TT_TEXT);
+  CHECK(scanner.value() == "'");
+  CHECK(scanner.next_token() == markup::scanner::TT_TEXT);
+  CHECK(scanner.value() == " ");
+  CHECK(scanner.next_token() == markup::scanner::TT_TEXT);
+  CHECK(scanner.value() == "\"");
+  CHECK(scanner.next_token() == markup::scanner::TT_TEXT);
+  CHECK(scanner.value() == "<");
+  CHECK(scanner.next_token() == markup::scanner::TT_TEXT);
+  CHECK(scanner.value() == ">");
+  CHECK(scanner.next_token() == markup::scanner::TT_EOF);
+}
+
+TEST_CASE("scan & instead of &amp;") {
+  markup::instream in("Hello & other people");
   markup::scanner scanner(in);
 
   CHECK(scanner.next_token() == markup::scanner::TT_TEXT);
@@ -44,13 +96,16 @@ TEST_CASE("scan html entities") {
   CHECK(scanner.next_token() == markup::scanner::TT_TEXT);
   CHECK(scanner.value() == "&");
   CHECK(scanner.next_token() == markup::scanner::TT_TEXT);
-  CHECK(scanner.value() == " ");
+  CHECK(scanner.value() == " other people");
+  CHECK(scanner.next_token() == markup::scanner::TT_EOF);
+}
+
+TEST_CASE("scan &notanentity;") {
+  markup::instream in("&notanentity;");
+  markup::scanner scanner(in);
+
   CHECK(scanner.next_token() == markup::scanner::TT_TEXT);
-  CHECK(scanner.value() == "'");
-  CHECK(scanner.next_token() == markup::scanner::TT_TEXT);
-  CHECK(scanner.value() == "world");
-  CHECK(scanner.next_token() == markup::scanner::TT_TEXT);
-  CHECK(scanner.value() == "'");
+  CHECK(scanner.value() == "&notanentity;");
   CHECK(scanner.next_token() == markup::scanner::TT_EOF);
 }
 
@@ -121,5 +176,50 @@ TEST_CASE("test long text (#273)") {
 
   CHECK(scanner.next_token() == markup::scanner::TT_TEXT);
   CHECK(scanner.value() == test_str);
+  CHECK(scanner.next_token() == markup::scanner::TT_EOF);
+}
+
+TEST_CASE("scan self-closing element") {
+  markup::instream in("before <img src=\"#\"/> after");
+  markup::scanner scanner(in);
+
+  CHECK(scanner.next_token() == markup::scanner::TT_TEXT);
+  CHECK(scanner.value() == "before ");
+  CHECK(scanner.next_token() == markup::scanner::TT_TAG_START);
+  CHECK(scanner.tag_name() == "img");
+  CHECK(scanner.next_token() == markup::scanner::TT_ATTR);
+  CHECK(scanner.attr_name() == "src");
+  CHECK(scanner.value() == "#");
+  CHECK(scanner.next_token() == markup::scanner::TT_TAG_END);
+  CHECK(scanner.tag_name() == "img");
+  CHECK(scanner.next_token() == markup::scanner::TT_TEXT);
+  CHECK(scanner.value() == " after");
+  CHECK(scanner.next_token() == markup::scanner::TT_EOF);
+}
+
+TEST_CASE("scan script") {
+  markup::instream in("<script async>true && document.body.length > 10</script>");
+  markup::scanner scanner(in);
+
+  CHECK(scanner.next_token() == markup::scanner::TT_TAG_START);
+  CHECK(scanner.tag_name() == "script");
+  CHECK(scanner.next_token() == markup::scanner::TT_ATTR);
+  CHECK(scanner.attr_name() == "async");
+  CHECK(scanner.value() == "");
+  CHECK(scanner.next_token() == markup::scanner::TT_DATA);
+  CHECK(scanner.value() == "true && document.body.length > 10");
+  CHECK(scanner.next_token() == markup::scanner::TT_TAG_END);
+  CHECK(scanner.next_token() == markup::scanner::TT_EOF);
+}
+
+TEST_CASE("scan style") {
+  markup::instream in("<style>body { background: url(test.png); }</style>");
+  markup::scanner scanner(in);
+
+  CHECK(scanner.next_token() == markup::scanner::TT_TAG_START);
+  CHECK(scanner.tag_name() == "style");
+  CHECK(scanner.next_token() == markup::scanner::TT_DATA);
+  CHECK(scanner.value() == "body { background: url(test.png); }");
+  CHECK(scanner.next_token() == markup::scanner::TT_TAG_END);
   CHECK(scanner.next_token() == markup::scanner::TT_EOF);
 }

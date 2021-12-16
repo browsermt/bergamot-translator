@@ -57,6 +57,28 @@ TEST_CASE("scan element with unquoted attributes") {
   CHECK(scanner.next_token() == markup::scanner::TT_EOF);
 }
 
+TEST_CASE("scan element with spaces around attributes") {
+  markup::instream in("<input class = \"test\" checked type = checkbox >");
+  markup::scanner scanner(in);
+
+  CHECK(scanner.next_token() == markup::scanner::TT_TAG_START);
+  CHECK(scanner.tag_name() == "input");
+
+  CHECK(scanner.next_token() == markup::scanner::TT_ATTR);
+  CHECK(scanner.attr_name() == "class");
+  CHECK(scanner.value() == "test");
+
+  CHECK(scanner.next_token() == markup::scanner::TT_ATTR);
+  CHECK(scanner.attr_name() == "checked");
+  CHECK(scanner.value() == "");
+
+  CHECK(scanner.next_token() == markup::scanner::TT_ATTR);
+  CHECK(scanner.attr_name() == "type");
+  CHECK(scanner.value() == "checkbox");
+
+  CHECK(scanner.next_token() == markup::scanner::TT_EOF);
+}
+
 TEST_CASE("scan element with text") {
   markup::instream in("<span>Hello world</span>");
   markup::scanner scanner(in);

@@ -5,6 +5,11 @@ void wasm(BlockingService &service, std::shared_ptr<TranslationModel> &model) {
   ResponseOptions responseOptions;
   std::vector<std::string> texts;
 
+  // WASM always requires HTML and alignment.
+  // TODO(jerinphilip): Fix this, bring in actual tests.
+  // responseOptions.HTML = true;
+  // responseOptions.alignment = true;  // Necessary for HTML
+
   // Hide the translateMultiple operation
   for (std::string line; std::getline(std::cin, line);) {
     texts.emplace_back(line);

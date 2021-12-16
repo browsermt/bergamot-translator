@@ -5,15 +5,27 @@
 //|
 //| (C) Andrew Fedoniouk @ terrainformatica.com
 //|
-#include <string.h>
+#include <cassert>
+#include <cstring>
+#include <string_view>
 
 namespace markup {
+
 struct instream {
   const char *p;
+  const char *begin;
   const char *end;
-  explicit instream(const char *src) : p(src), end(src + strlen(src)) {}
-  instream(const char *begin, const char *end) : p(begin), end(end) {}
-  char get_char() { return p < end ? *p++ : 0; }
+  explicit instream(const char *src) : p(src), begin(src), end(src + strlen(src)) {}
+  instream(const char *begin, const char *end) : p(begin), begin(begin), end(end) {}
+  char consume() { return p < end ? *p++ : 0; }
+  char peek() const { return p < end ? *p : 0; }
+  const char *pos() const { return p; }
+};
+
+// Think string_view, but with a mutable range
+struct string_ref {
+  const char *data;
+  size_t size;
 };
 
 class scanner {
@@ -37,94 +49,59 @@ class scanner {
 
     TT_COMMENT_START,
     TT_COMMENT_END,  // after "<!--" and "-->"
-    TT_CDATA_START,
-    TT_CDATA_END,  // after "<![CDATA[" and "]]>"
-    TT_PI_START,
-    TT_PI_END,  // after "<?" and "?>"
-    TT_ENTITY_START,
-    TT_ENTITY_END,  // after "<!ENTITY" and ">"
-
   };
 
-  enum $ { MAX_TOKEN_SIZE = 1024, MAX_NAME_SIZE = 128 };
-
  public:
-  explicit scanner(instream &is)
-      : value_length(0), tag_name_length(0), attr_name_length(0), input(is), input_char(0), got_tail(false) {
-    c_scan = &scanner::scan_body;
-  }
+  explicit scanner(instream &is) : input_(is), got_tail(false) { c_scan = &scanner::scan_body; }
 
   // get next token
-  token_type get_token() { return (this->*c_scan)(); }
-
-  // get text span backed by original input.
-  const char *get_text_begin() { return text_begin; }
-  const char *get_text_end() { return text_end; }
+  token_type next_token() { return (this->*c_scan)(); }
 
   // get value of TT_TEXT, TT_ATTR and TT_DATA
-  const char *get_value();
+  std::string_view value() const;
 
   // get attribute name
-  const char *get_attr_name();
+  std::string_view attr_name() const;
 
-  // get tag name (always lowercase)
-  const char *get_tag_name();
+  // get tag name
+  std::string_view tag_name() const;
 
  private: /* methods */
   typedef token_type (scanner::*scan)();
 
   scan c_scan;  // current 'reader'
 
-  // content 'readers'
+  // Consumes the text around and between tags
   token_type scan_body();
 
-  token_type scan_head();
+  // Consumes name="attr"
+  token_type scan_attr();
 
+  // Consumes <!-- ... -->
   token_type scan_comment();
 
-  token_type scan_cdata();
-
+  // Consumes ...</style> and ...</script>
   token_type scan_special();
 
-  token_type scan_pi();
-
+  // Consumes <tagname and </tagname>
   token_type scan_tag();
 
-  token_type scan_entity();
+  // Consumes '&amp;' etc, emits parent_token_type
+  token_type scan_entity(token_type parent_token_type);
 
-  token_type scan_entity_decl();
+  size_t skip_whitespace();
 
-  char skip_whitespace();
-
-  void push_back(char c);
-
-  char get_char();
-
-  bool resolve_entity(char *buffer, unsigned int len);
+  bool resolve_entity(string_ref const &buffer, string_ref &decoded) const;
 
   static bool is_whitespace(char c);
 
-  void append_value(char c);
-
-  void append_attr_name(char c);
-
-  void append_tag_name(char c);
-
  private: /* data */
-  char value[MAX_TOKEN_SIZE]{};
-  unsigned int value_length;
+  string_ref value_;
+  string_ref tag_name_;
+  string_ref attr_name_;
 
-  char tag_name[MAX_NAME_SIZE]{};
-  unsigned int tag_name_length;
+  instream &input_;
 
-  char attr_name[MAX_NAME_SIZE]{};
-  unsigned int attr_name_length;
-
-  instream &input;
-  char input_char;
-
-  bool got_tail;  // aux flag used in scan_comment, etc.
-
-  const char *text_begin, *text_end;
+  bool got_tail;  // aux flag used in scan_comment
 };
 }  // namespace markup

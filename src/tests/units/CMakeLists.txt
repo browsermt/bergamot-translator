@@ -3,7 +3,8 @@ set(UNIT_TESTS
     annotation_tests
     cache_tests
     quality_estimator_tests
-    html_tests)
+    html_tests
+    xh_scanner_tests)
 
 foreach(test ${UNIT_TESTS})
   add_executable("run_${test}" run_tests.cpp "${test}.cpp")

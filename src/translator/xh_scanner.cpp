@@ -131,11 +131,16 @@ scanner::token_type scanner::scan_attr() {
       case '\0':
         return TT_EOF;
       case '>':
-        return TT_ATTR;  // attribute without value (HTML style)
+        return TT_ATTR;  // attribute without value (HTML style) at end of tag
       case '<':
         return TT_ERROR;
       default:
-        if (skip_whitespace()) continue;
+        if (skip_whitespace()) {
+          if (input_.peek() == '=')
+            break;
+          else
+            return TT_ATTR;  // attribute without value (HTML style) but not yet at end of tag
+        }
         input_.consume();
         ++attr_name_.size;
         break;

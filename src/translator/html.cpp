@@ -174,10 +174,17 @@ bool HasAlignments(Response const &response) {
   // Test for each sentence individually as a sentence may be empty (or there)
   // might be no sentences, so just testing for alignments.empty() would not be
   // sufficient.
-  for (size_t sentenceIdx = 0; sentenceIdx < response.target.numSentences(); ++sentenceIdx)
+  for (size_t sentenceIdx = 0; sentenceIdx < response.target.numSentences(); ++sentenceIdx) {
+    // If response.alignments is just empty, this might catch it.
     if (response.alignments.size() <= sentenceIdx ||
         response.alignments[sentenceIdx].size() != response.target.numWords(sentenceIdx))
       return false;
+
+    // If response.alignments is "empty" because the model did not provide alignments,
+    // it still has entries for each target word. But all these entries are empty.
+    for (size_t wordIdx = 0; wordIdx < response.target.numWords(sentenceIdx); ++wordIdx)
+      if (response.alignments[sentenceIdx][wordIdx].size() != response.source.numWords(sentenceIdx)) return false;
+  }
   return true;
 }
 

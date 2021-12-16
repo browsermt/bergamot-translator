@@ -76,7 +76,6 @@ TEST_CASE("Ignore HTML if process_markup is false") {
   CHECK(response.source.text == html_code);
 }
 
-// TODO: is there a better way to test for correct abort() calls than [!shouldfail]
 TEST_CASE("Abort if alignments are missing") {
   marian::setThrowExceptionOnAbort(true);
 
@@ -103,6 +102,41 @@ TEST_CASE("Abort if alignments are missing") {
   response.source = source;
   response.target = target;
   // Note: explicitly not setting response.alignments
+
+  CHECK_THROWS_WITH(
+      html.Restore(response),
+      "Response object does not contain alignments. TranslationModel or ResponseOptions is misconfigured?");
+}
+
+TEST_CASE("Abort if alignments are misconfigured") {
+  marian::setThrowExceptionOnAbort(true);
+
+  std::string input("<p>hello <b>world</b></p>\n");
+  HTML html(std::move(input), true);
+
+  AnnotatedText source("hello world\n");
+  RecordSentenceFromByteRange(source, {
+                                          ByteRange{0, 4},   // 0.0 "hell"
+                                          ByteRange{4, 5},   // 0.1 "o"
+                                          ByteRange{5, 11},  // 0.2 " world"
+                                          ByteRange{11, 11}  // 0.3 ""
+                                      });
+
+  AnnotatedText target("hallo Welt\n");
+  RecordSentenceFromByteRange(target, {
+                                          ByteRange{0, 4},   // 0.0 "hall"
+                                          ByteRange{4, 5},   // 0.1 "o"
+                                          ByteRange{5, 10},  // 0.2 " Welt"
+                                          ByteRange{10, 10}  // 0.3 ""
+                                      });
+
+  Response response;
+  response.source = source;
+  response.target = target;
+
+  // If the model is misconfigured to not give any alignment information,
+  // response will have entries for each target word, but they will all be empty.
+  response.alignments = {{{}, {}, {}, {}}};
 
   CHECK_THROWS_WITH(
       html.Restore(response),

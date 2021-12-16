@@ -29,7 +29,7 @@ inline bool equals_case_insensitive(const char *lhs, const char *rhs, size_t len
 // Alias for the above, but with compile-time known C string
 template <size_t Len>
 inline bool equals_case_insensitive(markup::string_ref &lhs, const char (&rhs)[Len]) {
-  return lhs.size == Len - 1 && equals_case_insensitive(lhs.data, rhs, Len);
+  return lhs.size == Len - 1 && equals_case_insensitive(lhs.data, rhs, Len - 1);
 }
 
 template <typename Char_t, size_t Len>

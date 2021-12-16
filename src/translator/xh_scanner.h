@@ -52,7 +52,10 @@ class scanner {
   };
 
  public:
-  explicit scanner(instream &is) : input_(is), got_tail(false) { c_scan = &scanner::scan_body; }
+  explicit scanner(instream &is)
+      : value_{nullptr, 0}, tag_name_{nullptr, 0}, attr_name_{nullptr, 0}, input_(is), got_tail(false) {
+    c_scan = &scanner::scan_body;
+  }
 
   // get next token
   token_type next_token() { return (this->*c_scan)(); }

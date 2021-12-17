@@ -34,21 +34,47 @@ class scanner {
     TT_ERROR = -1,
     TT_EOF = 0,
 
-    TT_TAG_START,  // <tag ...
-    //     ^-- happens here
-    TT_TAG_END,  // </tag>
-    //       ^-- happens here
-    // <tag ... />
-    //            ^-- or here
-    TT_ATTR,  // <tag attr="value" >
-    //                  ^-- happens here
-    TT_TEXT,
-
-    TT_DATA,  // content of followings:
-    // (also content of TT_TAG_START and TT_TAG_END, if the tag is 'script' or 'style')
-
-    TT_COMMENT_START,
-    TT_COMMENT_END,  // after "<!--" and "-->"
+    TT_TAG_START,      // <tag ...
+                       //     ^-- happens here
+                       //
+    TT_TAG_END,        // </tag>
+                       //       ^-- happens here
+                       // <tag ... />
+                       //            ^-- or here
+                       //
+    TT_ATTR,           // <tag attr="value" >
+                       //                 ^-- happens here, attr_name() and value()
+                       //                     will be filled with 'attr' and 'value'.
+                       //
+    TT_TEXT,           // <tag>xxx</tag>
+                       //         ^-- happens here
+                       // <tag>foo &amp;&amp; bar</tag>
+                       //          ^---^----^----^-- and all of here as well
+                       // Comes after TT_TAG_START or as the first token if the input
+                       // begins with text instead of a root element.
+                       //
+    TT_DATA,           // <!-- foo -->
+                       //         ^-- here
+                       // <? ... ?>
+                       //       ^-- as well as here
+                       // <script>...</script>
+                       //            ^-- or here
+                       // <style>...</style>
+                       //           ^-- or here
+                       // comes after TT_COMMENT_START, TT_PI_START, or TT_TAG_START
+                       // if the tag was <script> or <style>.
+                       //
+    TT_COMMENT_START,  // <!-- foo -->
+                       //     ^-- happens here
+                       //
+    TT_COMMENT_END,    // <!-- foo -->
+                       //             ^-- happens here
+                       //
+    TT_PI_START,       // <?xml version="1.0?>
+                       //   ^-- happens here
+                       //
+    TT_PI_END,         // <?xml version="1.0?>
+                       //                     ^-- would you believe this happens here
   };
 
  public:
@@ -82,6 +108,9 @@ class scanner {
 
   // Consumes <!-- ... -->
   token_type scan_comment();
+
+  // Consumes <?name [attrs]?>
+  token_type scan_pi();
 
   // Consumes ...</style> and ...</script>
   token_type scan_special();

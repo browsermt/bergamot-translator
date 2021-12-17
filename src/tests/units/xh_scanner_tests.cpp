@@ -245,3 +245,17 @@ TEST_CASE("scan style") {
   CHECK(scanner.next_token() == markup::scanner::TT_TAG_END);
   CHECK(scanner.next_token() == markup::scanner::TT_EOF);
 }
+
+TEST_CASE("scan processing instruction") {
+  // Based on https://searchfox.org/mozilla-central/source/dom/base/nsContentUtils.cpp#8961
+  // element.outerHTML can produce processing instructions in the html. These
+  // should be treated similar to <!-- foo -->.
+  markup::instream in("<?xml version=\"1.0\"?>");
+  markup::scanner scanner(in);
+
+  CHECK(scanner.next_token() == markup::scanner::TT_PI_START);
+  CHECK(scanner.next_token() == markup::scanner::TT_DATA);
+  CHECK(scanner.value() == "xml version=\"1.0\"");
+  CHECK(scanner.next_token() == markup::scanner::TT_PI_END);
+  CHECK(scanner.next_token() == markup::scanner::TT_EOF);
+}

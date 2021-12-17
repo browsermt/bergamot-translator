@@ -27,7 +27,7 @@ jobs:
               cp bergamot-translator-worker.wasm ../artifacts/bergamot-translator-worker-with-wormhole.wasm
               cp bergamot-translator-worker.js ../artifacts/bergamot-translator-worker-with-wormhole.js
               shasum -a 256 ../artifacts/* > ../artifacts/SHA256-1
-              cp BERGAMOT_VERSION ../artifacts/
+              cp ../BERGAMOT_VERSION ../artifacts/
             else
               echo "Failure: Artifacts Not Present"
               exit 1

@@ -92,7 +92,7 @@ jobs:
           name: "Publish Release on GitHub"
           command: |
             export COMMIT=$(echo $CIRCLE_SHA1 | cut -c -7)
-            export VERSION=$(cat ./artifacts/BERGAMOT_VERSION)
+            export VERSION=$(cat ./artifacts/BERGAMOT_VERSION | cut -c 2-)
             VERSION=$VERSION+$COMMIT
             ls -lsa ./artifacts/ > ./artifacts/FILESIZES
             cat ./artifacts/SHA256-1 ./artifacts/SHA256-2 > ./artifacts/SHA256

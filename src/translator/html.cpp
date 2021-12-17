@@ -94,11 +94,13 @@ bool IsBlockElement(std::string_view const &name) {
   return inline_ish_elements.find(std::string(name)) == inline_ish_elements.end();
 }
 
-bool IsEmptyElement(std::string_view const &name) {
+bool IsVoidTag(std::string_view const &name) {
   // List of elements for which we do not expect a closing tag, or self-closing
   // elements in XHTML. See also https://developer.mozilla.org/en-US/docs/Glossary/Empty_element
-  static std::unordered_set<std::string> empty_elements{"area",  "base", "br",   "col",   "embed",  "hr",    "img",
-                                                        "input", "link", "meta", "param", "source", "track", "wbr"};
+  // More relevant source of this list: https://searchfox.org/mozilla-central/source/dom/base/FragmentOrElement.cpp#1791
+  static std::unordered_set<std::string> empty_elements{"area",  "base",  "basefont", "bgsound", "br",    "col",
+                                                        "embed", "frame", "hr",       "img",     "input", "keygen",
+                                                        "link",  "meta",  "param",    "source",  "track", "wbr"};
 
   return empty_elements.find(std::string(name)) != empty_elements.end();
 }
@@ -476,7 +478,7 @@ HTML::HTML(std::string &&source, bool process_markup) {
         if (IsBlockElement(scanner.tag_name()) && !source.empty() && source.back() != ' ') source.push_back(' ');
 
         // pool_ takes ownership of our tag, makes sure it's freed when necessary
-        pool_.emplace_back(new Tag{std::string(scanner.tag_name()), std::string(), IsEmptyElement(scanner.tag_name())});
+        pool_.emplace_back(new Tag{std::string(scanner.tag_name()), std::string(), IsVoidTag(scanner.tag_name())});
 
         // Tag *tag is used by attribute parsing
         tag = pool_.back().get();

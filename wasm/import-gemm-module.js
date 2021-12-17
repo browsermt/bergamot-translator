@@ -3,9 +3,6 @@
  * implementation.
  */
 function createWasmGemm() {
-    // Name of the optimized gemm implementation.
-    const OPTIMIZED_GEMM = "mozIntGemm";
-
     // A map of expected gemm function to the corresponding fallback gemm function names.
     const GEMM_TO_FALLBACK_FUNCTIONS_MAP = {
         "int8_prepare_a": "int8PrepareAFallback",
@@ -17,19 +14,28 @@ function createWasmGemm() {
         "int8_select_columns_of_b": "int8SelectColumnsOfBFallback"
     };
 
-    const optimizedGemmModule = WebAssembly[OPTIMIZED_GEMM];
-    if (!optimizedGemmModule) {
-        return fallbackGemm(GEMM_TO_FALLBACK_FUNCTIONS_MAP);
-    }
+    // ToDo: Activate the if code and remove else code once optimized gemm can work without shared array buffer.
+    if (0) {
+        // Name of the optimized gemm implementation.
+        const OPTIMIZED_GEMM = "mozIntGemm";
 
-    const optimizedGemmModuleExports = new WebAssembly.Instance(optimizedGemmModule(), {"": {memory: wasmMemory}}).exports;
-    for (let key in GEMM_TO_FALLBACK_FUNCTIONS_MAP) {
-        if (!optimizedGemmModuleExports[key]) {
+        const optimizedGemmModule = WebAssembly[OPTIMIZED_GEMM];
+        if (!optimizedGemmModule) {
             return fallbackGemm(GEMM_TO_FALLBACK_FUNCTIONS_MAP);
         }
+
+        const optimizedGemmModuleExports = new WebAssembly.Instance(optimizedGemmModule(), {"": {memory: wasmMemory}}).exports;
+        for (let key in GEMM_TO_FALLBACK_FUNCTIONS_MAP) {
+            if (!optimizedGemmModuleExports[key]) {
+                return fallbackGemm(GEMM_TO_FALLBACK_FUNCTIONS_MAP);
+            }
+        }
+        console.log(`Using optimized gemm (${OPTIMIZED_GEMM}) implementation`);
+        return optimizedGemmModuleExports;
     }
-    console.log(`Using optimized gemm (${OPTIMIZED_GEMM}) implementation`);
-    return optimizedGemmModuleExports;
+    else {
+        return fallbackGemm(GEMM_TO_FALLBACK_FUNCTIONS_MAP);
+    }
 }
 
 // Return the fallback gemm implementation.

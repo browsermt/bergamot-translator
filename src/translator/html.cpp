@@ -122,16 +122,6 @@ bool Intersects(ByteRange const &range, HTML::Span const &span) {
   return range.begin <= span.end && range.end >= span.begin;
 };
 
-void FilterEmpty(HTML::Taint &stack) {
-  auto src = stack.begin();
-  auto dst = stack.begin();
-
-  for (auto src = stack.begin(); src != stack.end(); ++src)
-    if (!(*src)->empty) *(dst++) = *src;
-
-  stack.resize(dst - stack.begin());
-}
-
 bool ContainsTag(HTML::Taint const &stack, HTML::Tag const *tag) {
   return std::find(stack.rbegin(), stack.rend(), tag) != stack.rend();
 }
@@ -458,7 +448,6 @@ HTML::HTML(std::string &&source, bool process_markup) {
         auto begin = source.size();
         source.append(scanner.value());
         spans_.push_back(Span{begin, source.size(), stack});
-        FilterEmpty(stack);
       } break;
 
       case markup::scanner::TT_TAG_START:

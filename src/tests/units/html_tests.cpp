@@ -128,7 +128,7 @@ TEST_CASE("Do not abort if the input is just empty element") {
   Response response;
   html.Restore(response);
   CHECK(response.source.text == "<p></p>");
-  CHECK(response.target.text == "");  // Should be <p></p> but hey not there yet.
+  CHECK(response.target.text == "<p></p>");
 }
 
 TEST_CASE("Test case html entities") {
@@ -354,7 +354,7 @@ TEST_CASE("Test empty self-closing pair at end of input in parent") {
   CHECK(input == "hello ");
 }
 
-TEST_CASE("Test empty tag", "[!mayfail]") {
+TEST_CASE("Test empty tag") {
   std::string test_str(
       "<p id=\"1\">hello <img id=\"1.1\"><span id=\"1.2\"><u id=\"1.2.1\"></u><b id=\"1.2.2\"></b><img "
       "id=\"1.2.3\">world</span></p>\n");

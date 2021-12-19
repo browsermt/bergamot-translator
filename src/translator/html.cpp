@@ -221,32 +221,36 @@ void HardAlignments(Response const &response, std::vector<std::vector<size_t>> &
   }
 }
 
+// Internal type used to point to a position in HTML::spans_.
+typedef std::vector<HTML::Span>::const_iterator SpanIterator;
+
 void CopyTaint(Response const &response, std::vector<std::vector<size_t>> const &alignments,
-               std::vector<HTML::Taint> const &token_tags, std::vector<HTML::Taint> &token_tags_target) {
+               std::vector<SpanIterator> const &source_token_spans, std::vector<SpanIterator> &target_token_spans) {
   size_t token_offset = 0;
 
-  // Fill token_tags_target based on the alignments we just made up.
+  // Fill target_token_spans based on the alignments we just made up.
   // NOTE: this should match the exact order of Apply()
   for (size_t sentenceIdx = 0; sentenceIdx < response.target.numSentences(); ++sentenceIdx) {
-    token_tags_target.push_back(token_tags[token_offset]);  // token_tag for sentence ending gap
+    target_token_spans.push_back(source_token_spans[token_offset]);  // token_tag for sentence ending gap
     for (size_t t = 0; t < response.target.numWords(sentenceIdx); ++t) {
       size_t s = alignments[sentenceIdx][t];
       assert(s < response.source.numWords(sentenceIdx));
-      token_tags_target.push_back(token_tags[token_offset + 1 + s]);  // +1 for prefix gap
+      target_token_spans.push_back(source_token_spans[token_offset + 1 + s]);  // +1 for prefix gap
     }
 
     token_offset += response.source.numWords(sentenceIdx) + 1;  // +1 for prefix gap
   }
 
-  assert(token_offset < token_tags.size());
-  token_tags_target.push_back(token_tags[token_offset]);  // token_tag for ending whitespace
+  assert(token_offset < source_token_spans.size());
+  target_token_spans.push_back(source_token_spans[token_offset]);  // token_tag for ending whitespace
 }
 
-AnnotatedText RestoreSource(AnnotatedText const &in, std::vector<HTML::Taint> &token_tags,
-                            std::vector<HTML::Span>::const_iterator span_it,
-                            std::vector<HTML::Span>::const_iterator span_end) {
-  auto prev_it = span_it;  // safe because first span is always empty span, and
-                           // and the while-loop below will do the rest
+AnnotatedText RestoreSource(AnnotatedText const &in, std::vector<HTML::Span> const &source_spans,
+                            std::vector<SpanIterator> &source_token_spans) {
+  auto span_it = source_spans.begin();
+  auto prev_it = source_spans.begin();  // safe because first span is always empty span, and
+                                        // and the while-loop below will do the rest
+  assert(prev_it == source_spans.end() || prev_it->tags.empty());
 
   // workspace variables for lambda
   std::string html;
@@ -294,7 +298,7 @@ AnnotatedText RestoreSource(AnnotatedText const &in, std::vector<HTML::Taint> &t
         close_left = false;
       }
 
-      if (span_it + 1 != span_end && ((span_it + 1)->begin < range.end || last)) {
+      if (span_it + 1 != source_spans.end() && ((span_it + 1)->begin < range.end || last)) {
         span_it++;
         continue;
       }
@@ -303,17 +307,17 @@ AnnotatedText RestoreSource(AnnotatedText const &in, std::vector<HTML::Taint> &t
     }
 
     // TODO: This is just the taint of the last span, not the ones in between.
-    // This makes us lose empty tags, and maybe some markup as well, in the
-    // response target HTML restoration.
-    token_tags.push_back(prev_it->tags);
+    // This makes us lose some markup of parts of tokens as described above.
+    source_token_spans.push_back(prev_it);
 
     return html;
   });
 }
 
-AnnotatedText RestoreTarget(AnnotatedText const &in, std::vector<HTML::Taint> const &token_tags_target) {
-  auto token_prev_it = token_tags_target.begin();
-  auto token_tags_it = token_tags_target.begin() + 1;
+AnnotatedText RestoreTarget(AnnotatedText const &in, std::vector<HTML::Span> const &source_spans,
+                            std::vector<SpanIterator> const &target_token_spans) {
+  auto prev_span = source_spans.begin();
+  auto target_span_it = target_token_spans.begin();
 
   // workspace for lambda
   std::string html;
@@ -326,13 +330,45 @@ AnnotatedText RestoreTarget(AnnotatedText const &in, std::vector<HTML::Taint> co
 
     size_t offset = 0;  // Size added by prepending HTML
     size_t whitespace_size = CountPrefixWhitespaces(token);
+    bool close_left = true;  // See RestoreSource's implementation
 
-    assert(token_tags_it != token_tags_target.end());
-    DiffTags(*token_prev_it, *token_tags_it, opening, closing);
+    // First we scan through spans_ to catch up to the span assigned to this
+    // token. We're only interested in empty spans (empty and void elements)
+    for (auto span_it = prev_span + 1; span_it < *target_span_it; span_it++) {
+      // We're only interested in empty spans between the spans in target_span_it
+      if (span_it->size() != 0) continue;
+
+      DiffTags(prev_span->tags, span_it->tags, opening, closing);
+
+      for (auto cit = closing.crbegin(); cit != closing.crend(); ++cit) {
+        std::string close_tag = format("</{}>", (*cit)->name);
+        html.insert(offset + (close_left ? 0 : whitespace_size), close_tag);
+        offset += close_tag.size();
+      }
+
+      for (HTML::Tag const *tag : opening) {
+        std::string open_tag = format("<{}{}>", tag->name, tag->attributes);
+        html.insert(offset + whitespace_size, open_tag);
+        offset += open_tag.size();
+        close_left = false;
+      }
+
+      // Note: here, not in 3rd part of for-statement because we don't want to
+      // set prev_span if the continue clause at the beginning of this for-loop
+      // was hit.
+      prev_span = span_it;
+    }
+
+    // Now do the same thing but for our target set of tags. Note that we cannot
+    // combine this in the for-loop above (i.e. `span_it <= *target_span_it`)
+    // because there is no guarantee that the order in `target_token_spans` is
+    // the same as that of `spans`.
+
+    DiffTags(prev_span->tags, (*target_span_it)->tags, opening, closing);
 
     for (auto cit = closing.crbegin(); cit != closing.crend(); ++cit) {
       std::string close_tag = format("</{}>", (*cit)->name);
-      html.insert(offset, close_tag);
+      html.insert(offset + (close_left ? 0 : whitespace_size), close_tag);
       offset += close_tag.size();
     }
 
@@ -340,34 +376,40 @@ AnnotatedText RestoreTarget(AnnotatedText const &in, std::vector<HTML::Taint> co
       std::string open_tag = format("<{}{}>", tag->name, tag->attributes);
       html.insert(offset + whitespace_size, open_tag);
       offset += open_tag.size();
+      close_left = false;
     }
 
     // If this is the last token of the response, close all open tags.
     if (last) {
-      for (auto cit = token_tags_it->crbegin(); cit != token_tags_it->crend(); ++cit) {
+      // Note: this assert is true due to our current implementation of
+      // HardAlignments() that always matches the last token of the input with
+      // the last token of the output. But lets assume someone someday changes
+      // HardAlignments(), and then this for-loop will be necessary.
+      // assert((*target_span_it)->tags.empty());
+
+      for (auto cit = (*target_span_it)->tags.crbegin(); cit != (*target_span_it)->tags.crend(); ++cit) {
         html += format("</{}>", (*cit)->name);
       }
     }
 
-    ++token_prev_it;
-    ++token_tags_it;
+    prev_span = *target_span_it++;
 
     return html;
   });
 
   // Assert that we did in fact use all our taints
-  assert(token_tags_it == token_tags_target.end());
+  assert(target_span_it == target_token_spans.end());
 
   return out;
 }
 
 std::ostream &DebugPrintMapping(std::ostream &out, Response const &response,
                                 std::vector<std::vector<size_t>> const &alignments,
-                                std::vector<HTML::Taint> const &token_tags_target) {
-  auto taints = token_tags_target.begin();
+                                std::vector<SpanIterator> const &target_token_spans) {
+  auto spans = target_token_spans.begin();
   for (size_t sentenceIdx = 0; sentenceIdx < response.target.numSentences(); ++sentenceIdx) {
     out << "Mapped sentence prefix with tags: ";
-    for (auto &&taint : *(++taints)) out << '/' << taint->name;
+    for (auto &&taint : (*++spans)->tags) out << '/' << taint->name;
     out << '\n';
 
     for (size_t wordIdx = 0; wordIdx < response.target.numWords(sentenceIdx); ++wordIdx) {
@@ -379,16 +421,16 @@ std::ostream &DebugPrintMapping(std::ostream &out, Response const &response,
       out << " to ";
       out << std::setw(10) << std::setfill(' ') << response.source.word(sentenceIdx, alignments[sentenceIdx][wordIdx]);
       out << " with tags: ";
-      for (auto &&taint : *(++taints)) out << '/' << taint->name;
+      for (auto &&taint : (*++spans)->tags) out << '/' << taint->name;
       out << '\n';
     }
   }
 
   out << "Mapped end-of-input with tags: ";
-  for (auto &&taint : *(++taints)) out << '/' << taint->name;
+  for (auto &&taint : (*++spans)->tags) out << '/' << taint->name;
   out << '\n';
 
-  assert(++taints == token_tags_target.end());
+  assert(++spans == target_token_spans.end());
   return out;
 }
 
@@ -520,32 +562,34 @@ void HTML::Restore(Response &response) {
 
   // Reconstruction of HTML tags:
   // 1. Map each token to a Span
-  // 2. Apply the taint of that span to the token
-  // 3. Reconstruct the source HTML with these tainted tokens
-  // 4. Transfer the taint from the source tokens to the target tokens using alignment information
+  // 2. Reconstruct the source HTML with these tainted tokens
+  // 3. Transfer the spans from the source tokens to the target tokens using alignment information
+  // 4. For spans that represent empty elements (e.g. <img>) figure out their position
   // 5. Reconstruct the target HTML with these tainted tokens
 
-  std::vector<Taint> token_tags;  // List of HTML tags active per token in source
-                                  // Calculating these is a side-effect of restoring
-                                  // the HTML in response.source.
+  // source_token_spans is a vector with a pointer to a span for each token. We
+  // use iterators here to point to these positions so we can easily compare if
+  // one span comes before or after another, information we'll need when we need
+  // to figure out whether we've skipped spans (of emtpy elements) when
+  // reconstructing HTML in response.target.
+  std::vector<SpanIterator> source_token_spans;
 
-  AnnotatedText source = RestoreSource(response.source, token_tags, spans_.cbegin(), spans_.cend());
-  assert(token_tags.size() == DebugCountTokens(response.source));
+  // RestoreSource re-inserts HTML into the source text, but also identifies
+  // which span each source token fits into best.
+  AnnotatedText source = RestoreSource(response.source, spans_, source_token_spans);
+  assert(source_token_spans.size() == DebugCountTokens(response.source));
 
   // Find for every token in target the token in source that best matches.
   std::vector<std::vector<size_t>> alignments;
   HardAlignments(response, alignments);
 
-  std::vector<Taint> token_tags_target;
-  token_tags_target.emplace_back();  // add empty one to the beginning for easy
-                                     // life later on (we start iterating at 1,
-                                     // and can then do i - 1 for empty.
-  CopyTaint(response, alignments, token_tags, token_tags_target);
-  assert(token_tags_target.size() == DebugCountTokens(response.target) + 1);
+  std::vector<SpanIterator> target_token_spans;
+  CopyTaint(response, alignments, source_token_spans, target_token_spans);
+  assert(target_token_spans.size() == DebugCountTokens(response.target));
 
-  // DebugPrintMapping(std::cerr, response, alignments, token_tags_target);
+  // DebugPrintMapping(std::cerr, response, alignments, target_token_spans);
 
-  AnnotatedText target = RestoreTarget(response.target, token_tags_target);
+  AnnotatedText target = RestoreTarget(response.target, spans_, target_token_spans);
 
   response.source = source;
   response.target = target;

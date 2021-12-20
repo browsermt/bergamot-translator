@@ -64,7 +64,7 @@ class ResponseBuilder {
     if (responseOptions_.alignment) {
       buildAlignments(histories, response);
     }
-    html_.Restore(response);
+    html_.restore(response);
 
     callback_(std::move(response));
   }

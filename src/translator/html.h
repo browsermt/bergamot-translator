@@ -34,7 +34,7 @@ class HTML {
   };
 
   explicit HTML(std::string &&source, bool process_markup);
-  void Restore(Response &response);
+  void restore(Response &response);
 
  private:
   // List of text spans, and which tags are applied to them

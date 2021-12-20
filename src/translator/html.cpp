@@ -63,23 +63,23 @@ std::ostream &operator<<(std::ostream &out, HTML::Taint const &tags) {
 }
 
 // Very simple replacement for std::format introduced in C++20
-std::string format(std::string const &format_str) { return format_str; }
+std::string format(std::string const &formatTemplate) { return formatTemplate; }
 
 template <typename Arg>
-std::string format(std::string const &format_str, Arg arg) {
+std::string format(std::string const &formatTemplate, Arg arg) {
   std::ostringstream os;
-  auto index = format_str.find("{}");
+  auto index = formatTemplate.find("{}");
   assert(index != std::string::npos);
-  os << format_str.substr(0, index) << arg << format_str.substr(index + 2);
+  os << formatTemplate.substr(0, index) << arg << formatTemplate.substr(index + 2);
   return os.str();
 }
 
 template <typename Arg, typename... Args>
-std::string format(std::string const &format_str, Arg arg, Args... args) {
+std::string format(std::string const &formatTemplate, Arg arg, Args... args) {
   std::ostringstream os;
-  auto index = format_str.find("{}");
+  auto index = formatTemplate.find("{}");
   assert(index != std::string::npos);
-  os << format_str.substr(0, index) << arg << format(format_str.substr(index + 2), std::forward<Args>(args)...);
+  os << formatTemplate.substr(0, index) << arg << format(formatTemplate.substr(index + 2), std::forward<Args>(args)...);
   return os.str();
 }
 
@@ -87,11 +87,11 @@ bool isBlockElement(std::string_view const &name) {
   // List of elements that we expect might occur inside words, and that should
   // not introduce spacings around them. Not strictly inline elements, nor flow
   // elements. See also https://developer.mozilla.org/en-US/docs/Web/Guide/HTML/Content_categories
-  static std::unordered_set<std::string> inline_ish_elements{
+  static std::unordered_set<std::string> inlineishElements{
       "abbr",  "a",    "b",      "em",  "i",   "kbd",  "mark", "math", "output", "q",   "ruby",
       "small", "span", "strong", "sub", "sup", "time", "u",    "var",  "wbr",    "ins", "del"};
 
-  return inline_ish_elements.find(std::string(name)) == inline_ish_elements.end();
+  return inlineishElements.find(std::string(name)) == inlineishElements.end();
 }
 
 bool isVoidTag(std::string_view const &name) {
@@ -99,11 +99,11 @@ bool isVoidTag(std::string_view const &name) {
   // elements in XHTML. See also https://developer.mozilla.org/en-US/docs/Glossary/Empty_element
   // More relevant source of this list:
   // https://searchfox.org/mozilla-central/rev/7d17fd1fe9f0005a2fb19e5d53da4741b06a98ba/dom/base/FragmentOrElement.cpp#1791
-  static std::unordered_set<std::string> empty_elements{"area",  "base",  "basefont", "bgsound", "br",    "col",
-                                                        "embed", "frame", "hr",       "img",     "input", "keygen",
-                                                        "link",  "meta",  "param",    "source",  "track", "wbr"};
+  static std::unordered_set<std::string> voidElements{"area",  "base",  "basefont", "bgsound", "br",    "col",
+                                                      "embed", "frame", "hr",       "img",     "input", "keygen",
+                                                      "link",  "meta",  "param",    "source",  "track", "wbr"};
 
-  return empty_elements.find(std::string(name)) != empty_elements.end();
+  return voidElements.find(std::string(name)) != voidElements.end();
 }
 
 void diffTags(HTML::Taint const &prev, HTML::Taint const &curr, HTML::Taint &opening, HTML::Taint &closing) {
@@ -217,21 +217,21 @@ void hardAlignments(Response const &response, std::vector<std::vector<size_t>> &
       if (isContinuation(response.target.word(sentenceIdx, t))) {
         // Note: only looking at the previous token since that will already
         // have this treatment applied to it.
-        size_t s_curr = alignments.back()[t];
-        size_t s_prev = alignments.back()[t - 1];
-        float score_curr = response.alignments[sentenceIdx][t][s_curr];
-        float score_prev = response.alignments[sentenceIdx][t - 1][s_prev];
+        size_t currSentenceIdx = alignments.back()[t];
+        size_t prevSentenceIdx = alignments.back()[t - 1];
+        float currScore = response.alignments[sentenceIdx][t][currSentenceIdx];
+        float prevScore = response.alignments[sentenceIdx][t - 1][prevSentenceIdx];
 
-        if (score_curr > score_prev) {
+        if (currScore > prevScore) {
           // Apply this to all previous tokens in the word
           for (size_t i = t;; --i) {
-            alignments.back()[i] = s_curr;
+            alignments.back()[i] = currSentenceIdx;
 
             // Stop if this was the first token or the beginning of the word
             if (i == 0 || !isContinuation(response.target.word(sentenceIdx, i))) break;
           }
         } else {
-          alignments.back()[t] = s_prev;
+          alignments.back()[t] = prevSentenceIdx;
         }
       }
     }
@@ -242,24 +242,24 @@ void hardAlignments(Response const &response, std::vector<std::vector<size_t>> &
 }
 
 void copyTaint(Response const &response, std::vector<std::vector<size_t>> const &alignments,
-               std::vector<HTML::Taint> const &token_tags, std::vector<HTML::Taint> &token_tags_target) {
-  size_t token_offset = 0;
+               std::vector<HTML::Taint> const &sourceTokenTags, std::vector<HTML::Taint> &targetTokenTags) {
+  size_t offset = 0;
 
-  // Fill token_tags_target based on the alignments we just made up.
+  // Fill targetTokenTags based on the alignments we just made up.
   // NOTE: this should match the exact order of Apply()
   for (size_t sentenceIdx = 0; sentenceIdx < response.target.numSentences(); ++sentenceIdx) {
-    token_tags_target.push_back(token_tags[token_offset]);  // token_tag for sentence ending gap
+    targetTokenTags.push_back(sourceTokenTags[offset]);  // token_tag for sentence ending gap
     for (size_t t = 0; t < response.target.numWords(sentenceIdx); ++t) {
       size_t s = alignments[sentenceIdx][t];
       assert(s < response.source.numWords(sentenceIdx));
-      token_tags_target.push_back(token_tags[token_offset + 1 + s]);  // +1 for prefix gap
+      targetTokenTags.push_back(sourceTokenTags[offset + 1 + s]);  // +1 for prefix gap
     }
 
-    token_offset += response.source.numWords(sentenceIdx) + 1;  // +1 for prefix gap
+    offset += response.source.numWords(sentenceIdx) + 1;  // +1 for prefix gap
   }
 
-  assert(token_offset < token_tags.size());
-  token_tags_target.push_back(token_tags[token_offset]);  // token_tag for ending whitespace
+  assert(offset < sourceTokenTags.size());
+  targetTokenTags.push_back(sourceTokenTags[offset]);  // token_tag for ending whitespace
 }
 
 AnnotatedText restoreSource(AnnotatedText const &in, std::vector<HTML::Taint> &token_tags,

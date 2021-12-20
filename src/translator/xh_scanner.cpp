@@ -9,14 +9,14 @@
 
 namespace {
 
-// Simple replacement for str.ends_with(compile-time C string)
+// Simple replacement for string_view.ends_with(compile-time C string)
 template <typename Char_t, size_t Len>
-inline bool ends_with(markup::string_ref &str, const Char_t (&suffix)[Len]) {
+inline bool EndsWith(markup::string_ref &str, const Char_t (&suffix)[Len]) {
   size_t offset = str.size - (Len - 1);
   return offset <= str.size && std::memcmp(str.data + offset, suffix, Len - 1) == 0;
 }
 
-inline bool equals_case_insensitive(const char *lhs, const char *rhs, size_t len) {
+inline bool EqualsCaseInsensitive(const char *lhs, const char *rhs, size_t len) {
   for (size_t i = 0; i < len; ++i) {
     // cast to unsigned char otherwise std::tolower has undefined behaviour
     if (std::tolower(static_cast<unsigned char>(lhs[i])) != std::tolower(static_cast<unsigned char>(rhs[i])))
@@ -28,8 +28,8 @@ inline bool equals_case_insensitive(const char *lhs, const char *rhs, size_t len
 
 // Alias for the above, but with compile-time known C string
 template <size_t Len>
-inline bool equals_case_insensitive(markup::string_ref &lhs, const char (&rhs)[Len]) {
-  return lhs.size == Len - 1 && equals_case_insensitive(lhs.data, rhs, Len - 1);
+inline bool EqualsCaseInsensitive(markup::string_ref &lhs, const char (&rhs)[Len]) {
+  return lhs.size == Len - 1 && EqualsCaseInsensitive(lhs.data, rhs, Len - 1);
 }
 
 template <typename Char_t, size_t Len>
@@ -97,12 +97,12 @@ scanner::token_type scanner::scan_attr() {
   switch (input_.peek()) {
     case '>':
       input_.consume();
-      if (equals_case_insensitive(tag_name_, "script")) {
+      if (EqualsCaseInsensitive(tag_name_, "script")) {
         // script is special because we want to parse the attributes,
         // but not the content
         c_scan = &scanner::scan_special;
         return scan_special();
-      } else if (equals_case_insensitive(tag_name_, "style")) {
+      } else if (EqualsCaseInsensitive(tag_name_, "style")) {
         // same with style
         c_scan = &scanner::scan_special;
         return scan_special();
@@ -136,10 +136,11 @@ scanner::token_type scanner::scan_attr() {
         return TT_ERROR;
       default:
         if (skip_whitespace()) {
-          if (input_.peek() == '=')
+          if (input_.peek() == '=') {
             break;
-          else
+          } else {
             return TT_ATTR;  // attribute without value (HTML style) but not yet at end of tag
+          }
         }
         input_.consume();
         ++attr_name_.size;
@@ -322,7 +323,7 @@ scanner::token_type scanner::scan_comment() {
     if (input_.consume() == '\0') return TT_EOF;
     ++value_.size;
 
-    if (ends_with(value_, "-->")) {
+    if (EndsWith(value_, "-->")) {
       got_tail = true;
       value_.size -= 3;
       break;
@@ -344,7 +345,7 @@ scanner::token_type scanner::scan_pi() {
     if (input_.consume() == '\0') return TT_EOF;
     ++value_.size;
 
-    if (ends_with(value_, "?>")) {
+    if (EndsWith(value_, "?>")) {
       got_tail = true;
       value_.size -= 2;
       break;
@@ -375,7 +376,7 @@ scanner::token_type scanner::scan_special() {
 
       // Test for the "tag" bit of "</tag>". Doing case insensitive compare because <I>...</i> is okay.
       size_t pos_tag_name = value_.size - tag_name_.size - 1;  // end - tag>
-      if (!equals_case_insensitive(value_.data + pos_tag_name, tag_name_.data, tag_name_.size)) continue;
+      if (!EqualsCaseInsensitive(value_.data + pos_tag_name, tag_name_.data, tag_name_.size)) continue;
 
       got_tail = true;
       value_.size -= tag_name_.size + 3;

@@ -97,7 +97,7 @@ bool IsBlockElement(std::string_view const &name) {
 bool IsVoidTag(std::string_view const &name) {
   // List of elements for which we do not expect a closing tag, or self-closing
   // elements in XHTML. See also https://developer.mozilla.org/en-US/docs/Glossary/Empty_element
-  // More relevant source of this list: https://searchfox.org/mozilla-central/source/dom/base/FragmentOrElement.cpp#1791
+  // More relevant source of this list: https://searchfox.org/mozilla-central/rev/7d17fd1fe9f0005a2fb19e5d53da4741b06a98ba/dom/base/FragmentOrElement.cpp#1791
   static std::unordered_set<std::string> empty_elements{"area",  "base",  "basefont", "bgsound", "br",    "col",
                                                         "embed", "frame", "hr",       "img",     "input", "keygen",
                                                         "link",  "meta",  "param",    "source",  "track", "wbr"};

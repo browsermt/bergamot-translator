@@ -5,7 +5,7 @@
 
 TEST_CASE("scan element with attributes") {
   markup::instream in("<div id=\"test\" class=\"a b c \">");
-  markup::scanner scanner(in);
+  markup::Scanner scanner(in);
 
   CHECK(scanner.next() == markup::Scanner::TT_TAG_START);
   CHECK(scanner.tag() == "div");

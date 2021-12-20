@@ -79,12 +79,15 @@ class Scanner {
 
  public:
   explicit Scanner(instream &is)
-      : value_{nullptr, 0}, tag_name_{nullptr, 0}, attr_name_{nullptr, 0}, input_(is), got_tail_(false) {
-    c_scan = &Scanner::scanBody;
-  }
+      : value_{nullptr, 0},
+        tagName_{nullptr, 0},
+        attributeName_{nullptr, 0},
+        input_(is),
+        scanFun_(&Scanner::scanBody),
+        gotTail_(false) {}
 
   // get next token
-  TokenType next() { return (this->*c_scan)(); }
+  TokenType next() { return (this->*scanFun_)(); }
 
   // get value of TT_TEXT, TT_ATTR and TT_DATA
   std::string_view value() const;
@@ -97,8 +100,6 @@ class Scanner {
 
  private: /* methods */
   typedef TokenType (Scanner::*ScanPtr)();
-
-  ScanPtr c_scan;  // current 'reader'
 
   // Consumes the text around and between tags
   TokenType scanBody();
@@ -119,7 +120,7 @@ class Scanner {
   TokenType scanTag();
 
   // Consumes '&amp;' etc, emits parent_token_type
-  TokenType scanEntity(TokenType parent_token_type);
+  TokenType scanEntity(TokenType parentTokenType);
 
   size_t skipWhitespace();
 
@@ -129,11 +130,13 @@ class Scanner {
 
  private: /* data */
   string_ref value_;
-  string_ref tag_name_;
-  string_ref attr_name_;
+  string_ref tagName_;
+  string_ref attributeName_;
+
+  ScanPtr scanFun_;  // current 'reader'
 
   instream &input_;
 
-  bool got_tail_;  // aux flag used in scanComment, scanSpecial, scanProcessingInstruction
+  bool gotTail_;  // aux flag used in scanComment, scanSpecial, scanProcessingInstruction
 };
 }  // namespace markup

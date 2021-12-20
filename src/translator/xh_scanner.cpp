@@ -193,7 +193,7 @@ scanner::token_type scanner::scan_attr() {
 // Emits:
 // - TT_TAG_START if tag head is read
 // - TT_COMMENT_START
-// - TT_PI_START
+// - TT_PROCESSING_INSTRUCTION_START
 // - TT_CDATA_START
 // - TT_ENTITY_START
 // - TT_ERROR if unexpected character or end
@@ -219,8 +219,8 @@ scanner::token_type scanner::scan_tag() {
       c_scan = &scanner::scan_comment;
       return TT_COMMENT_START;
     } else if (tag_name_ == "?") {
-      c_scan = &scanner::scan_pi;
-      return TT_PI_START;
+      c_scan = &scanner::scan_processing_instruction;
+      return TT_PROCESSING_INSTRUCTION_START;
     }
   }
 
@@ -332,11 +332,11 @@ scanner::token_type scanner::scan_comment() {
   return TT_DATA;
 }
 
-scanner::token_type scanner::scan_pi() {
+scanner::token_type scanner::scan_processing_instruction() {
   if (got_tail) {
     c_scan = &scanner::scan_body;
     got_tail = false;
-    return TT_PI_END;
+    return TT_PROCESSING_INSTRUCTION_END;
   }
 
   value_ = string_ref{input_.pos(), 0};

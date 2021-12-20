@@ -253,9 +253,9 @@ TEST_CASE("scan processing instruction") {
   markup::instream in("<?xml version=\"1.0\"?>");
   markup::scanner scanner(in);
 
-  CHECK(scanner.next_token() == markup::scanner::TT_PI_START);
+  CHECK(scanner.next_token() == markup::scanner::TT_PROCESSING_INSTRUCTION_START);
   CHECK(scanner.next_token() == markup::scanner::TT_DATA);
   CHECK(scanner.value() == "xml version=\"1.0\"");
-  CHECK(scanner.next_token() == markup::scanner::TT_PI_END);
+  CHECK(scanner.next_token() == markup::scanner::TT_PROCESSING_INSTRUCTION_END);
   CHECK(scanner.next_token() == markup::scanner::TT_EOF);
 }

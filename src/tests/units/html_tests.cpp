@@ -16,7 +16,7 @@ std::ostream &operator<<(std::ostream &out, std::pair<ByteRange, ByteRange> cons
 
 std::ostream &operator<<(std::ostream &out, ByteRange const &b) { return out << '{' << b.begin << ',' << b.end << '}'; }
 
-std::vector<ByteRange> AsByteRanges(AnnotatedText const &annotation) {
+std::vector<ByteRange> asByteRanges(AnnotatedText const &annotation) {
   std::vector<ByteRange> words;
   words.emplace_back(annotation.annotation.gap(0));
   for (size_t sentenceIdx = 0; sentenceIdx < annotation.numSentences(); ++sentenceIdx) {
@@ -27,7 +27,7 @@ std::vector<ByteRange> AsByteRanges(AnnotatedText const &annotation) {
   return words;
 }
 
-std::vector<std::string> AsTokens(AnnotatedText const &annotation) {
+std::vector<std::string> asTokens(AnnotatedText const &annotation) {
   std::vector<std::string> words;
   words.emplace_back(annotation.gap(0));
   for (size_t sentenceIdx = 0; sentenceIdx < annotation.numSentences(); ++sentenceIdx) {
@@ -38,7 +38,7 @@ std::vector<std::string> AsTokens(AnnotatedText const &annotation) {
   return words;
 }
 
-void RecordSentenceFromByteRange(AnnotatedText &text, std::vector<ByteRange> const &ranges) {
+void recordSentenceFromByteRange(AnnotatedText &text, std::vector<ByteRange> const &ranges) {
   assert(ranges.size() > 0);
 
   std::vector<string_view> tokens;
@@ -70,9 +70,9 @@ TEST_CASE("Ignore HTML if process_markup is false") {
   response.source.text = html_code;
   response.target.text = html_code;
   // Note: response.alignments is empty, which is allowed in this case
-  html.Restore(response);
+  html.restore(response);
 
-  // Assert that Restore() does not mess with my HTML code
+  // Assert that restore() does not mess with my HTML code
   CHECK(response.source.text == html_code);
 }
 
@@ -83,7 +83,7 @@ TEST_CASE("Abort if alignments are missing") {
   HTML html(std::move(input), true);
 
   AnnotatedText source("hello world\n");
-  RecordSentenceFromByteRange(source, {
+  recordSentenceFromByteRange(source, {
                                           ByteRange{0, 4},   // 0.0 "hell"
                                           ByteRange{4, 5},   // 0.1 "o"
                                           ByteRange{5, 11},  // 0.2 " world"
@@ -91,7 +91,7 @@ TEST_CASE("Abort if alignments are missing") {
                                       });
 
   AnnotatedText target("hallo Welt\n");
-  RecordSentenceFromByteRange(target, {
+  recordSentenceFromByteRange(target, {
                                           ByteRange{0, 4},   // 0.0 "hall"
                                           ByteRange{4, 5},   // 0.1 "o"
                                           ByteRange{5, 10},  // 0.2 " Welt"
@@ -104,7 +104,7 @@ TEST_CASE("Abort if alignments are missing") {
   // Note: explicitly not setting response.alignments
 
   CHECK_THROWS_WITH(
-      html.Restore(response),
+      html.restore(response),
       "Response object does not contain alignments. TranslationModel or ResponseOptions is misconfigured?");
 }
 
@@ -115,7 +115,7 @@ TEST_CASE("Abort if alignments are misconfigured") {
   HTML html(std::move(input), true);
 
   AnnotatedText source("hello world\n");
-  RecordSentenceFromByteRange(source, {
+  recordSentenceFromByteRange(source, {
                                           ByteRange{0, 4},   // 0.0 "hell"
                                           ByteRange{4, 5},   // 0.1 "o"
                                           ByteRange{5, 11},  // 0.2 " world"
@@ -123,7 +123,7 @@ TEST_CASE("Abort if alignments are misconfigured") {
                                       });
 
   AnnotatedText target("hallo Welt\n");
-  RecordSentenceFromByteRange(target, {
+  recordSentenceFromByteRange(target, {
                                           ByteRange{0, 4},   // 0.0 "hall"
                                           ByteRange{4, 5},   // 0.1 "o"
                                           ByteRange{5, 10},  // 0.2 " Welt"
@@ -139,7 +139,7 @@ TEST_CASE("Abort if alignments are misconfigured") {
   response.alignments = {{{}, {}, {}, {}}};
 
   CHECK_THROWS_WITH(
-      html.Restore(response),
+      html.restore(response),
       "Response object does not contain alignments. TranslationModel or ResponseOptions is misconfigured?");
 }
 
@@ -149,7 +149,7 @@ TEST_CASE("Do not abort if the input is just empty") {
   CHECK(input == "");
 
   Response response;
-  html.Restore(response);
+  html.restore(response);
   CHECK(response.source.text == "");
   CHECK(response.target.text == "");
 }
@@ -160,7 +160,7 @@ TEST_CASE("Do not abort if the input is just empty element") {
   CHECK(input == "");
 
   Response response;
-  html.Restore(response);
+  html.restore(response);
   CHECK(response.source.text == "<p></p>");
   CHECK(response.target.text == "");  // Should be <p></p> but hey not there yet.
 }
@@ -187,7 +187,7 @@ TEST_CASE("Test reconstruction of target sentence") {
   CHECK(input == "hello world\n");
 
   AnnotatedText source("hello world\n");
-  RecordSentenceFromByteRange(source, {
+  recordSentenceFromByteRange(source, {
                                           ByteRange{0, 4},   // 0.0 "hell"
                                           ByteRange{4, 5},   // 0.1 "o"
                                           ByteRange{5, 11},  // 0.2 " world"
@@ -195,7 +195,7 @@ TEST_CASE("Test reconstruction of target sentence") {
                                       });
 
   AnnotatedText target("hallo Welt\n");
-  RecordSentenceFromByteRange(target, {
+  recordSentenceFromByteRange(target, {
                                           ByteRange{0, 4},   // 0.0 "hall"
                                           ByteRange{4, 5},   // 0.1 "o"
                                           ByteRange{5, 10},  // 0.2 " Welt"
@@ -207,14 +207,14 @@ TEST_CASE("Test reconstruction of target sentence") {
   response.target = target;
   response.alignments = {identity_matrix<float>(4)};
 
-  html.Restore(response);
+  html.restore(response);
 
   std::vector<std::string> html_tokens_source{"", "<p>hell", "o", " <b>world", "", "</b></p>\n"};
 
   std::vector<std::string> html_tokens_target{"", "<p>hall", "o", " <b>Welt", "", "</b></p>\n"};
 
-  CHECK(AsTokens(response.source) == html_tokens_source);
-  CHECK(AsTokens(response.target) == html_tokens_target);
+  CHECK(asTokens(response.source) == html_tokens_source);
+  CHECK(asTokens(response.target) == html_tokens_target);
 }
 
 TEST_CASE("Test reconstruction of target sentence with entities") {
@@ -223,7 +223,7 @@ TEST_CASE("Test reconstruction of target sentence with entities") {
   CHECK(input == "hello world & friends!\n");
 
   AnnotatedText source("hello world & friends!\n");
-  RecordSentenceFromByteRange(source, {
+  recordSentenceFromByteRange(source, {
                                           ByteRange{0, 4},    // 0.0 "hell"
                                           ByteRange{4, 5},    // 0.1 "o"
                                           ByteRange{5, 11},   // 0.2 " world"
@@ -234,7 +234,7 @@ TEST_CASE("Test reconstruction of target sentence with entities") {
                                       });
 
   AnnotatedText target("hallo Welt & Freunde!\n");
-  RecordSentenceFromByteRange(target, {
+  recordSentenceFromByteRange(target, {
                                           ByteRange{0, 4},    // 0.0 "hall"
                                           ByteRange{4, 5},    // 0.1 "o"
                                           ByteRange{5, 10},   // 0.2 " Welt"
@@ -249,7 +249,7 @@ TEST_CASE("Test reconstruction of target sentence with entities") {
   response.target = target;
   response.alignments = {identity_matrix<float>(7)};
 
-  html.Restore(response);
+  html.restore(response);
 
   std::vector<std::string> html_tokens_source{"",         "<p>hell", "o", " <b>world", " &amp;",
                                               " friends", "!",       "",  "</b></p>\n"};
@@ -258,8 +258,8 @@ TEST_CASE("Test reconstruction of target sentence with entities") {
 
                                               " Freunde", "!",       "",  "</b></p>\n"};
 
-  CHECK(AsTokens(response.source) == html_tokens_source);
-  CHECK(AsTokens(response.target) == html_tokens_target);
+  CHECK(asTokens(response.source) == html_tokens_source);
+  CHECK(asTokens(response.target) == html_tokens_target);
 }
 
 TEST_CASE("Test reconstruction of target with multiple sentences") {
@@ -270,14 +270,14 @@ TEST_CASE("Test reconstruction of target with multiple sentences") {
   AnnotatedText source("hello world! How does this  deal with multiple sentences? Will it work?\n");
   CHECK(source.text == input);
 
-  RecordSentenceFromByteRange(source, {
+  recordSentenceFromByteRange(source, {
                                           ByteRange{0, 4},    // 0.0 "hell"
                                           ByteRange{4, 5},    // 0.1 "o"
                                           ByteRange{5, 11},   // 0.2 " world"
                                           ByteRange{11, 12},  // 0.3 "!"
                                           ByteRange{12, 12}   // 0.4 ""
                                       });
-  RecordSentenceFromByteRange(source, {
+  recordSentenceFromByteRange(source, {
                                           ByteRange{13, 16},  // 1.0 "How"
                                           ByteRange{16, 21},  // 1.1 " does"
                                           ByteRange{21, 26},  // 1.2 " this"
@@ -289,7 +289,7 @@ TEST_CASE("Test reconstruction of target with multiple sentences") {
                                           ByteRange{56, 57},  // 1.8 "?"
                                           ByteRange{57, 57}   // 1.9 ""
                                       });
-  RecordSentenceFromByteRange(source, {
+  recordSentenceFromByteRange(source, {
                                           ByteRange{58, 62},  // 2.0 "Will"
                                           ByteRange{62, 65},  // 2.1 " it"
                                           ByteRange{65, 70},  // 2.2 " work"
@@ -298,14 +298,14 @@ TEST_CASE("Test reconstruction of target with multiple sentences") {
                                       });
 
   AnnotatedText target("hallo Welt! Wie geht das mit mehreren Sätzen um? Wird es funktionieren?\n");
-  RecordSentenceFromByteRange(target, {
+  recordSentenceFromByteRange(target, {
                                           ByteRange{0, 4},    // 0.0 "hall"
                                           ByteRange{4, 5},    // 0.1 "o"
                                           ByteRange{5, 10},   // 0.2 " Welt"
                                           ByteRange{10, 11},  // 0.3 "!"
                                           ByteRange{11, 11},  // 0.4 ""
                                       });
-  RecordSentenceFromByteRange(target, {
+  recordSentenceFromByteRange(target, {
                                           ByteRange{12, 15},  // 1.0 "Wie"
                                           ByteRange{15, 20},  // 1.1 " geht"
                                           ByteRange{20, 24},  // 1.2 " das"
@@ -317,7 +317,7 @@ TEST_CASE("Test reconstruction of target with multiple sentences") {
                                           ByteRange{48, 49},  // 1.8 "?"
                                           ByteRange{49, 49},  // 1.9 ""
                                       });
-  RecordSentenceFromByteRange(target, {
+  recordSentenceFromByteRange(target, {
                                           ByteRange{50, 54},  // 2.0 "Wird"
                                           ByteRange{54, 57},  // 2.1 " es"
                                           ByteRange{57, 71},  // 2.2 " funktionieren"
@@ -329,13 +329,13 @@ TEST_CASE("Test reconstruction of target with multiple sentences") {
       "",       "hall", "o",   " Welt", "!", "",  " ",    "Wie", " geht",          " das", " mit", " mehreren",
       " Sätze", "n",    " um", "?",     "",  " ", "Wird", " es", " funktionieren", "?",    "",     "\n"};
 
-  CHECK(AsTokens(target) == text_tokens_source);
+  CHECK(asTokens(target) == text_tokens_source);
 
   Response response;
   response.source = source;
   response.target = target;
   response.alignments = {identity_matrix<float>(5), identity_matrix<float>(10), identity_matrix<float>(5)};
-  html.Restore(response);
+  html.restore(response);
 
   std::vector<std::string> html_tokens_source{"",
                                               "<p>hell",
@@ -361,7 +361,7 @@ TEST_CASE("Test reconstruction of target with multiple sentences") {
                                               "?",
                                               "",
                                               "</p>\n"};
-  CHECK(AsTokens(response.source) == html_tokens_source);
+  CHECK(asTokens(response.source) == html_tokens_source);
 }
 
 TEST_CASE("Test self-closing tag (HTML5)") {
@@ -414,7 +414,7 @@ TEST_CASE("Test empty tag", "[!mayfail]") {
 
   response.alignments = {identity_matrix<float>(4)};
 
-  html.Restore(response);
+  html.restore(response);
   CHECK(response.source.text == test_str);
   CHECK(response.target.text == test_str);
 }
@@ -473,7 +473,7 @@ TEST_CASE("End-to-end translation") {
     response.target.appendEndingWhitespace("\n");
   }
 
-  html.Restore(response);
+  html.restore(response);
 
   {
     AnnotatedText source;
@@ -491,7 +491,7 @@ TEST_CASE("End-to-end translation") {
     source.appendSentence("", sentence.begin(), sentence.end());
     source.appendEndingWhitespace("</p>\n");
 
-    CHECK(AsTokens(response.source) == AsTokens(source));
+    CHECK(asTokens(response.source) == asTokens(source));
   }
 
   {
@@ -511,7 +511,7 @@ TEST_CASE("End-to-end translation") {
     target.appendSentence("", sentence.begin(), sentence.end());
     target.appendEndingWhitespace("</p>\n");
 
-    CHECK(AsTokens(response.target) == AsTokens(target));
+    CHECK(asTokens(response.target) == asTokens(target));
   }
 }
 

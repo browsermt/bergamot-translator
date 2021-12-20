@@ -11,12 +11,12 @@ namespace {
 
 // Simple replacement for string_view.ends_with(compile-time C string)
 template <typename Char_t, size_t Len>
-inline bool EndsWith(markup::string_ref &str, const Char_t (&suffix)[Len]) {
+inline bool endsWith(markup::string_ref &str, const Char_t (&suffix)[Len]) {
   size_t offset = str.size - (Len - 1);
   return offset <= str.size && std::memcmp(str.data + offset, suffix, Len - 1) == 0;
 }
 
-inline bool EqualsCaseInsensitive(const char *lhs, const char *rhs, size_t len) {
+inline bool equalsCaseInsensitive(const char *lhs, const char *rhs, size_t len) {
   for (size_t i = 0; i < len; ++i) {
     // cast to unsigned char otherwise std::tolower has undefined behaviour
     if (std::tolower(static_cast<unsigned char>(lhs[i])) != std::tolower(static_cast<unsigned char>(rhs[i])))
@@ -28,8 +28,8 @@ inline bool EqualsCaseInsensitive(const char *lhs, const char *rhs, size_t len) 
 
 // Alias for the above, but with compile-time known C string
 template <size_t Len>
-inline bool EqualsCaseInsensitive(markup::string_ref &lhs, const char (&rhs)[Len]) {
-  return lhs.size == Len - 1 && EqualsCaseInsensitive(lhs.data, rhs, Len - 1);
+inline bool equalsCaseInsensitive(markup::string_ref &lhs, const char (&rhs)[Len]) {
+  return lhs.size == Len - 1 && equalsCaseInsensitive(lhs.data, rhs, Len - 1);
 }
 
 template <typename Char_t, size_t Len>
@@ -43,22 +43,22 @@ namespace markup {
 
 // case sensitive string equality test
 // s_lowcase shall be lowercase string
-std::string_view scanner::value() const { return std::string_view(value_.data, value_.size); }
+std::string_view Scanner::value() const { return std::string_view(value_.data, value_.size); }
 
-std::string_view scanner::attr_name() const { return std::string_view(attr_name_.data, attr_name_.size); }
+std::string_view Scanner::attribute() const { return std::string_view(attr_name_.data, attr_name_.size); }
 
-std::string_view scanner::tag_name() const { return std::string_view(tag_name_.data, tag_name_.size); }
+std::string_view Scanner::tag() const { return std::string_view(tag_name_.data, tag_name_.size); }
 
-scanner::token_type scanner::scan_body() {
+Scanner::TokenType Scanner::scanBody() {
   value_ = string_ref{input_.pos(), 0};
 
   switch (input_.peek()) {
     case '\0':
       return TT_EOF;
     case '<':
-      return scan_tag();
+      return scanTag();
     case '&':
-      return scan_entity(TT_TEXT);
+      return scanEntity(TT_TEXT);
   }
 
   while (true) {
@@ -79,43 +79,43 @@ scanner::token_type scanner::scan_body() {
 //   <tag attr="value">...</tag>
 //       |------------|
 // Followed by:
-// - scan_special if <script> or <style>
-// - scan_body
+// - scanSpecial if <script> or <style>
+// - scanBody
 // - another scan_head for the next attribute or end of open tag
 // Returns:
-// - TT_ATTR if attribute is read
+// - TT_ATTRIBUTE if attribute is read
 // - TT_TAG_END if self-closing tag
 // - TT_ERROR if wrong character encountered
-// - TT_EOF if unexpected end of input (will not return TT_ATTR if attribute value wasn't finished yet)
-// - TT_TAG_END through scan_special
-// - TT_TEXT through scan_body
-scanner::token_type scanner::scan_attr() {
+// - TT_EOF if unexpected end of input (will not return TT_ATTRIBUTE if attribute value wasn't finished yet)
+// - TT_TAG_END through scanSpecial
+// - TT_TEXT through scanBody
+Scanner::TokenType Scanner::scanAttribute() {
   // Skip all whitespace between tag name or last attribute and next attribute or '>'
-  skip_whitespace();
+  skipWhitespace();
 
   // Find end of tag name
   switch (input_.peek()) {
     case '>':
       input_.consume();
-      if (EqualsCaseInsensitive(tag_name_, "script")) {
+      if (equalsCaseInsensitive(tag_name_, "script")) {
         // script is special because we want to parse the attributes,
         // but not the content
-        c_scan = &scanner::scan_special;
-        return scan_special();
-      } else if (EqualsCaseInsensitive(tag_name_, "style")) {
+        c_scan = &Scanner::scanSpecial;
+        return scanSpecial();
+      } else if (equalsCaseInsensitive(tag_name_, "style")) {
         // same with style
-        c_scan = &scanner::scan_special;
-        return scan_special();
+        c_scan = &Scanner::scanSpecial;
+        return scanSpecial();
       } else {
-        c_scan = &scanner::scan_body;
-        return scan_body();
+        c_scan = &Scanner::scanBody;
+        return scanBody();
       }
     case '/':
       input_.consume();
       if (input_.peek() == '>') {
         // self closing tag
         input_.consume();
-        c_scan = &scanner::scan_body;
+        c_scan = &Scanner::scanBody;
         return TT_TAG_END;
       } else {
         return TT_ERROR;
@@ -131,15 +131,15 @@ scanner::token_type scanner::scan_attr() {
       case '\0':
         return TT_EOF;
       case '>':
-        return TT_ATTR;  // attribute without value (HTML style) at end of tag
+        return TT_ATTRIBUTE;  // attribute without value (HTML style) at end of tag
       case '<':
         return TT_ERROR;
       default:
-        if (skip_whitespace()) {
+        if (skipWhitespace()) {
           if (input_.peek() == '=') {
             break;
           } else {
-            return TT_ATTR;  // attribute without value (HTML style) but not yet at end of tag
+            return TT_ATTRIBUTE;  // attribute without value (HTML style) but not yet at end of tag
           }
         }
         input_.consume();
@@ -150,7 +150,7 @@ scanner::token_type scanner::scan_attr() {
 
   // consume '=' and any following whitespace
   input_.consume();
-  skip_whitespace();
+  skipWhitespace();
   // attribute value...
 
   char quote;  // Either '"' or '\'' depending on which quote we're searching for
@@ -164,7 +164,7 @@ scanner::token_type scanner::scan_attr() {
           return TT_ERROR;
         } else if (input_.peek() == quote) {
           input_.consume();
-          return TT_ATTR;
+          return TT_ATTRIBUTE;
         } else {
           input_.consume();
           ++value_.size;
@@ -175,8 +175,8 @@ scanner::token_type scanner::scan_attr() {
       value_ = string_ref{input_.pos(), 0};
 
       while (true) {
-        if (is_whitespace(input_.peek())) return TT_ATTR;
-        if (input_.peek() == '>') return TT_ATTR;  // '>' will be consumed next round
+        if (isWhitespace(input_.peek())) return TT_ATTRIBUTE;
+        if (input_.peek() == '>') return TT_ATTRIBUTE;  // '>' will be consumed next round
         input_.consume();
         ++value_.size;
       }
@@ -197,7 +197,7 @@ scanner::token_type scanner::scan_attr() {
 // - TT_CDATA_START
 // - TT_ENTITY_START
 // - TT_ERROR if unexpected character or end
-scanner::token_type scanner::scan_tag() {
+Scanner::TokenType Scanner::scanTag() {
   if (input_.consume() != '<') return TT_ERROR;
 
   bool is_tail = input_.peek() == '/';
@@ -206,7 +206,7 @@ scanner::token_type scanner::scan_tag() {
   tag_name_ = string_ref{input_.pos(), 0};
 
   while (input_.peek()) {
-    if (skip_whitespace()) break;
+    if (skipWhitespace()) break;
 
     if (input_.peek() == '/' || input_.peek() == '>') break;
 
@@ -216,10 +216,10 @@ scanner::token_type scanner::scan_tag() {
     // Note: these tests are executed at every char, thus eager.
     // "<?xml" will match on `tag_name_ == "?"`.
     if (tag_name_ == "!--") {
-      c_scan = &scanner::scan_comment;
+      c_scan = &Scanner::scanComment;
       return TT_COMMENT_START;
     } else if (tag_name_ == "?") {
-      c_scan = &scanner::scan_processing_instruction;
+      c_scan = &Scanner::scanProcessingInstruction;
       return TT_PROCESSING_INSTRUCTION_START;
     }
   }
@@ -228,11 +228,11 @@ scanner::token_type scanner::scan_tag() {
 
   if (is_tail) return input_.consume() == '>' ? TT_TAG_END : TT_ERROR;
 
-  c_scan = &scanner::scan_attr;
+  c_scan = &Scanner::scanAttribute;
   return TT_TAG_START;
 }
 
-scanner::token_type scanner::scan_entity(token_type parent_token_type) {
+Scanner::TokenType Scanner::scanEntity(TokenType parent_token_type) {
   // `entity` includes starting '&' and ending ';'
   string_ref entity{input_.pos(), 0};
   bool has_end = false;
@@ -258,14 +258,14 @@ scanner::token_type scanner::scan_entity(token_type parent_token_type) {
   }
 
   // If we can decode the entity, do so
-  if (has_end && resolve_entity(entity, value_)) return parent_token_type;
+  if (has_end && resolveEntity(entity, value_)) return parent_token_type;
 
   // Otherwise, just yield the whole thing undecoded, interpret it as text
   value_ = entity;
   return parent_token_type;
 }
 
-bool scanner::resolve_entity(string_ref const &buffer, string_ref &decoded) const {
+bool Scanner::resolveEntity(string_ref const &buffer, string_ref &decoded) const {
   static char lt = '<', gt = '>', amp = '&', quot = '"', apos = '\'', nbsp = ' ';
 
   if (buffer == "&lt;") {
@@ -297,23 +297,23 @@ bool scanner::resolve_entity(string_ref const &buffer, string_ref &decoded) cons
 
 // skip whitespaces.
 // returns how many whitespaces were skipped
-size_t scanner::skip_whitespace() {
+size_t Scanner::skipWhitespace() {
   size_t skipped = 0;
-  while (is_whitespace(input_.peek())) {
+  while (isWhitespace(input_.peek())) {
     input_.consume();
     ++skipped;
   }
   return skipped;
 }
 
-bool scanner::is_whitespace(char c) {
+bool Scanner::isWhitespace(char c) {
   return c <= ' ' && (c == ' ' || c == '\t' || c == '\n' || c == '\r' || c == '\f');
 }
 
-scanner::token_type scanner::scan_comment() {
-  if (got_tail) {
-    c_scan = &scanner::scan_body;
-    got_tail = false;
+Scanner::TokenType Scanner::scanComment() {
+  if (got_tail_) {
+    c_scan = &Scanner::scanBody;
+    got_tail_ = false;
     return TT_COMMENT_END;
   }
 
@@ -323,8 +323,8 @@ scanner::token_type scanner::scan_comment() {
     if (input_.consume() == '\0') return TT_EOF;
     ++value_.size;
 
-    if (EndsWith(value_, "-->")) {
-      got_tail = true;
+    if (endsWith(value_, "-->")) {
+      got_tail_ = true;
       value_.size -= 3;
       break;
     }
@@ -332,10 +332,10 @@ scanner::token_type scanner::scan_comment() {
   return TT_DATA;
 }
 
-scanner::token_type scanner::scan_processing_instruction() {
-  if (got_tail) {
-    c_scan = &scanner::scan_body;
-    got_tail = false;
+Scanner::TokenType Scanner::scanProcessingInstruction() {
+  if (got_tail_) {
+    c_scan = &Scanner::scanBody;
+    got_tail_ = false;
     return TT_PROCESSING_INSTRUCTION_END;
   }
 
@@ -345,8 +345,8 @@ scanner::token_type scanner::scan_processing_instruction() {
     if (input_.consume() == '\0') return TT_EOF;
     ++value_.size;
 
-    if (EndsWith(value_, "?>")) {
-      got_tail = true;
+    if (endsWith(value_, "?>")) {
+      got_tail_ = true;
       value_.size -= 2;
       break;
     }
@@ -354,10 +354,10 @@ scanner::token_type scanner::scan_processing_instruction() {
   return TT_DATA;
 }
 
-scanner::token_type scanner::scan_special() {
-  if (got_tail) {
-    c_scan = &scanner::scan_body;
-    got_tail = false;
+Scanner::TokenType Scanner::scanSpecial() {
+  if (got_tail_) {
+    c_scan = &Scanner::scanBody;
+    got_tail_ = false;
     return TT_TAG_END;
   }
 
@@ -376,9 +376,9 @@ scanner::token_type scanner::scan_special() {
 
       // Test for the "tag" bit of "</tag>". Doing case insensitive compare because <I>...</i> is okay.
       size_t pos_tag_name = value_.size - tag_name_.size - 1;  // end - tag>
-      if (!EqualsCaseInsensitive(value_.data + pos_tag_name, tag_name_.data, tag_name_.size)) continue;
+      if (!equalsCaseInsensitive(value_.data + pos_tag_name, tag_name_.data, tag_name_.size)) continue;
 
-      got_tail = true;
+      got_tail_ = true;
       value_.size -= tag_name_.size + 3;
       break;
     }

@@ -28,9 +28,9 @@ struct string_ref {
   size_t size;
 };
 
-class scanner {
+class Scanner {
  public:
-  enum token_type {
+  enum TokenType {
     TT_ERROR = -1,
     TT_EOF = 0,
 
@@ -42,7 +42,7 @@ class scanner {
                                       // <tag ... />
                                       //            ^-- or here
                                       //
-    TT_ATTR,                          // <tag attr="value" >
+    TT_ATTRIBUTE,                     // <tag attr="value" >
                                       //                 ^-- happens here, attr_name() and value()
                                       //                     will be filled with 'attr' and 'value'.
                                       //
@@ -78,54 +78,54 @@ class scanner {
   };
 
  public:
-  explicit scanner(instream &is)
-      : value_{nullptr, 0}, tag_name_{nullptr, 0}, attr_name_{nullptr, 0}, input_(is), got_tail(false) {
-    c_scan = &scanner::scan_body;
+  explicit Scanner(instream &is)
+      : value_{nullptr, 0}, tag_name_{nullptr, 0}, attr_name_{nullptr, 0}, input_(is), got_tail_(false) {
+    c_scan = &Scanner::scanBody;
   }
 
   // get next token
-  token_type next_token() { return (this->*c_scan)(); }
+  TokenType next() { return (this->*c_scan)(); }
 
   // get value of TT_TEXT, TT_ATTR and TT_DATA
   std::string_view value() const;
 
   // get attribute name
-  std::string_view attr_name() const;
+  std::string_view attribute() const;
 
   // get tag name
-  std::string_view tag_name() const;
+  std::string_view tag() const;
 
  private: /* methods */
-  typedef token_type (scanner::*scan)();
+  typedef TokenType (Scanner::*ScanPtr)();
 
-  scan c_scan;  // current 'reader'
+  ScanPtr c_scan;  // current 'reader'
 
   // Consumes the text around and between tags
-  token_type scan_body();
+  TokenType scanBody();
 
   // Consumes name="attr"
-  token_type scan_attr();
+  TokenType scanAttribute();
 
   // Consumes <!-- ... -->
-  token_type scan_comment();
+  TokenType scanComment();
 
   // Consumes <?name [attrs]?>
-  token_type scan_processing_instruction();
+  TokenType scanProcessingInstruction();
 
   // Consumes ...</style> and ...</script>
-  token_type scan_special();
+  TokenType scanSpecial();
 
   // Consumes <tagname and </tagname>
-  token_type scan_tag();
+  TokenType scanTag();
 
   // Consumes '&amp;' etc, emits parent_token_type
-  token_type scan_entity(token_type parent_token_type);
+  TokenType scanEntity(TokenType parent_token_type);
 
-  size_t skip_whitespace();
+  size_t skipWhitespace();
 
-  bool resolve_entity(string_ref const &buffer, string_ref &decoded) const;
+  bool resolveEntity(string_ref const &buffer, string_ref &decoded) const;
 
-  static bool is_whitespace(char c);
+  static bool isWhitespace(char c);
 
  private: /* data */
   string_ref value_;
@@ -134,6 +134,6 @@ class scanner {
 
   instream &input_;
 
-  bool got_tail;  // aux flag used in scan_comment
+  bool got_tail_;  // aux flag used in scanComment, scanSpecial, scanProcessingInstruction
 };
 }  // namespace markup

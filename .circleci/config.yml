@@ -19,13 +19,12 @@ jobs:
           name: Check artifacts
           working_directory: build-wasm
           command: |
-            ls -all bergamot*
-            if ls bergamot*.wasm &>/dev/null && ls bergamot*.js &>/dev/null
-            then
+            ARTIFACT_BASE="bergamot-translator-worker"
+            if [[ -f "$ARTIFACT_BASE.js" && -f "$ARTIFACT_BASE.wasm" ]]; then
               echo "Artifacts Successfully Generated"
               mkdir ../artifacts
-              cp bergamot-translator-worker.wasm ../artifacts/bergamot-translator-worker-with-wormhole.wasm
-              cp bergamot-translator-worker.js ../artifacts/bergamot-translator-worker-with-wormhole.js
+              cp $ARTIFACT_BASE.wasm ../artifacts/$ARTIFACT_BASE-with-wormhole.wasm
+              cp $ARTIFACT_BASE.js ../artifacts/$ARTIFACT_BASE-with-wormhole.js
               shasum -a 256 ../artifacts/* > ../artifacts/SHA256-1
               cp ../BERGAMOT_VERSION ../artifacts/
             else
@@ -39,7 +38,7 @@ jobs:
             - artifacts/*
 
       - store_artifacts:
-          path: "build-wasm"
+          path: "artifacts"
           destination: "wasm-wormhole"
 
   build-without-wormhole:
@@ -61,26 +60,27 @@ jobs:
           name: Check artifacts
           working_directory: build-wasm
           command: |
-            ls -all bergamot*
-            if ls bergamot*.wasm &>/dev/null && ls bergamot*.js &>/dev/null
-            then
+            ARTIFACT_BASE="bergamot-translator-worker"
+            if [[ -f "$ARTIFACT_BASE.js" && -f "$ARTIFACT_BASE.wasm" ]]; then
               echo "Artifacts Successfully Generated"
               mkdir ../artifacts
-              cp bergamot-translator-worker.wasm ../artifacts/bergamot-translator-worker-without-wormhole.wasm
-              cp bergamot-translator-worker.js ../artifacts/bergamot-translator-worker-without-wormhole.js
+              cp $ARTIFACT_BASE.wasm ../artifacts/$ARTIFACT_BASE-without-wormhole.wasm
+              cp $ARTIFACT_BASE.js ../artifacts/$ARTIFACT_BASE-without-wormhole.js
               shasum -a 256 ../artifacts/* > ../artifacts/SHA256-2
             else
               echo "Failure: Artifacts Not Present"
               exit 1
             fi
+
       - persist_to_workspace:
           root: .
           paths:
             - artifacts/*
 
       - store_artifacts:
-          path: "build-wasm"
+          path: "artifacts"
           destination: "wasm-without-wormhole"
+
   publish_to_github:
      docker:
        - image: cibuilds/github:0.10
@@ -91,15 +91,11 @@ jobs:
        - run:
           name: "Publish Release on GitHub"
           command: |
-            export COMMIT=$(echo $CIRCLE_SHA1 | cut -c -7)
-            export VERSION=$(cat ./artifacts/BERGAMOT_VERSION | cut -c 2-)
-            VERSION=$VERSION+$COMMIT
+            export TAG_VERSION=$(cat ./artifacts/BERGAMOT_VERSION)
             ls -lsa ./artifacts/ > ./artifacts/FILESIZES
             cat ./artifacts/SHA256-1 ./artifacts/SHA256-2 > ./artifacts/SHA256
-            rm ./artifacts/SHA256-1
-            rm ./artifacts/SHA256-2
-            rm ./artifacts/BERGAMOT_VERSION
-            ghr -t ${GHTOKEN} -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} -delete ${VERSION} ./artifacts/
+            rm ./artifacts/SHA256-1 ./artifacts/SHA256-2 ./artifacts/BERGAMOT_VERSION
+            ghr -t ${GHTOKEN} -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} -delete ${TAG_VERSION} ./artifacts/
 
 workflows:
   build:

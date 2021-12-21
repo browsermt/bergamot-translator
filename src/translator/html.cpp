@@ -12,7 +12,7 @@ using marian::bergamot::Response;
 
 void encodeEntities(string_view const &input, std::string &output) {
   output.clear();
-  output.reserve(input.size());
+  output.reserve(input.size());  // assumes there are no entities in most cases
 
   for (auto it = input.begin(); it != input.end(); ++it) {
     switch (*it) {
@@ -270,6 +270,51 @@ void copyTaint(Response const &response, std::vector<std::vector<size_t>> const 
   targetTokenSpans.push_back(sourceTokenSpans[offset]);  // token_tag for ending whitespace
 }
 
+// Little helper class to append HTML to a token
+class TokenFormatter {
+ public:
+  TokenFormatter(string_view token)
+      : html_(), offset_(0), whitespaceSize_(countPrefixWhitespaces(token)), closeLeft_(true) {
+    // Do encoding of any entities that popped up in the translation
+    encodeEntities(token, html_);
+  }
+
+  std::string &&html() { return std::move(html_); }
+
+  // Append the markup necessary for moving from `prev` set of tags to `curr`.
+  void append(HTML::Taint const &prev, HTML::Taint const &curr) {
+    HTML::Taint opening, closing;
+
+    diffTags(prev, curr, opening, closing);
+
+    for (HTML::Tag const *tag : reversed(closing)) {
+      std::string closeTag = format("</{}>", tag->name);
+      html_.insert(offset_ + (closeLeft_ ? 0 : whitespaceSize_), closeTag);
+      offset_ += closeTag.size();
+    }
+
+    for (HTML::Tag const *tag : opening) {
+      std::string openTag = format("<{}{}>", tag->name, tag->attributes);
+      html_.insert(offset_ + whitespaceSize_, openTag);
+      offset_ += openTag.size();
+      closeLeft_ = false;
+    }
+  }
+
+ private:
+  std::string html_;       // Output html
+  size_t offset_;          // Size added by prepending HTML
+  size_t whitespaceSize_;  // number of prefix whitespace characters
+
+  // Close tags we want to show up left (before) the token, but open tags
+  // ideally come directly after any prefix whitespace. However, some tokens
+  // match multiple spans. If a previous span has added an open tag, after any
+  // whitespace, and the next span closes said tag again, we need to close
+  // it after the whitespace. So after the first open tag, any closing tag
+  // should also align right, after whitespace, not before. Hence this bool.
+  bool closeLeft_;
+};
+
 AnnotatedText restoreSource(AnnotatedText const &in, std::vector<HTML::Span> const &sourceSpans,
                             std::vector<SpanIterator> &sourceTokenSpans) {
   auto spanIt = sourceSpans.begin();
@@ -277,25 +322,8 @@ AnnotatedText restoreSource(AnnotatedText const &in, std::vector<HTML::Span> con
                                       // and the while-loop below will do the rest
   assert(prevIt == sourceSpans.end() || prevIt->tags.empty());
 
-  // workspace variables for lambda
-  std::string html;
-  HTML::Taint opening, closing;
-
   return apply(in, [&](ByteRange range, string_view token, bool last) {
-    // Do encoding of any entities that popped up in the translation
-    // (Also effectively clears html from previous call)
-    encodeEntities(token, html);
-
-    size_t offset = 0;  // Size added by prepending HTML
-    size_t whiespaceSize = countPrefixWhitespaces(token);
-
-    // Close tags we want to show up left (before) the token, but open tags
-    // ideally come directly after any prefix whitespace. However, some tokens
-    // match multiple spans. If a previous span has added an open tag, after any
-    // whitespace, and the next span closes said tag again, we need to close
-    // it after the whitespace. So after the first open tag, any closing tag
-    // should also align right, after whitespace, not before. Hence this bool.
-    bool closeLeft = true;
+    TokenFormatter formatter(token);
 
     // Potential issue: spans and tokens can intersect, e.g.
     //
@@ -304,24 +332,13 @@ AnnotatedText restoreSource(AnnotatedText const &in, std::vector<HTML::Span> con
     //  tokens     |111111111111111|2|
     //
     // Now 1 covers span 1 to 3, so what taint should it get? Just <p>, or <p><u>?
+    // Note: only relevant if isBlockElement is used. If we just insert spaces
+    // around all elements, every segment of `hello` will be a token.
 
     // Seek to the last span that overlaps with this token
     while (true) {
-      diffTags(prevIt->tags, spanIt->tags, opening, closing);
+      formatter.append(prevIt->tags, spanIt->tags);
       prevIt = spanIt;
-
-      for (HTML::Tag const *tag : reversed(closing)) {
-        std::string closeTag = format("</{}>", tag->name);
-        html.insert(offset + (closeLeft ? 0 : whiespaceSize), closeTag);
-        offset += closeTag.size();
-      }
-
-      for (HTML::Tag const *tag : opening) {
-        std::string openTag = format("<{}{}>", tag->name, tag->attributes);
-        html.insert(offset + whiespaceSize, openTag);
-        offset += openTag.size();
-        closeLeft = false;
-      }
 
       if (spanIt + 1 != sourceSpans.end() && ((spanIt + 1)->begin < range.end || last)) {
         spanIt++;
@@ -335,7 +352,7 @@ AnnotatedText restoreSource(AnnotatedText const &in, std::vector<HTML::Span> con
     // This makes us lose some markup of parts of tokens as described above.
     sourceTokenSpans.push_back(prevIt);
 
-    return html;
+    return std::move(formatter.html());
   });
 }
 
@@ -344,18 +361,8 @@ AnnotatedText restoreTarget(AnnotatedText const &in, std::vector<HTML::Span> con
   auto prevSpan = sourceSpans.begin();
   auto targetSpanIt = targetTokenSpans.begin();
 
-  // workspace for lambda
-  std::string html;
-  HTML::Taint opening, closing;
-
   AnnotatedText out = apply(in, [&](ByteRange range, string_view token, bool last) {
-    // Do encoding of any entities that popped up in the translation
-    // (Also effectively clears html from previous call)
-    encodeEntities(token, html);
-
-    size_t offset = 0;  // Size added by prepending HTML
-    size_t whitespaceSize = countPrefixWhitespaces(token);
-    bool closeLeft = true;  // See RestoreSource's implementation
+    TokenFormatter formatter(token);
 
     // First we scan through spans_ to catch up to the span assigned to this
     // token. We're only interested in empty spans (empty and void elements)
@@ -363,20 +370,7 @@ AnnotatedText restoreTarget(AnnotatedText const &in, std::vector<HTML::Span> con
       // We're only interested in empty spans between the spans in targetSpanIt
       if (span_it->size() != 0) continue;
 
-      diffTags(prevSpan->tags, span_it->tags, opening, closing);
-
-      for (HTML::Tag const *tag : reversed(closing)) {
-        std::string close_tag = format("</{}>", tag->name);
-        html.insert(offset + (closeLeft ? 0 : whitespaceSize), close_tag);
-        offset += close_tag.size();
-      }
-
-      for (HTML::Tag const *tag : opening) {
-        std::string open_tag = format("<{}{}>", tag->name, tag->attributes);
-        html.insert(offset + whitespaceSize, open_tag);
-        offset += open_tag.size();
-        closeLeft = false;
-      }
+      formatter.append(prevSpan->tags, span_it->tags);
 
       // Note: here, not in 3rd part of for-statement because we don't want to
       // set prevSpan if the continue clause at the beginning of this for-loop
@@ -388,21 +382,7 @@ AnnotatedText restoreTarget(AnnotatedText const &in, std::vector<HTML::Span> con
     // combine this in the for-loop above (i.e. `span_it <= *targetSpanIt`)
     // because there is no guarantee that the order in `targetTokenSpans` is
     // the same as that of `spans`.
-
-    diffTags(prevSpan->tags, (*targetSpanIt)->tags, opening, closing);
-
-    for (HTML::Tag const *tag : reversed(closing)) {
-      std::string close_tag = format("</{}>", tag->name);
-      html.insert(offset + (closeLeft ? 0 : whitespaceSize), close_tag);
-      offset += close_tag.size();
-    }
-
-    for (HTML::Tag const *tag : opening) {
-      std::string open_tag = format("<{}{}>", tag->name, tag->attributes);
-      html.insert(offset + whitespaceSize, open_tag);
-      offset += open_tag.size();
-      closeLeft = false;
-    }
+    formatter.append(prevSpan->tags, (*targetSpanIt)->tags);
 
     // If this is the last token of the response, close all open tags.
     if (last) {
@@ -411,15 +391,12 @@ AnnotatedText restoreTarget(AnnotatedText const &in, std::vector<HTML::Span> con
       // the last token of the output. But lets assume someone someday changes
       // HardAlignments(), and then this for-loop will be necessary.
       // assert((*targetSpanIt)->tags.empty());
-
-      for (HTML::Tag const *tag : reversed((*targetSpanIt)->tags)) {
-        html += format("</{}>", tag->name);
-      }
+      formatter.append((*targetSpanIt)->tags, HTML::Taint());
     }
 
     prevSpan = *targetSpanIt++;
 
-    return html;
+    return std::move(formatter.html());
   });
 
   // Assert that we did in fact use all our taints

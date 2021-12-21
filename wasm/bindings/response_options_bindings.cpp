@@ -11,10 +11,11 @@ using ResponseOptions = marian::bergamot::ResponseOptions;
 
 using namespace emscripten;
 
-// Binding code
 EMSCRIPTEN_BINDINGS(response_options) {
   value_object<ResponseOptions>("ResponseOptions")
       .field("qualityScores", &ResponseOptions::qualityScores)
       .field("alignment", &ResponseOptions::alignment)
-      .field("html", &ResponseOptions::HTML);
+      .field("html", &ResponseOptions::HTML)
+      .field("htmlVoidTags", &ResponseOptions::HTMLVoidTags)
+      .field("htmlInlineTags", &ResponseOptions::HTMLInlineTags);
 }

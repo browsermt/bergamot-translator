@@ -63,10 +63,22 @@ struct Response {
   /// @param [in] sentenceIdx: The index representing the sentence where 0 <= sentenceIdx < Response::size()
   ByteRange getSourceSentenceAsByteRange(size_t sentenceIdx) const { return source.sentenceAsByteRange(sentenceIdx); }
 
+  ByteRange getSourceWordAsByteRange(size_t sentenceIdx, size_t wordIdx) const {
+    return source.wordAsByteRange(sentenceIdx, wordIdx);
+  }
+
   /// Returns the translated sentence (in terms of byte range) corresponding to sentenceIdx.
   ///
   /// @param [in] sentenceIdx: The index representing the sentence where 0 <= sentenceIdx < Response::size()
   ByteRange getTargetSentenceAsByteRange(size_t sentenceIdx) const { return target.sentenceAsByteRange(sentenceIdx); }
+
+  ByteRange getTargetWordAsByteRange(size_t sentenceIdx, size_t wordIdx) const {
+    return target.wordAsByteRange(sentenceIdx, wordIdx);
+  }
+
+  size_t getSourceSentenceSize(size_t sentenceIdx) const { return source.numWords(sentenceIdx); }
+
+  size_t getTargetSentenceSize(size_t sentenceIdx) const { return target.numWords(sentenceIdx); }
 
   const std::string &getOriginalText() const { return source.text; }
 

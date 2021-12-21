@@ -22,6 +22,10 @@ EMSCRIPTEN_BINDINGS(byte_range) {
 
 std::vector<SentenceQualityScore> getQualityScores(const Response& response) { return response.qualityScores; }
 
+float getAlignmentScore(const Response& response, size_t sentenceIdx, size_t targetIdx, size_t sourceIdx) {
+  return response.alignments[sentenceIdx][targetIdx][sourceIdx];
+}
+
 EMSCRIPTEN_BINDINGS(response) {
   class_<Response>("Response")
       .constructor<>()
@@ -30,7 +34,12 @@ EMSCRIPTEN_BINDINGS(response) {
       .function("getOriginalText", &Response::getOriginalText)
       .function("getTranslatedText", &Response::getTranslatedText)
       .function("getSourceSentence", &Response::getSourceSentenceAsByteRange)
-      .function("getTranslatedSentence", &Response::getTargetSentenceAsByteRange);
+      .function("getTranslatedSentence", &Response::getTargetSentenceAsByteRange)
+      .function("getSourceWord", &Response::getSourceWordAsByteRange)
+      .function("getTranslatedWord", &Response::getTargetWordAsByteRange)
+      .function("getSourceSentenceSize", &Response::getSourceSentenceSize)
+      .function("getTranslatedSentenceSize", &Response::getTargetSentenceSize)
+      .function("getAlignmentScore", &getAlignmentScore);
 
   value_object<SentenceQualityScore>("SentenceQualityScore")
       .field("wordScores", &SentenceQualityScore::wordScores)

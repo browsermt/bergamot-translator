@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Testbench</title>
+    <meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <style>
+      body {
+        font: 14px/18px sans-serif;
+        margin-bottom: 3em; /* 2em for for status bar */
+      }
+      .panel {
+        border: 1px solid #ccc;
+        display: flex;
+        flex-direction: column;
+        margin: 1em 0;
+      }
+
+      .panel-header {
+        padding: 0.2em 0.4em;
+        flex: 0 0;
+        display: flex;
+        background: #eee;
+        align-items: baseline;
+      }
+
+      .panel-header > * {
+        margin: 0 0.2em;
+      }
+
+      .panel-header .close-btn {
+        margin-left: auto;
+      }
+
+      .panel-body {
+        padding: 0.2em 0.4em;
+        flex: 1 1;
+        display: flex;
+        flex-direction: column;
+      }
+
+      #input {
+        flex: 1 1 auto;
+        min-height: 4em;
+        resize: vertical;
+      }
+
+      .form {
+        display: flex;
+        flex-direction: column;
+      }
+
+      .form > * {
+        flex: 1 1;
+      }
+
+      .form label {
+        display: flex;
+        align-items: baseline;
+        margin-bottom: 0.4em;
+      }
+      
+      .form input {
+        flex: 1 1;
+        margin-left: 0.4em;
+      }
+
+      .output-panel .panel-body {
+        flex-direction: row;
+        flex-wrap: wrap;
+      }
+
+      .output-panel .panel-body > div {
+        flex: 0 0 33%;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .output-panel .html,
+      .output-panel .text {
+        border: 1px solid #ccc;
+        border-radius: 2px;
+        margin: 0.4em;
+        padding: 0.4em;
+        position: relative;
+      }
+
+      .output-panel .html::before,
+      .output-panel .text::before {
+        content: attr(class);
+        font: 0.8em sans-serif;
+        position: absolute;
+        top: 0;
+        right: 0;
+        background: #ccc;
+        padding: 0 0.2em;
+        border-radius: 0 0 0 2px;
+      } 
+
+      .output-panel .text {
+        white-space: pre-wrap;
+      }
+
+      .output-panel .alignments {
+        flex: 0 1 100% !important;
+        overflow-x: auto;
+      }
+
+      .alignments table {
+        margin-right: auto; /* don't be 100% width always */
+        border-collapse: collapse;
+        text-align: center;
+        font-family: monospace;
+        white-space: nowrap;
+      }
+
+      .alignments table th,
+      .alignments table td {
+        padding: 0 0.2em;
+        border-right: 1px solid #ccc;
+        border-bottom: 1px solid #ccc;
+      }
+
+      .alignments th:first-child {
+        text-align: right;
+      }
+
+      .alignments .selected {
+        border: 2px solid #F00;
+      }
+
+      #status {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: #eee;
+        border-top: 1px solid #ccc;
+        height: 2em;
+        line-height: 2em;
+        padding: 0 0.4em;
+      }
+
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <div class="panel">
+        <div class="panel-header">
+          <label>
+            From
+            <select id="lang-from" name="from" class="lang-select"></select>
+          </label>
+          <label>
+            To
+            <select id="lang-to" name="to" class="lang-select"></select>
+          </label>
+          <label>
+            HTML input
+            <input type="checkbox" id="input-is-html" checked>
+          </label>
+          <button id="translate-btn">Translate</button>
+          <button id="set-gtranslate-key">Set Google Translate key</button>
+        </div>
+        <div class="panel-body">
+          <textarea id="input" name="input"></textarea>
+          <details class="form">
+            <summary>Advanced HTML options</summary>
+            <label>
+              Void tags:
+              <input type="text" id="html-void-tags" value="area,base,basefont,bgsound,br,col,embed,frame,hr,img,input,keygen,link,meta,param,source,track,wbr">
+            </label>
+            <label>
+              Inline tags:
+              <input type="text" id="html-inline-tags" value="abbr,a,b,em,i,kbd,mark,math,output,q,ruby,small,span,strong,sub,sup,time,u,var,wbr,ins,del">
+            </label>
+          </details>
+        </div>
+      </div>
+    </div>
+    <div id="outputs">
+      <template id="output-panel-template">
+        <div class="panel output-panel">
+          <div class="panel-header">
+            <button class="close-btn" title="Remove panel">&times;</button>
+          </div>
+          <div class="panel-body">
+            <div class="input">
+              <h1>Input</h1>
+              <iframe class="html"></iframe>
+              <pre class="text"><code class="raw"></code></pre>
+            </div>
+            <div class="output">
+              <h1>Output</h1>
+              <iframe class="html"></iframe>
+              <pre class="text"><code class="raw"></code></pre>
+            </div>
+            <div class="gtranslate">
+              <h1>Google Translate</h1>
+              <iframe class="html"></iframe>
+              <pre class="text"><code class="raw"></code></pre>
+            </div>
+            <div class="alignments"></div>
+          </div>
+        </div>
+      </template>
+    </div>
+    <div class="footer" id="status"></div>
+    <script src="js/html.js"></script>
+    <script src="js/testbench.js"></script>
+  </body>
+</html>

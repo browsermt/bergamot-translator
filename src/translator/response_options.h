@@ -27,6 +27,9 @@ struct ResponseOptions {
   bool sentenceMappings{false};
 
   ConcatStrategy concatStrategy{ConcatStrategy::FAITHFUL};
+
+  std::string HTMLVoidTags;
+  std::string HTMLInlineTags;
 };
 
 }  // namespace bergamot

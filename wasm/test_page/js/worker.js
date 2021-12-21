@@ -19,7 +19,7 @@ var Module = {
   onRuntimeInitialized: function() {
     log(`Wasm Runtime initialized Successfully (preRun -> onRuntimeInitialized) in ${(Date.now() - moduleLoadStart) / 1000} secs`);
     importScripts(MODEL_REGISTRY);
-    postMessage([`import_reply`, modelRegistry]);
+    postMessage([null, `import_reply`, modelRegistry]);
   }
 };
 
@@ -28,15 +28,14 @@ const log = (message) => {
 }
 
 onmessage = async function(e) {
-  const command = e.data[0];
+  const [id, command] = e.data.slice(0, 2);
   log(`Message '${command}' received from main script`);
   let result = "";
   if (command === 'import') {
       importScripts(BERGAMOT_TRANSLATOR_MODULE);
   } else if (command === 'load_model') {
       let start = Date.now();
-      let from = e.data[1];
-      let to = e.data[2];
+      let [from, to] = e.data.slice(2, 2+2);
       try {
         await constructTranslationService();
         await constructTranslationModel(from, to);
@@ -47,28 +46,22 @@ onmessage = async function(e) {
         result = "Model loading failed";
       }
       log(`'${command}' command done, Posting message back to main script`);
-      postMessage([`${command}_reply`, result]);
+      postMessage([id, `${command}_reply`, result]);
   } else if (command === 'translate') {
-      const from = e.data[1];
-      const to = e.data[2];
-      const input = e.data[3];
-      let inputWordCount = 0;
-      let inputBlockElements = 0;
-      input.forEach(sentence => {
-        inputWordCount += sentence.trim().split(" ").filter(word => word.trim() !== "").length;
-        inputBlockElements++;
-      })
+      const [from, to, input] = e.data.slice(2, 2+3);
+      const options = e.data.length >= 6 ? e.data[5] : {};
+      let inputWordCount = input.trim().split(" ").filter(word => word.trim() !== "").length;
       let start = Date.now();
       try {
-        log(`Blocks to translate: ${inputBlockElements}`);
-        result = translate(from, to, input);
+        result = translate(from, to, input, options);
         const secs = (Date.now() - start) / 1000;
         log(`Translation '${from}${to}' Successful. Speed: ${Math.round(inputWordCount / secs)} WPS (${inputWordCount} words in ${secs} secs)`);
       } catch (error) {
         log(`Error: ${error.message}`);
+        postMessage([id, 'error', error.message]);
       }
       log(`'${command}' command done, Posting message back to main script`);
-      postMessage([`${command}_reply`, result]);
+      postMessage([id, `${command}_reply`, result]);
   }
 }
 
@@ -105,17 +98,17 @@ const constructTranslationModel = async (from, to) => {
 }
 
 // Translates text from source language to target language.
-const translate = (from, to, input) => {
+const translate = (from, to, input, options) => {
   // If none of the languages is English then perform translation with
   // English as a pivot language.
   if (from !== 'en' && to !== 'en') {
     log(`Translating '${from}${to}' via pivoting: '${from}en' -> 'en${to}'`);
     const translatedTextInEnglish = _translateInvolvingEnglish(from, 'en', input);
-    return _translateInvolvingEnglish('en', to, translatedTextInEnglish);
+    return _translateInvolvingEnglish('en', to, translatedTextInEnglish, options);
   }
   else {
     log(`Translating '${from}${to}'`);
-    return _translateInvolvingEnglish(from, to, input);
+    return _translateInvolvingEnglish(from, to, input, options);
   }
 }
 
@@ -229,7 +222,7 @@ alignment: soft
   languagePairToTranslationModels.set(languagePair, translationModel);
 }
 
-const _translateInvolvingEnglish = (from, to, input) => {
+const _translateInvolvingEnglish = (from, to, input, options) => {
   const languagePair = `${from}${to}`;
   if (!languagePairToTranslationModels.has(languagePair)) {
     throw Error(`Please load translation model '${languagePair}' before translating`);
@@ -237,7 +230,7 @@ const _translateInvolvingEnglish = (from, to, input) => {
   translationModel = languagePairToTranslationModels.get(languagePair);
 
   // Prepare the arguments of translate() API i.e. ResponseOptions and vectorSourceText (i.e. a vector<string>)
-  const responseOptions = _prepareResponseOptions();
+  const responseOptions = _prepareResponseOptions(options);
   let vectorSourceText = _prepareSourceText(input);
 
   // Call translate() API; result is vector<Response> where every item of vector<Response> corresponds
@@ -251,6 +244,8 @@ const _translateInvolvingEnglish = (from, to, input) => {
   const listSourceTextSentences = _parseSourceTextSentences(vectorResponse);
   const listTranslatedTextSentenceQualityScores = _parseTranslatedTextSentenceQualityScores(vectorResponse);
 
+  const listAlignments = _parseAlignments(vectorResponse);
+
   log(`Source text: ${listSourceText}`);
   log(`Translated text: ${listTranslatedText}`);
   log(`Translated sentences: ${JSON.stringify(listTranslatedTextSentences)}`);
@@ -260,7 +255,11 @@ const _translateInvolvingEnglish = (from, to, input) => {
   // Delete prepared SourceText to avoid memory leak
   vectorSourceText.delete();
 
-  return listTranslatedText;
+  return {
+    source: listSourceText[0],
+    translated: listTranslatedText[0],
+    alignments: listAlignments[0]
+  };
 }
 
 const _parseTranslatedText = (vectorResponse) => {
@@ -337,19 +336,58 @@ const _parseTranslatedTextSentenceQualityScores = (vectorResponse) => {
   return result;
 }
 
-const _prepareResponseOptions = () => {
-  return {qualityScores: true, alignment: true, html: true};
+const _parseAlignments = (vectorResponse) => {
+  const result = [];
+
+  for (let i = 0; i < vectorResponse.size(); i++) {
+    const response = vectorResponse.get(i);
+
+    const original = response.getOriginalText();
+    const translated = response.getTranslatedText();
+
+    const sentences = [];
+
+    for (let sentenceIndex = 0; sentenceIndex < response.size(); ++sentenceIndex) {
+      const originalTokens = [];
+      const translatedTokens = [];
+      const scores = []; // scores[translated:int][original:int] = score:float
+
+      for (let wordIndex = 0; wordIndex < response.getSourceSentenceSize(sentenceIndex); ++wordIndex) {
+        originalTokens.push(_getSubString(original, response.getSourceWord(sentenceIndex, wordIndex)));
+      }
+
+      for (let wordIndex = 0; wordIndex < response.getTranslatedSentenceSize(sentenceIndex); ++wordIndex) {
+        translatedTokens.push(_getSubString(translated, response.getTranslatedWord(sentenceIndex, wordIndex)));
+      }
+
+      for (let t = 0; t < response.getTranslatedSentenceSize(sentenceIndex); ++t) {
+        scores.push([]);
+        for (let s = 0; s < response.getSourceSentenceSize(sentenceIndex); ++s) {
+          scores[t].push(response.getAlignmentScore(sentenceIndex, t, s));
+        }
+      }
+
+      sentences.push({originalTokens, translatedTokens, scores})
+    }
+    result.push(sentences);
+  }
+
+  return result;
+}
+
+const _prepareResponseOptions = ({html, inlineTags, voidTags}) => {
+  return {
+    qualityScores: true,
+    alignment: true,
+    html: !!html,
+    htmlInlineTags: inlineTags || "",
+    htmlVoidTags: voidTags || ""
+  };
 }
 
 const _prepareSourceText = (input) => {
   let vectorSourceText = new Module.VectorString;
-  input.forEach(paragraph => {
-    // prevent empty paragraph - it breaks the translation
-    if (paragraph.trim() === "") {
-      return;
-    }
-    vectorSourceText.push_back(paragraph.trim())
-  })
+  vectorSourceText.push_back(input.trim());
   return vectorSourceText;
 }
 

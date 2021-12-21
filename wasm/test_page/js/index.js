@@ -20,7 +20,7 @@ const langs = [
 
 if (window.Worker) {
   worker = new Worker("js/worker.js");
-  worker.postMessage(["import"]);
+  worker.postMessage([0, "import"]);
 }
 
 document.querySelector("#input").addEventListener("keyup", function (event) {
@@ -30,22 +30,21 @@ document.querySelector("#input").addEventListener("keyup", function (event) {
 const translateCall = () => {
   const text = document.querySelector("#input").value + "  ";
   if (!text.trim().length) return;
-  const paragraphs = text.split("\n");
   $("#output").setAttribute("disabled", true);
   const lngFrom = langFrom.value;
   const lngTo = langTo.value;
-  worker.postMessage(["translate", lngFrom, lngTo, paragraphs]);
+  worker.postMessage([0, "translate", lngFrom, lngTo, text]);
 };
 
 worker.onmessage = function (e) {
-  if (e.data[0] === "translate_reply" && e.data[1]) {
-    document.querySelector("#output").value = e.data[1].join("\n\n");
+  if (e.data[1] === "translate_reply" && e.data[2]) {
+    document.querySelector("#output").value = e.data[2].translated;
     $("#output").removeAttribute("disabled");
-  } else if (e.data[0] === "load_model_reply" && e.data[1]) {
-    status(e.data[1]);
+  } else if (e.data[1] === "load_model_reply" && e.data[2]) {
+    status(e.data[2]);
     translateCall();
-  } else if (e.data[0] === "import_reply" && e.data[1]) {
-    modelRegistry = e.data[1];
+  } else if (e.data[1] === "import_reply" && e.data[2]) {
+    modelRegistry = e.data[2];
     init();
   }
 };
@@ -61,7 +60,7 @@ const loadModel = () => {
   if (lngFrom !== lngTo) {
     status(`Installing model...`);
     console.log(`Loading model '${lngFrom}${lngTo}'`);
-    worker.postMessage(["load_model", lngFrom, lngTo]);
+    worker.postMessage([0, "load_model", lngFrom, lngTo]);
   } else {
     const input = document.querySelector("#input").value;
     document.querySelector("#output").value = input;

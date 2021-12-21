@@ -10,6 +10,19 @@
 #include "parser.h"
 #include "translator/beam_search.h"
 
+namespace {
+
+void split(std::string const &str, char delimiter, std::unordered_set<std::string> &out) {
+  std::string::size_type pos{0}, offset{0};
+  while ((pos = str.find(delimiter, offset)) != std::string::npos) {
+    out.emplace(str.substr(offset, pos - offset));
+    offset = pos + 1;
+  }
+  out.emplace(str.substr(offset));
+}
+
+}  // namespace
+
 namespace marian {
 namespace bergamot {
 
@@ -95,7 +108,17 @@ Ptr<Request> TranslationModel::makeRequest(size_t requestId, std::string &&sourc
   Segments segments;
   AnnotatedText annotatedSource;
 
-  HTML html(std::move(source), responseOptions.HTML);
+  HTML::Options htmlOptions;
+  if (!responseOptions.HTMLVoidTags.empty()) {
+    htmlOptions.voidTags.clear();
+    split(responseOptions.HTMLVoidTags, ',', htmlOptions.voidTags);
+  }
+  if (!responseOptions.HTMLInlineTags.empty()) {
+    htmlOptions.inlineTags.clear();
+    split(responseOptions.HTMLInlineTags, ',', htmlOptions.inlineTags);
+  }
+
+  HTML html(std::move(source), responseOptions.HTML, std::move(htmlOptions));
   textProcessor_.process(std::move(source), annotatedSource, segments);
   ResponseBuilder responseBuilder(responseOptions, std::move(annotatedSource), vocabs_, callback, *qualityEstimator_,
                                   std::move(html));

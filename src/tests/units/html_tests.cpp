@@ -419,6 +419,53 @@ TEST_CASE("Test empty tag") {
   CHECK(response.target.text == test_str);
 }
 
+TEST_CASE("Test <script> element") {
+  std::string test_str("hello <script>alert(\"<foo>\");</script>world");
+
+  std::string input(test_str);
+  HTML html(std::move(input), true);
+  CHECK(input == "hello world");
+
+  Response response;
+  std::string sentence_str("hello world");
+  std::vector<string_view> sentence{
+      string_view(sentence_str.data() + 0, 4),   // 0.0 hell
+      string_view(sentence_str.data() + 4, 1),   // 0.1 o
+      string_view(sentence_str.data() + 5, 6),   // 0.2 _world
+      string_view(sentence_str.data() + 11, 0),  // 0.3 ""
+  };
+  response.source.appendSentence("", sentence.begin(), sentence.end());
+  response.target.appendSentence("", sentence.begin(), sentence.end());
+  response.alignments = {identity_matrix<float>(4)};
+
+  html.restore(response);
+  CHECK(response.source.text == test_str);
+  CHECK(response.target.text == test_str);
+}
+
+TEST_CASE("Test comment") {
+  std::string test_str("foo <!-- <ignore> me -->bar");
+
+  std::string input(test_str);
+  HTML html(std::move(input), true);
+  CHECK(input == "foo bar");
+
+  Response response;
+  std::string sentence_str("foo bar");
+  std::vector<string_view> sentence{
+      string_view(sentence_str.data() + 0, 3),  // foo
+      string_view(sentence_str.data() + 3, 4),  // _bar
+      string_view(sentence_str.data() + 7, 0),  // ""
+  };
+  response.source.appendSentence("", sentence.begin(), sentence.end());
+  response.target.appendSentence("", sentence.begin(), sentence.end());
+  response.alignments = {identity_matrix<float>(3)};
+
+  html.restore(response);
+  CHECK(response.source.text == test_str);
+  CHECK(response.target.text == test_str);
+}
+
 TEST_CASE("End-to-end translation") {
   std::string input("<p>I <b>like</b> to <u>drive</u> this car.</p>\n");
   HTML html(std::move(input), true);

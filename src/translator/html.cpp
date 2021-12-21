@@ -405,55 +405,6 @@ AnnotatedText restoreTarget(AnnotatedText const &in, std::vector<HTML::Span> con
   return out;
 }
 
-std::ostream &debugPrintMapping(std::ostream &out, Response const &response,
-                                std::vector<std::vector<size_t>> const &alignments,
-                                std::vector<SpanIterator> const &targetTokenSpans) {
-  auto spans = targetTokenSpans.begin();
-  for (size_t sentenceIdx = 0; sentenceIdx < response.target.numSentences(); ++sentenceIdx) {
-    out << "Mapped sentence prefix with tags: ";
-    for (auto &&taint : (*++spans)->tags) out << '/' << taint->name;
-    out << '\n';
-
-    for (size_t wordIdx = 0; wordIdx < response.target.numWords(sentenceIdx); ++wordIdx) {
-      assert(sentenceIdx < alignments.size());
-      assert(wordIdx < alignments[sentenceIdx].size());
-
-      out << "Mapped ";
-      out << std::setw(10) << std::setfill(' ') << response.target.word(sentenceIdx, wordIdx);
-      out << " to ";
-      out << std::setw(10) << std::setfill(' ') << response.source.word(sentenceIdx, alignments[sentenceIdx][wordIdx]);
-      out << " with tags: ";
-      for (auto &&taint : (*++spans)->tags) out << '/' << taint->name;
-      out << '\n';
-    }
-  }
-
-  out << "Mapped end-of-input with tags: ";
-  for (auto &&taint : (*++spans)->tags) out << '/' << taint->name;
-  out << '\n';
-
-  assert(++spans == targetTokenSpans.end());
-  return out;
-}
-
-std::ostream &debugPrintAlignmentScores(std::ostream &out, Response const &response) {
-  out << "std::vector<std::vector<std::vector<float>>> alignments{\n";
-  for (size_t sentenceIdx = 0; sentenceIdx < response.source.numSentences(); ++sentenceIdx) {
-    out << "  {\n";
-    for (size_t t = 0; t < response.alignments[sentenceIdx].size(); ++t) {
-      out << "    {";
-      for (size_t s = 0; s < response.alignments[sentenceIdx][t].size(); ++s) {
-        out << std::fixed << std::setw(8) << std::setprecision(8) << std::setfill(' ')
-            << response.alignments[sentenceIdx][t][s];
-        out << ", ";
-      }
-      out << "},\n";
-    }
-    out << "  },\n";
-  }
-  return out << "};\n";
-}
-
 size_t debugCountTokens(AnnotatedText const &text) {
   size_t tokens = 1;  // for the ending gap
   for (size_t sentenceIdx = 0; sentenceIdx < text.numSentences(); ++sentenceIdx) {

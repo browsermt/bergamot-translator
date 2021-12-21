@@ -3,7 +3,9 @@
 
 #include <stdexcept>
 #include <string>
+#include <unordered_set>
 
+#include "annotation.h"
 #include "definitions.h"
 
 namespace marian {
@@ -18,35 +20,67 @@ class BadHTML : public std::runtime_error {
 
 class HTML {
  public:
+  struct Options {
+    // List of elements for which we do not expect a closing tag, or self-closing
+    // elements in XHTML. See also https://developer.mozilla.org/en-US/docs/Glossary/Empty_element
+    // More relevant source of this list:
+    // https://searchfox.org/mozilla-central/rev/7d17fd1fe9f0005a2fb19e5d53da4741b06a98ba/dom/base/FragmentOrElement.cpp#1791
+    std::unordered_set<std::string> voidTags{"area",  "base",  "basefont", "bgsound", "br",    "col",
+                                             "embed", "frame", "hr",       "img",     "input", "keygen",
+                                             "link",  "meta",  "param",    "source",  "track", "wbr"};
+
+    std::unordered_set<std::string> inlineTags{"abbr",   "a", "b",    "em",    "i",    "kbd",    "mark", "math",
+                                               "output", "q", "ruby", "small", "span", "strong", "sub",  "sup",
+                                               "time",   "u", "var",  "wbr",   "ins",  "del"};
+  };
+
   struct Tag {
     enum NodeType {
       ELEMENT,
       VOID_ELEMENT,
       COMMENT,
       PROCESSING_INSTRUCTION,
+      WHITESPACE,  // negative space
     };
 
-    NodeType type;  // Type of the node
-    std::string name;
-    std::string attributes;
-    std::string data;  // Raw data of an element that just needs to be
-                       // copied as is, e.g. <script> or <style>
-                       // TODO: replace with string_view if input lives that long
+    NodeType type;           // Type of the node
+    std::string name;        // Tag name (if type is ELEMENT or VOID_ELEMENT)
+    std::string attributes;  // Tag attributes (as raw HTML string, including
+                             // entities and prefix whitespace)
+    std::string data;        // Raw data of an element that just needs to be
+                             // copied as is, e.g. <script> or <style>
+    // @TODO: if the original HTML stays in memory, we could replace
+    // `attributes` and `data` with string_views pointing to it.
   };
 
-  typedef std::vector<Tag *> Taint;
+  using Taint = std::vector<Tag *>;
 
   struct Span {
     size_t begin;
     size_t end;
-    Taint tags;  // Note: free pointer! Lifetime of tags is managed by pool_
+    Taint tags;  // Note: free pointers! Lifetime of tags is managed by pool_
     inline size_t size() const { return end - begin; }
   };
 
-  explicit HTML(std::string &&source, bool process_markup);
+  explicit HTML(std::string &&source, bool process_markup) : HTML(std::move(source), process_markup, HTML::Options{}){};
+
+  explicit HTML(std::string &&source, bool process_markup, Options &&options);
   void restore(Response &response);
 
  private:
+  using SpanIterator = std::vector<HTML::Span>::const_iterator;
+  using AnnotatedText = marian::bergamot::AnnotatedText;
+
+  AnnotatedText restoreSource(AnnotatedText const &in, std::vector<HTML::Span> const &sourceSpans,
+                              std::vector<SpanIterator> &sourceTokenSpans);
+  AnnotatedText restoreTarget(AnnotatedText const &in, std::vector<HTML::Span> const &sourceSpans,
+                              std::vector<SpanIterator> const &targetTokenSpans);
+  void copyTaint(Response const &response, std::vector<std::vector<size_t>> const &alignments,
+                 std::vector<HTML::SpanIterator> const &sourceTokenSpans,
+                 std::vector<HTML::SpanIterator> &targetTokenSpans);
+
+  Options options_;
+
   // List of text spans, and which tags are applied to them
   std::vector<Span> spans_;
 

@@ -175,10 +175,43 @@ TEST_CASE("Test case html entities") {
 }
 
 TEST_CASE("Test self-closing tags should be treated as spaces") {
-  std::string input("<p>Space<br>please?</p>\n");
+  std::string test_str("<p>Space<br>please?</p>");
 
+  std::string input(test_str);
   HTML html(std::move(input), true);
-  CHECK(input == "Space please?\n");
+  CHECK(input == "Space please?");
+
+  Response response;
+  std::string source_str("Space please?");
+  std::vector<string_view> source_tokens{
+      string_view(source_str.data() + 0, 5),   // Space
+      string_view(source_str.data() + 5, 2),   // _p
+      string_view(source_str.data() + 7, 5),   // lease
+      string_view(source_str.data() + 12, 1),  // ?
+      string_view(source_str.data() + 13, 0),  // [EOS]
+  };
+  response.source.appendSentence("", source_tokens.begin(), source_tokens.end());
+
+  std::string target_str("Platz bitte?");
+  std::vector<string_view> target_tokens{
+      string_view(target_str.data() + 0, 5),   // Platz
+      string_view(target_str.data() + 5, 6),   // _bitte
+      string_view(target_str.data() + 11, 1),  // ?
+      string_view(target_str.data() + 12, 0),  // [EOS]
+  };
+  response.target.appendSentence("", target_tokens.begin(), target_tokens.end());
+  response.alignments = {{
+      {1.0, 0.0, 0.0, 0.0, 0.0},  //  Platz <- Space
+      {0.0, 0.1, 0.9, 0.0, 0.0},  // _bitte <- _p + lease
+      {0.0, 0.0, 0.0, 1.0, 0.0},  //      ? <- ?
+      {1.0, 0.0, 0.0, 0.0, 1.0},  //  [EOS] <- [EOS]
+  }};
+
+  // Main focus of this test is that the space that was introduced in the text
+  // that was being translated does not end up in the translation.
+  html.restore(response);
+  CHECK(response.source.text == "<p>Space<br>please?</p>");
+  CHECK(response.target.text == "<p>Platz<br>bitte?</p>");
 }
 
 TEST_CASE("Test reconstruction of target sentence") {

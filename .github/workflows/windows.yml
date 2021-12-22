@@ -37,7 +37,7 @@ jobs:
       shell: powershell
 
     - name: Prepare vcpkg
-      uses: lukka/run-vcpkg@v7.4
+      uses: lukka/run-vcpkg@v10
       with:
         vcpkgArguments: protobuf pcre2 
         vcpkgGitCommitId: 67e4272121ee24eb743d5b38b5e56004c6490aae

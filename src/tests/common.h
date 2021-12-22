@@ -41,12 +41,18 @@ template <>
 struct Bridge<BlockingService> : public std::true_type {
   Response translate(BlockingService &service, std::shared_ptr<TranslationModel> &model, std::string &&source,
                      const ResponseOptions &responseOptions);
+  Response pivot(BlockingService &service, std::shared_ptr<TranslationModel> &sourceToPivot,
+                 std::shared_ptr<TranslationModel> &pivotToTarget, std::string &&source,
+                 const ResponseOptions &responseOptions);
 };
 
 template <>
 struct Bridge<AsyncService> : public std::true_type {
   Response translate(AsyncService &service, std::shared_ptr<TranslationModel> &model, std::string &&source,
                      const ResponseOptions &responseOptions);
+  Response pivot(AsyncService &service, std::shared_ptr<TranslationModel> &sourceToPivot,
+                 std::shared_ptr<TranslationModel> &pivotToTarget, std::string &&source,
+                 const ResponseOptions &responseOptions);
 };
 
 template <class Service>
@@ -79,6 +85,8 @@ class TestSuite {
   void qualityEstimatorScores(Ptr<TranslationModel> model);
 
   void translationCache(Ptr<TranslationModel> model);
+
+  void pivotTranslate(std::vector<Ptr<TranslationModel>> &models);
 };
 
 #define BERGAMOT_TESTS_COMMON_IMPL

@@ -3,451 +3,387 @@
 
 #include "xh_scanner.h"
 
+#include <cassert>
 #include <cctype>
 #include <cstring>
+
+namespace {
+
+// Simple replacement for string_view.ends_with(compile-time C string)
+template <typename Char_t, size_t Len>
+inline bool endsWith(markup::string_ref &str, const Char_t (&suffix)[Len]) {
+  size_t offset = str.size - (Len - 1);
+  return offset <= str.size && std::memcmp(str.data + offset, suffix, Len - 1) == 0;
+}
+
+inline bool equalsCaseInsensitive(const char *lhs, const char *rhs, size_t len) {
+  for (size_t i = 0; i < len; ++i) {
+    // cast to unsigned char otherwise std::tolower has undefined behaviour
+    if (std::tolower(static_cast<unsigned char>(lhs[i])) != std::tolower(static_cast<unsigned char>(rhs[i])))
+      return false;
+  }
+
+  return true;
+}
+
+// Alias for the above, but with compile-time known C string
+template <size_t Len>
+inline bool equalsCaseInsensitive(markup::string_ref &lhs, const char (&rhs)[Len]) {
+  return lhs.size == Len - 1 && equalsCaseInsensitive(lhs.data, rhs, Len - 1);
+}
+
+template <typename Char_t, size_t Len>
+bool operator==(markup::string_ref const &str, const Char_t (&str2)[Len]) {
+  return str.size == Len - 1 && std::memcmp(str.data, str2, Len - 1) == 0;
+}
+
+}  // end namespace
 
 namespace markup {
 
 // case sensitive string equality test
 // s_lowcase shall be lowercase string
-inline bool equal(const char *s, const char *s1, size_t length) { return strncmp(s, s1, length) == 0; }
+std::string_view Scanner::value() const { return std::string_view(value_.data, value_.size); }
 
-const char *scanner::get_value() {
-  value[value_length] = 0;
-  return value;
-}
+std::string_view Scanner::attribute() const { return std::string_view(attributeName_.data, attributeName_.size); }
 
-const char *scanner::get_attr_name() {
-  attr_name[attr_name_length] = 0;
-  return attr_name;
-}
+std::string_view Scanner::tag() const { return std::string_view(tagName_.data, tagName_.size); }
 
-const char *scanner::get_tag_name() {
-  tag_name[tag_name_length] = 0;
-  return tag_name;
-}
+Scanner::TokenType Scanner::scanBody() {
+  value_ = string_ref{input_.pos(), 0};
 
-scanner::token_type scanner::scan_body() {
-  text_begin = input.p;
-  if (input_char) {
-    --text_begin;
+  switch (input_.peek()) {
+    case '\0':
+      return TT_EOF;
+    case '<':
+      return scanTag();
+    case '&':
+      return scanEntity(TT_TEXT);
   }
-  text_end = text_begin;
-  value_length = 0;
-  char c = get_char();
-
-  if (c == 0)
-    return TT_EOF;
-  else if (c == '<')
-    return scan_tag();
-  else if (c == '&')
-    return scan_entity();
 
   while (true) {
-    append_value(c);
-    ++text_end;
-
-    c = get_char();
-
-    if (c == 0) {
-      push_back(c);
-      break;
-    }
-    if (c == '<') {
-      push_back(c);
-      break;
-    }
-    if (c == '&') {
-      push_back(c);
-      break;
-    }
-  }
-  return TT_TEXT;
-}
-
-scanner::token_type scanner::scan_head() {
-  char c = skip_whitespace();
-
-  if (c == '>') {
-    if (equal(tag_name, "script", 6)) {
-      // script is special because we want to parse the attributes,
-      // but not the content
-      c_scan = &scanner::scan_special;
-      return scan_special();
-    } else if (equal(tag_name, "style", 5)) {
-      // same with style
-      c_scan = &scanner::scan_special;
-      return scan_special();
-    }
-    c_scan = &scanner::scan_body;
-    return scan_body();
-  }
-  if (c == '/') {
-    char t = get_char();
-    if (t == '>') {
-      // self closing tag
-      c_scan = &scanner::scan_body;
-      return TT_TAG_END;
-    } else {
-      push_back(t);
-      return TT_ERROR;
-    }  // erroneous situtation - standalone '/'
-  }
-
-  attr_name_length = 0;
-  value_length = 0;
-
-  // attribute name...
-  while (c != '=') {
-    if (c == 0) return TT_EOF;
-    if (c == '>') {
-      push_back(c);
-      return TT_ATTR;
-    }  // attribute without value (HTML style)
-    if (is_whitespace(c)) {
-      c = skip_whitespace();
-      if (c != '=') {
-        push_back(c);
-        return TT_ATTR;
-      }  // attribute without value (HTML style)
-      else
+    switch (input_.peek()) {
+      case '\0':
+      case '<':
+      case '&':
+        return TT_TEXT;
+      default:
+        input_.consume();
+        ++value_.size;
         break;
     }
-    if (c == '<') return TT_ERROR;
-    append_attr_name(c);
-    c = get_char();
+  }
+}
+
+// Consumes one or closing bit of a tag:
+//   <tag attr="value">...</tag>
+//       |------------|
+// Followed by:
+// - scanSpecial if <script> or <style>
+// - scanBody
+// - another scan_head for the next attribute or end of open tag
+// Returns:
+// - TT_ATTRIBUTE if attribute is read
+// - TT_TAG_END if self-closing tag
+// - TT_ERROR if wrong character encountered
+// - TT_EOF if unexpected end of input (will not return TT_ATTRIBUTE if attribute value wasn't finished yet)
+// - TT_TAG_END through scanSpecial
+// - TT_TEXT through scanBody
+Scanner::TokenType Scanner::scanAttribute() {
+  // Skip all whitespace between tag name or last attribute and next attribute or '>'
+  skipWhitespace();
+
+  // Find end of tag name
+  switch (input_.peek()) {
+    case '>':
+      input_.consume();
+      if (equalsCaseInsensitive(tagName_, "script")) {
+        // script is special because we want to parse the attributes,
+        // but not the content
+        scanFun_ = &Scanner::scanSpecial;
+        return scanSpecial();
+      } else if (equalsCaseInsensitive(tagName_, "style")) {
+        // same with style
+        scanFun_ = &Scanner::scanSpecial;
+        return scanSpecial();
+      } else {
+        scanFun_ = &Scanner::scanBody;
+        return scanBody();
+      }
+    case '/':
+      input_.consume();
+      if (input_.peek() == '>') {
+        // self closing tag
+        input_.consume();
+        scanFun_ = &Scanner::scanBody;
+        return TT_TAG_END;
+      } else {
+        return TT_ERROR;
+      }
   }
 
-  c = skip_whitespace();
+  attributeName_ = string_ref{input_.pos(), 0};
+  value_ = string_ref{nullptr, 0};
+
+  // attribute name...
+  while (input_.peek() != '=') {
+    switch (input_.peek()) {
+      case '\0':
+        return TT_EOF;
+      case '>':
+        return TT_ATTRIBUTE;  // attribute without value (HTML style) at end of tag
+      case '<':
+        return TT_ERROR;
+      default:
+        if (skipWhitespace()) {
+          if (input_.peek() == '=') {
+            break;
+          } else {
+            return TT_ATTRIBUTE;  // attribute without value (HTML style) but not yet at end of tag
+          }
+        }
+        input_.consume();
+        ++attributeName_.size;
+        break;
+    }
+  }
+
+  // consume '=' and any following whitespace
+  input_.consume();
+  skipWhitespace();
   // attribute value...
 
-  if (c == '\"') {
-    c = get_char();
-    while (c) {
-      if (c == '\"') return TT_ATTR;
-      // if (c == '&') c = scan_entity();
-      append_value(c);
-      c = get_char();
-    }
-  } else if (c == '\'')  // allowed in html
-  {
-    c = get_char();
-    while (c) {
-      if (c == '\'') return TT_ATTR;
-      // if (c == '&') c = scan_entity();
-      append_value(c);
-      c = get_char();
-    }
-  } else  // scan token, allowed in html: e.g. align=center
-  {
-    c = get_char();
-    do {
-      if (is_whitespace(c)) return TT_ATTR;
-      /* these two removed in favour of better html support:
-      if( c == '/' || c == '>' ) { push_back(c); return TT_ATTR; }
-      if( c == '&' ) c = scan_entity();*/
-      if (c == '>') {
-        push_back(c);
-        return TT_ATTR;
+  char quote;  // Either '"' or '\'' depending on which quote we're searching for
+  switch (input_.peek()) {
+    case '"':
+    case '\'':
+      quote = input_.consume();
+      value_ = string_ref{input_.pos(), 0};
+      while (true) {
+        if (input_.peek() == '\0') {
+          return TT_ERROR;
+        } else if (input_.peek() == quote) {
+          input_.consume();
+          return TT_ATTRIBUTE;
+        } else {
+          input_.consume();
+          ++value_.size;
+        }
       }
-      append_value(c);
-      c = get_char();
-    } while (c);
+      break;
+    default:
+      value_ = string_ref{input_.pos(), 0};
+
+      while (true) {
+        if (isWhitespace(input_.peek())) return TT_ATTRIBUTE;
+        if (input_.peek() == '>') return TT_ATTRIBUTE;  // '>' will be consumed next round
+        input_.consume();
+        ++value_.size;
+      }
+      break;
   }
 
+  // How did we end up here?!
   return TT_ERROR;
 }
 
-// caller already consumed '<'
-// scan header start or tag tail
-scanner::token_type scanner::scan_tag() {
-  tag_name_length = 0;
+// scans tag name of open or closing tag
+//   <tag attr="value">...</tag>
+//   |--|                 |----|
+// Emits:
+// - TT_TAG_START if tag head is read
+// - TT_COMMENT_START
+// - TT_PROCESSING_INSTRUCTION_START
+// - TT_CDATA_START
+// - TT_ENTITY_START
+// - TT_ERROR if unexpected character or end
+Scanner::TokenType Scanner::scanTag() {
+  if (input_.consume() != '<') return TT_ERROR;
 
-  char c = get_char();
+  bool is_tail = input_.peek() == '/';
+  if (is_tail) input_.consume();
 
-  bool is_tail = c == '/';
-  if (is_tail) c = get_char();
+  tagName_ = string_ref{input_.pos(), 0};
 
-  while (c) {
-    if (is_whitespace(c)) {
-      c = skip_whitespace();
-      break;
+  while (input_.peek()) {
+    if (skipWhitespace()) break;
+
+    if (input_.peek() == '/' || input_.peek() == '>') break;
+
+    input_.consume();
+    ++tagName_.size;
+
+    // Note: these tests are executed at every char, thus eager.
+    // "<?xml" will match on `tagName_ == "?"`.
+    if (tagName_ == "!--") {
+      scanFun_ = &Scanner::scanComment;
+      return TT_COMMENT_START;
+    } else if (tagName_ == "?") {
+      scanFun_ = &Scanner::scanProcessingInstruction;
+      return TT_PROCESSING_INSTRUCTION_START;
     }
-    if (c == '/' || c == '>') break;
-    append_tag_name(c);
-
-    switch (tag_name_length) {
-      case 3:
-        if (equal(tag_name, "!--", 3)) {
-          c_scan = &scanner::scan_comment;
-          return TT_COMMENT_START;
-        }
-        break;
-      case 8:
-        if (equal(tag_name, "![CDATA[", 8)) {
-          c_scan = &scanner::scan_cdata;
-          return TT_CDATA_START;
-        }
-        break;
-      case 7:
-        if (equal(tag_name, "!ENTITY", 8)) {
-          c_scan = &scanner::scan_entity_decl;
-          return TT_ENTITY_START;
-        }
-        break;
-    }
-
-    c = get_char();
   }
 
-  if (c == 0) return TT_ERROR;
+  if (!input_.peek()) return TT_EOF;
 
-  if (is_tail) {
-    if (c == '>') return TT_TAG_END;
-    return TT_ERROR;
-  } else
-    push_back(c);
+  if (is_tail) return input_.consume() == '>' ? TT_TAG_END : TT_ERROR;
 
-  c_scan = &scanner::scan_head;
+  scanFun_ = &Scanner::scanAttribute;
   return TT_TAG_START;
 }
 
-scanner::token_type scanner::scan_entity() {
-  // note that when scan_entity() is called, & is already consumed.
+Scanner::TokenType Scanner::scanEntity(TokenType parentTokenType) {
+  // `entity` includes starting '&' and ending ';'
+  string_ref entity{input_.pos(), 0};
+  bool hasEnd = false;
 
-  char buffer[8];
-  unsigned int buflen = 0;
-  buffer[buflen++] = '&';  // (just makes resolve_entity and append_value(buffer) easier)
+  if (input_.consume() != '&') return TT_ERROR;
 
-  bool has_end = false;
+  ++entity.size;  // Account for the consumed '&'
 
-  while (true) {
-    char c = get_char();
-    buffer[buflen++] = c;
-
-    // Found end of entity
-    if (c == ';') break;
-
-    // Too long to be entity
-    if (buflen == sizeof(buffer)) break;
-
-    // Not a character we'd expect in an entity (esp '&' or '<')
-    if (!isalpha(c)) break;
+  // Consume the entity
+  while (input_.peek()) {
+    if (input_.peek() == ';') {
+      input_.consume();
+      ++entity.size;
+      hasEnd = true;
+      break;
+    } else if (!isalpha(input_.peek())) {
+      hasEnd = false;
+      break;
+    } else {
+      input_.consume();
+      ++entity.size;
+    }
   }
 
-  // Keep the text_end that scanner::scan_body uses similarly up-to-date. Since
-  // scan_entity() is only called from scan_body we assume text_begin is already
-  // set correctly by it.
-  text_end += buflen;
+  // If we can decode the entity, do so
+  if (hasEnd && resolveEntity(entity, value_)) return parentTokenType;
 
-  // If we found the end of the entity, and we can identify it, then
-  // resolve_entity() will emit the char it encoded.
-  if (buffer[buflen - 1] == ';' && resolve_entity(buffer, buflen)) {
-    return TT_TEXT;
-  }
-
-  // Otherwise, we just emit whatever we read as text, except for the last
-  // character that caused us to break. That may be another &, or a <, which we
-  // would want to scan properly.
-  for (unsigned int i = 0; i < buflen - 1; ++i) append_value(buffer[i]);
-  push_back(buffer[buflen - 1]);
-  --text_end;  // because push_back()
-  return TT_TEXT;
+  // Otherwise, just yield the whole thing undecoded, interpret it as text
+  value_ = entity;
+  return parentTokenType;
 }
 
-bool scanner::resolve_entity(char *buffer, unsigned int len) {
-  switch (len) {
-    case 4:
-      if (equal(buffer, "&lt;", 4)) {
-        append_value('<');
-        return true;
-      }
-      if (equal(buffer, "&gt;", 4)) {
-        append_value('>');
-        return true;
-      }
-      break;
+bool Scanner::resolveEntity(string_ref const &buffer, string_ref &decoded) const {
+  static char lt = '<', gt = '>', amp = '&', quot = '"', apos = '\'', nbsp = ' ';
 
-    case 5:
-      if (equal(buffer, "&amp;", 5)) {
-        append_value('&');
-        return true;
-      }
-      break;
-
-    case 6:
-      if (equal(buffer, "&quot;", 6)) {
-        append_value('"');
-        return true;
-      }
-      if (equal(buffer, "&apos;", 6)) {
-        append_value('\'');
-        return true;
-      }
-      if (equal(buffer, "&nbsp;", 6)) {
-        append_value(' ');  // TODO: handle non-breaking spaces better than just converting them to spaces
-        return true;
-      }
-      break;
+  if (buffer == "&lt;") {
+    decoded = string_ref{&lt, 1};
+    return true;
+  }
+  if (buffer == "&gt;") {
+    decoded = string_ref{&gt, 1};
+    return true;
+  }
+  if (buffer == "&amp;") {
+    decoded = string_ref{&amp, 1};
+    return true;
+  }
+  if (buffer == "&quot;") {
+    decoded = string_ref{&quot, 1};
+    return true;
+  }
+  if (buffer == "&apos;") {
+    decoded = string_ref{&apos, 1};
+    return true;
+  }
+  if (buffer == "&nbsp;") {
+    decoded = string_ref{&nbsp, 1};  // TODO: handle non-breaking spaces better than just converting them to spaces
+    return true;
   }
   return false;
 }
 
 // skip whitespaces.
-// returns first non-whitespace char
-char scanner::skip_whitespace() {
-  while (char c = get_char()) {
-    if (!is_whitespace(c)) return c;
+// returns how many whitespaces were skipped
+size_t Scanner::skipWhitespace() {
+  size_t skipped = 0;
+  while (isWhitespace(input_.peek())) {
+    input_.consume();
+    ++skipped;
   }
-  return 0;
+  return skipped;
 }
 
-void scanner::push_back(char c) { input_char = c; }
-
-char scanner::get_char() {
-  if (input_char) {
-    char t(input_char);
-    input_char = 0;
-    return t;
-  }
-  return input.get_char();
-}
-
-bool scanner::is_whitespace(char c) {
+bool Scanner::isWhitespace(char c) {
   return c <= ' ' && (c == ' ' || c == '\t' || c == '\n' || c == '\r' || c == '\f');
 }
 
-void scanner::append_value(char c) {
-  if (value_length < (MAX_TOKEN_SIZE - 1)) value[value_length++] = c;
-}
-
-void scanner::append_attr_name(char c) {
-  if (attr_name_length < (MAX_NAME_SIZE - 1)) attr_name[attr_name_length++] = char(c);
-}
-
-void scanner::append_tag_name(char c) {
-  if (tag_name_length < (MAX_NAME_SIZE - 1))
-    tag_name[tag_name_length++] =
-        std::tolower(static_cast<unsigned char>(c));  // cast because std::tolower has undefined behaviour otherwise
-}
-
-scanner::token_type scanner::scan_comment() {
-  if (got_tail) {
-    c_scan = &scanner::scan_body;
-    got_tail = false;
+Scanner::TokenType Scanner::scanComment() {
+  if (gotTail_) {
+    scanFun_ = &Scanner::scanBody;
+    gotTail_ = false;
     return TT_COMMENT_END;
   }
-  for (value_length = 0; value_length < (MAX_TOKEN_SIZE - 1); ++value_length) {
-    char c = get_char();
-    if (c == 0) return TT_EOF;
-    value[value_length] = c;
 
-    if (value_length >= 2 && value[value_length] == '>' && value[value_length - 1] == '-' &&
-        value[value_length - 2] == '-') {
-      got_tail = true;
-      value_length -= 2;
+  value_ = string_ref{input_.pos(), 0};
+
+  while (true) {
+    if (input_.consume() == '\0') return TT_EOF;
+    ++value_.size;
+
+    if (endsWith(value_, "-->")) {
+      gotTail_ = true;
+      value_.size -= 3;
       break;
     }
   }
   return TT_DATA;
 }
 
-scanner::token_type scanner::scan_special() {
-  if (got_tail) {
-    c_scan = &scanner::scan_body;
-    got_tail = false;
+Scanner::TokenType Scanner::scanProcessingInstruction() {
+  if (gotTail_) {
+    scanFun_ = &Scanner::scanBody;
+    gotTail_ = false;
+    return TT_PROCESSING_INSTRUCTION_END;
+  }
+
+  value_ = string_ref{input_.pos(), 0};
+
+  while (true) {
+    if (input_.consume() == '\0') return TT_EOF;
+    ++value_.size;
+
+    if (endsWith(value_, "?>")) {
+      gotTail_ = true;
+      value_.size -= 2;
+      break;
+    }
+  }
+  return TT_DATA;
+}
+
+Scanner::TokenType Scanner::scanSpecial() {
+  if (gotTail_) {
+    scanFun_ = &Scanner::scanBody;
+    gotTail_ = false;
     return TT_TAG_END;
   }
-  for (value_length = 0; value_length < (MAX_TOKEN_SIZE - 1); ++value_length) {
-    char c = get_char();
-    if (c == 0) return TT_EOF;
 
-    // in case MAX_TOKEN_SIZE limit breaks up the end tag
-    if (c == '<' && value_length + tag_name_length + 3 >= MAX_TOKEN_SIZE) {
-      push_back(c);
-      break;
-    }
+  value_ = string_ref{input_.pos(), 0};
 
-    value[value_length] = c;
+  while (true) {
+    if (input_.consume() == '\0') return TT_EOF;
+    ++value_.size;
 
-    if (c == '>' && value_length >= tag_name_length + 2) {
-      unsigned int i = tag_name_length - 1;
-      do {
-        if (value[value_length + i - tag_name_length] != tag_name[i]) break;
-        --i;
-      } while (i > 0);
-      if (i > 0) continue;
-      if (value[value_length - tag_name_length - 1] != '/') continue;
-      if (value[value_length - tag_name_length - 2] != '<') continue;
+    // Test for </tag>
+    // TODO: no whitespaces allowed? Is that okay?
+    if (value_.data[value_.size - 1] == '>' && value_.size >= tagName_.size + 3) {
+      // Test for the "</"" bit of "</tag>"
+      size_t pos_tag_start = value_.size - tagName_.size - 3;
+      if (std::memcmp(value_.data + pos_tag_start, "</", 2) != 0) continue;
 
-      got_tail = true;
-      value_length = value_length - tag_name_length - 2;
+      // Test for the "tag" bit of "</tag>". Doing case insensitive compare because <I>...</i> is okay.
+      size_t pos_tag_name = value_.size - tagName_.size - 1;  // end - tag>
+      if (!equalsCaseInsensitive(value_.data + pos_tag_name, tagName_.data, tagName_.size)) continue;
+
+      gotTail_ = true;
+      value_.size -= tagName_.size + 3;
       break;
     }
   }
-  return TT_DATA;
-}
 
-scanner::token_type scanner::scan_cdata() {
-  if (got_tail) {
-    c_scan = &scanner::scan_body;
-    got_tail = false;
-    return TT_CDATA_END;
-  }
-  for (value_length = 0; value_length < (MAX_TOKEN_SIZE - 1); ++value_length) {
-    char c = get_char();
-    if (c == 0) return TT_EOF;
-    value[value_length] = c;
-
-    if (value_length >= 2 && value[value_length] == '>' && value[value_length - 1] == ']' &&
-        value[value_length - 2] == ']') {
-      got_tail = true;
-      value_length -= 2;
-      break;
-    }
-  }
-  return TT_DATA;
-}
-
-scanner::token_type scanner::scan_pi() {
-  if (got_tail) {
-    c_scan = &scanner::scan_body;
-    got_tail = false;
-    return TT_PI_END;
-  }
-  for (value_length = 0; value_length < (MAX_TOKEN_SIZE - 1); ++value_length) {
-    char c = get_char();
-    if (c == 0) return TT_EOF;
-    value[value_length] = c;
-
-    if (value_length >= 1 && value[value_length] == '>' && value[value_length - 1] == '?') {
-      got_tail = true;
-      value_length -= 1;
-      break;
-    }
-  }
-  return TT_DATA;
-}
-
-scanner::token_type scanner::scan_entity_decl() {
-  if (got_tail) {
-    c_scan = &scanner::scan_body;
-    got_tail = false;
-    return TT_ENTITY_END;
-  }
-  char t;
-  unsigned int tc = 0;
-  for (value_length = 0; value_length < (MAX_TOKEN_SIZE - 1); ++value_length) {
-    t = get_char();
-    if (t == 0) return TT_EOF;
-    value[value_length] = t;
-    if (t == '\"')
-      tc++;
-    else if (t == '>' && (tc & 1u) == 0) {
-      got_tail = true;
-      break;
-    }
-  }
   return TT_DATA;
 }
 

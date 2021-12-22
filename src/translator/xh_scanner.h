@@ -5,126 +5,138 @@
 //|
 //| (C) Andrew Fedoniouk @ terrainformatica.com
 //|
-#include <string.h>
+#include <cassert>
+#include <cstring>
+#include <string_view>
 
 namespace markup {
+
 struct instream {
   const char *p;
+  const char *begin;
   const char *end;
-  explicit instream(const char *src) : p(src), end(src + strlen(src)) {}
-  instream(const char *begin, const char *end) : p(begin), end(end) {}
-  char get_char() { return p < end ? *p++ : 0; }
+  explicit instream(const char *src) : p(src), begin(src), end(src + strlen(src)) {}
+  instream(const char *begin, const char *end) : p(begin), begin(begin), end(end) {}
+  char consume() { return p < end ? *p++ : 0; }
+  char peek() const { return p < end ? *p : 0; }
+  const char *pos() const { return p; }
 };
 
-class scanner {
+// Think string_view, but with a mutable range
+struct string_ref {
+  const char *data;
+  size_t size;
+};
+
+class Scanner {
  public:
-  enum token_type {
+  enum TokenType {
     TT_ERROR = -1,
     TT_EOF = 0,
 
-    TT_TAG_START,  // <tag ...
-    //     ^-- happens here
-    TT_TAG_END,  // </tag>
-    //       ^-- happens here
-    // <tag ... />
-    //            ^-- or here
-    TT_ATTR,  // <tag attr="value" >
-    //                  ^-- happens here
-    TT_TEXT,
-
-    TT_DATA,  // content of followings:
-    // (also content of TT_TAG_START and TT_TAG_END, if the tag is 'script' or 'style')
-
-    TT_COMMENT_START,
-    TT_COMMENT_END,  // after "<!--" and "-->"
-    TT_CDATA_START,
-    TT_CDATA_END,  // after "<![CDATA[" and "]]>"
-    TT_PI_START,
-    TT_PI_END,  // after "<?" and "?>"
-    TT_ENTITY_START,
-    TT_ENTITY_END,  // after "<!ENTITY" and ">"
-
+    TT_TAG_START,                     // <tag ...
+                                      //     ^-- happens here
+                                      //
+    TT_TAG_END,                       // </tag>
+                                      //       ^-- happens here
+                                      // <tag ... />
+                                      //            ^-- or here
+                                      //
+    TT_ATTRIBUTE,                     // <tag attr="value" >
+                                      //                 ^-- happens here, attr_name() and value()
+                                      //                     will be filled with 'attr' and 'value'.
+                                      //
+    TT_TEXT,                          // <tag>xxx</tag>
+                                      //         ^-- happens here
+                                      // <tag>foo &amp;&amp; bar</tag>
+                                      //          ^---^----^----^-- and all of here as well
+                                      // Comes after TT_TAG_START or as the first token if the input
+                                      // begins with text instead of a root element.
+                                      //
+    TT_DATA,                          // <!-- foo -->
+                                      //         ^-- here
+                                      // <? ... ?>
+                                      //       ^-- as well as here
+                                      // <script>...</script>
+                                      //            ^-- or here
+                                      // <style>...</style>
+                                      //           ^-- or here
+                                      // comes after TT_COMMENT_START, TT_PI_START, or TT_TAG_START
+                                      // if the tag was <script> or <style>.
+                                      //
+    TT_COMMENT_START,                 // <!-- foo -->
+                                      //     ^-- happens here
+                                      //
+    TT_COMMENT_END,                   // <!-- foo -->
+                                      //             ^-- happens here
+                                      //
+    TT_PROCESSING_INSTRUCTION_START,  // <?xml version="1.0?>
+                                      //   ^-- happens here
+                                      //
+    TT_PROCESSING_INSTRUCTION_END,    // <?xml version="1.0?>
+                                      //                     ^-- would you believe this happens here
   };
 
-  enum $ { MAX_TOKEN_SIZE = 1024, MAX_NAME_SIZE = 128 };
-
  public:
-  explicit scanner(instream &is)
-      : value_length(0), tag_name_length(0), attr_name_length(0), input(is), input_char(0), got_tail(false) {
-    c_scan = &scanner::scan_body;
-  }
+  explicit Scanner(instream &is)
+      : value_{nullptr, 0},
+        tagName_{nullptr, 0},
+        attributeName_{nullptr, 0},
+        input_(is),
+        scanFun_(&Scanner::scanBody),
+        gotTail_(false) {}
 
   // get next token
-  token_type get_token() { return (this->*c_scan)(); }
-
-  // get text span backed by original input.
-  const char *get_text_begin() { return text_begin; }
-  const char *get_text_end() { return text_end; }
+  TokenType next() { return (this->*scanFun_)(); }
 
   // get value of TT_TEXT, TT_ATTR and TT_DATA
-  const char *get_value();
+  std::string_view value() const;
 
   // get attribute name
-  const char *get_attr_name();
+  std::string_view attribute() const;
 
-  // get tag name (always lowercase)
-  const char *get_tag_name();
+  // get tag name
+  std::string_view tag() const;
 
  private: /* methods */
-  typedef token_type (scanner::*scan)();
+  typedef TokenType (Scanner::*ScanPtr)();
 
-  scan c_scan;  // current 'reader'
+  // Consumes the text around and between tags
+  TokenType scanBody();
 
-  // content 'readers'
-  token_type scan_body();
+  // Consumes name="attr"
+  TokenType scanAttribute();
 
-  token_type scan_head();
+  // Consumes <!-- ... -->
+  TokenType scanComment();
 
-  token_type scan_comment();
+  // Consumes <?name [attrs]?>
+  TokenType scanProcessingInstruction();
 
-  token_type scan_cdata();
+  // Consumes ...</style> and ...</script>
+  TokenType scanSpecial();
 
-  token_type scan_special();
+  // Consumes <tagname and </tagname>
+  TokenType scanTag();
 
-  token_type scan_pi();
+  // Consumes '&amp;' etc, emits parent_token_type
+  TokenType scanEntity(TokenType parentTokenType);
 
-  token_type scan_tag();
+  size_t skipWhitespace();
 
-  token_type scan_entity();
+  bool resolveEntity(string_ref const &buffer, string_ref &decoded) const;
 
-  token_type scan_entity_decl();
-
-  char skip_whitespace();
-
-  void push_back(char c);
-
-  char get_char();
-
-  bool resolve_entity(char *buffer, unsigned int len);
-
-  static bool is_whitespace(char c);
-
-  void append_value(char c);
-
-  void append_attr_name(char c);
-
-  void append_tag_name(char c);
+  static bool isWhitespace(char c);
 
  private: /* data */
-  char value[MAX_TOKEN_SIZE]{};
-  unsigned int value_length;
+  string_ref value_;
+  string_ref tagName_;
+  string_ref attributeName_;
 
-  char tag_name[MAX_NAME_SIZE]{};
-  unsigned int tag_name_length;
+  ScanPtr scanFun_;  // current 'reader'
 
-  char attr_name[MAX_NAME_SIZE]{};
-  unsigned int attr_name_length;
+  instream &input_;
 
-  instream &input;
-  char input_char;
-
-  bool got_tail;  // aux flag used in scan_comment, etc.
-
-  const char *text_begin, *text_end;
+  bool gotTail_;  // aux flag used in scanComment, scanSpecial, scanProcessingInstruction
 };
 }  // namespace markup

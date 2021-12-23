@@ -126,12 +126,14 @@ AsyncService::~AsyncService() {
 
 void AsyncService::pivot(std::shared_ptr<TranslationModel> first, std::shared_ptr<TranslationModel> second,
                          std::string &&source, CallbackType clientCallback, const ResponseOptions &responseOptions) {
+  Ptr<HTML> html = std::make_shared<HTML>(std::move(source), responseOptions.HTML);
   // This is callback chaining or CPS due to async.
 
   // We create a callback which feeds the result of first into a second translation (internalCallback), which is
   // supplied with a callback (joiningCallback) which merges both results and creates our final response.
+  //
 
-  auto internalCallback = [this, clientCallback, second, responseOptions](Response &&sourceToPivot) {
+  auto internalCallback = [this, clientCallback, second, responseOptions, html](Response &&sourceToPivot) {
     // We cannot eliminate the following copy, as we need two versions of intermediate. Holding
     // it in a copy allows moving the response into the lambda below.
 
@@ -139,13 +141,14 @@ void AsyncService::pivot(std::shared_ptr<TranslationModel> first, std::shared_pt
 
     // https://stackoverflow.com/a/65606554/4565794
     // Move semantics only work on mutable lambdas, and can only be done once. It's only once in our case, so issok.
-    auto joiningCallback = [this, sourceToPivot = std::move(sourceToPivot),
-                            clientCallback](Response &&pivotToTarget) mutable {
+    auto joiningCallback = [this, sourceToPivot = std::move(sourceToPivot), clientCallback,
+                            html](Response &&pivotToTarget) mutable {
       // We have both Responses at this callback, sourceToPivot is moved in, second half will be available when
       // complete.
       Response finalResponse = combine(std::move(sourceToPivot), std::move(pivotToTarget));
 
       // Sentences should be consistent now, give way to client.
+      html->restore(finalResponse);
       clientCallback(std::move(finalResponse));
     };
 
@@ -157,11 +160,23 @@ void AsyncService::pivot(std::shared_ptr<TranslationModel> first, std::shared_pt
   };
 
   // First call.
-  translate(first, std::move(source), internalCallback, responseOptions);
+  translateRaw(first, std::move(source), internalCallback, responseOptions);
 }
 
 void AsyncService::translate(std::shared_ptr<TranslationModel> translationModel, std::string &&source,
                              CallbackType callback, const ResponseOptions &responseOptions) {
+  // Producer thread, a call to this function adds new work items. If batches are available, notifies workers waiting.
+  Ptr<HTML> html = std::make_shared<HTML>(std::move(source), responseOptions.HTML);
+  auto internalCallback = [html, callback](Response &&response) {
+    html->restore(response);
+    callback(std::move(response));
+  };
+
+  translateRaw(translationModel, std::move(source), internalCallback, responseOptions);
+}
+
+void AsyncService::translateRaw(std::shared_ptr<TranslationModel> translationModel, std::string &&source,
+                                CallbackType callback, const ResponseOptions &responseOptions) {
   // Producer thread, a call to this function adds new work items. If batches are available, notifies workers waiting.
   TranslationCache *cache = config_.cacheEnabled ? &cache_ : nullptr;
   Ptr<Request> request =

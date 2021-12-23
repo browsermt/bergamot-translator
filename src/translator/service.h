@@ -164,6 +164,8 @@ class AsyncService {
   TranslationCache::Stats cacheStats() { return cache_.stats(); }
 
  private:
+  void translateRaw(std::shared_ptr<TranslationModel> translationModel, std::string &&source, CallbackType callback,
+                    const ResponseOptions &options = ResponseOptions());
   AsyncService::Config config_;
 
   std::vector<std::thread> workers_;

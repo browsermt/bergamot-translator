@@ -19,6 +19,8 @@ struct ResponseOptions {
   bool qualityScores{false};  ///< Include quality-scores or not.
   bool alignment{false};      ///< Include alignments or not.
 
+  bool HTML{false};  /// Remove HTML tags from text and (TODO) insert in output.
+
   /// Whether to include sentenceMappings or not. Alignments require
   /// sentenceMappings and are available irrespective of this option if
   /// `alignment=true`.

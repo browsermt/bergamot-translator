@@ -34,6 +34,14 @@ class BlockingService {
     bool cacheCollectStats{false};  ///< Whether to collect stats on cache or not, expensive, might involve locks.
     size_t cacheSize{2000};  ///< Size in History items to be stored in the cache. Loosely corresponds to sentences to
                              /// cache in the real world.
+    template <class App>
+    static void addOptions(App &app, Config &config) {
+      // Options will come here.
+      app.add_option("--cache-translations", config.cacheEnabled, "Whether to cache translations or not.");
+      app.add_option("--cache-size", config.cacheSize, "Number of entries to store in cache.");
+      app.add_option("--cache-collect-stats", config.cacheCollectStats,
+                     "Whether to enable collection of cache-stats or not.");
+    }
   };
   /// Construct a BlockingService with configuration loaded from an Options object. Does not require any keys, values to
   /// be set.
@@ -78,14 +86,24 @@ class BlockingService {
 class AsyncService {
  public:
   struct Config {
-    size_t numWorkers;              ///< How many worker translation threads to spawn.
+    size_t numWorkers{1};           ///< How many worker translation threads to spawn.
     bool cacheEnabled{false};       ///< Whether to enable cache or not.
     bool cacheCollectStats{false};  ///< Whether to collect stats on cache or not, expensive, might involve locks.
-    size_t cacheSize{2000};    ///< Size in History items to be stored in the cache. Loosely corresponds to sentences to
-                               /// cache in the real world.
-    size_t cacheMutexBuckets;  ///< Controls the granularity of locking to reduce contention by bucketing mutexes
-                               ///< guarding cache entry read write. Optimal at min(core, numWorkers) assuming a
-                               ///< reasonably large cache-size.
+    size_t cacheSize{2000};  ///< Size in History items to be stored in the cache. Loosely corresponds to sentences to
+                             /// cache in the real world.
+    size_t cacheMutexBuckets{1};  ///< Controls the granularity of locking to reduce contention by bucketing mutexes
+                                  ///< guarding cache entry read write. Optimal at min(core, numWorkers) assuming a
+                                  ///< reasonably large cache-size.
+    template <class App>
+    static void addOptions(App &app, Config &config) {
+      app.add_option("--cpu-threads", config.numWorkers, "Workers to form translation backend");
+      app.add_option("--cache-translations", config.cacheEnabled, "Whether to cache translations or not.");
+      app.add_option("--cache-size", config.cacheSize, "Number of entries to store in cache.");
+      app.add_option("--cache-mutex-buckets", config.cacheMutexBuckets,
+                     "Number of mutex buckets to control locking granularity");
+      app.add_option("--cache-collect-stats", config.cacheCollectStats,
+                     "Whether to enable collection of cache-stats or not.");
+    }
   };
   /// Construct an AsyncService with configuration loaded from Options. Expects positive integer value for
   /// `cpu-threads`. Additionally requires options which configure AggregateBatchingPool.

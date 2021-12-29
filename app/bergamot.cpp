@@ -1,22 +1,42 @@
-#include "cli.h"
+#include "translator/byte_array_util.h"
+#include "translator/parser.h"
+#include "translator/response.h"
+#include "translator/response_options.h"
+#include "translator/service.h"
+#include "translator/utils.h"
 
 int main(int argc, char *argv[]) {
-  marian::bergamot::ConfigParser configParser;
+  using namespace marian::bergamot;
+  ConfigParser<AsyncService> configParser("Bergamot CLI", /*multiOpMode=*/false);
   configParser.parseArgs(argc, argv);
   auto &config = configParser.getConfig();
-  using namespace marian::bergamot;
-  switch (config.opMode) {
-    case OpMode::APP_WASM:
-      app::wasm(config);
-      break;
-    case OpMode::APP_NATIVE:
-      app::native(config);
-      break;
-    case OpMode::APP_DECODER:
-      app::decoder(config);
-      break;
-    default:
-      break;
-  }
+
+  AsyncService service(config.serviceConfig);
+
+  // Construct a model.
+  auto options = parseOptionsFromFilePath(config.modelConfigPaths.front());
+
+  MemoryBundle memoryBundle;
+  std::shared_ptr<TranslationModel> model = service.createCompatibleModel(options, std::move(memoryBundle));
+
+  ResponseOptions responseOptions;
+  std::string input = readFromStdin();
+
+  // Create a barrier using future/promise.
+  std::promise<Response> promise;
+  std::future<Response> future = promise.get_future();
+  auto callback = [&promise](Response &&response) {
+    // Fulfill promise.
+    promise.set_value(std::move(response));
+  };
+
+  service.translate(model, std::move(input), callback, responseOptions);
+
+  // Wait until promise sets the response.
+  Response response = future.get();
+
+  // Print (only) translated text.
+  std::cout << response.target.text;
+
   return 0;
 }

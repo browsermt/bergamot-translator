@@ -140,7 +140,6 @@ void TestSuite<Service>::qualityEstimatorWords(Ptr<TranslationModel> model) {
   }
 }
 
-// Reads from stdin and translates the read content. Prints the quality words for each sentence.
 template <class Service>
 void TestSuite<Service>::htmlTranslation(Ptr<TranslationModel> model) {
   ResponseOptions responseOptions;

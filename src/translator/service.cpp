@@ -38,6 +38,21 @@ BlockingService::BlockingService(const BlockingService::Config &config)
 std::vector<Response> BlockingService::translateMultiple(std::shared_ptr<TranslationModel> translationModel,
                                                          std::vector<std::string> &&sources,
                                                          const ResponseOptions &responseOptions) {
+  std::vector<HTML> htmls;
+  for (auto &&source : sources) {
+    htmls.emplace_back(std::move(source), responseOptions.HTML);
+  }
+  std::vector<Response> responses = translateMultipleRaw(translationModel, std::move(sources), responseOptions);
+  for (size_t i = 0; i < responses.size(); i++) {
+    htmls[i].restore(responses[i]);
+  }
+
+  return responses;
+}
+
+std::vector<Response> BlockingService::translateMultipleRaw(std::shared_ptr<TranslationModel> translationModel,
+                                                            std::vector<std::string> &&sources,
+                                                            const ResponseOptions &responseOptions) {
   std::vector<Response> responses;
   responses.resize(sources.size());
 
@@ -64,7 +79,7 @@ std::vector<Response> BlockingService::pivotMultiple(std::shared_ptr<Translation
                                                      const ResponseOptions &responseOptions) {
   // Translate source to pivots. This is same as calling translateMultiple.
   std::vector<Response> sourcesToPivots;
-  sourcesToPivots = translateMultiple(first, std::move(sources), responseOptions);
+  sourcesToPivots = translateMultipleRaw(first, std::move(sources), responseOptions);
 
   // Translate pivots to targets, after we have outputs at pivot from first round. We cannot use translateMultiple here
   // because need consistency at pivot on both sides.

@@ -87,6 +87,8 @@ class TestSuite {
   void translationCache(Ptr<TranslationModel> model);
 
   void pivotTranslate(std::vector<Ptr<TranslationModel>> &models);
+
+  void htmlTranslation(Ptr<TranslationModel> model);
 };
 
 #define BERGAMOT_TESTS_COMMON_IMPL

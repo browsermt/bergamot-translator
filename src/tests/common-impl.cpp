@@ -71,6 +71,8 @@ void TestSuite<Service>::TestSuite::run(const std::string &opModeAsString, std::
     translationCache(models.front());
   } else if (opModeAsString == "test-pivot") {
     pivotTranslate(models);
+  } else if (opModeAsString == "test-html-translation") {
+    htmlTranslation(models.front());
   } else {
     std::cerr << "Incompatible test mode. Choose from the one of the valid test-modes";
     std::abort();
@@ -158,6 +160,17 @@ void TestSuite<Service>::qualityEstimatorWords(Ptr<TranslationModel> model) {
     }
     std::cout << "[SentenceEnd]\n\n";
   }
+}
+
+template <class Service>
+void TestSuite<Service>::htmlTranslation(Ptr<TranslationModel> model) {
+  ResponseOptions responseOptions;
+  responseOptions.HTML = true;
+  responseOptions.alignment = true;
+  std::string source = readFromStdin();
+  const Response response = bridge_.translate(service_, model, std::move(source), responseOptions);
+
+  std::cout << response.target.text;
 }
 
 // Reads from stdin and translates the read content. Prints the quality scores for each sentence.

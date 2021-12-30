@@ -11,10 +11,7 @@ namespace marian {
 namespace bergamot {
 
 BlockingService::BlockingService(const BlockingService::Config &config)
-    : config_(config),
-      requestId_(0),
-      batchingPool_(),
-      cache_(config.cacheSize, /*mutexBuckets=*/1, config.cacheCollectStats) {}
+    : config_(config), requestId_(0), batchingPool_(), cache_(config.cacheSize, /*mutexBuckets=*/1) {}
 
 std::vector<Response> BlockingService::translateMultiple(std::shared_ptr<TranslationModel> translationModel,
                                                          std::vector<std::string> &&sources,
@@ -40,10 +37,7 @@ std::vector<Response> BlockingService::translateMultiple(std::shared_ptr<Transla
 }
 
 AsyncService::AsyncService(const AsyncService::Config &config)
-    : requestId_(0),
-      config_(config),
-      safeBatchingPool_(),
-      cache_(config_.cacheSize, config_.cacheMutexBuckets, config_.cacheCollectStats) {
+    : requestId_(0), config_(config), safeBatchingPool_(), cache_(config_.cacheSize, config_.cacheMutexBuckets) {
   ABORT_IF(config_.numWorkers == 0, "Number of workers should be at least 1 in a threaded workflow");
   workers_.reserve(config_.numWorkers);
   for (size_t cpuId = 0; cpuId < config_.numWorkers; cpuId++) {

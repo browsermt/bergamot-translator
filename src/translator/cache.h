@@ -17,8 +17,7 @@ class AtomicCache {
     size_t misses{0};
   };
 
-  explicit AtomicCache(size_t size, size_t buckets, bool collectStats = false)
-      : records_(size), mutexBuckets_(buckets), collectStats_(collectStats) {}
+  explicit AtomicCache(size_t size, size_t buckets) : records_(size), mutexBuckets_(buckets) {}
 
   std::pair<bool, Value> find(const Key &key) const {
     Value value;
@@ -28,7 +27,13 @@ class AtomicCache {
 
   void store(const Key &key, Value value) { atomicStore(key, value); }
 
-  const Stats stats() const { return Stats{hits_.load(), misses_.load()}; }
+  const Stats stats() const {
+#ifdef TESTS_ENABLED
+    return Stats{hits_.load(), misses_.load()};
+#else
+    return Stats{0, 0};
+#endif
+  }
 
  private:
   using Record = std::pair<Key, Value>;
@@ -42,14 +47,14 @@ class AtomicCache {
     const Record &candidate = records_[index];
     if (equals_(key, candidate.first)) {
       value = candidate.second;
-      if (collectStats_) {
-        ++hits_;
-      }
+#ifdef TESTS_ENABLED
+      ++hits_;
+#endif
       return true;
     } else {
-      if (collectStats_) {
-        ++misses_;
-      }
+#ifdef TESTS_ENABLED
+      ++misses_;
+#endif
     }
 
     return false;
@@ -70,10 +75,11 @@ class AtomicCache {
   std::vector<Record> records_;
 
   mutable std::vector<std::mutex> mutexBuckets_;
+
+#ifdef TESTS_ENABLED
   mutable std::atomic<size_t> hits_{0};
   mutable std::atomic<size_t> misses_{0};
-
-  bool collectStats_;
+#endif
 
   Hash hash_;
   Equals equals_;

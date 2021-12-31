@@ -16,7 +16,7 @@ class Logger {
     }
   };
 
-  Logger(const Config &config) : config_(config), marianLoggers_(createLoggers()) {
+  Logger(const Config &config) : marianLoggers_(createLoggers()) {
     // We are manually creating loggers, because this is usually created in marian as a side-effect of
     // config-parsing.
     for (auto &logger : marianLoggers_) {
@@ -24,6 +24,8 @@ class Logger {
     }
   }
 
+  // Taken from
+  // https://github.com/marian-nmt/marian-dev/blob/c84599d08ad69059279abd5a7417a8053db8b631/src/common/logging.cpp#L45
   static bool setLoggingLevel(spdlog::logger &logger, std::string const level) {
     if (level == "trace")
       logger.set_level(spdlog::level::trace);
@@ -64,7 +66,6 @@ class Logger {
  private:
   using MarianLogger = std::shared_ptr<spdlog::logger>;
   std::vector<MarianLogger> marianLoggers_;
-  Config config_;
 };
 }  // namespace bergamot
 }  // namespace marian

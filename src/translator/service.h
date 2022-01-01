@@ -5,6 +5,7 @@
 #include <thread>
 #include <vector>
 
+#include "cache.h"
 #include "data/types.h"
 #include "logging.h"
 #include "quality_estimator.h"
@@ -78,10 +79,21 @@ class AsyncService;
 class BlockingService {
  public:
   struct Config {
+    bool cacheEnabled{false};  ///< Whether to enable cache or not.
+    size_t cacheSize{2000};    ///< Size in History items to be stored in the cache. Loosely corresponds to sentences to
+                               /// cache in the real world.
     size_t workspaceSizeInMB{1024};
+
+    template <class App>
+    static void addOptions(App &app, Config &config) {
+      // Options will come here.
+      app.add_option("--cache-translations", config.cacheEnabled, "Whether to cache translations or not.");
+      app.add_option("--cache-size", config.cacheSize, "Number of entries to store in cache.");
+      app.add_option("--workspace-size", config.workspaceSizeInMB, "Workspace size to use");
+    }
   };
-  /// Construct a BlockingService with configuration loaded from an Options object. Does not require any keys, values
-  /// to be set.
+  /// Construct a BlockingService with configuration loaded from an Options object. Does not require any keys, values to
+  /// be set.
   BlockingService(const BlockingService::Config &config);
 
   /// Translate multiple text-blobs in a single *blocking* API call, providing ResponseOptions which applies across
@@ -99,6 +111,8 @@ class BlockingService {
   std::vector<Response> translateMultiple(std::shared_ptr<TranslationModel> translationModel,
                                           std::vector<std::string> &&source, const ResponseOptions &responseOptions);
 
+  TranslationCache::Stats cacheStats() { return cache_.stats(); }
+
  private:
   ///  Numbering requests processed through this instance. Used to keep account of arrival times of the request. This
   ///  allows for using this quantity in priority based ordering.
@@ -114,6 +128,7 @@ class BlockingService {
   Logger logger_;
 
   Workspace workspace_;
+  TranslationCache cache_;
 };
 
 /// Effectively a threadpool, providing an API to take a translation request of a source-text, paramaterized by
@@ -122,8 +137,25 @@ class BlockingService {
 class AsyncService {
  public:
   struct Config {
-    size_t numWorkers;
+    size_t numWorkers{1};      ///< How many worker translation threads to spawn.
+    bool cacheEnabled{false};  ///< Whether to enable cache or not.
+    size_t cacheSize{2000};    ///< Size in History items to be stored in the cache. Loosely corresponds to sentences to
+                               /// cache in the real world.
+    size_t cacheMutexBuckets{1};  ///< Controls the granularity of locking to reduce contention by bucketing mutexes
+                                  ///< guarding cache entry read write. Optimal at min(core, numWorkers) assuming a
+                                  ///< reasonably large cache-size.
+
     size_t workspaceSizeInMB{1024};
+
+    template <class App>
+    static void addOptions(App &app, Config &config) {
+      app.add_option("--cpu-threads", config.numWorkers, "Workers to form translation backend");
+      app.add_option("--cache-translations", config.cacheEnabled, "Whether to cache translations or not.");
+      app.add_option("--cache-size", config.cacheSize, "Number of entries to store in cache.");
+      app.add_option("--cache-mutex-buckets", config.cacheMutexBuckets,
+                     "Number of mutex buckets to control locking granularity");
+      app.add_option("--workspace-size", config.workspaceSizeInMB, "Workspace size to use");
+    }
   };
   /// Construct an AsyncService with configuration loaded from Options. Expects positive integer value for
   /// `cpu-threads`. Additionally requires options which configure AggregateBatchingPool.
@@ -153,6 +185,8 @@ class AsyncService {
   /// Thread joins and proper shutdown are required to be handled explicitly.
   ~AsyncService();
 
+  TranslationCache::Stats cacheStats() { return cache_.stats(); }
+
  private:
   AsyncService::Config config_;
 
@@ -173,6 +207,7 @@ class AsyncService {
 
   // Logger which shuts down cleanly with service.
   Logger logger_;
+  TranslationCache cache_;
 };
 
 }  // namespace bergamot

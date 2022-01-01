@@ -1,13 +1,13 @@
 # marian-dev is tested elsewhere in both paths, turning off here.
 set(COMPILE_TESTS OFF)
-add_subdirectory(marian-dev)
+add_subdirectory(marian-dev EXCLUDE_FROM_ALL)
 
 if(COMPILE_WASM)
   # This is a bad way of adding compilation flags. Will be improved soon.
   add_compile_options(${WASM_COMPILE_FLAGS})
 endif(COMPILE_WASM)
 
-add_subdirectory(ssplit-cpp)
+add_subdirectory(ssplit-cpp EXCLUDE_FROM_ALL)
 
 # Add include directories for 3rd party targets to be able to use it anywhere in the
 # project without explicitly specifying their include directories. Once they

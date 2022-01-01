@@ -6,6 +6,7 @@
 
 #include "batch.h"
 #include "batching_pool.h"
+#include "cache.h"
 #include "common/utils.h"
 #include "data/shortlist.h"
 #include "definitions.h"
@@ -68,11 +69,11 @@ class TranslationModel {
   /// @param [in] responseOptions: Configuration used to prepare the Response corresponding to the created request.
   //  @returns Request created from the query parameters wrapped within a shared-pointer.
   Ptr<Request> makeRequest(size_t requestId, std::string&& source, CallbackType callback,
-                           const ResponseOptions& responseOptions);
+                           const ResponseOptions& responseOptions, TranslationCache* cache);
 
   /// Relays a request to the batching-pool specific to this translation model.
   /// @param [in] request: Request constructed through makeRequest
-  void enqueueRequest(Ptr<Request> request) { batchingPool_.enqueueRequest(request); };
+  size_t enqueueRequest(Ptr<Request> request) { return batchingPool_.enqueueRequest(request); };
 
   /// Generates a batch from the batching-pool for this translation model, compiling from several active requests. Note
   /// that it is possible that calls to this method can give empty-batches.
@@ -88,7 +89,11 @@ class TranslationModel {
   /// @param [in] batch: A batch generated from generateBatch from the same TranslationModel instance.
   void translateBatch(Workspace& workspace, Batch& batch);
 
+  /// Returns a unique-identifier for the model.
+  size_t modelId() const { return modelId_; }
+
  private:
+  size_t modelId_;
   Config options_;
   MemoryBundle memory_;
   Vocabs vocabs_;
@@ -117,6 +122,8 @@ class TranslationModel {
 
   void loadBackend(MarianBackend& backend, Workspace& workspace);
   Ptr<marian::data::CorpusBatch> convertToMarianBatch(Batch& batch);
+
+  static std::atomic<size_t> modelCounter_;
 };
 
 }  // namespace bergamot

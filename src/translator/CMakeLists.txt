@@ -32,9 +32,9 @@ if(COMPILE_WASM)
   target_compile_options(bergamot-translator PRIVATE ${WASM_COMPILE_FLAGS})
 endif(COMPILE_WASM)
 
-if(COMPILE_TESTS)
-    target_compile_definitions(bergamot-translator PUBLIC TESTS_ENABLED)
-endif(COMPILE_TESTS)
+if(ENABLE_CACHE_STATS)
+    target_compile_definitions(bergamot-translator PUBLIC ENABLE_CACHE_STATS)
+endif(ENABLE_CACHE_STATS)
 
 target_link_libraries(bergamot-translator marian ssplit)
 

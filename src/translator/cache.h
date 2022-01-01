@@ -28,7 +28,7 @@ class AtomicCache {
   void store(const Key &key, Value value) { atomicStore(key, value); }
 
   const Stats stats() const {
-#ifdef TESTS_ENABLED
+#ifdef ENABLE_CACHE_STATS
     return Stats{hits_.load(), misses_.load()};
 #else
     return Stats{0, 0};
@@ -47,12 +47,12 @@ class AtomicCache {
     const Record &candidate = records_[index];
     if (equals_(key, candidate.first)) {
       value = candidate.second;
-#ifdef TESTS_ENABLED
+#ifdef ENABLE_CACHE_STATS
       ++hits_;
 #endif
       return true;
     } else {
-#ifdef TESTS_ENABLED
+#ifdef ENABLE_CACHE_STATS
       ++misses_;
 #endif
     }
@@ -76,7 +76,7 @@ class AtomicCache {
 
   mutable std::vector<std::mutex> mutexBuckets_;
 
-#ifdef TESTS_ENABLED
+#ifdef ENABLE_CACHE_STATS
   mutable std::atomic<size_t> hits_{0};
   mutable std::atomic<size_t> misses_{0};
 #endif

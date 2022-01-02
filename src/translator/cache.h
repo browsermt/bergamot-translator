@@ -1,4 +1,5 @@
 #pragma once
+#include <atomic>
 #include <memory>
 #include <mutex>
 #include <vector>
@@ -26,7 +27,14 @@ class AtomicCache {
 
   void store(const Key &key, Value value) { atomicStore(key, value); }
 
-  const Stats stats() const { return stats_; }
+  const Stats stats() const {
+#ifdef ENABLE_CACHE_STATS
+    return Stats{hits_.load(), misses_.load()};
+#else
+    ABORT("Cache statistics requested without enabling in builds. Please use -DENABLE_CACHE_STATS with cmake.");
+    return Stats{0, 0};
+#endif
+  }
 
  private:
   using Record = std::pair<Key, Value>;
@@ -40,10 +48,14 @@ class AtomicCache {
     const Record &candidate = records_[index];
     if (equals_(key, candidate.first)) {
       value = candidate.second;
-      stats_.hits += 1;
+#ifdef ENABLE_CACHE_STATS
+      ++hits_;
+#endif
       return true;
     } else {
-      stats_.misses += 1;
+#ifdef ENABLE_CACHE_STATS
+      ++misses_;
+#endif
     }
 
     return false;
@@ -64,7 +76,11 @@ class AtomicCache {
   std::vector<Record> records_;
 
   mutable std::vector<std::mutex> mutexBuckets_;
-  mutable Stats stats_;
+
+#ifdef ENABLE_CACHE_STATS
+  mutable std::atomic<size_t> hits_{0};
+  mutable std::atomic<size_t> misses_{0};
+#endif
 
   Hash hash_;
   Equals equals_;

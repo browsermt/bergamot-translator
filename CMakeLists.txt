@@ -74,6 +74,8 @@ cmake_dependent_option(USE_WASM_COMPATIBLE_SOURCE "Use wasm compatible sources" 
 # WASM disables a million libraries, which also includes the unit test-library.
 cmake_dependent_option(COMPILE_UNIT_TESTS "Compile unit tests" OFF "USE_WASM_COMPATIBLE_SOURCE" ON)
 option(COMPILE_TESTS "Compile bergamot-tests" OFF)
+cmake_dependent_option(ENABLE_CACHE_STATS "Enable stats on cache" ON "COMPILE_TESTS" OFF)
+
 
 # Set 3rd party submodule specific cmake options for this project
 SET(COMPILE_CUDA OFF CACHE BOOL "Compile GPU version")

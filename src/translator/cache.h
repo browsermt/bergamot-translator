@@ -31,6 +31,7 @@ class AtomicCache {
 #ifdef ENABLE_CACHE_STATS
     return Stats{hits_.load(), misses_.load()};
 #else
+    ABORT("Cache statistics requested without enabling in builds. Please use -DENABLE_CACHE_STATS with cmake.");
     return Stats{0, 0};
 #endif
   }

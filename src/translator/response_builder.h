@@ -61,7 +61,7 @@ class ResponseBuilder {
       buildQualityScores(histories, response);
     }
 
-    if (responseOptions_.alignment or responseOptions_.HTML) {
+    if (responseOptions_.alignment || responseOptions_.HTML) {
       buildAlignments(histories, response);
     }
     html_.restore(response);

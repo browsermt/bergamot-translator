@@ -58,6 +58,8 @@ class AggregateBatchingPool {
   /// @returns Number of sentences in the generated batch.
   size_t generateBatch(Ptr<TranslationModel>& model, Batch& batch);
 
+  void clear();
+
  private:
   std::unordered_set<std::shared_ptr<TranslationModel>, HashPtr<TranslationModel>> aggregateQueue_;
 };

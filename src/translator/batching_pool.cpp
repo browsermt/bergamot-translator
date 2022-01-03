@@ -59,5 +59,11 @@ size_t BatchingPool::enqueueRequest(Ptr<Request> request) {
   return toBeFreshlyTranslated;
 }
 
+void BatchingPool::clear() {
+  for (size_t length = 0; length < bucket_.size(); length++) {
+    bucket_[length].clear();
+  }
+}
+
 }  // namespace bergamot
 }  // namespace marian

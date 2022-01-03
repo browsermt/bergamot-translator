@@ -130,7 +130,13 @@ class AsyncService {
   void translate(std::shared_ptr<TranslationModel> translationModel, std::string &&source, CallbackType callback,
                  const ResponseOptions &options = ResponseOptions());
 
-  /// Thread joins and proper shutdown are required to be handled explicitly.
+  /// Clears all pending work and stops immediately
+  void terminate();
+
+  /// Joins threads and waits for any pending work
+  void join();
+
+  /// Calls join()
   ~AsyncService();
 
   TranslationCache::Stats cacheStats() { return cache_.stats(); }

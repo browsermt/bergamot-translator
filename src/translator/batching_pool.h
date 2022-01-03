@@ -26,6 +26,8 @@ class BatchingPool {
   // requests optimizing for both padding and priority.
   size_t generateBatch(Batch &batch);
 
+  void clear();
+
  private:
   size_t miniBatchWords;
   std::vector<std::set<RequestSentence>> bucket_;

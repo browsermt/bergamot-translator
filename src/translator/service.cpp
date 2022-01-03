@@ -61,17 +61,28 @@ AsyncService::AsyncService(const AsyncService::Config &config)
   }
 }
 
-AsyncService::~AsyncService() {
+void AsyncService::terminate() {
+  safeBatchingPool_.clear();
+  join();
+}
+
+void AsyncService::join() {
   safeBatchingPool_.shutdown();
   for (std::thread &worker : workers_) {
     assert(worker.joinable());
     worker.join();
   }
+  workers_.clear();
+}
+
+AsyncService::~AsyncService() {
+  join();
 }
 
 void AsyncService::translate(std::shared_ptr<TranslationModel> translationModel, std::string &&source,
                              CallbackType callback, const ResponseOptions &responseOptions) {
   // Producer thread, a call to this function adds new work items. If batches are available, notifies workers waiting.
+  ABORT_IF(workers_.empty(), "Service has already been terminated");
   TranslationCache *cache = config_.cacheEnabled ? &cache_ : nullptr;
   Ptr<Request> request =
       translationModel->makeRequest(requestId_++, std::move(source), callback, responseOptions, cache);

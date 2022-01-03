@@ -43,6 +43,8 @@ class ThreadsafeBatchingPool {
   template <class... Args>
   size_t generateBatch(Args &&... args);
 
+  void clear();
+
   void shutdown();
 
  private:

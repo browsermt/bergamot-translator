@@ -19,9 +19,19 @@ class BadHTML : public std::runtime_error {
 class HTML {
  public:
   struct Tag {
+    enum NodeType {
+      ELEMENT,
+      VOID_ELEMENT,
+      COMMENT,
+      PROCESSING_INSTRUCTION,
+    };
+
+    NodeType type;  // Type of the node
     std::string name;
     std::string attributes;
-    bool empty;
+    std::string data;  // Raw data of an element that just needs to be
+                       // copied as is, e.g. <script> or <style>
+                       // TODO: replace with string_view if input lives that long
   };
 
   typedef std::vector<Tag *> Taint;

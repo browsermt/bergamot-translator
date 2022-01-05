@@ -130,13 +130,15 @@ class AsyncService {
   void translate(std::shared_ptr<TranslationModel> translationModel, std::string &&source, CallbackType callback,
                  const ResponseOptions &options = ResponseOptions());
 
-  /// Clears all pending work and stops immediately
+  /// Clears all pending work and stops workers as soon as they request their
+  /// next (marian) batch. Blocks until all workers have stopped. Calling
+  /// `translate()` after (or during) `terminate()` will result in an error.
   void terminate();
 
-  /// Joins threads and waits for any pending work
+  /// Joins threads and waits for any pending translation requests to finish.
   void join();
 
-  /// Calls join()
+  /// Calls join() which blocks until all pending translation requests are completed.
   ~AsyncService();
 
   TranslationCache::Stats cacheStats() { return cache_.stats(); }

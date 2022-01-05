@@ -26,6 +26,7 @@ class BatchingPool {
   // requests optimizing for both padding and priority.
   size_t generateBatch(Batch &batch);
 
+  // Removes any pending requests from the pool.
   void clear();
 
  private:

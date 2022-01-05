@@ -58,6 +58,8 @@ class AggregateBatchingPool {
   /// @returns Number of sentences in the generated batch.
   size_t generateBatch(Ptr<TranslationModel>& model, Batch& batch);
 
+  /// Clear the aggregate queue. Does not clear the underlying model/request pairs but the next call
+  /// to `generateBatch()` will return 0. (Unless `enqueueRequest()` was called in the mean time.)
   void clear();
 
  private:

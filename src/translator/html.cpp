@@ -59,6 +59,8 @@ std::ostream &operator<<(std::ostream &out, HTML::Tag const *tag) {
       return out << "<!--" << tag->data << "-->";
     case HTML::Tag::PROCESSING_INSTRUCTION:
       return out << "<?" << tag->data << "?>";
+    default:
+      return out << "[Unknown tag type]";
   }
 }
 

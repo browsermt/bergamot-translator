@@ -79,6 +79,8 @@ class TestSuite {
   void qualityEstimatorScores(Ptr<TranslationModel> model);
 
   void translationCache(Ptr<TranslationModel> model);
+
+  void htmlTranslation(Ptr<TranslationModel> model);
 };
 
 #define BERGAMOT_TESTS_COMMON_IMPL

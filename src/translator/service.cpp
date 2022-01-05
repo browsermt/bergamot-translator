@@ -75,9 +75,7 @@ void AsyncService::join() {
   workers_.clear();
 }
 
-AsyncService::~AsyncService() {
-  join();
-}
+AsyncService::~AsyncService() { join(); }
 
 void AsyncService::translate(std::shared_ptr<TranslationModel> translationModel, std::string &&source,
                              CallbackType callback, const ResponseOptions &responseOptions) {

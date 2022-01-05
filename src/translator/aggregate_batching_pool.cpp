@@ -30,9 +30,7 @@ size_t AggregateBatchingPool::generateBatch(Ptr<TranslationModel>& model, Batch&
   return /*numSentences=*/0;
 }
 
-void AggregateBatchingPool::clear() {
-  aggregateQueue_.clear();
-}
+void AggregateBatchingPool::clear() { aggregateQueue_.clear(); }
 
 }  // namespace bergamot
 }  // namespace marian

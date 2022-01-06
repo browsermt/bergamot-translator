@@ -4,7 +4,7 @@
 mkdir -p models
 wget --quiet --continue --directory models/ \
     http://data.statmt.org/bergamot/models/deen/ende.student.tiny11.tar.gz 
-tar -xzf models/ende.student.tiny11.tar.gz 
+(cd models && tar -xzf ende.student.tiny11.tar.gz)
 
 # Patch the config-files generated from marian for use in bergamot.
 python3 bergamot-translator-tests/tools/patch-marian-for-bergamot.py \

@@ -47,11 +47,20 @@ size_t countPrefixWhitespaces(string_view const &input) {
   return size;
 }
 
+// Formatters used for exception messages combined with format()
 std::ostream &operator<<(std::ostream &out, HTML::Tag const *tag) {
   if (tag == nullptr) return out << "[nullptr]";
-  out << '<' << tag->name << tag->attributes;
-  if (tag->empty) out << '/';
-  return out << '>';
+  switch (tag->type) {
+    case HTML::Tag::ELEMENT:
+      return out << '<' << tag->name << tag->attributes << '>';
+    case HTML::Tag::VOID_ELEMENT:
+      return out << '<' << tag->name << tag->attributes << "/>";
+    case HTML::Tag::COMMENT:
+      return out << "<!--" << tag->data << "-->";
+    case HTML::Tag::PROCESSING_INSTRUCTION:
+      return out << "<?" << tag->data << "?>";
+  }
+  return out << "[Unknown tag type]";
 }
 
 std::ostream &operator<<(std::ostream &out, HTML::Taint const &tags) {
@@ -131,7 +140,9 @@ void diffTags(HTML::Taint const &prev, HTML::Taint const &curr, HTML::Taint &ope
   for (; i < prev.size(); ++i)
     if (i >= curr.size() || prev[i] != curr[i]) break;
 
-  std::copy_if(prev.begin() + i, prev.end(), std::back_inserter(closing), [&](HTML::Tag *tag) { return !tag->empty; });
+  // Only nodes of type ELEMENT can have children and thus would need a closing tag.
+  std::copy_if(prev.begin() + i, prev.end(), std::back_inserter(closing),
+               [&](HTML::Tag *tag) { return tag->type == HTML::Tag::ELEMENT; });
 
   opening.insert(opening.end(), curr.begin() + i, curr.end());
 }
@@ -273,7 +284,7 @@ void copyTaint(Response const &response, std::vector<std::vector<size_t>> const 
 // Little helper class to append HTML to a token
 class TokenFormatter {
  public:
-  TokenFormatter(string_view token)
+  explicit TokenFormatter(string_view token)
       : html_(), offset_(0), whitespaceSize_(countPrefixWhitespaces(token)), closeLeft_(true) {
     // Do encoding of any entities that popped up in the translation
     encodeEntities(token, html_);
@@ -288,13 +299,26 @@ class TokenFormatter {
     diffTags(prev, curr, opening, closing);
 
     for (HTML::Tag const *tag : reversed(closing)) {
+      assert(tag->type == HTML::Tag::ELEMENT);
       std::string closeTag = format("</{}>", tag->name);
       html_.insert(offset_ + (closeLeft_ ? 0 : whitespaceSize_), closeTag);
       offset_ += closeTag.size();
     }
 
     for (HTML::Tag const *tag : opening) {
-      std::string openTag = format("<{}{}>", tag->name, tag->attributes);
+      std::string openTag;
+      switch (tag->type) {
+        case HTML::Tag::ELEMENT:
+        case HTML::Tag::VOID_ELEMENT:
+          openTag = format("<{}{}>{}", tag->name, tag->attributes, tag->data);
+          break;
+        case HTML::Tag::COMMENT:
+          openTag = format("<!--{}-->", tag->data);
+          break;
+        case HTML::Tag::PROCESSING_INSTRUCTION:
+          openTag = format("<?{}?>", tag->data);
+          break;
+      }
       html_.insert(offset_ + whitespaceSize_, openTag);
       offset_ += openTag.size();
       closeLeft_ = false;
@@ -405,55 +429,6 @@ AnnotatedText restoreTarget(AnnotatedText const &in, std::vector<HTML::Span> con
   return out;
 }
 
-std::ostream &debugPrintMapping(std::ostream &out, Response const &response,
-                                std::vector<std::vector<size_t>> const &alignments,
-                                std::vector<SpanIterator> const &targetTokenSpans) {
-  auto spans = targetTokenSpans.begin();
-  for (size_t sentenceIdx = 0; sentenceIdx < response.target.numSentences(); ++sentenceIdx) {
-    out << "Mapped sentence prefix with tags: ";
-    for (auto &&taint : (*++spans)->tags) out << '/' << taint->name;
-    out << '\n';
-
-    for (size_t wordIdx = 0; wordIdx < response.target.numWords(sentenceIdx); ++wordIdx) {
-      assert(sentenceIdx < alignments.size());
-      assert(wordIdx < alignments[sentenceIdx].size());
-
-      out << "Mapped ";
-      out << std::setw(10) << std::setfill(' ') << response.target.word(sentenceIdx, wordIdx);
-      out << " to ";
-      out << std::setw(10) << std::setfill(' ') << response.source.word(sentenceIdx, alignments[sentenceIdx][wordIdx]);
-      out << " with tags: ";
-      for (auto &&taint : (*++spans)->tags) out << '/' << taint->name;
-      out << '\n';
-    }
-  }
-
-  out << "Mapped end-of-input with tags: ";
-  for (auto &&taint : (*++spans)->tags) out << '/' << taint->name;
-  out << '\n';
-
-  assert(++spans == targetTokenSpans.end());
-  return out;
-}
-
-std::ostream &debugPrintAlignmentScores(std::ostream &out, Response const &response) {
-  out << "std::vector<std::vector<std::vector<float>>> alignments{\n";
-  for (size_t sentenceIdx = 0; sentenceIdx < response.source.numSentences(); ++sentenceIdx) {
-    out << "  {\n";
-    for (size_t t = 0; t < response.alignments[sentenceIdx].size(); ++t) {
-      out << "    {";
-      for (size_t s = 0; s < response.alignments[sentenceIdx][t].size(); ++s) {
-        out << std::fixed << std::setw(8) << std::setprecision(8) << std::setfill(' ')
-            << response.alignments[sentenceIdx][t][s];
-        out << ", ";
-      }
-      out << "},\n";
-    }
-    out << "  },\n";
-  }
-  return out << "};\n";
-}
-
 size_t debugCountTokens(AnnotatedText const &text) {
   size_t tokens = 1;  // for the ending gap
   for (size_t sentenceIdx = 0; sentenceIdx < text.numSentences(); ++sentenceIdx) {
@@ -501,7 +476,8 @@ HTML::HTML(std::string &&source, bool process_markup) {
         if (isBlockElement(scanner.tag()) && !source.empty() && source.back() != ' ') source.push_back(' ');
 
         // pool_ takes ownership of our tag, makes sure it's freed when necessary
-        pool_.emplace_back(new Tag{std::string(scanner.tag()), std::string(), isVoidTag(scanner.tag())});
+        pool_.emplace_back(new Tag{isVoidTag(scanner.tag()) ? Tag::VOID_ELEMENT : Tag::ELEMENT,
+                                   std::string(scanner.tag()), std::string()});
 
         // Tag *tag is used by attribute parsing
         tag = pool_.back().get();
@@ -511,7 +487,7 @@ HTML::HTML(std::string &&source, bool process_markup) {
         // Empty elements (e.g. <img>) are not applicable to a span of text
         // so instead we "apply" them to an empty span in between, and then
         // immediately remove them again from the stack.
-        if (tag->empty) {
+        if (tag->type == Tag::VOID_ELEMENT) {
           spans_.push_back(Span{source.size(), source.size(), stack});
           stack.pop_back();
         }
@@ -539,8 +515,36 @@ HTML::HTML(std::string &&source, bool process_markup) {
         tag->attributes += format(" {}=\"{}\"", scanner.attribute(), scanner.value());
         break;
 
-      default:
+      case markup::Scanner::TT_COMMENT_START:
+        // pool_ takes ownership of our tag, makes sure it's freed when necessary
+        pool_.emplace_back(new Tag{Tag::COMMENT});
+        tag = pool_.back().get();
+        stack.push_back(tag);
+        spans_.push_back(Span{source.size(), source.size(), stack});
+        stack.pop_back();
         break;
+
+      case markup::Scanner::TT_PROCESSING_INSTRUCTION_START:
+        // pool_ takes ownership of our tag, makes sure it's freed when necessary
+        pool_.emplace_back(new Tag{Tag::PROCESSING_INSTRUCTION});
+        tag = pool_.back().get();
+        stack.push_back(tag);
+        spans_.push_back(Span{source.size(), source.size(), stack});
+        stack.pop_back();
+        break;
+
+      case markup::Scanner::TT_COMMENT_END:
+      case markup::Scanner::TT_PROCESSING_INSTRUCTION_END:
+        tag = nullptr;
+        break;
+
+      case markup::Scanner::TT_DATA:
+        assert(tag != nullptr);
+        tag->data = scanner.value();
+        break;
+
+      default:
+        throw BadHTML("Unsupported scanner token type");
     }
   }
 

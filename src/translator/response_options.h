@@ -30,6 +30,7 @@ struct ResponseOptions {
 
   std::string HTMLVoidTags;
   std::string HTMLInlineTags;
+  std::string HTMLContinuationDelimiters;
 };
 
 }  // namespace bergamot

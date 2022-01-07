@@ -17,5 +17,6 @@ EMSCRIPTEN_BINDINGS(response_options) {
       .field("alignment", &ResponseOptions::alignment)
       .field("html", &ResponseOptions::HTML)
       .field("htmlVoidTags", &ResponseOptions::HTMLVoidTags)
-      .field("htmlInlineTags", &ResponseOptions::HTMLInlineTags);
+      .field("htmlInlineTags", &ResponseOptions::HTMLInlineTags)
+      .field("htmlContinuationDelimiters", &ResponseOptions::HTMLContinuationDelimiters);
 }

@@ -58,7 +58,8 @@ const translateCall = () => {
   const options = {
     html: document.querySelector("#input-is-html").checked,
     voidTags: document.querySelector("#html-void-tags").value,
-    inlineTags: document.querySelector("#html-inline-tags").value
+    inlineTags: document.querySelector("#html-inline-tags").value,
+    continuationDelimiters: document.querySelector("#html-continuation-delimiters").value,
   };
 
   worker.postMessage([id, "translate", lngFrom, lngTo, text, options]);
@@ -92,8 +93,10 @@ function argmax(arr) {
 }
 
 function isContinuation(token) {
+  const delimiters = document.querySelector("#html-continuation-delimiters").value;  // TODO could have changed since translation request
+  if (delimiters == "disable") return false;
   token = token.replace(/\<\/?.+?>/g, ''); // Remove HTML
-  return token.length > 0 && " ,.(){}[]".indexOf(token.substr(0, 1)) === -1;
+  return token.length > 0 && delimiters.indexOf(token.substr(0, 1)) === -1;
 }
 
 function hardAlignments({originalTokens, translatedTokens, scores}) {

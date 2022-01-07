@@ -375,13 +375,14 @@ const _parseAlignments = (vectorResponse) => {
   return result;
 }
 
-const _prepareResponseOptions = ({html, inlineTags, voidTags}) => {
+const _prepareResponseOptions = ({html, inlineTags, voidTags, continuationDelimiters}) => {
   return {
     qualityScores: true,
     alignment: true,
     html: !!html,
     htmlInlineTags: inlineTags || "",
-    htmlVoidTags: voidTags || ""
+    htmlVoidTags: voidTags || "",
+    htmlContinuationDelimiters: continuationDelimiters || ""
   };
 }
 

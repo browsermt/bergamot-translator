@@ -117,6 +117,12 @@ Ptr<Request> TranslationModel::makeRequest(size_t requestId, std::string &&sourc
     htmlOptions.inlineTags.clear();
     split(responseOptions.HTMLInlineTags, ',', htmlOptions.inlineTags);
   }
+  if (!responseOptions.HTMLContinuationDelimiters.empty()) {  // Oh such a dirty hack!
+    if (responseOptions.HTMLContinuationDelimiters == "disable")
+      htmlOptions.continuationDelimiters = "";
+    else
+      htmlOptions.continuationDelimiters = responseOptions.HTMLContinuationDelimiters;
+  }
 
   HTML html(std::move(source), responseOptions.HTML, std::move(htmlOptions));
   textProcessor_.process(std::move(source), annotatedSource, segments);

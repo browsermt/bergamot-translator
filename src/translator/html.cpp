@@ -372,8 +372,7 @@ HTML::HTML(std::string &&source, bool process_markup, Options &&options) : optio
           if (!source.empty() && !std::isspace(source.back()) && !scanner.value().empty() &&
               !std::isspace(scanner.value().back())) {
             source.push_back(' ');
-            pool_.emplace_back(new Tag{Tag::WHITESPACE});
-            stack.push_back(pool_.back().get());
+            stack.push_back(makeTag({Tag::WHITESPACE}));
             spans_.push_back(Span{source.size(), source.size(), stack});  // Important: span->size() == 0
             stack.pop_back();
           }
@@ -388,12 +387,8 @@ HTML::HTML(std::string &&source, bool process_markup, Options &&options) : optio
       case markup::Scanner::TT_TAG_START: {
         std::string name(scanner.tag());
 
-        // pool_ takes ownership of our tag, makes sure it's freed when necessary
-        pool_.emplace_back(new Tag{/* type = */ contains(options_.voidTags, name) ? Tag::VOID_ELEMENT : Tag::ELEMENT,
-                                   /* name = */ std::move(name)});
-
         // Tag *tag is used by attribute parsing
-        tag = pool_.back().get();
+        tag = makeTag({contains(options_.voidTags, name) ? Tag::VOID_ELEMENT : Tag::ELEMENT, std::move(name)});
 
         stack.push_back(tag);
 
@@ -439,18 +434,16 @@ HTML::HTML(std::string &&source, bool process_markup, Options &&options) : optio
         break;
 
       case markup::Scanner::TT_COMMENT_START:
-        // pool_ takes ownership of our tag, makes sure it's freed when necessary
-        pool_.emplace_back(new Tag{Tag::COMMENT});
-        tag = pool_.back().get();
+        // Tag *tag is used when TT_DATA is seen to add the comment's content.
+        tag = makeTag({Tag::COMMENT});
         stack.push_back(tag);
         spans_.push_back(Span{source.size(), source.size(), stack});
         stack.pop_back();
         break;
 
       case markup::Scanner::TT_PROCESSING_INSTRUCTION_START:
-        // pool_ takes ownership of our tag, makes sure it's freed when necessary
-        pool_.emplace_back(new Tag{Tag::PROCESSING_INSTRUCTION});
-        tag = pool_.back().get();
+        // Tag *tag is used when TT_DATA is seen to add the PI's content.
+        tag = makeTag({Tag::PROCESSING_INSTRUCTION});
         stack.push_back(tag);
         spans_.push_back(Span{source.size(), source.size(), stack});
         stack.pop_back();
@@ -608,6 +601,11 @@ AnnotatedText HTML::restoreTarget(AnnotatedText const &in, std::vector<HTML::Spa
   assert(targetSpanIt == targetTokenSpans.end());
 
   return out;
+}
+
+HTML::Tag *HTML::makeTag(Tag &&tag) {
+  pool_.emplace_front(std::move(tag));
+  return &pool_.front();
 }
 
 void HTML::copyTaint(Response const &response, std::vector<std::vector<size_t>> const &alignments,

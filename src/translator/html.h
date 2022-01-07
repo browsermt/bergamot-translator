@@ -1,6 +1,7 @@
 #ifndef SRC_BERGAMOT_HTML_H_
 #define SRC_BERGAMOT_HTML_H_
 
+#include <forward_list>
 #include <stdexcept>
 #include <string>
 #include <unordered_set>
@@ -63,7 +64,6 @@ class HTML {
   };
 
   explicit HTML(std::string &&source, bool process_markup) : HTML(std::move(source), process_markup, HTML::Options{}){};
-
   explicit HTML(std::string &&source, bool process_markup, Options &&options);
   void restore(Response &response);
 
@@ -79,13 +79,17 @@ class HTML {
                  std::vector<HTML::SpanIterator> const &sourceTokenSpans,
                  std::vector<HTML::SpanIterator> &targetTokenSpans);
 
+  // Allocates tag in pool_ (which then owns it) and gives a pointer to be used
+  // in Taints. Pointer is valid as long as this HTML instance lives on.
+  Tag *makeTag(Tag &&tag);
+
   Options options_;
 
   // List of text spans, and which tags are applied to them
   std::vector<Span> spans_;
 
   // a pool of tags that we free when HTML goes out of scope
-  std::vector<std::unique_ptr<Tag>> pool_;
+  std::forward_list<Tag> pool_;
 };
 
 }  // namespace bergamot

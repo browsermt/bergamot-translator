@@ -15,10 +15,10 @@ namespace {
 void split(std::string const &str, char delimiter, std::unordered_set<std::string> &out) {
   std::string::size_type pos{0}, offset{0};
   while ((pos = str.find(delimiter, offset)) != std::string::npos) {
-    out.emplace(str.substr(offset, pos - offset));
+    if (pos > offset) out.emplace(str.substr(offset, pos - offset));
     offset = pos + 1;
   }
-  out.emplace(str.substr(offset));
+  if (offset != str.size()) out.emplace(str.substr(offset));
 }
 
 }  // namespace

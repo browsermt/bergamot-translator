@@ -33,6 +33,11 @@ class HTML {
     std::unordered_set<std::string> inlineTags{"abbr",   "a", "b",    "em",    "i",    "kbd",    "mark", "math",
                                                "output", "q", "ruby", "small", "span", "strong", "sub",  "sup",
                                                "time",   "u", "var",  "wbr",   "ins",  "del"};
+
+    // List of characters that occur at the start of a token that indicate that
+    // the this token is probably *not* a continuation of a word. Set to empty
+    // to never mark a token as a continuation of the word.
+    std::string continuationDelimiters = " ,.(){}[]";
   };
 
   struct Tag {
@@ -78,7 +83,8 @@ class HTML {
   void copyTaint(Response const &response, std::vector<std::vector<size_t>> const &alignments,
                  std::vector<HTML::SpanIterator> const &sourceTokenSpans,
                  std::vector<HTML::SpanIterator> &targetTokenSpans);
-
+  void hardAlignments(Response const &response, std::vector<std::vector<size_t>> &alignments);
+  bool isContinuation(string_view str);
   // Allocates tag in pool_ (which then owns it) and gives a pointer to be used
   // in Taints. Pointer is valid as long as this HTML instance lives on.
   Tag *makeTag(Tag &&tag);

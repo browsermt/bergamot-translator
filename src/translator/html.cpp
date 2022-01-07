@@ -170,29 +170,6 @@ AnnotatedText apply(AnnotatedText const &in, Fun fun) {
   return out;
 }
 
-// Reports if token `str` is likely to be a continuation of a word. This is used
-// to determine whether we should share the markup, or whether we should see
-// this token as a fresh start. This implementation will treat "hello[world]"
-// as 4 words, assuming its tokenised as something like `h ell o [ wor ld ]`.
-bool isContinuation(string_view str) {
-  if (str.empty()) return false;
-
-  switch (str[0]) {
-    case ' ':  // if it begins with a space,
-    case ',':  // or a special character,
-    case '.':
-    case '(':
-    case ')':
-    case '{':
-    case '}':
-    case '[':
-    case ']':
-      return false;  // it's it own separate word.
-    default:
-      return true;  // otherwise it just continues the previous word (except the first word of the sentence)
-  }
-}
-
 bool hasAlignments(Response const &response) {
   // Test for each sentence individually as a sentence may be empty (or there)
   // might be no sentences, so just testing for alignments.empty() would not be
@@ -209,56 +186,6 @@ bool hasAlignments(Response const &response) {
       if (response.alignments[sentenceIdx][wordIdx].size() != response.source.numWords(sentenceIdx)) return false;
   }
   return true;
-}
-
-void hardAlignments(Response const &response, std::vector<std::vector<size_t>> &alignments) {
-  // For each sentence...
-  for (size_t sentenceIdx = 0; sentenceIdx < response.target.numSentences(); ++sentenceIdx) {
-    alignments.emplace_back();
-
-    // Hard-align: find for each target token the most prevalent source token
-    // Note: only search from 0 to N-1 because token N is end-of-sentence token
-    // that can only align with the end-of-sentence token of the target
-    for (size_t t = 0; t + 1 < response.target.numWords(sentenceIdx); ++t) {
-      size_t maxS = 0;
-      for (size_t s = 1; s + 1 < response.source.numWords(sentenceIdx); ++s) {
-        if (response.alignments[sentenceIdx][t][s] > response.alignments[sentenceIdx][t][maxS]) {
-          maxS = s;
-        }
-      }
-
-      alignments.back().push_back(maxS);
-    }
-
-    // Next, we try to smooth out these selected alignments with a few heuristics
-    for (size_t t = 1; t + 1 < response.target.numWords(sentenceIdx); ++t) {
-      // If this token is a continuation of a previous token, pick the tags from the most
-      // prevalent token for the whole word.
-      if (isContinuation(response.target.word(sentenceIdx, t))) {
-        // Note: only looking at the previous token since that will already
-        // have this treatment applied to it.
-        size_t currSentenceIdx = alignments.back()[t];
-        size_t prevSentenceIdx = alignments.back()[t - 1];
-        float currScore = response.alignments[sentenceIdx][t][currSentenceIdx];
-        float prevScore = response.alignments[sentenceIdx][t - 1][prevSentenceIdx];
-
-        if (currScore > prevScore) {
-          // Apply this to all previous tokens in the word
-          for (size_t i = t;; --i) {
-            alignments.back()[i] = currSentenceIdx;
-
-            // Stop if this was the first token or the beginning of the word
-            if (i == 0 || !isContinuation(response.target.word(sentenceIdx, i))) break;
-          }
-        } else {
-          alignments.back()[t] = prevSentenceIdx;
-        }
-      }
-    }
-
-    // Always align target end with source end
-    alignments.back().push_back(response.source.numWords(sentenceIdx) - 1);
-  }
 }
 
 // Little helper class to append HTML to a token
@@ -627,6 +554,66 @@ void HTML::copyTaint(Response const &response, std::vector<std::vector<size_t>> 
 
   assert(offset < sourceTokenSpans.size());
   targetTokenSpans.push_back(sourceTokenSpans[offset]);  // token_tag for ending whitespace
+}
+
+// Reports if token `str` is likely to be a continuation of a word. This is used
+// to determine whether we should share the markup, or whether we should see
+// this token as a fresh start. This implementation will treat "hello[world]"
+// as 4 words, assuming its tokenised as something like `h ell o [ wor ld ]`.
+bool HTML::isContinuation(string_view str) {
+  if (str.empty()) return false;
+  if (options_.continuationDelimiters.empty()) return false;
+  return options_.continuationDelimiters.find(str[0]) == std::string::npos;
+}
+
+void HTML::hardAlignments(Response const &response, std::vector<std::vector<size_t>> &alignments) {
+  // For each sentence...
+  for (size_t sentenceIdx = 0; sentenceIdx < response.target.numSentences(); ++sentenceIdx) {
+    alignments.emplace_back();
+
+    // Hard-align: find for each target token the most prevalent source token
+    // Note: only search from 0 to N-1 because token N is end-of-sentence token
+    // that can only align with the end-of-sentence token of the target
+    for (size_t t = 0; t + 1 < response.target.numWords(sentenceIdx); ++t) {
+      size_t maxS = 0;
+      for (size_t s = 1; s + 1 < response.source.numWords(sentenceIdx); ++s) {
+        if (response.alignments[sentenceIdx][t][s] > response.alignments[sentenceIdx][t][maxS]) {
+          maxS = s;
+        }
+      }
+
+      alignments.back().push_back(maxS);
+    }
+
+    // Next, we try to smooth out these selected alignments with a few heuristics
+    for (size_t t = 1; t + 1 < response.target.numWords(sentenceIdx); ++t) {
+      // If this token is a continuation of a previous token, pick the tags from the most
+      // prevalent token for the whole word.
+      if (isContinuation(response.target.word(sentenceIdx, t))) {
+        // Note: only looking at the previous token since that will already
+        // have this treatment applied to it.
+        size_t currSentenceIdx = alignments.back()[t];
+        size_t prevSentenceIdx = alignments.back()[t - 1];
+        float currScore = response.alignments[sentenceIdx][t][currSentenceIdx];
+        float prevScore = response.alignments[sentenceIdx][t - 1][prevSentenceIdx];
+
+        if (currScore > prevScore) {
+          // Apply this to all previous tokens in the word
+          for (size_t i = t;; --i) {
+            alignments.back()[i] = currSentenceIdx;
+
+            // Stop if this was the first token or the beginning of the word
+            if (i == 0 || !isContinuation(response.target.word(sentenceIdx, i))) break;
+          }
+        } else {
+          alignments.back()[t] = prevSentenceIdx;
+        }
+      }
+    }
+
+    // Always align target end with source end
+    alignments.back().push_back(response.source.numWords(sentenceIdx) - 1);
+  }
 }
 
 }  // namespace marian::bergamot

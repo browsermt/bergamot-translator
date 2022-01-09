@@ -12,28 +12,22 @@ using namespace marian;
 
 std::string work_dir = "/workspaces/bergamot/bergamot-translator/distilled";
 
-void createGraph(Ptr<ExpressionGraph>& graph, const Words& tokens_src, const int dim_vocab) {
-  // https://github.com/sheffieldnlp/deepQuest-py/blob/main/deepquestpy/config/birnn.jsonnet#L28
-  const int dim_emb = 50;
+void createGraphParams(Ptr<ExpressionGraph>& graph, const int dim_vocab, const int dim_emb) {
+  graph->param("embeddings_txt_src", {dim_vocab, dim_emb}, inits::glorotUniform());
+}
+
+void forward(Ptr<ExpressionGraph>& graph, const std::vector<WordIndex>& tokens_src, const int dim_emb) {
+
   const int dim_batch = 1;
+  const int dim_tokens_src = tokens_src.size();
 
-  const auto tokens_src_dim = static_cast<int>(tokens_src.size());
+  auto embeddings_txt_src = graph->get("embeddings_txt_src");
 
-  auto embeddings_txt_src = graph->param("embeddings_txt_src", {dim_vocab, dim_emb}, inits::glorotUniform());
-  auto embedded_txt_src =
-      reshape(rows(embeddings_txt_src, toWordIndexVector(tokens_src)), {dim_batch, tokens_src_dim, dim_emb});
-
-  std::cout << graph->graphviz() << std::endl;
+  auto embedded_txt_src = reshape(rows(embeddings_txt_src, tokens_src), {dim_batch, dim_tokens_src, dim_emb});
+  
+  debug( embedded_txt_src, "embedded_txt_src");
 
   graph->forward();
-
-  graph->save(work_dir + "/distilled.npz");
-
-  std::vector<float> values;
-
-  embedded_txt_src->val()->get(values);
-
-  std::cout << values.size() << std::endl;
 }
 
 int main(const int argc, const char* argv[]) {
@@ -44,15 +38,35 @@ int main(const int argc, const char* argv[]) {
   graph->setDevice({0, DeviceType::cpu});
   graph->reserveWorkspaceMB(128);
 
+  // https://github.com/sheffieldnlp/deepQuest-py/blob/main/deepquestpy/config/birnn.jsonnet#L28
+  const int dim_emb = 50;
+
+  // Tokenize source input by marian vocab
+  // https://data.statmt.org/bergamot/models/eten/
+  
   marian::Vocab vocab(New<Options>(), 0);
   vocab.load("/workspaces/bergamot/attentions/vocab.eten.spm");
+  
+  const auto tokens_word_src = vocab.encode(
+      "Pärast Portugali Vabariigi väljakuulutamist võeti 1911. aastal kasutusele uus rahaühik eskuudo , mis jagunes "
+      "100 sentaavoks .");
 
-  // Source Input
-  const auto tokens_src = vocab.encode("Pärast Portugali Vabariigi väljakuulutamist võeti 1911. aastal kasutusele uus rahaühik eskuudo , mis jagunes 100 sentaavoks .");
+  auto dim_vocab = static_cast<int>(vocab.size());
+  auto tokens_src = toWordIndexVector(tokens_word_src);
 
-  const auto dim_vocab = static_cast<int>(vocab.size());
+  // // Create randon params
+  // createGraphParams( graph, dim_vocab, dim_emb);
+  // forward(graph, tokens_src, dim_emb);
 
-  createGraph(graph, tokens_src, dim_vocab);
+  // Load converted python model
+  graph->load(work_dir + "/distilled.npz");
+  
+  // Simulating the python tokenizer
+  dim_vocab = 31781;
+  tokens_src = {1, 1, 1, 1, 118,  1, 1, 3061, 1, 1,    1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+                3, 1, 1, 1, 1542, 1, 1, 1,    1, 1542, 1, 2, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+
+  forward(graph, tokens_src, dim_emb);
 
   return 0;
 }

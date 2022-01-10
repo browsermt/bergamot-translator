@@ -21,6 +21,9 @@ int main(int argc, char *argv[]) {
 
   ResponseOptions responseOptions;
   responseOptions.HTML = config.serviceConfig.HTML;
+  responseOptions.HTMLVoidTags = config.serviceConfig.HTMLVoidTags;
+  responseOptions.HTMLInlineTags = config.serviceConfig.HTMLInlineTags;
+  responseOptions.HTMLContinuationDelimiters = config.serviceConfig.HTMLContinuationDelimiters;
   std::string input = readFromStdin();
 
   // Create a barrier using future/promise.

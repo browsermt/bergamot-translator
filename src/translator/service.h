@@ -96,9 +96,16 @@ class AsyncService {
                                   ///< reasonably large cache-size.
     Logger::Config logger;        // Configurations for logging
 
+    std::string HTMLVoidTags;
+    std::string HTMLInlineTags;
+    std::string HTMLContinuationDelimiters;
+
     template <class App>
     static void addOptions(App &app, Config &config) {
       app.add_flag("--html", config.HTML, "Process input as HTML");
+      app.add_option("--html-void-tags", config.HTMLVoidTags);
+      app.add_option("--html-inline-tags", config.HTMLInlineTags);
+      app.add_option("--html-continuation-delimiters", config.HTMLInlineTags);
       app.add_option("--cpu-threads", config.numWorkers, "Workers to form translation backend");
       app.add_flag("--cache-translations", config.cacheEnabled, "Whether to cache translations or not.");
       app.add_option("--cache-size", config.cacheSize, "Number of entries to store in cache.");

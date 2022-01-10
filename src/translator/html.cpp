@@ -226,13 +226,14 @@ class TokenFormatter {
         case HTML::Tag::PROCESSING_INSTRUCTION:
           openTag = format("<?{}?>", tag->data);
           break;
-        case HTML::Tag::WHITESPACE:
-          // Eat space added by this "tag"
-          if (whitespaceSize_ > 0) {
-            html_.erase(whitespaceOffset_, 1);
-            whitespaceSize_ -= 1;
+        case HTML::Tag::WHITESPACE: {
+          // Try to eat two newlines (paragraph break) from our segment
+          auto pos = html_.find("\n\n", whitespaceOffset_);
+          if (pos != std::string::npos && pos < whitespaceOffset_ + whitespaceSize_) {
+            html_.erase(pos, 2);
+            whitespaceSize_ -= 2;
           }
-          break;
+        } break;
       }
 
       html_.insert(offset_ + whitespaceSize_, openTag);
@@ -279,7 +280,7 @@ HTML::HTML(std::string &&source, bool process_markup, Options &&options) : optio
 
   Tag *tag;
   Taint stack;
-  bool addSpace = false;
+  bool addSentenceBreak = false;
   spans_.push_back(Span{0, 0, {}});
 
   bool stop = false;
@@ -295,15 +296,15 @@ HTML::HTML(std::string &&source, bool process_markup, Options &&options) : optio
       case markup::Scanner::TT_TEXT: {
         // If the previous segment was an open or close tag, it might be best
         // to add a space to make sure we don't append to the previous word.
-        if (addSpace) {
-          if (!source.empty() && !std::isspace(source.back()) && !scanner.value().empty() &&
-              !std::isspace(scanner.value().back())) {
-            source.push_back(' ');
-            stack.push_back(makeTag({Tag::WHITESPACE}));
-            spans_.push_back(Span{source.size(), source.size(), stack});  // Important: span->size() == 0
-            stack.pop_back();
-          }
-          addSpace = false;
+        if (addSentenceBreak) {
+          stack.push_back(makeTag({Tag::WHITESPACE}));
+          // Important: span->size() == 0 to make it behave as a void element.
+          // Also important: position before the \n\n tokens, not after, to
+          // make it easier to remove them later through apply().
+          spans_.push_back(Span{source.size(), source.size(), stack});
+          source.append("\n\n");  // TODO assumes ssplit-mode = wrapped_text
+          stack.pop_back();
+          addSentenceBreak = false;
         }
 
         auto begin = source.size();
@@ -329,7 +330,7 @@ HTML::HTML(std::string &&source, bool process_markup, Options &&options) : optio
 
         // Treat non-inline HTML tags as spaces that break up words.
         if (!contains(options_.inlineTags, tag->name)) {
-          addSpace = true;
+          addSentenceBreak = true;
         }
       } break;
 
@@ -351,7 +352,7 @@ HTML::HTML(std::string &&source, bool process_markup, Options &&options) : optio
 
         // Add space if necessary
         if (!contains(options_.inlineTags, std::string(scanner.tag()))) {
-          addSpace = true;
+          addSentenceBreak = true;
         }
         break;
 

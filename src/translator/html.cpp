@@ -297,13 +297,15 @@ HTML::HTML(std::string &&source, bool process_markup, Options &&options) : optio
         // If the previous segment was an open or close tag, it might be best
         // to add a space to make sure we don't append to the previous word.
         if (addSentenceBreak) {
-          stack.push_back(makeTag({Tag::WHITESPACE}));
-          // Important: span->size() == 0 to make it behave as a void element.
-          // Also important: position before the \n\n tokens, not after, to
-          // make it easier to remove them later through apply().
-          spans_.push_back(Span{source.size(), source.size(), stack});
-          source.append("\n\n");  // TODO assumes ssplit-mode = wrapped_text
-          stack.pop_back();
+          if (!(source.empty() || (source.size() > 2 && source.substr(source.size() - 2) == ""))) {
+            stack.push_back(makeTag({Tag::WHITESPACE}));
+            // Important: span->size() == 0 to make it behave as a void element.
+            // Also important: position before the \n\n tokens, not after, to
+            // make it easier to remove them later through apply().
+            spans_.push_back(Span{source.size(), source.size(), stack});
+            source.append("\n\n");  // TODO assumes ssplit-mode = wrapped_text
+            stack.pop_back();
+          }
           addSentenceBreak = false;
         }
 

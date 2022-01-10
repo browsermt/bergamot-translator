@@ -32,7 +32,7 @@ class HTML {
 
     std::unordered_set<std::string> inlineTags{"abbr",   "a", "b",    "em",    "i",    "kbd",    "mark", "math",
                                                "output", "q", "ruby", "small", "span", "strong", "sub",  "sup",
-                                               "time",   "u", "var",  "wbr",   "ins",  "del"};
+                                               "time",   "u", "var",  "wbr",   "ins",  "del",    "img"};
 
     // List of characters that occur at the start of a token that indicate that
     // the this token is probably *not* a continuation of a word. Set to empty

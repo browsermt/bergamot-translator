@@ -185,6 +185,7 @@ langFrom.addEventListener("change", e => {
 });
 
 langTo.addEventListener("change", e => {
+  window.localStorage['lang-to'] = langTo.value;
   loadModel();
 });
 
@@ -200,8 +201,13 @@ function init() {
     }
   }
 
-  // find first output lang that *isn't* input language
-  langTo.value = langs.find(([code]) => code !== langFrom.value)[0];
+  if (langs.some(([code]) => code === window.localStorage['lang-to']))
+    // If we remember an existing language from last time, load that
+    langTo.value = window.localStorage['lang-to'];
+  else
+    // find first output lang that *isn't* input language
+    langTo.value = langs.find(([code]) => code !== langFrom.value)[0];
+  
   // load this model
   loadModel();
 }

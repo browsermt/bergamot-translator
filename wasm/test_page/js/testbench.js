@@ -100,8 +100,10 @@ function isContinuation(token) {
 }
 
 function hardAlignments({originalTokens, translatedTokens, scores}) {
-  const selected = translatedTokens.map((_, t) => argmax(scores[t]));
+  return translatedTokens.map((_, t) => argmax(scores[t]));
+}
 
+function alignmentHeuristics(selected, {originalTokens, translatedTokens, scores}) {
   // EOS always aligns with EOS
   selected[translatedTokens.length - 1] = originalTokens.length - 1;
 
@@ -120,12 +122,17 @@ function hardAlignments({originalTokens, translatedTokens, scores}) {
 }
 
 function renderAlignmentsTable({originalTokens, translatedTokens, scores}) {
-  const selected = hardAlignments({originalTokens, translatedTokens, scores});
+  const original = hardAlignments({originalTokens, translatedTokens, scores});
+
+  const selected = alignmentHeuristics(original.slice(), {originalTokens, translatedTokens, scores});
 
   const classNames = (t, o) => {
+    const list = [];
+    if (original[t] === o)
+      list.push('selected-argmax');
     if (selected[t] === o)
-      return 'selected';
-    return '';
+      list.push('selected-heuristic');
+    return list.join(' ');
   };
 
   return html`<table>

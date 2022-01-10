@@ -125,7 +125,11 @@
         text-align: right;
       }
 
-      .alignments .selected {
+      .alignments .selected-argmax {
+        border: 2px solid #06F;
+      }
+
+      .alignments .selected-heuristic {
         border: 2px solid #F00;
       }
 
@@ -204,7 +208,9 @@
               <iframe class="html"></iframe>
               <pre class="text"><code class="raw"></code></pre>
             </div>
-            <div class="alignments"></div>
+            <div class="alignments">
+              <p class="warning">The selected alignments are not accurate around eaten spaces.</p>
+            </div>
           </div>
         </div>
       </template>

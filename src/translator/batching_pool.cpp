@@ -59,7 +59,16 @@ size_t BatchingPool::enqueueRequest(Ptr<Request> request) {
     if (!request->cacheHitPrefilled(i)) {
       RequestSentence sentence(i, request);
       size_t bucket_id = sentence.numTokens();
-      assert(bucket_id < bucket_.size());
+
+      // Due to a workaround for pivoting, unless we can discipline the
+      // vocabulary to get stronger static requirements, it is difficult to
+      // rework the rest of the components. Instead, we allow dynamic growth
+      // here. We let std::vector take care of the dynamic growth.
+      // https://en.cppreference.com/w/cpp/container/vector/resize#Complexity
+      if (bucket_id >= bucket_.size()) {
+        bucket_.resize(bucket_id + 1);
+      }
+
       bucket_[bucket_id].insert(sentence);
       maxActiveBucketLength_ = std::max<size_t>(bucket_id, maxActiveBucketLength_);
 

@@ -136,6 +136,9 @@ class AsyncService {
   void terminate();
 
   /// Joins threads and waits for any pending translation requests to finish.
+  /// `join()` performs no internal synchornisation. Calling `join()` from mutliple
+  /// threads is undefined behaviour. Calling `translate()` after join will raise
+  /// an error. It is safe to call `join()` multiple times.
   void join();
 
   /// Calls join() which blocks until all pending translation requests are completed.

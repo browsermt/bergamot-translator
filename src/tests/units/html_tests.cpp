@@ -580,17 +580,18 @@ TEST_CASE("End-to-end translation") {
 
   {
     AnnotatedText target;
-    std::string sentence_str("<p>Ich <u>fahre</u> <b>gerne</b> dieses Auto.");
+    // Empty <b></b> because the space token after "Ich" has "<p><b>" markup, passed down from "<b>like</b>"
+    std::string sentence_str("<p>Ich <b></b><u>fahre</u> <b>gerne</b> dieses Auto.");
     std::vector<string_view> sentence{
         string_view(sentence_str.data() + 0, 6),    // 0.0 "<p>Ich"
-        string_view(sentence_str.data() + 6, 4),    // 0.1 " <u>"
-        string_view(sentence_str.data() + 10, 4),   // 0.2 "fahr"
-        string_view(sentence_str.data() + 14, 1),   // 0.3 "e"
-        string_view(sentence_str.data() + 15, 13),  // 0.4 "</u> <b>gerne"
-        string_view(sentence_str.data() + 28, 11),  // 0.5 "</b> dieses"
-        string_view(sentence_str.data() + 39, 5),   // 0.6 " Auto"
-        string_view(sentence_str.data() + 44, 1),   // 0.7 "."
-        string_view(sentence_str.data() + 45, 0),   // 0.8 ""
+        string_view(sentence_str.data() + 6, 4),    // 0.1 " <b>"
+        string_view(sentence_str.data() + 10, 11),  // 0.2 "</b><u>fahr"
+        string_view(sentence_str.data() + 21, 1),   // 0.3 "e"
+        string_view(sentence_str.data() + 22, 13),  // 0.4 "</u> <b>gerne"
+        string_view(sentence_str.data() + 35, 11),  // 0.5 "</b> dieses"
+        string_view(sentence_str.data() + 46, 5),   // 0.6 " Auto"
+        string_view(sentence_str.data() + 51, 1),   // 0.7 "."
+        string_view(sentence_str.data() + 52, 0),   // 0.8 ""
     };
     target.appendSentence("", sentence.begin(), sentence.end());
     target.appendEndingWhitespace("</p>");

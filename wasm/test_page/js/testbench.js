@@ -59,7 +59,7 @@ const translateCall = () => {
     html: document.querySelector("#input-is-html").checked,
     voidTags: document.querySelector("#html-void-tags").value,
     inlineTags: document.querySelector("#html-inline-tags").value,
-    continuationDelimiters: document.querySelector("#html-continuation-delimiters").value,
+    continuationDelimiters: getContinuationDelimiters(),
   };
 
   worker.postMessage([id, "translate", lngFrom, lngTo, text, options]);
@@ -93,7 +93,7 @@ function argmax(arr) {
 }
 
 function isContinuation(token) {
-  const delimiters = document.querySelector("#html-continuation-delimiters").value;  // TODO could have changed since translation request
+  const delimiters = getContinuationDelimiters();  // TODO could have changed since translation request
   if (delimiters == "disable") return false;
   token = token.replace(/\<\/?.+?>/g, ''); // Remove HTML
   return token.length > 0 && delimiters.indexOf(token.substr(0, 1)) === -1;
@@ -225,6 +225,10 @@ function addControlCharacters(text) {
         return match[0];
     }
   });
+}
+
+function getContinuationDelimiters() {
+  return document.querySelector("#html-continuation-delimiters").value.replace(/\\n/, "\n");
 }
 
 async function googleTranslate(id, lngFrom, lngTo, text, options) {

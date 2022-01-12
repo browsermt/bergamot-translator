@@ -397,7 +397,7 @@ HTML::HTML(std::string &&source, bool process_markup, Options &&options) : optio
   if (!stack.empty()) throw BadHTML(format("Not all tags were closed: {}", stack));
 
   // Add a trailing span (that's empty) to signify all closed tags.
-  spans_.emplace_back(Span{source.size() + 1, source.size() + 1, stack});
+  spans_.emplace_back(Span{source.size(), source.size(), stack});
 }
 
 void HTML::restore(Response &response) {

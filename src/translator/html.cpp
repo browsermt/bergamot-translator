@@ -297,13 +297,15 @@ HTML::HTML(std::string &&source, bool process_markup, Options &&options) : optio
         // If the previous segment was an open or close tag, it might be best
         // to add a space to make sure we don't append to the previous word.
         if (addSentenceBreak) {
-          stack.push_back(makeTag({Tag::WHITESPACE}));
-          // Important: span->size() == 0 to make it behave as a void element.
-          // Also important: position before the \n\n tokens, not after, to
-          // make it easier to remove them later through apply().
-          spans_.push_back(Span{source.size(), source.size(), stack});
-          source.append("\n\n");  // TODO assumes ssplit-mode = wrapped_text
-          stack.pop_back();
+          if (!(source.empty() || (source.size() > 2 && source.substr(source.size() - 2) == ""))) {
+            stack.push_back(makeTag({Tag::WHITESPACE}));
+            // Important: span->size() == 0 to make it behave as a void element.
+            // Also important: position before the \n\n tokens, not after, to
+            // make it easier to remove them later through apply().
+            spans_.push_back(Span{source.size(), source.size(), stack});
+            source.append("\n\n");  // TODO assumes ssplit-mode = wrapped_text
+            stack.pop_back();
+          }
           addSentenceBreak = false;
         }
 
@@ -395,7 +397,7 @@ HTML::HTML(std::string &&source, bool process_markup, Options &&options) : optio
   if (!stack.empty()) throw BadHTML(format("Not all tags were closed: {}", stack));
 
   // Add a trailing span (that's empty) to signify all closed tags.
-  spans_.emplace_back(Span{source.size() + 1, source.size() + 1, stack});
+  spans_.emplace_back(Span{source.size(), source.size(), stack});
 }
 
 void HTML::restore(Response &response) {
@@ -424,7 +426,7 @@ void HTML::restore(Response &response) {
 
   // RestoreSource re-inserts HTML into the source text, but also identifies
   // which span each source token fits into best.
-  AnnotatedText source = restoreSource(response.source, spans_, sourceTokenSpans);
+  AnnotatedText source = restoreSource(response.source, sourceTokenSpans);
   assert(sourceTokenSpans.size() == debugCountTokens(response.source));
 
   // Find for every token in target the token in source that best matches.
@@ -435,18 +437,17 @@ void HTML::restore(Response &response) {
   copyTaint(response, alignments, sourceTokenSpans, targetTokenSpans);
   assert(targetTokenSpans.size() == debugCountTokens(response.target));
 
-  AnnotatedText target = restoreTarget(response.target, spans_, targetTokenSpans);
+  AnnotatedText target = restoreTarget(response.target, targetTokenSpans);
 
   response.source = source;
   response.target = target;
 }
 
-AnnotatedText HTML::restoreSource(AnnotatedText const &in, std::vector<HTML::Span> const &sourceSpans,
-                                  std::vector<SpanIterator> &sourceTokenSpans) {
-  auto spanIt = sourceSpans.begin();
-  auto prevIt = sourceSpans.begin();  // safe because first span is always empty span, and
-                                      // and the while-loop below will do the rest
-  assert(prevIt == sourceSpans.end() || prevIt->tags.empty());
+AnnotatedText HTML::restoreSource(AnnotatedText const &in, std::vector<SpanIterator> &sourceTokenSpans) {
+  auto spanIt = spans_.begin();
+  auto prevIt = spans_.begin();  // safe because first span is always empty span, and
+                                 // and the while-loop below will do the rest
+  assert(prevIt == spans_.end() || prevIt->tags.empty());
 
   return apply(in, [&](ByteRange range, string_view token, bool last) {
     TokenFormatter formatter(token);
@@ -466,7 +467,7 @@ AnnotatedText HTML::restoreSource(AnnotatedText const &in, std::vector<HTML::Spa
       formatter.append(prevIt->tags, spanIt->tags);
       prevIt = spanIt;
 
-      if (spanIt + 1 != sourceSpans.end() && ((spanIt + 1)->begin < range.end || last)) {
+      if (spanIt + 1 != spans_.end() && ((spanIt + 1)->begin < range.end || last)) {
         spanIt++;
         continue;
       }
@@ -482,9 +483,8 @@ AnnotatedText HTML::restoreSource(AnnotatedText const &in, std::vector<HTML::Spa
   });
 }
 
-AnnotatedText HTML::restoreTarget(AnnotatedText const &in, std::vector<HTML::Span> const &sourceSpans,
-                                  std::vector<SpanIterator> const &targetTokenSpans) {
-  auto prevSpan = sourceSpans.begin();
+AnnotatedText HTML::restoreTarget(AnnotatedText const &in, std::vector<SpanIterator> const &targetTokenSpans) {
+  auto prevSpan = spans_.cbegin();
   auto targetSpanIt = targetTokenSpans.begin();
 
   AnnotatedText out = apply(in, [&](ByteRange range, string_view token, bool last) {
@@ -492,7 +492,7 @@ AnnotatedText HTML::restoreTarget(AnnotatedText const &in, std::vector<HTML::Spa
 
     // First we scan through spans_ to catch up to the span assigned to this
     // token. We're only interested in empty spans (empty and void elements)
-    for (auto span_it = prevSpan + 1; span_it < *targetSpanIt; span_it++) {
+    for (auto span_it = prevSpan; span_it < *targetSpanIt; span_it++) {
       // We're only interested in empty spans between the spans in targetSpanIt
       if (span_it->size() != 0) continue;
 
@@ -520,7 +520,8 @@ AnnotatedText HTML::restoreTarget(AnnotatedText const &in, std::vector<HTML::Spa
       formatter.append((*targetSpanIt)->tags, HTML::Taint());
     }
 
-    prevSpan = *targetSpanIt++;
+    prevSpan = *targetSpanIt;
+    ++targetSpanIt;
 
     return std::move(formatter.html());
   });
@@ -538,7 +539,7 @@ HTML::Tag *HTML::makeTag(Tag &&tag) {
 
 void HTML::copyTaint(Response const &response, std::vector<std::vector<size_t>> const &alignments,
                      std::vector<SpanIterator> const &sourceTokenSpans, std::vector<SpanIterator> &targetTokenSpans) {
-  size_t offset = 0;
+  size_t offset = 0;  // Sentence offset in sourceTokenSpans
 
   // Fill targetTokenSpans based on the alignments we just made up.
   // NOTE: this should match the exact order of Apply()
@@ -553,7 +554,7 @@ void HTML::copyTaint(Response const &response, std::vector<std::vector<size_t>> 
     offset += response.source.numWords(sentenceIdx) + 1;  // +1 for prefix gap
   }
 
-  assert(offset < sourceTokenSpans.size());
+  assert(offset + 1 == sourceTokenSpans.size());
   targetTokenSpans.push_back(sourceTokenSpans[offset]);  // token_tag for ending whitespace
 }
 
@@ -561,10 +562,11 @@ void HTML::copyTaint(Response const &response, std::vector<std::vector<size_t>> 
 // to determine whether we should share the markup, or whether we should see
 // this token as a fresh start. This implementation will treat "hello[world]"
 // as 4 words, assuming its tokenised as something like `h ell o [ wor ld ]`.
-bool HTML::isContinuation(string_view str) {
-  if (str.empty()) return false;
+bool HTML::isContinuation(string_view prev, string_view str) {
   if (options_.continuationDelimiters.empty()) return false;
-  return options_.continuationDelimiters.find(str[0]) == std::string::npos;
+  if (prev.empty() || str.empty()) return false;
+  return options_.continuationDelimiters.find(str[0]) == std::string::npos &&
+         options_.continuationDelimiters.find(prev.back()) == std::string::npos;
 }
 
 void HTML::hardAlignments(Response const &response, std::vector<std::vector<size_t>> &alignments) {
@@ -590,7 +592,7 @@ void HTML::hardAlignments(Response const &response, std::vector<std::vector<size
     for (size_t t = 1; t + 1 < response.target.numWords(sentenceIdx); ++t) {
       // If this token is a continuation of a previous token, pick the tags from the most
       // prevalent token for the whole word.
-      if (isContinuation(response.target.word(sentenceIdx, t))) {
+      if (isContinuation(response.target.word(sentenceIdx, t - 1), response.target.word(sentenceIdx, t))) {
         // Note: only looking at the previous token since that will already
         // have this treatment applied to it.
         size_t currSentenceIdx = alignments.back()[t];
@@ -598,13 +600,15 @@ void HTML::hardAlignments(Response const &response, std::vector<std::vector<size
         float currScore = response.alignments[sentenceIdx][t][currSentenceIdx];
         float prevScore = response.alignments[sentenceIdx][t - 1][prevSentenceIdx];
 
-        if (currScore > prevScore) {
+        if (currScore >= prevScore) {
           // Apply this to all previous tokens in the word
           for (size_t i = t;; --i) {
             alignments.back()[i] = currSentenceIdx;
 
             // Stop if this was the first token or the beginning of the word
-            if (i == 0 || !isContinuation(response.target.word(sentenceIdx, i))) break;
+            if (i == 0 ||
+                !isContinuation(response.target.word(sentenceIdx, i - 1), response.target.word(sentenceIdx, i)))
+              break;
           }
         } else {
           alignments.back()[t] = prevSentenceIdx;

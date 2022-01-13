@@ -290,7 +290,7 @@ TEST_CASE("Test inline tags should not break words") {
 
   html.restore(response);
   CHECK(response.source.text == "<u></u>underline");  // TODO not spread <u> to whole word?
-  CHECK(response.target.text == "subrayar");          // TODO now we lose the <u> tag completely
+  CHECK(response.target.text == "<u></u>subrayar");   // TODO not spread <u> to the whole word?
 }
 
 TEST_CASE("Test reconstruction of target sentence") {
@@ -692,6 +692,94 @@ TEST_CASE("End-to-end translation", "[!mayfail]") {
         string_view(sentence_str.data() + 46, 5),   // 0.6 " Auto"
         string_view(sentence_str.data() + 51, 1),   // 0.7 "."
         string_view(sentence_str.data() + 52, 0),   // 0.8 ""
+    };
+    target.appendSentence("", sentence.begin(), sentence.end());
+    target.appendEndingWhitespace("</p>");
+
+    CHECK(asTokens(response.target) == asTokens(target));
+  }
+}
+
+TEST_CASE("End-to-end translation when no words with markup align", "[!mayfail]") {
+  std::string input("<p>I <b>like</b> to <u>drive</u> this car.</p>");
+  HTML html(std::move(input), true);
+  CHECK(input == "I like to drive this car.");
+
+  Response response;
+
+  // clang-format off
+  response.alignments = std::vector<std::vector<std::vector<float>>>{{
+    {0.5360, 0.4405, 0.0142, 0.0061, 0.0029, 0.0001, 0.0000, 0.0001},
+    {0.0451, 0.0602, 0.5120, 0.2584, 0.1145, 0.0062, 0.0019, 0.0017},
+    {0.0392, 0.0009, 0.6535, 0.2293, 0.0492, 0.0199, 0.0014, 0.0067},
+    {0.0007, 0.0036, 0.0112, 0.0118, 0.9209, 0.0449, 0.0050, 0.0019},
+    {0.0000, 0.0004, 0.0008, 0.0047, 0.0163, 0.9683, 0.0045, 0.0050},
+    {0.0011, 0.0046, 0.0039, 0.0090, 0.0023, 0.0024, 0.9648, 0.0119},
+    {0.0840, 0.0744, 0.1545, 0.1330, 0.1818, 0.1722, 0.0859, 0.1143},
+  }};
+  // clang-format on
+
+  {
+    std::string sentence_str("I like to drive this car.");
+    std::vector<string_view> sentence{
+        string_view(sentence_str.data() + 0, 1),   // 0.0 "I"
+        string_view(sentence_str.data() + 1, 5),   // 0.1 " like"
+        string_view(sentence_str.data() + 6, 3),   // 0.2 " to"
+        string_view(sentence_str.data() + 9, 6),   // 0.3 " drive"
+        string_view(sentence_str.data() + 15, 5),  // 0.4 " this"
+        string_view(sentence_str.data() + 20, 4),  // 0.5 " car"
+        string_view(sentence_str.data() + 24, 1),  // 0.6 "."
+        string_view(sentence_str.data() + 25, 0),  // 0.7 [EOS]
+    };
+    response.source.appendSentence("", sentence.begin(), sentence.end());
+  }
+
+  {
+    std::string sentence_str("Rád řídím to auto.");
+    std::vector<string_view> sentence{
+        string_view(sentence_str.data() + 0, 4),   // 0.0 "Rád"
+        string_view(sentence_str.data() + 4, 6),   // 0.1 " říd"
+        string_view(sentence_str.data() + 10, 3),  // 0.2 "ím"
+        string_view(sentence_str.data() + 13, 3),  // 0.3 "_to"
+        string_view(sentence_str.data() + 16, 5),  // 0.4 " auto"
+        string_view(sentence_str.data() + 21, 1),  // 0.5 "."
+        string_view(sentence_str.data() + 22, 0),  // 0.6 [EOS]
+    };
+    response.target.appendSentence("", sentence.begin(), sentence.end());
+  }
+
+  html.restore(response);
+
+  {
+    AnnotatedText source;
+    std::string sentence_str("<p>I <b>like</b> to <u>drive</u> this car.");
+    std::vector<string_view> sentence{
+        string_view(sentence_str.data() + 0, 4),   // 0.0 "<p>I"
+        string_view(sentence_str.data() + 4, 8),   // 0.1 " <b>like"
+        string_view(sentence_str.data() + 12, 7),  // 0.2 "</b> to"
+        string_view(sentence_str.data() + 19, 9),  // 0.3 " <u>drive"
+        string_view(sentence_str.data() + 28, 9),  // 0.4 "</u> this"
+        string_view(sentence_str.data() + 37, 4),  // 0.5 " car"
+        string_view(sentence_str.data() + 41, 1),  // 0.6 "."
+        string_view(sentence_str.data() + 42, 0),  // 0.7 ""
+    };
+    source.appendSentence("", sentence.begin(), sentence.end());
+    source.appendEndingWhitespace("</p>");
+
+    CHECK(asTokens(response.source) == asTokens(source));
+  }
+
+  {
+    AnnotatedText target;
+    std::string sentence_str("<p>Rád <b></b>řídím <u></u>to auto.");
+    std::vector<string_view> sentence{
+        string_view(sentence_str.data() + 0, 7),    // 0.0 "<p>Rád"
+        string_view(sentence_str.data() + 7, 13),   // 0.1 " <b></b>říd"
+        string_view(sentence_str.data() + 20, 3),   // 0.2 "ím"
+        string_view(sentence_str.data() + 23, 10),  // 0.3 "_<u></u>to"
+        string_view(sentence_str.data() + 33, 5),   // 0.4 " auto"
+        string_view(sentence_str.data() + 38, 1),   // 0.5 "."
+        string_view(sentence_str.data() + 39, 0),   // 0.6 [EOS]
     };
     target.appendSentence("", sentence.begin(), sentence.end());
     target.appendEndingWhitespace("</p>");

@@ -19,7 +19,7 @@ var Module = {
   onRuntimeInitialized: function() {
     log(`Wasm Runtime initialized Successfully (preRun -> onRuntimeInitialized) in ${(Date.now() - moduleLoadStart) / 1000} secs`);
     importScripts(MODEL_REGISTRY);
-    postMessage([null, `import_reply`, modelRegistry]);
+    postMessage([null, `import_reply`, modelRegistry, BERGAMOT_VERSION_FULL]);
   }
 };
 

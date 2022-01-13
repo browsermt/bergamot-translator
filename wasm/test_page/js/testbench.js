@@ -158,6 +158,7 @@ worker.onmessage = function (e) {
       document.querySelector("#translate-btn").disabled = false;
   } else if (e.data[1] === "import_reply" && e.data[2]) {
     modelRegistry = e.data[2];
+    document.title += ` ${e.data[3]}`;
     init();
   } else if (e.data[1] === "error" && e.data[2]) {
     status(`Error: ${e.data[2]}`);

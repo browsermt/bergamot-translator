@@ -223,6 +223,76 @@ TEST_CASE("Test self-closing tags should be treated as paragraph break") {
   CHECK(response.target.text == "<p>Platz<br>bitte?</p>");
 }
 
+TEST_CASE("Test inline tags should be treated as spaces") {
+  std::string test_str("un<u>der</u>line");
+
+  std::string input(test_str);
+  HTML html(std::move(input), true);
+  CHECK(input == "un der line");
+
+  Response response;
+  std::string source_str("un der line");
+  std::vector<string_view> source_tokens{
+      string_view(source_str.data() + 0, 2),   // un
+      string_view(source_str.data() + 2, 3),   // _de
+      string_view(source_str.data() + 5, 1),   // r
+      string_view(source_str.data() + 6, 5),   // _line
+      string_view(source_str.data() + 11, 0),  // EOS
+  };
+  response.source.appendSentence("", source_tokens.begin(), source_tokens.end());
+
+  std::string target_str("una linea der");
+  std::vector<string_view> target_tokens{
+      string_view(target_str.data() + 0, 3),   // una
+      string_view(target_str.data() + 3, 6),   // _linéa
+      string_view(target_str.data() + 9, 3),   // _de
+      string_view(target_str.data() + 12, 1),  // r
+      string_view(target_str.data() + 13, 0),  // [EOS]
+  };
+  response.target.appendSentence("", target_tokens.begin(), target_tokens.end());
+
+  response.alignments = {{{0.9795, 0.0127, 0.0002, 0.0066, 0.0009},
+                          {0.0098, 0.2967, 0.0156, 0.6640, 0.0138},
+                          {0.0214, 0.7472, 0.0626, 0.0745, 0.0943},
+                          {0.0022, 0.0230, 0.9357, 0.0165, 0.0226},
+                          {0.0122, 0.0240, 0.0085, 0.7427, 0.2125}}};
+
+  html.restore(response);
+  CHECK(response.source.text == "un <u>der</u> line");  // TODO leave spaces?
+  CHECK(response.target.text == "una linea <u>der</u>");
+}
+
+TEST_CASE("Test inline tags should not break words") {
+  std::string test_str("un<u>der</u>line");
+
+  std::string input(test_str);
+  HTML::Options options;
+  options.substituteInlineTagsWithSpaces = false;
+  HTML html(std::move(input), true, std::move(options));
+  CHECK(input == "underline");
+
+  Response response;
+  std::string source_str("underline");
+  std::vector<string_view> source_tokens{
+      string_view(source_str.data() + 0, 9),  // underline
+      string_view(source_str.data() + 9, 0),  // EOS
+  };
+  response.source.appendSentence("", source_tokens.begin(), source_tokens.end());
+
+  std::string target_str("subrayar");
+  std::vector<string_view> target_tokens{
+      string_view(target_str.data() + 0, 8),  // subrayar
+      string_view(target_str.data() + 8, 0),  // [EOS]
+  };
+  response.target.appendSentence("", target_tokens.begin(), target_tokens.end());
+
+  response.alignments = {identity_matrix<float>(2)};
+
+  html.restore(response);
+  CHECK(response.source.text == "<u></u>underline");  // TODO not spread <u> to whole word?
+  CHECK(response.target.text == "subrayar");          // TODO now we lose the <u> tag completely
+}
+
 TEST_CASE("Test reconstruction of target sentence") {
   std::string input("<p>hello <b>world</b></p>\n");
   HTML html(std::move(input), true);
@@ -412,16 +482,46 @@ TEST_CASE("Test self-closing tag (HTML5)") {
   CHECK(input == "hello  world and other creatures");  // Note double space between "hello" and "world"
 }
 
-TEST_CASE("Test empty self-closing tag at end of input") {
+TEST_CASE("Test empty void tag at end of input") {
   std::string input("hello <br>");
   HTML html(std::move(input), true);
   CHECK(input == "hello ");
+
+  Response response;
+  std::string sentence_str("hello ");
+  std::vector<string_view> sentence{
+      string_view(sentence_str.data() + 0, 4),  // 0.0 hell
+      string_view(sentence_str.data() + 4, 2),  // 0.1 o_
+      string_view(sentence_str.data() + 6, 0),  // 0.2 [EOS]
+  };
+  response.source.appendSentence("", sentence.begin(), sentence.end());
+  response.target.appendSentence("", sentence.begin(), sentence.end());
+  response.alignments = {identity_matrix<float>(3)};
+
+  html.restore(response);
+  CHECK(response.source.text == "hello <br>");
+  CHECK(response.target.text == "hello <br>");
 }
 
 TEST_CASE("Test empty tag pair at end of input") {
   std::string input("hello <u></u>");
   HTML html(std::move(input), true);
   CHECK(input == "hello ");
+
+  Response response;
+  std::string sentence_str("hello ");
+  std::vector<string_view> sentence{
+      string_view(sentence_str.data() + 0, 4),  // 0.0 hell
+      string_view(sentence_str.data() + 4, 2),  // 0.1 o_
+      string_view(sentence_str.data() + 6, 0),  // 0.2 [EOS]
+  };
+  response.source.appendSentence("", sentence.begin(), sentence.end());
+  response.target.appendSentence("", sentence.begin(), sentence.end());
+  response.alignments = {identity_matrix<float>(3)};
+
+  html.restore(response);
+  CHECK(response.source.text == "hello <u></u>");
+  CHECK(response.target.text == "hello <u></u>");
 }
 
 TEST_CASE("Test empty self-closing pair at end of input in parent") {

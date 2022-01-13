@@ -61,6 +61,7 @@ const translateCall = () => {
       voidTags: document.querySelector("#html-void-tags").value,
       inlineTags: document.querySelector("#html-inline-tags").value,
       continuationDelimiters: getContinuationDelimiters(),
+      substituteInlineTagsWithSpaces: document.querySelector("#html-substitute-inline-tags-with-spaces").checked
     }
   };
 

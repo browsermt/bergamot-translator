@@ -65,6 +65,10 @@
         margin-left: 0.4em;
       }
 
+      .form input[type=checkbox] {
+        flex: 0 0;
+      }
+
       .output-panel .panel-body {
         flex-direction: row;
         flex-wrap: wrap;
@@ -170,17 +174,21 @@
           <textarea id="input" name="input"></textarea>
           <details class="form">
             <summary>Advanced HTML options</summary>
-            <label>
+            <label title="HTML::Options.voidTags">
               Void tags:
               <input type="text" id="html-void-tags" value="area,base,basefont,bgsound,br,col,embed,frame,hr,img,input,keygen,link,meta,param,source,track,wbr">
             </label>
-            <label>
+            <label title="HTML::Options.inlineTags">
               Inline tags:
               <input type="text" id="html-inline-tags" value="abbr,a,b,em,i,kbd,mark,math,output,q,ruby,small,span,strong,sub,sup,time,u,var,wbr,ins,del,img">
             </label>
-            <label>
+            <label title="HTML::Options.continuationDelimiters">
               Continuation delimiters ("disable" for disabled):
               <input type="text" id="html-continuation-delimiters" value="\n ,.(){}[]">
+            </label>
+            <label title="HTML::Options.substituteInlineTagsWithSpaces">
+              <input type="checkbox" id="html-substitute-inline-tags-with-spaces" checked>
+              Substitute inline tags with spaces
             </label>
           </details>
         </div>

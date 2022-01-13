@@ -508,8 +508,13 @@ AnnotatedText HTML::restoreTarget(AnnotatedText const &in, std::vector<SpanItera
     // First we scan through spans_ to catch up to the span assigned to this
     // token. We're only interested in empty spans (empty and void elements)
     for (auto span_it = prevSpan; span_it < *targetSpanIt; span_it++) {
-      // We're only interested in empty spans between the spans in targetSpanIt
-      if (span_it->size() != 0) continue;
+      // We're only interested in empty spans or spans that would otherwise get
+      // lost because they didn't align with anything between the spans in
+      // targetSpanIt
+      // TODO That std::find makes this O(N*N) NOT GOOD NOT GOOD
+      if (span_it->size() != 0 &&
+          std::find(targetTokenSpans.begin(), targetTokenSpans.end(), span_it) != targetTokenSpans.end())
+        continue;
 
       formatter.append(prevSpan->tags, span_it->tags);
 

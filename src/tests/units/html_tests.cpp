@@ -412,16 +412,46 @@ TEST_CASE("Test self-closing tag (HTML5)") {
   CHECK(input == "hello  world and other creatures");  // Note double space between "hello" and "world"
 }
 
-TEST_CASE("Test empty self-closing tag at end of input") {
+TEST_CASE("Test empty void tag at end of input") {
   std::string input("hello <br>");
   HTML html(std::move(input), true);
   CHECK(input == "hello ");
+
+  Response response;
+  std::string sentence_str("hello ");
+  std::vector<string_view> sentence{
+      string_view(sentence_str.data() + 0, 4),  // 0.0 hell
+      string_view(sentence_str.data() + 4, 2),  // 0.1 o_
+      string_view(sentence_str.data() + 6, 0),  // 0.2 [EOS]
+  };
+  response.source.appendSentence("", sentence.begin(), sentence.end());
+  response.target.appendSentence("", sentence.begin(), sentence.end());
+  response.alignments = {identity_matrix<float>(3)};
+
+  html.restore(response);
+  CHECK(response.source.text == "hello <br>");
+  CHECK(response.target.text == "hello <br>");
 }
 
 TEST_CASE("Test empty tag pair at end of input") {
   std::string input("hello <u></u>");
   HTML html(std::move(input), true);
   CHECK(input == "hello ");
+
+  Response response;
+  std::string sentence_str("hello ");
+  std::vector<string_view> sentence{
+      string_view(sentence_str.data() + 0, 4),  // 0.0 hell
+      string_view(sentence_str.data() + 4, 2),  // 0.1 o_
+      string_view(sentence_str.data() + 6, 0),  // 0.2 [EOS]
+  };
+  response.source.appendSentence("", sentence.begin(), sentence.end());
+  response.target.appendSentence("", sentence.begin(), sentence.end());
+  response.alignments = {identity_matrix<float>(3)};
+
+  html.restore(response);
+  CHECK(response.source.text == "hello <u></u>");
+  CHECK(response.target.text == "hello <u></u>");
 }
 
 TEST_CASE("Test empty self-closing pair at end of input in parent") {

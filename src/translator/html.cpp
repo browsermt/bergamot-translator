@@ -281,6 +281,7 @@ HTML::HTML(std::string &&source, bool process_markup, Options &&options) : optio
   Tag *tag;
   Taint stack;
   bool addSentenceBreak = false;
+  bool addSpace = false;
   spans_.push_back(Span{0, 0, {}});
 
   bool stop = false;
@@ -294,8 +295,8 @@ HTML::HTML(std::string &&source, bool process_markup, Options &&options) : optio
         break;
 
       case markup::Scanner::TT_TEXT: {
-        // If the previous segment was an open or close tag, it might be best
-        // to add a space to make sure we don't append to the previous word.
+        // If the previous segment was the open or close tag of a block element
+        // we treat the text after it as a new sentence.
         if (addSentenceBreak) {
           if (!(source.empty() || (source.size() > 2 && source.substr(source.size() - 2) == ""))) {
             stack.push_back(makeTag({Tag::WHITESPACE}));
@@ -307,6 +308,16 @@ HTML::HTML(std::string &&source, bool process_markup, Options &&options) : optio
             stack.pop_back();
           }
           addSentenceBreak = false;
+        }
+
+        // If the previous segment was an open or close tag, it might be best
+        // to add a space to make sure we don't append to the previous word.
+        if (addSpace) {
+          if (options_.substituteInlineTagsWithSpaces && !source.empty() && !std::isspace(source.back()) &&
+              !std::isspace(scanner.value()[0])) {
+            source.push_back(' ');
+          }
+          addSpace = false;
         }
 
         auto begin = source.size();
@@ -333,6 +344,8 @@ HTML::HTML(std::string &&source, bool process_markup, Options &&options) : optio
         // Treat non-inline HTML tags as spaces that break up words.
         if (!contains(options_.inlineTags, tag->name)) {
           addSentenceBreak = true;
+        } else {
+          addSpace = true;
         }
       } break;
 
@@ -355,6 +368,8 @@ HTML::HTML(std::string &&source, bool process_markup, Options &&options) : optio
         // Add space if necessary
         if (!contains(options_.inlineTags, std::string(scanner.tag()))) {
           addSentenceBreak = true;
+        } else {
+          addSpace = true;
         }
         break;
 

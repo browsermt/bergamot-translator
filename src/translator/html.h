@@ -37,7 +37,8 @@ class HTML {
     // List of characters that occur at the start of a token that indicate that
     // the this token is probably *not* a continuation of a word. Set to empty
     // to never mark a token as a continuation of the word.
-    std::string continuationDelimiters = "\n ,.(){}[]";
+    // std::string continuationDelimiters = "\n ,.(){}[]";
+    std::string continuationDelimiters;
 
     // Should we always add spaces to the places where tags used to be? I.e.
     // `un<u>der</u>line` should become `un der line`?

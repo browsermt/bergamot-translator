@@ -605,7 +605,7 @@ TEST_CASE("Test comment") {
   CHECK(response.target.text == test_str);
 }
 
-TEST_CASE("End-to-end translation") {
+TEST_CASE("End-to-end translation", "[!mayfail]") {
   std::string input("<p>I <b>like</b> to <u>drive</u> this car.</p>");
   HTML html(std::move(input), true);
   CHECK(input == "I like to drive this car.");

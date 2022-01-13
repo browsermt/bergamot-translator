@@ -95,11 +95,18 @@ function argmax(arr) {
   return arr.reduce(((best, curr, i) => curr > arr[best] ? i : best), 0);
 }
 
-function isContinuation(token) {
+function stripHTML(html) {
+  return html.replace(/\<\/?.+?>/g, '');
+}
+
+function isContinuation(prev, token) {
   const delimiters = getContinuationDelimiters();  // TODO could have changed since translation request
-  if (delimiters == "disable") return false;
-  token = token.replace(/\<\/?.+?>/g, ''); // Remove HTML
-  return token.length > 0 && delimiters.indexOf(token.substr(0, 1)) === -1;
+  if (delimiters === '') return false;
+  prev = stripHTML(prev);
+  token = stripHTML(token);
+  return prev.length > 0 && token.length > 0
+      && delimiters.indexOf(token.substr(0, 1)) === -1
+      && delimiters.indexOf(prev.substr(-1, 1)) === -1;
 }
 
 function hardAlignments({originalTokens, translatedTokens, scores}) {
@@ -111,11 +118,11 @@ function alignmentHeuristics(selected, {originalTokens, translatedTokens, scores
   selected[translatedTokens.length - 1] = originalTokens.length - 1;
 
   for (let t = 1; t < translatedTokens.length - 1; ++t) { // -1 to exclude EOS
-    if (isContinuation(translatedTokens[t])) {
+    if (isContinuation(translatedTokens[t-1], translatedTokens[t])) {
       if (scores[t][selected[t]] > scores[t-1][selected[t-1]]) {
         for (let i = t; ; --i) {
           selected[i] = selected[t];
-          if (i == 0 || !isContinuation(translatedTokens[i])) break;
+          if (i == 0 || !isContinuation(translatedTokens[i-1], translatedTokens[i])) break;
         }
       }
     }

@@ -1,6 +1,9 @@
 #ifndef SRC_BERGAMOT_RESPONSE_OPTIONS_H_
 #define SRC_BERGAMOT_RESPONSE_OPTIONS_H_
+#include <optional>
 #include <string>
+
+#include "html.h"
 
 namespace marian {
 namespace bergamot {
@@ -28,9 +31,7 @@ struct ResponseOptions {
 
   ConcatStrategy concatStrategy{ConcatStrategy::FAITHFUL};
 
-  std::string HTMLVoidTags;
-  std::string HTMLInlineTags;
-  std::string HTMLContinuationDelimiters;
+  std::optional<HTML::Options> HTMLOptions;
 };
 
 }  // namespace bergamot

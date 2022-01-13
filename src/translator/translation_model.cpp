@@ -10,19 +10,6 @@
 #include "parser.h"
 #include "translator/beam_search.h"
 
-namespace {
-
-void split(std::string const &str, char delimiter, std::unordered_set<std::string> &out) {
-  std::string::size_type pos{0}, offset{0};
-  while ((pos = str.find(delimiter, offset)) != std::string::npos) {
-    if (pos > offset) out.emplace(str.substr(offset, pos - offset));
-    offset = pos + 1;
-  }
-  if (offset != str.size()) out.emplace(str.substr(offset));
-}
-
-}  // namespace
-
 namespace marian {
 namespace bergamot {
 
@@ -109,20 +96,7 @@ Ptr<Request> TranslationModel::makeRequest(size_t requestId, std::string &&sourc
   AnnotatedText annotatedSource;
 
   HTML::Options htmlOptions;
-  if (!responseOptions.HTMLVoidTags.empty()) {
-    htmlOptions.voidTags.clear();
-    split(responseOptions.HTMLVoidTags, ',', htmlOptions.voidTags);
-  }
-  if (!responseOptions.HTMLInlineTags.empty()) {
-    htmlOptions.inlineTags.clear();
-    split(responseOptions.HTMLInlineTags, ',', htmlOptions.inlineTags);
-  }
-  if (!responseOptions.HTMLContinuationDelimiters.empty()) {  // Oh such a dirty hack!
-    if (responseOptions.HTMLContinuationDelimiters == "disable")
-      htmlOptions.continuationDelimiters = "";
-    else
-      htmlOptions.continuationDelimiters = responseOptions.HTMLContinuationDelimiters;
-  }
+  if (responseOptions.HTMLOptions.has_value()) htmlOptions = std::move(responseOptions.HTMLOptions.value());
 
   HTML html(std::move(source), responseOptions.HTML, std::move(htmlOptions));
   textProcessor_.process(std::move(source), annotatedSource, segments);

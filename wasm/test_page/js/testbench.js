@@ -57,9 +57,11 @@ const translateCall = () => {
   const lngTo = langTo.value;
   const options = {
     html: document.querySelector("#input-is-html").checked,
-    voidTags: document.querySelector("#html-void-tags").value,
-    inlineTags: document.querySelector("#html-inline-tags").value,
-    continuationDelimiters: getContinuationDelimiters(),
+    htmlOptions: {
+      voidTags: document.querySelector("#html-void-tags").value,
+      inlineTags: document.querySelector("#html-inline-tags").value,
+      continuationDelimiters: getContinuationDelimiters(),
+    }
   };
 
   worker.postMessage([id, "translate", lngFrom, lngTo, text, options]);

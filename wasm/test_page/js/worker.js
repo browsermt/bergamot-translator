@@ -375,15 +375,22 @@ const _parseAlignments = (vectorResponse) => {
   return result;
 }
 
-const _prepareResponseOptions = ({html, inlineTags, voidTags, continuationDelimiters}) => {
-  return {
+const _prepareResponseOptions = ({html, htmlOptions}) => {
+  const options = {
     qualityScores: true,
     alignment: true,
-    html: !!html,
-    htmlInlineTags: inlineTags || "",
-    htmlVoidTags: voidTags || "",
-    htmlContinuationDelimiters: continuationDelimiters || ""
+    html: !!html
   };
+
+  if (htmlOptions !== undefined) {
+    options.htmlOptions = new Module.HTMLOptions();
+
+    Object.entries(htmlOptions).forEach(([option, value]) => {
+      options.htmlOptions[`set${option.substr(0, 1).toUpperCase()}${option.substr(1)}`](value);
+    });
+  }
+
+  return options;
 }
 
 const _prepareSourceText = (input) => {

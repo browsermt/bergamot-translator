@@ -86,7 +86,6 @@ class BlockingService {
 class AsyncService {
  public:
   struct Config {
-    bool HTML{false};
     size_t numWorkers{1};      ///< How many worker translation threads to spawn.
     bool cacheEnabled{false};  ///< Whether to enable cache or not.
     size_t cacheSize{2000};    ///< Size in History items to be stored in the cache. Loosely corresponds to sentences to

@@ -20,10 +20,6 @@ int main(int argc, char *argv[]) {
   std::shared_ptr<TranslationModel> model = service.createCompatibleModel(options, std::move(memoryBundle));
 
   ResponseOptions responseOptions;
-  responseOptions.HTML = config.serviceConfig.HTML;
-  responseOptions.HTMLVoidTags = config.serviceConfig.HTMLVoidTags;
-  responseOptions.HTMLInlineTags = config.serviceConfig.HTMLInlineTags;
-  responseOptions.HTMLContinuationDelimiters = config.serviceConfig.HTMLContinuationDelimiters;
   std::string input = readFromStdin();
 
   // Create a barrier using future/promise.

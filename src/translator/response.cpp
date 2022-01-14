@@ -128,9 +128,9 @@ std::vector<Alignment> remapAlignments(const Response &first, const Response &se
     size_t sourceTokenCount = first.source.numWords(sentenceId);
     size_t targetTokenCount = second.target.numWords(sentenceId);
     Alignment output(targetTokenCount, std::vector<float>(sourceTokenCount, 0.0f));
-    for (size_t ids = 0; ids < sourceTokenCount; ids++) {
+    for (size_t idt = 0; idt < targetTokenCount; idt++) {
       for (size_t idq = 0; idq < sourceSidePivots.size(); idq++) {
-        for (size_t idt = 0; idt < targetTokenCount; idt++) {
+        for (size_t ids = 0; ids < sourceTokenCount; ids++) {
           // Matrices are of form p(s | t) = P[t][s], hence idq appears on the extremes.
           output[idt][ids] += sourceGivenPivots[idq][ids] * remappedPivotGivenTargets[idt][idq];
         }

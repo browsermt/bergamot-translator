@@ -180,7 +180,7 @@ langs.forEach(([code, name]) => {
   langTo.options.add(new Option(name, code));
 });
 
-const loadModel = () => {
+function loadModel() {
   const lngFrom = langFrom.value;
   const lngTo = langTo.value;
   if (lngFrom !== lngTo) {
@@ -191,6 +191,74 @@ const loadModel = () => {
   }
 };
 
+async function loadLocalModel(files) {
+  const entry = {
+    modelFile: null,
+    shortlistFile: null,
+    vocabFiles: null
+  };
+
+  filesByName = Object.fromEntries(Array.from(files).map(file => [file.name, file]));
+
+  const configFile = Array.from(files).find(file => file.name.match(/config.*\.yml$/));
+  if (!configFile) throw Error("Could not find config.yml file");
+
+  const config = await parseModelConfig(configFile);
+  entry.modelFile = filesByName[config.models[0]];
+  entry.shortlistFile = filesByName[config.shortlist[0]];
+  entry.vocabFiles = config.vocabs.map(name => filesByName[name]);
+
+  status(`Installing model...`);
+  console.log('Loading model', entry);
+  document.querySelector("#translate-btn").disabled = true;
+  langFrom.options.add(new Option('Local', 'local'));
+  langTo.options.add(new Option('Local', 'local'));
+  langFrom.value = 'local';
+  langTo.value = 'local';
+  worker.postMessage([0, "load_model", 'local', 'local', entry]);
+}
+
+function parseYaml(yaml) {
+  const out = {};
+
+  yaml.split('\n').reduce((key, line, i) => {
+    let match;
+    if (match = line.match(/^\s*-\s+(.+?)$/)) {
+      if (!Array.isArray(out[key]))
+        out[key] = out[key].trim() ? [out[key]] : [];
+      out[key].push(match[1].trim());
+    }
+    else if (match = line.match(/^([A-Za-z0-9_][A-Za-z0-9_-]*):\s*(.*)$/)) {
+      key = match[1];
+      out[key] = match[2].trim();
+    }
+    else if (!line.trim()) {
+      // whitespace, ignore
+    }
+    else {
+      throw Error(`Could not parse line ${i+1}: "${line}"`);
+    }
+    return key;
+  }, null);
+
+  return out;
+}
+
+function parseModelConfig(file) {
+  const reader = new FileReader();
+  
+  return new Promise((resolve, reject) => {
+    reader.onload = () => {
+      try {
+        resolve(parseYaml(reader.result));
+      } catch (e) {
+        reject(e);
+      }
+    }
+    reader.readAsText(file);
+  });
+}
+
 langFrom.addEventListener("change", e => {
   loadModel();
 });
@@ -198,6 +266,10 @@ langFrom.addEventListener("change", e => {
 langTo.addEventListener("change", e => {
   window.localStorage['lang-to'] = langTo.value;
   loadModel();
+});
+
+document.querySelector("#load-local-model").addEventListener("change", e => {
+  loadLocalModel(e.target.files);
 });
 
 function init() {

@@ -38,7 +38,7 @@ onmessage = async function(e) {
       let [from, to] = e.data.slice(2, 2+2);
       try {
         await constructTranslationService();
-        await constructTranslationModel(from, to);
+        await constructTranslationModel(from, to, e.data[4]);
         log(`Model '${from}${to}' successfully constructed. Time taken: ${(Date.now() - start) / 1000} secs`);
         result = "Model successfully loaded";
       } catch (error) {
@@ -76,7 +76,7 @@ const constructTranslationService = async () => {
 }
 
 // Constructs a translation model object for the source and target language pair
-const constructTranslationModel = async (from, to) => {
+const constructTranslationModel = async (from, to, files) => {
   // Delete all previously constructed translation models and clear the map
   languagePairToTranslationModels.forEach((value, key) => {
     log(`Destructing model '${key}'`);
@@ -86,14 +86,14 @@ const constructTranslationModel = async (from, to) => {
 
   // If none of the languages is English then construct multiple models with
   // English as a pivot language.
-  if (from !== 'en' && to !== 'en') {
+  if (from !== 'en' && to !== 'en' && files === undefined) {
     log(`Constructing model '${from}${to}' via pivoting: '${from}en' and 'en${to}'`);
     await Promise.all([_constructTranslationModelInvolvingEnglish(from, 'en'),
                         _constructTranslationModelInvolvingEnglish('en', to)]);
   }
   else {
     log(`Constructing model '${from}${to}'`);
-    await _constructTranslationModelInvolvingEnglish(from, to);
+    await _constructTranslationModelInvolvingEnglish(from, to, files);
   }
 }
 
@@ -101,7 +101,7 @@ const constructTranslationModel = async (from, to) => {
 const translate = (from, to, input, options) => {
   // If none of the languages is English then perform translation with
   // English as a pivot language.
-  if (from !== 'en' && to !== 'en') {
+  if (from !== 'en' && to !== 'en' && !languagePairToTranslationModels.has(`${from}${to}`)) {
     log(`Translating '${from}${to}' via pivoting: '${from}en' -> 'en${to}'`);
     const translatedTextInEnglish = _translateInvolvingEnglish(from, 'en', input);
     return _translateInvolvingEnglish('en', to, translatedTextInEnglish, options);
@@ -121,6 +121,15 @@ const _downloadAsArrayBuffer = async(url) => {
   return response.arrayBuffer();
 }
 
+const _readAsArrayBuffer = async (file) => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => resolve(e.target.result);
+    reader.onerror = (e) => reject(e.target.error);
+    reader.readAsArrayBuffer(file);
+  });
+}
+
 // Constructs and initializes the AlignedMemory from the array buffer and alignment size
 const _prepareAlignedMemoryFromBuffer = async (buffer, alignmentSize) => {
   var byteArray = new Int8Array(buffer);
@@ -133,7 +142,11 @@ const _prepareAlignedMemoryFromBuffer = async (buffer, alignmentSize) => {
   return alignedMemory;
 }
 
-const _constructTranslationModelInvolvingEnglish = async (from, to) => {
+function unique(items) {
+  return new Set(items).values();
+}
+
+const _constructTranslationModelInvolvingEnglish = async (from, to, files) => {
   const languagePair = `${from}${to}`;
 
   /*Set the Model Configuration as YAML formatted string.
@@ -180,30 +193,29 @@ gemm-precision: int8shiftAlphaAll
 alignment: soft
 `;
 
-  const modelFile = `${rootURL}/${languagePair}/${modelRegistry[languagePair]["model"].name}`;
-  const shortlistFile = `${rootURL}/${languagePair}/${modelRegistry[languagePair]["lex"].name}`;
-  const vocabFiles = [`${rootURL}/${languagePair}/${modelRegistry[languagePair]["vocab"].name}`,
-                      `${rootURL}/${languagePair}/${modelRegistry[languagePair]["vocab"].name}`];
+  let modelBuffer = null;
+  let shortlistBuffer = null;
+  let downloadedVocabBuffers = [];
 
-  const uniqueVocabFiles = new Set(vocabFiles);
-  log(`modelFile: ${modelFile}\nshortlistFile: ${shortlistFile}\nNo. of unique vocabs: ${uniqueVocabFiles.size}`);
-  uniqueVocabFiles.forEach(item => log(`unique vocabFile: ${item}`));
+  if (files) {
+    let start = Date.now();
+    [modelBuffer, shortlistBuffer, ...downloadedVocabBuffers] = await Promise.all([files.modelFile, files.shortlistFile, ...unique(files.vocabFiles)].map(file => _readAsArrayBuffer(file)));
+    log(`Total Read time for all files: ${(Date.now() - start) / 1000} secs`);
+  } else {
+    const modelFile = `${rootURL}/${languagePair}/${modelRegistry[languagePair]["model"].name}`;
+    const shortlistFile = `${rootURL}/${languagePair}/${modelRegistry[languagePair]["lex"].name}`;
+    const vocabFiles = [`${rootURL}/${languagePair}/${modelRegistry[languagePair]["vocab"].name}`,
+                        `${rootURL}/${languagePair}/${modelRegistry[languagePair]["vocab"].name}`];
 
-  // Download the files as buffers from the given urls
-  let start = Date.now();
-  const downloadedBuffers = await Promise.all([_downloadAsArrayBuffer(modelFile), _downloadAsArrayBuffer(shortlistFile)]);
-  const modelBuffer = downloadedBuffers[0];
-  const shortListBuffer = downloadedBuffers[1];
-
-  const downloadedVocabBuffers = [];
-  for (let item of uniqueVocabFiles.values()) {
-    downloadedVocabBuffers.push(await _downloadAsArrayBuffer(item));
+    // Download the files as buffers from the given urls
+    let start = Date.now();
+    [modelBuffer, shortlistBuffer, ...downloadedVocabBuffers] = await Promise.all([modelFile, shortlistFile, ...unique(vocabFiles)].map(url => _downloadAsArrayBuffer(url)));
+    log(`Total Download time for all files of '${languagePair}': ${(Date.now() - start) / 1000} secs`);
   }
-  log(`Total Download time for all files of '${languagePair}': ${(Date.now() - start) / 1000} secs`);
 
   // Construct AlignedMemory objects with downloaded buffers
   let constructedAlignedMemories = await Promise.all([_prepareAlignedMemoryFromBuffer(modelBuffer, 256),
-                                                      _prepareAlignedMemoryFromBuffer(shortListBuffer, 64)]);
+                                                      _prepareAlignedMemoryFromBuffer(shortlistBuffer, 64)]);
   let alignedModelMemory = constructedAlignedMemories[0];
   let alignedShortlistMemory = constructedAlignedMemories[1];
   let alignedVocabsMemoryList = new Module.AlignedMemoryList;

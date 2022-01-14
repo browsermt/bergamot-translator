@@ -103,7 +103,7 @@ Ptr<Request> TranslationModel::makeRequest(size_t requestId, std::string &&sourc
   return request;
 }
 
-Ptr<Request> TranslationModel::makePivotRequest(size_t requestId, CallbackType callback, AnnotatedText &&previousTarget,
+Ptr<Request> TranslationModel::makePivotRequest(size_t requestId, AnnotatedText &&previousTarget, CallbackType callback,
                                                 const ResponseOptions &responseOptions, TranslationCache *cache) {
   Segments segments;
 

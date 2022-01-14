@@ -68,9 +68,6 @@ class BlockingService {
   /// were translated from first's source language to second's target langauge. Requires first's target to be second's
   /// source to work correctly - effectively implementing pivoting translation via an intermediate language.
   ///
-  /// Requires that `max-length-break` * `max-length-factor` for the second to be greater than the value for the first
-  /// model.
-  ///
   /// @param[in] first: TranslationModel capable of translating from source language to pivot language.
   /// @param[in] second: TranslationModel capable of translating between pivot and target language.
   /// @param[move] sources: The input source texts to be translated.
@@ -152,9 +149,6 @@ class AsyncService {
   /// With the supplied two translation models, translate using first and then the second generating a response as if it
   /// were translated from first's source language to second's target langauge. Requires first's target to be second's
   /// source to work correctly - effectively implementing pivoting translation via an intermediate language.
-  ///
-  /// Requires that `max-length-break` * `max-length-factor` for the second to be greater than the value for the first
-  /// model.
   ///
   /// @param[in] first: TranslationModel capable of translating from source language to pivot language.
   /// @param[in] second: TranslationModel capable of translating between pivot and target language.

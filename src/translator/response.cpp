@@ -53,13 +53,17 @@ Alignment transferThroughCharacters(const std::vector<ByteRange> &sourceSidePivo
     }
   }
 
-  assert(sq == sourceSidePivots.size());  // Nothing can be done here, this should not happen.
+  // The following is left in here for future debugging. Every token in source is expected to have been processed in the
+  // above pipeline. We advance the pivot-token index based on overlap with source-token. @jerinphilip is worried about
+  // EOS not existing when people try weird 4-model things in the future and would like to keep this check here.
+  assert(sq == sourceSidePivots.size());
 
   while (qt < targetSidePivots.size()) {
     // There is a case of EOS not being predicted. In this case the two pointer algorithm will fail. The just author
     // will redistribute the surplus among subjects.
 
-    assert(qt == 0);  // assert in DEBUG, that this is only EOS.
+    // assert in DEBUG, that this is only EOS - occuring at the end and with zero-surface.
+    assert(qt == targetSidePivots.size() - 1 && targetSidePivots[qt].size() == 0);
     for (size_t t = 0; t < pivotGivenTargets.size(); t++) {
       float gift = pivotGivenTargets[t][qt] / sourceSidePivots.size();
       for (size_t sq = 0; sq < sourceSidePivots.size(); sq++) {

@@ -110,6 +110,7 @@ class TranslationModel {
 
     Graph graph;
     ScorerEnsemble scorerEnsemble;
+    bool initialized{false};
   };
 
   // ShortlistGenerator is purely const, we don't need one per thread.

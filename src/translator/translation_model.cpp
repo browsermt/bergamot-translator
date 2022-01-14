@@ -44,10 +44,6 @@ TranslationModel::TranslationModel(const Config &options, MemoryBundle &&memory 
                                                                 srcIdx, trgIdx, shared_vcb);
     }
   }
-
-  for (size_t idx = 0; idx < replicas; idx++) {
-    loadBackend(idx);
-  }
 }
 
 void TranslationModel::loadBackend(size_t idx) {
@@ -172,6 +168,12 @@ Ptr<marian::data::CorpusBatch> TranslationModel::convertToMarianBatch(Batch &bat
 
 void TranslationModel::translateBatch(size_t deviceId, Batch &batch) {
   auto &backend = backend_[deviceId];
+
+  if (!backend.initialized) {
+    loadBackend(deviceId);
+    backend.initialized = true;
+  }
+
   BeamSearch search(options_, backend.scorerEnsemble, vocabs_.target());
   Histories histories = search.search(backend.graph, convertToMarianBatch(batch));
   batch.completeBatch(histories);

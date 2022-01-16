@@ -61,12 +61,9 @@ AsyncService::AsyncService(const AsyncService::Config &config)
   }
 }
 
-void AsyncService::terminate() {
-  safeBatchingPool_.clear();
-  join();
-}
+void AsyncService::clear() { safeBatchingPool_.clear(); }
 
-void AsyncService::join() {
+AsyncService::~AsyncService() {
   safeBatchingPool_.shutdown();
   for (std::thread &worker : workers_) {
     assert(worker.joinable());
@@ -74,8 +71,6 @@ void AsyncService::join() {
   }
   workers_.clear();
 }
-
-AsyncService::~AsyncService() { join(); }
 
 void AsyncService::translate(std::shared_ptr<TranslationModel> translationModel, std::string &&source,
                              CallbackType callback, const ResponseOptions &responseOptions) {

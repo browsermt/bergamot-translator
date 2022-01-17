@@ -44,10 +44,6 @@ TranslationModel::TranslationModel(const Config &options, MemoryBundle &&memory 
                                                                 srcIdx, trgIdx, shared_vcb);
     }
   }
-
-  for (size_t idx = 0; idx < replicas; idx++) {
-    loadBackend(idx);
-  }
 }
 
 void TranslationModel::loadBackend(size_t idx) {
@@ -95,16 +91,22 @@ Ptr<Request> TranslationModel::makeRequest(size_t requestId, std::string &&sourc
   Segments segments;
   AnnotatedText annotatedSource;
 
-  HTML::Options htmlOptions;
-  if (responseOptions.HTMLOptions.has_value()) htmlOptions = std::move(responseOptions.HTMLOptions.value());
-
-  HTML html(std::move(source), responseOptions.HTML, std::move(htmlOptions));
   textProcessor_.process(std::move(source), annotatedSource, segments);
-  ResponseBuilder responseBuilder(responseOptions, std::move(annotatedSource), vocabs_, callback, *qualityEstimator_,
-                                  std::move(html));
+  ResponseBuilder responseBuilder(responseOptions, std::move(annotatedSource), vocabs_, callback, *qualityEstimator_);
 
   Ptr<Request> request =
       New<Request>(requestId, /*model=*/*this, std::move(segments), std::move(responseBuilder), cache);
+  return request;
+}
+
+Ptr<Request> TranslationModel::makePivotRequest(size_t requestId, AnnotatedText &&previousTarget, CallbackType callback,
+                                                const ResponseOptions &responseOptions, TranslationCache *cache) {
+  Segments segments;
+
+  textProcessor_.processFromAnnotation(previousTarget, segments);
+  ResponseBuilder responseBuilder(responseOptions, std::move(previousTarget), vocabs_, callback, *qualityEstimator_);
+
+  Ptr<Request> request = New<Request>(requestId, *this, std::move(segments), std::move(responseBuilder), cache);
   return request;
 }
 
@@ -175,6 +177,12 @@ Ptr<marian::data::CorpusBatch> TranslationModel::convertToMarianBatch(Batch &bat
 
 void TranslationModel::translateBatch(size_t deviceId, Batch &batch) {
   auto &backend = backend_[deviceId];
+
+  if (!backend.initialized) {
+    loadBackend(deviceId);
+    backend.initialized = true;
+  }
+
   BeamSearch search(options_, backend.scorerEnsemble, vocabs_.target());
   Histories histories = search.search(backend.graph, convertToMarianBatch(batch));
   batch.completeBatch(histories);

@@ -31,13 +31,12 @@ class ResponseBuilder {
   /// @param [in] qualityEstimator: the QualityEstimator model that can be used
   /// to provide translation quality probability.
   ResponseBuilder(ResponseOptions responseOptions, AnnotatedText &&source, const Vocabs &vocabs,
-                  std::function<void(Response &&)> callback, const QualityEstimator &qualityEstimator, HTML &&html)
+                  std::function<void(Response &&)> callback, const QualityEstimator &qualityEstimator)
       : responseOptions_(responseOptions),
         source_(std::move(source)),
         vocabs_(vocabs),
         callback_(std::move(callback)),
-        qualityEstimator_(qualityEstimator),
-        html_(std::move(html)) {}
+        qualityEstimator_(qualityEstimator) {}
 
   /// Constructs and sets the promise of a Response object from obtained
   /// histories after translating.
@@ -64,7 +63,6 @@ class ResponseBuilder {
     if (responseOptions_.alignment || responseOptions_.HTML) {
       buildAlignments(histories, response);
     }
-    html_.restore(response);
 
     callback_(std::move(response));
   }
@@ -97,8 +95,6 @@ class ResponseBuilder {
   AnnotatedText source_;
 
   const QualityEstimator &qualityEstimator_;
-
-  HTML html_;
 };
 }  // namespace bergamot
 }  // namespace marian

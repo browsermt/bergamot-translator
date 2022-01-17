@@ -69,6 +69,9 @@ class TranslationModel {
   Ptr<Request> makeRequest(size_t requestId, std::string&& source, CallbackType callback,
                            const ResponseOptions& responseOptions, TranslationCache* cache);
 
+  Ptr<Request> makePivotRequest(size_t requestId, AnnotatedText&& previousTarget, CallbackType callback,
+                                const ResponseOptions& responseOptions, TranslationCache* cache);
+
   /// Relays a request to the batching-pool specific to this translation model.
   /// @param [in] request: Request constructed through makeRequest
   size_t enqueueRequest(Ptr<Request> request) { return batchingPool_.enqueueRequest(request); };
@@ -107,6 +110,7 @@ class TranslationModel {
 
     Graph graph;
     ScorerEnsemble scorerEnsemble;
+    bool initialized{false};
   };
 
   // ShortlistGenerator is purely const, we don't need one per thread.

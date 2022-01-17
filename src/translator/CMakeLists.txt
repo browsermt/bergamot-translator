@@ -15,6 +15,7 @@ add_library(bergamot-translator STATIC
     annotation.cpp
     service.cpp
     parser.cpp
+    response.cpp
     html.cpp
     xh_scanner.cpp
 )

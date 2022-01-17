@@ -10,6 +10,28 @@
 namespace marian {
 namespace bergamot {
 
+namespace {
+
+// Combines two responses with first.target == second.source mapping alignments etc accordingly.
+// There are several constraints which are matched by only the pivoting workflow in <>Service source, therefore this
+// function is not for external use and in a hidden namespace.
+Response combine(Response &&first, Response &&second) {
+  Response combined;
+
+  // Compute alignment first using internal matrices and mappings.
+  if (first.alignments.size()) {
+    combined.alignments = remapAlignments(first, second);
+  }
+
+  combined.source = std::move(first.source);
+  combined.target = std::move(second.target);
+  combined.qualityScores = std::move(second.qualityScores);
+
+  return combined;
+}
+
+}  // namespace
+
 BlockingService::BlockingService(const BlockingService::Config &config)
     : config_(config),
       requestId_(0),
@@ -20,6 +42,21 @@ BlockingService::BlockingService(const BlockingService::Config &config)
 std::vector<Response> BlockingService::translateMultiple(std::shared_ptr<TranslationModel> translationModel,
                                                          std::vector<std::string> &&sources,
                                                          const ResponseOptions &responseOptions) {
+  std::vector<HTML> htmls;
+  for (auto &&source : sources) {
+    htmls.emplace_back(std::move(source), responseOptions.HTML);
+  }
+  std::vector<Response> responses = translateMultipleRaw(translationModel, std::move(sources), responseOptions);
+  for (size_t i = 0; i < responses.size(); i++) {
+    htmls[i].restore(responses[i]);
+  }
+
+  return responses;
+}
+
+std::vector<Response> BlockingService::translateMultipleRaw(std::shared_ptr<TranslationModel> translationModel,
+                                                            std::vector<std::string> &&sources,
+                                                            const ResponseOptions &responseOptions) {
   std::vector<Response> responses;
   responses.resize(sources.size());
 
@@ -38,6 +75,47 @@ std::vector<Response> BlockingService::translateMultiple(std::shared_ptr<Transla
   }
 
   return responses;
+}
+
+std::vector<Response> BlockingService::pivotMultiple(std::shared_ptr<TranslationModel> first,
+                                                     std::shared_ptr<TranslationModel> second,
+                                                     std::vector<std::string> &&sources,
+                                                     const ResponseOptions &responseOptions) {
+  // Translate source to pivots. This is same as calling translateMultiple.
+  std::vector<Response> sourcesToPivots;
+  sourcesToPivots = translateMultipleRaw(first, std::move(sources), responseOptions);
+
+  // Translate pivots to targets, after we have outputs at pivot from first round. We cannot use translateMultiple here
+  // because need consistency at pivot on both sides.
+  std::vector<Response> pivotsToTargets;
+  pivotsToTargets.resize(sourcesToPivots.size());
+
+  for (size_t i = 0; i < sourcesToPivots.size(); i++) {
+    AnnotatedText intermediate =
+        sourcesToPivots[i].target;  // We cannot eliminate this copy, as we need two versions of intermediate. Holding
+                                    // it in allows further use in makePivotRequest
+    auto callback = [i, &pivotsToTargets](Response &&response) { pivotsToTargets[i] = std::move(response); };  //
+
+    TranslationCache *cache = config_.cacheEnabled ? &cache_ : nullptr;
+    Ptr<Request> request =
+        second->makePivotRequest(requestId_++, std::move(intermediate), callback, responseOptions, cache);
+    batchingPool_.enqueueRequest(second, request);
+  }
+
+  Batch batch;
+  Ptr<TranslationModel> model{nullptr};
+  while (batchingPool_.generateBatch(model, batch)) {
+    model->translateBatch(/*deviceId=*/0, batch);
+  }
+
+  // Combine both sides. They're associated by indices.
+  std::vector<Response> finalResponses;
+  for (size_t i = 0; i < sourcesToPivots.size(); i++) {
+    Response finalResponse = combine(std::move(sourcesToPivots[i]), std::move(pivotsToTargets[i]));
+    finalResponses.push_back(std::move(finalResponse));
+  }
+
+  return finalResponses;
 }
 
 AsyncService::AsyncService(const AsyncService::Config &config)
@@ -69,8 +147,59 @@ AsyncService::~AsyncService() {
   }
 }
 
+void AsyncService::pivot(std::shared_ptr<TranslationModel> first, std::shared_ptr<TranslationModel> second,
+                         std::string &&source, CallbackType clientCallback, const ResponseOptions &responseOptions) {
+  Ptr<HTML> html = std::make_shared<HTML>(std::move(source), responseOptions.HTML);
+  // This is callback chaining or CPS due to async.
+
+  // We create a callback which feeds the result of first into a second translation (internalCallback), which is
+  // supplied with a callback (joiningCallback) which merges both results and creates our final response.
+  //
+
+  auto internalCallback = [this, clientCallback, second, responseOptions, html](Response &&sourceToPivot) {
+    // We cannot eliminate the following copy, as we need two versions of intermediate. Holding
+    // it in a copy allows moving the response into the lambda below.
+
+    AnnotatedText intermediate = sourceToPivot.target;
+
+    // https://stackoverflow.com/a/65606554/4565794
+    // Move semantics only work on mutable lambdas, and can only be done once. It's only once in our case, so issok.
+    auto joiningCallback = [this, sourceToPivot = std::move(sourceToPivot), clientCallback,
+                            html](Response &&pivotToTarget) mutable {
+      // We have both Responses at this callback, sourceToPivot is moved in, second half will be available when
+      // complete.
+      Response finalResponse = combine(std::move(sourceToPivot), std::move(pivotToTarget));
+
+      // Sentences should be consistent now, give way to client.
+      html->restore(finalResponse);
+      clientCallback(std::move(finalResponse));
+    };
+
+    // Second call.
+    TranslationCache *cache = config_.cacheEnabled ? &cache_ : nullptr;
+    Ptr<Request> request =
+        second->makePivotRequest(requestId_++, std::move(intermediate), joiningCallback, responseOptions, cache);
+    safeBatchingPool_.enqueueRequest(second, request);
+  };
+
+  // First call.
+  translateRaw(first, std::move(source), internalCallback, responseOptions);
+}
+
 void AsyncService::translate(std::shared_ptr<TranslationModel> translationModel, std::string &&source,
                              CallbackType callback, const ResponseOptions &responseOptions) {
+  // Producer thread, a call to this function adds new work items. If batches are available, notifies workers waiting.
+  Ptr<HTML> html = std::make_shared<HTML>(std::move(source), responseOptions.HTML);
+  auto internalCallback = [html, callback](Response &&response) {
+    html->restore(response);
+    callback(std::move(response));
+  };
+
+  translateRaw(translationModel, std::move(source), internalCallback, responseOptions);
+}
+
+void AsyncService::translateRaw(std::shared_ptr<TranslationModel> translationModel, std::string &&source,
+                                CallbackType callback, const ResponseOptions &responseOptions) {
   // Producer thread, a call to this function adds new work items. If batches are available, notifies workers waiting.
   TranslationCache *cache = config_.cacheEnabled ? &cache_ : nullptr;
   Ptr<Request> request =

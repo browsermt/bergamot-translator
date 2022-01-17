@@ -49,6 +49,8 @@ class TextProcessor {
 
   void process(std::string &&blob, AnnotatedText &source, Segments &segments) const;
 
+  void processFromAnnotation(AnnotatedText &source, Segments &segments) const;
+
  private:
   void parseCommonOptions(Ptr<Options> options);
 

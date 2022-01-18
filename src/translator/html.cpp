@@ -350,8 +350,10 @@ HTML::HTML(std::string &&source, bool process_markup, Options &&options) : optio
       } break;
 
       case markup::Scanner::TT_TAG_END:
-        // Note: self-closing tags emit TT_TAG_END immediately after TT_TAG_START
-        // but since we're parsing HTML5, a sole <img> will never emit a TT_TAG_END
+        // If this is the closing bit of a void tag, i.e. triggered by the "/>"
+        // bit of "<img/>", then completely ignore it.
+        if (contains(options_.voidTags, std::string(scanner.tag()))) break;
+
         if (stack.empty()) throw BadHTML(format("Encountered more closing tags ({}) than opening tags", scanner.tag()));
 
         if (stack.back()->name != scanner.tag())

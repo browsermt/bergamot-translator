@@ -9,7 +9,7 @@ wget --quiet --continue --directory models/ \
 # Patch the config-files generated from marian for use in bergamot.
 python3 bergamot-translator-tests/tools/patch-marian-for-bergamot.py \
     --config-path models/ende.student.tiny11/config.intgemm8bitalpha.yml \
-    --ssplit-prefix-file 3rd-party/ssplit-cpp/split-cpp/nonbreaking_prefixes/nonbreaking_prefix.en
+    --ssplit-prefix-file $(realpath 3rd_party/ssplit-cpp/nonbreaking_prefixes/nonbreaking_prefix.en)
 
 # Patched config file will be available with .bergamot.yml suffix.
 CONFIG=models/ende.student.tiny11/config.intgemm8bitalpha.yml.bergamot.yml

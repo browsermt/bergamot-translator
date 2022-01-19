@@ -127,10 +127,9 @@ class AsyncService {
 
   /// Create a TranslationModel compatible with this instance of Service. Internally assigns how many replicas of
   /// backend needed based on worker threads set. See TranslationModel for documentation on other params.
-  template <class ConfigType>
-  Ptr<TranslationModel> createCompatibleModel(const ConfigType &config, MemoryBundle &&memory = MemoryBundle{}) {
+  Ptr<TranslationModel> createCompatibleModel(const TranslationModel::Config &config) {
     // @TODO: Remove this remove this dependency/coupling.
-    return New<TranslationModel>(config, std::move(memory), /*replicas=*/config_.numWorkers);
+    return New<TranslationModel>(config, /*replicas=*/config_.numWorkers);
   }
 
   /// With the supplied TranslationModel, translate an input. A Response is constructed with optional items set/unset

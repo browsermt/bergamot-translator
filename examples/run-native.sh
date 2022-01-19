@@ -14,6 +14,6 @@ python3 bergamot-translator-tests/tools/patch-marian-for-bergamot.py \
 # Patched config file will be available with .bergamot.yml suffix.
 CONFIG=models/ende.student.tiny11/config.intgemm8bitalpha.yml.bergamot.yml
 
-build/app/bergamot --model-config-paths $CONFIG --cpu-threads 4 <<< "Hello World!"
+build/app/bergamot --model-config-paths $CONFIG --cpu-threads 4 --log-level info <<< "Hello World!"
 # Hallo Welt!
 

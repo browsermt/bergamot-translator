@@ -143,7 +143,10 @@ AlignedMemory getQualityEstimatorModel(MemoryBundle& memoryBundle, const marian:
 MemoryBundle getMemoryBundleFromConfig(marian::Ptr<marian::Options> options) {
   MemoryBundle memoryBundle;
   memoryBundle.model = getModelMemoryFromConfig(options);
-  memoryBundle.shortlist = getShortlistMemoryFromConfig(options);
+  auto shortlist = options->get<std::vector<std::string>>("shortlist");
+  if (!shortlist.empty()) {
+    memoryBundle.shortlist = getShortlistMemoryFromConfig(options);
+  }
   getVocabsMemoryFromConfig(options, memoryBundle.vocabs);
   memoryBundle.ssplitPrefixFile = getSsplitPrefixFileMemoryFromConfig(options);
   memoryBundle.qualityEstimatorMemory = getQualityEstimatorModel(options);

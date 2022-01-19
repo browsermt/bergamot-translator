@@ -16,10 +16,6 @@ void ResponseBuilder::buildAlignments(Histories &histories, Response &response) 
 
     Result result = onebest[0];  // Expecting only one result;
     Words words = std::get<0>(result);
-    // Alignments
-    // TODO(jerinphilip): The following double conversion might not be
-    // necessary. Hard alignment can directly be exported, but this would
-    // mean WASM bindings for a structure deep within marian source.
     auto hyp = std::get<1>(result);
     auto softAlignment = hyp->tracebackAlignment();
     response.alignments.push_back(std::move(softAlignment));

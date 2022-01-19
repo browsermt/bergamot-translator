@@ -15,6 +15,7 @@ add_library(bergamot-translator STATIC
     annotation.cpp
     service.cpp
     parser.cpp
+    response.cpp
     html.cpp
     xh_scanner.cpp
 )
@@ -31,6 +32,10 @@ if(COMPILE_WASM)
   target_compile_definitions(bergamot-translator PRIVATE WASM_BINDINGS)
   target_compile_options(bergamot-translator PRIVATE ${WASM_COMPILE_FLAGS})
 endif(COMPILE_WASM)
+
+if(ENABLE_CACHE_STATS)
+    target_compile_definitions(bergamot-translator PUBLIC ENABLE_CACHE_STATS)
+endif(ENABLE_CACHE_STATS)
 
 target_link_libraries(bergamot-translator marian ssplit)
 

@@ -25,7 +25,7 @@ jobs:
           os: ubuntu-18.04
           identifier: ubuntu_1804_full
           cmake: -DCOMPILE_TESTS=on
-          brt_tags: "'#native'"
+          brt_tags: ""
           unittests: 'true'
         - name: Ubuntu 18.04 minimal
           os: ubuntu-18.04
@@ -37,7 +37,7 @@ jobs:
           os: ubuntu-20.04
           identifier: ubuntu_2004_full
           cmake: -DCOMPILE_TESTS=on
-          brt_tags: "'#native'"
+          brt_tags: ""
           unittests: 'true'
         - name: Ubuntu 20.04 minimal
           os: ubuntu-20.04
@@ -131,6 +131,10 @@ jobs:
           bergamot-translator-tests/**/*.expected
           bergamot-translator-tests/**/*.log
           bergamot-translator-tests/**/*.out
+    - name: Confirm native-run example script works
+      run: |-
+          bash examples/run-native.sh
+
   mac:
     strategy:
       fail-fast: false
@@ -140,7 +144,7 @@ jobs:
           os: macos-10.15
           identifier: mac_1015_full
           cmake: -DCOMPILE_TESTS=on -DUSE_APPLE_ACCELERATE=off -DUSE_FBGEMM=off -DUSE_STATIC_LIBS=off
-          brt_tags: "'#native'"
+          brt_tags: ""
           unittests: 'true'
         - name: MacOS 10.15 minimal
           os: macos-10.15
@@ -235,4 +239,7 @@ jobs:
           bergamot-translator-tests/**/*.expected
           bergamot-translator-tests/**/*.log
           bergamot-translator-tests/**/*.out
+    - name: Confirm native-run example script works
+      run: |-
+          bash examples/run-native.sh
 

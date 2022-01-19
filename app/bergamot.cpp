@@ -16,8 +16,7 @@ int main(int argc, char *argv[]) {
   // Construct a model.
   auto options = parseOptionsFromFilePath(config.modelConfigPaths.front());
 
-  MemoryBundle memoryBundle;
-  std::shared_ptr<TranslationModel> model = service.createCompatibleModel(options, std::move(memoryBundle));
+  std::shared_ptr<TranslationModel> model = service.createCompatibleModel(options);
 
   ResponseOptions responseOptions;
   std::string input = readFromStdin();

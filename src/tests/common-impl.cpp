@@ -26,6 +26,26 @@ Response Bridge<AsyncService>::translate(AsyncService &service, std::shared_ptr<
   return response;
 }
 
+Response Bridge<BlockingService>::pivot(BlockingService &service, std::shared_ptr<TranslationModel> &sourceToPivot,
+                                        std::shared_ptr<TranslationModel> &pivotToTarget, std::string &&source,
+                                        const ResponseOptions &responseOptions) {
+  std::vector<std::string> sources = {source};
+  return service.pivotMultiple(sourceToPivot, pivotToTarget, std::move(sources), responseOptions).front();
+}
+
+Response Bridge<AsyncService>::pivot(AsyncService &service, std::shared_ptr<TranslationModel> &sourceToPivot,
+                                     std::shared_ptr<TranslationModel> &pivotToTarget, std::string &&source,
+                                     const ResponseOptions &responseOptions) {
+  std::promise<Response> responsePromise;
+  std::future<Response> responseFuture = responsePromise.get_future();
+
+  auto callback = [&responsePromise](Response &&response) { responsePromise.set_value(std::move(response)); };
+  service.pivot(sourceToPivot, pivotToTarget, std::move(source), callback, responseOptions);
+  responseFuture.wait();
+  Response response = responseFuture.get();
+  return response;
+}
+
 template <class Service>
 TestSuite<Service>::TestSuite(Service &service) : service_{service} {}
 
@@ -49,6 +69,10 @@ void TestSuite<Service>::TestSuite::run(const std::string &opModeAsString, std::
     qualityEstimatorScores(models.front());
   } else if (opModeAsString == "test-translation-cache") {
     translationCache(models.front());
+  } else if (opModeAsString == "test-pivot") {
+    pivotTranslate(models);
+  } else if (opModeAsString == "test-html-translation") {
+    htmlTranslation(models.front());
   } else {
     std::cerr << "Incompatible test mode. Choose from the one of the valid test-modes";
     std::abort();
@@ -138,6 +162,17 @@ void TestSuite<Service>::qualityEstimatorWords(Ptr<TranslationModel> model) {
   }
 }
 
+template <class Service>
+void TestSuite<Service>::htmlTranslation(Ptr<TranslationModel> model) {
+  ResponseOptions responseOptions;
+  responseOptions.HTML = true;
+  responseOptions.alignment = true;
+  std::string source = readFromStdin();
+  const Response response = bridge_.translate(service_, model, std::move(source), responseOptions);
+
+  std::cout << response.target.text;
+}
+
 // Reads from stdin and translates the read content. Prints the quality scores for each sentence.
 template <class Service>
 void TestSuite<Service>::qualityEstimatorScores(Ptr<TranslationModel> model) {
@@ -189,4 +224,75 @@ void TestSuite<Service>::translationCache(Ptr<TranslationModel> model) {
            "same path, this is expected to be same.");
 
   std::cout << firstResponse.target.text;
+}
+
+template <class Service>
+void TestSuite<Service>::pivotTranslate(std::vector<Ptr<TranslationModel>> &models) {
+  // We expect a source -> pivot; pivot -> source model to get source -> source and build this test using accuracy of
+  // matches.
+  ABORT_IF(models.size() != 2, "Forward and backward test needs two models.");
+  ResponseOptions responseOptions;
+  responseOptions.alignment = true;
+  std::string source = readFromStdin();
+  std::promise<Response> responsePromise;
+  std::future<Response> responseFuture = responsePromise.get_future();
+
+  Response response = bridge_.pivot(service_, models.front(), models.back(), std::move(source), responseOptions);
+
+  const float EPS = 1e-5;
+  size_t totalOutcomes = 0;
+  size_t favourableOutcomes = 0;
+
+  for (size_t sentenceId = 0; sentenceId < response.source.numSentences(); sentenceId++) {
+    std::cout << "> " << response.source.sentence(sentenceId) << "\n";
+    std::cout << "< " << response.target.sentence(sentenceId) << "\n\n";
+
+    // Assert what we have is a probability distribution over source-tokens given a target token.
+    for (size_t t = 0; t < response.alignments[sentenceId].size(); t++) {
+      float sum = 0.0f;
+      for (size_t s = 0; s < response.alignments[sentenceId][t].size(); s++) {
+        sum += response.alignments[sentenceId][t][s];
+      }
+
+      std::cerr << fmt::format("Sum @ (target-token = {}, sentence = {}) = {}", t, sentenceId, sum) << std::endl;
+      ABORT_IF((std::abs(sum - 1.0f) > EPS), "Not a probability distribution, something's going wrong");
+    }
+
+    // For each target token, find argmax s, i.e find argmax p(s | t), max p(s | t)
+    for (size_t t = 0; t < response.alignments[sentenceId].size(); t++) {
+      bool valid = false;
+      float maxV = 0.0f;
+      auto argmaxV = std::make_pair(-1, -1);
+      for (size_t s = 0; s < response.alignments[sentenceId][t].size(); s++) {
+        auto v = response.alignments[sentenceId][t][s];
+        if (v > maxV) {
+          maxV = v;
+          argmaxV = std::make_pair(t, s);
+        }
+      }
+
+      auto sourceToken = response.source.word(sentenceId, argmaxV.second);
+      auto targetToken = response.target.word(sentenceId, argmaxV.first);
+      if (sourceToken == targetToken) {
+        favourableOutcomes += 1;
+      }
+
+      std::cerr << sourceToken << " " << targetToken << " " << maxV << std::endl;
+
+      totalOutcomes += 1;
+    }
+
+    // Assert each alignment over target is a valid probability distribution.
+  }
+
+  // Measure accuracy of word match.
+  float accuracy = static_cast<float>(favourableOutcomes) / static_cast<float>(totalOutcomes);
+
+  // This is arbitrary value chosen by @jerinphilip, but should be enough to check if things fail.
+  // This value is calibrated on bergamot input in BRT. All this is supposed to do is let the developers know if
+  // something's largely amiss to the point alignments are not working.
+  ABORT_IF(accuracy < 0.70, "Accuracy {} not enough. Please check if something's off.", accuracy * 100);
+
+  std::cout << response.source.text;
+  std::cout << response.target.text;
 }

@@ -6,6 +6,7 @@
 
 #include "batch.h"
 #include "batching_pool.h"
+#include "byte_array_util.h"
 #include "cache.h"
 #include "common/utils.h"
 #include "data/shortlist.h"
@@ -56,7 +57,10 @@ class TranslationModel {
   /// @param [in] options: Marian options object.
   /// @param [in] memory: MemoryBundle object holding memory buffers containing parameters to build MarianBackend,
   /// ShortlistGenerator, Vocabs and SentenceSplitter.
-  TranslationModel(const Config& options, MemoryBundle&& memory = MemoryBundle{}, size_t replicas = 1);
+  TranslationModel(const Config& options, MemoryBundle&& memory, size_t replicas = 1);
+
+  TranslationModel(const Config& options, size_t replicas = 1)
+      : TranslationModel(options, getMemoryBundleFromConfig(options), replicas) {}
 
   /// Make a Request to be translated by this TranslationModel instance.
   /// @param [in] requestId: Unique identifier associated with this request, available from Service.
@@ -68,6 +72,9 @@ class TranslationModel {
   //  @returns Request created from the query parameters wrapped within a shared-pointer.
   Ptr<Request> makeRequest(size_t requestId, std::string&& source, CallbackType callback,
                            const ResponseOptions& responseOptions, TranslationCache* cache);
+
+  Ptr<Request> makePivotRequest(size_t requestId, AnnotatedText&& previousTarget, CallbackType callback,
+                                const ResponseOptions& responseOptions, TranslationCache* cache);
 
   /// Relays a request to the batching-pool specific to this translation model.
   /// @param [in] request: Request constructed through makeRequest
@@ -107,6 +114,7 @@ class TranslationModel {
 
     Graph graph;
     ScorerEnsemble scorerEnsemble;
+    bool initialized{false};
   };
 
   // ShortlistGenerator is purely const, we don't need one per thread.

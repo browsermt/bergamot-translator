@@ -482,6 +482,12 @@ TEST_CASE("Test self-closing tag (HTML5)") {
   CHECK(input == "hello  world and other creatures");  // Note double space between "hello" and "world"
 }
 
+TEST_CASE("Test self-closing tag (XHTML)") {
+  std::string input("<p>hello<img/>world</p>");
+  HTML html(std::move(input), true);
+  CHECK(input == "hello world");  // <img/> introduced space
+}
+
 TEST_CASE("Test empty void tag at end of input") {
   std::string input("hello <br>");
   HTML html(std::move(input), true);

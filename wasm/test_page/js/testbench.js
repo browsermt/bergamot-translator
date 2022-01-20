@@ -131,6 +131,25 @@ function alignmentHeuristics(selected, {originalTokens, translatedTokens, scores
   return selected;
 }
 
+
+function renderToken(token) {
+  return token
+    .split(/(<(\/?)(\w+).*?\>)/)
+    .reduce((chunks, part, i) => {
+      if (i % 4 == 0) chunks.push([]);
+      chunks[chunks.length - 1].push(part);
+      return chunks;
+    }, [])
+    .reduce((fragment, [text, tag, isClosingTag, tagName]) => {
+      fragment.appendChild(document.createTextNode(addControlCharacters(text)));
+      if (tag !== undefined) {
+        const shortened = tag.length !== tagName.length + isClosingTag.length + 2;
+        fragment.appendChild(html`<span className="html-tag" title=${tag}>&lt;${isClosingTag}${tagName}${shortened ? '…' : ''}&gt;</span>`);
+      }
+      return fragment
+    }, document.createDocumentFragment());
+}
+
 function renderAlignmentsTable({originalTokens, translatedTokens, scores}) {
   const original = hardAlignments({originalTokens, translatedTokens, scores});
 
@@ -148,11 +167,11 @@ function renderAlignmentsTable({originalTokens, translatedTokens, scores}) {
   return html`<table>
     <tr>
       <th></th>
-      ${originalTokens.map(token => html`<th>${addControlCharacters(token)}</th>`)}
+      ${originalTokens.map(token => html`<th>${renderToken(token)}</th>`)}
     </tr>
     ${translatedTokens.map((token, t) => html`
       <tr>
-        <th>${addControlCharacters(token)}</th>
+        <th>${renderToken(token)}</th>
         ${originalTokens.map((_, o) => html`<td className=${classNames(t,o)}>${scores[t][o].toFixed(4)}</td>`)}
       </tr>
     `)}

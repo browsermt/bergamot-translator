@@ -90,7 +90,7 @@ const {html, htmlFragment} = (function() {
 	function consumeFragment(tokens) {
 		const fragment = document.createDocumentFragment();
 
-		for (let child; child = tokens.any([consumeElement, consumeTextNode]);)
+		for (let child; child = tokens.any([consumeElement, consumeEntity, consumeTextNode]);)
 			fragment.appendChild(child[1])
 		
 		return fragment;
@@ -105,9 +105,10 @@ const {html, htmlFragment} = (function() {
 		
 		if (!['INPUT', 'IMG', 'BR', 'HR'].includes(el.nodeName)) {
 			loop: {
-				for (let child; child = tokens.any([consumeCloseTag, consumeElement, consumeTextNode]);) {
+				for (let child; child = tokens.any([consumeCloseTag, consumeElement, consumeEntity, consumeTextNode]);) {
 					switch (child[0]) {
 						case consumeElement:
+						case consumeEntity:
 						case consumeTextNode:
 							el.appendChild(child[1]);
 							break;
@@ -132,6 +133,15 @@ const {html, htmlFragment} = (function() {
 			return text;
 		
 		return document.createTextNode(text);
+	}
+
+	function consumeEntity(tokens) {
+		let entity = String(tokens.consume('&'));
+		while (entity[entity.length - 1] != ';')
+			entity += String(tokens.consume());
+		const wrapper = document.createElement('div');
+		wrapper.innerHTML = entity;
+		return wrapper.firstChild;
 	}
 
 	function consumeWhitespace(tokens) {
@@ -207,7 +217,7 @@ const {html, htmlFragment} = (function() {
 
 			return tokens
 				.concat(
-					literal.split(/(<\/?|>|"|=|\s)/g)
+					literal.split(/(<\/?|>|"|=|&|;|\s)/g)
 					.filter(token => token.length > 0)
 				)
 				.concat(i < vars.length ? flatten(vars[i]) : []);

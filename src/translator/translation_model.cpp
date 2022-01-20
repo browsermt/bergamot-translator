@@ -27,22 +27,25 @@ TranslationModel::TranslationModel(const Config &options, MemoryBundle &&memory 
   ABORT_IF(replicas == 0, "At least one replica needs to be created.");
   backend_.resize(replicas);
 
-  if (options_->hasAndNotEmpty("shortlist")) {
-    int srcIdx = 0, trgIdx = 1;
-    bool shared_vcb =
-        vocabs_.sources().front() ==
-        vocabs_.target();  // vocabs_->sources().front() is invoked as we currently only support one source vocab
-    if (memory_.shortlist.size() > 0 && memory_.shortlist.begin() != nullptr) {
-      bool check = options_->get<bool>("check-bytearray", false);
-      shortlistGenerator_ = New<data::BinaryShortlistGenerator>(memory_.shortlist.begin(), memory_.shortlist.size(),
-                                                                vocabs_.sources().front(), vocabs_.target(), srcIdx,
-                                                                trgIdx, shared_vcb, check);
-    } else {
-      // Changed to BinaryShortlistGenerator to enable loading binary shortlist file
-      // This class also supports text shortlist file
-      shortlistGenerator_ = New<data::BinaryShortlistGenerator>(options_, vocabs_.sources().front(), vocabs_.target(),
-                                                                srcIdx, trgIdx, shared_vcb);
-    }
+  // Try to load shortlist from memory-bundle. If not available, try to load from options_;
+
+  int srcIdx = 0, trgIdx = 1;
+  // vocabs_->sources().front() is invoked as we currently only support one source vocab
+  bool shared_vcb = (vocabs_.sources().front() == vocabs_.target());
+
+  if (memory_.shortlist.size() > 0 && memory_.shortlist.begin() != nullptr) {
+    bool check = options_->get<bool>("check-bytearray", false);
+    shortlistGenerator_ = New<data::BinaryShortlistGenerator>(memory_.shortlist.begin(), memory_.shortlist.size(),
+                                                              vocabs_.sources().front(), vocabs_.target(), srcIdx,
+                                                              trgIdx, shared_vcb, check);
+  } else if (options_->hasAndNotEmpty("shortlist")) {
+    // Changed to BinaryShortlistGenerator to enable loading binary shortlist file
+    // This class also supports text shortlist file
+    shortlistGenerator_ = New<data::BinaryShortlistGenerator>(options_, vocabs_.sources().front(), vocabs_.target(),
+                                                              srcIdx, trgIdx, shared_vcb);
+  } else {
+    // In this case, the loadpath does not load shortlist.
+    shortlistGenerator_ = nullptr;
   }
 }
 

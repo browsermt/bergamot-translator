@@ -6,6 +6,7 @@
 
 #include "batch.h"
 #include "batching_pool.h"
+#include "byte_array_util.h"
 #include "cache.h"
 #include "common/utils.h"
 #include "data/shortlist.h"
@@ -56,7 +57,10 @@ class TranslationModel {
   /// @param [in] options: Marian options object.
   /// @param [in] memory: MemoryBundle object holding memory buffers containing parameters to build MarianBackend,
   /// ShortlistGenerator, Vocabs and SentenceSplitter.
-  TranslationModel(const Config& options, MemoryBundle&& memory = MemoryBundle{}, size_t replicas = 1);
+  TranslationModel(const Config& options, MemoryBundle&& memory, size_t replicas = 1);
+
+  TranslationModel(const Config& options, size_t replicas = 1)
+      : TranslationModel(options, getMemoryBundleFromConfig(options), replicas) {}
 
   /// Make a Request to be translated by this TranslationModel instance.
   /// @param [in] requestId: Unique identifier associated with this request, available from Service.

@@ -101,10 +101,12 @@ AlignedMemory getModelMemoryFromConfig(marian::Ptr<marian::Options> options) {
 
 AlignedMemory getShortlistMemoryFromConfig(marian::Ptr<marian::Options> options) {
   auto shortlist = options->get<std::vector<std::string>>("shortlist");
-  ABORT_IF(shortlist.empty(), "No path to shortlist file is given.");
-  ABORT_IF(!marian::data::isBinaryShortlist(shortlist[0]),
-           "Loading non-binary shortlist file into memory is not supported");
-  return loadFileToMemory(shortlist[0], 64);
+  if (!shortlist.empty()) {
+    ABORT_IF(!marian::data::isBinaryShortlist(shortlist[0]),
+             "Loading non-binary shortlist file into memory is not supported");
+    return loadFileToMemory(shortlist[0], 64);
+  }
+  return AlignedMemory();
 }
 
 void getVocabsMemoryFromConfig(marian::Ptr<marian::Options> options,

@@ -159,7 +159,11 @@ class AsyncService {
   void pivot(std::shared_ptr<TranslationModel> first, std::shared_ptr<TranslationModel> second, std::string &&source,
              CallbackType clientCallback, const ResponseOptions &options = ResponseOptions());
 
+  /// Clears all pending requests.
+  void clear();
+
   /// Thread joins and proper shutdown are required to be handled explicitly.
+  /// If you do not want to wait, call `clear()` before destructor.
   ~AsyncService();
 
   TranslationCache::Stats cacheStats() { return cache_.stats(); }

@@ -8,6 +8,13 @@ on:
 
 env:
   MKL_URL: "https://romang.blob.core.windows.net/mariandev/ci/mkl-2020.1-windows-static.zip"
+  CCACHE_BASEDIR: "${{ github.workspace }}"
+  CCACHE_DIR: "${{ github.workspace }}\\ccache"
+  CCACHE_COMPILERCHECK: content
+  CCACHE_COMPRESS: 'true'
+  CCACHE_COMPRESSLEVEL: 9
+  CCACHE_MAXSIZE: 200M
+  ccache_version: '4.5'
 
 jobs:
   build-windows:
@@ -17,6 +24,8 @@ jobs:
           # Windows CPU-only build
           - name: "Windows CPU-only"
             cuda: ""
+            arch: "64"
+            identifier: "windows-x64"
 
     runs-on: windows-2019
     name: ${{ matrix.name }}
@@ -26,6 +35,40 @@ jobs:
       uses: actions/checkout@v2
       with:
         submodules: recursive
+
+
+    - name: Download ccache
+      shell: cmake -P {0}
+      run: |
+        set(ccache_url "https://github.com/cristianadam/ccache/releases/download/v${{ env.ccache_version }}/${{ runner.os }}.tar.xz")
+        file(DOWNLOAD "${ccache_url}" ./ccache.tar.xz SHOW_PROGRESS)
+        execute_process(COMMAND ${CMAKE_COMMAND} -E tar xvf ./ccache.tar.xz)
+        if(ret AND NOT ret EQUAL 0)
+          message( FATAL_ERROR "Bad exit status")
+        endif()
+
+    - name: Generate ccache_vars for ccache based on machine
+      shell: cmake -P {0}
+      id: ccache_vars
+      run: |-
+        string(TIMESTAMP current_date "%Y-%m-%d-%H;%M;%S" UTC)
+        message("::set-output name=timestamp::${current_date}")
+        message("::set-output name=hash::${{ env.ccache_compilercheck }}")
+
+    - name: Cache-op for build-cache through ccache
+      uses: actions/cache@v2
+      with:
+        path: ${{ env.CCACHE_DIR }}
+        key: ccache-${{ matrix.identifier }}-${{ steps.ccache_vars.outputs.hash }}-${{ github.ref }}-${{ steps.ccache_vars.outputs.timestamp }}
+        restore-keys: |-
+          ccache-${{ matrix.identifier }}-${{ steps.ccache_vars.outputs.hash }}-${{ github.ref }}
+          ccache-${{ matrix.identifier }}-${{ steps.ccache_vars.outputs.hash }}
+          ccache-${{ matrix.identifier }}
+
+    - name: ccache prolog
+      run: |-
+        ${{github.workspace}}\ccache.exe -sv # Print current cache stats
+        ${{github.workspace}}\ccache.exe -z # Print current cache stats
 
     - name: Download MKL
       run: |
@@ -52,7 +95,10 @@ jobs:
         cmakeAppendedArgs: '-G Ninja
           -DCMAKE_BUILD_TYPE="Release"
           -DUSE_WASM_COMPATIBLE_SOURCE="OFF"
-          -DUSE_STATIC_LIBS="TRUE"'
+          -DUSE_STATIC_LIBS="TRUE" 
+          -DCMAKE_CXX_COMPILER_LAUNCHER=${{github.workspace}}\ccache.exe
+          -DCMAKE_C_COMPILER_LAUNCHER=${{github.workspace}}\ccache.exe
+        '
         cmakeListsOrSettingsJson: CMakeListsTxtAdvanced
         cmakeListsTxtPath: ${{ github.workspace }}/CMakeLists.txt
         useVcpkgToolchainFile: true
@@ -64,3 +110,7 @@ jobs:
       run: |
         .\app\bergamot.exe --version
       shell: cmd
+
+    - name: ccache epilog
+      run: |-
+        ${{github.workspace}}\\ccache.exe -sv # Print current cache stats

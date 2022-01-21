@@ -27,26 +27,25 @@ TranslationModel::TranslationModel(const Config &options, MemoryBundle &&memory 
   ABORT_IF(replicas == 0, "At least one replica needs to be created.");
   backend_.resize(replicas);
 
-  if (options_->hasAndNotEmpty("shortlist")) {
-    int srcIdx = 0, trgIdx = 1;
-    bool shared_vcb =
-        vocabs_.sources().front() ==
-        vocabs_.target();  // vocabs_->sources().front() is invoked as we currently only support one source vocab
-    if (memory_.shortlist.size() > 0 && memory_.shortlist.begin() != nullptr) {
-      bool check = options_->get<bool>("check-bytearray", false);
-      shortlistGenerator_ = New<data::BinaryShortlistGenerator>(memory_.shortlist.begin(), memory_.shortlist.size(),
-                                                                vocabs_.sources().front(), vocabs_.target(), srcIdx,
-                                                                trgIdx, shared_vcb, check);
-    } else {
-      // Changed to BinaryShortlistGenerator to enable loading binary shortlist file
-      // This class also supports text shortlist file
-      shortlistGenerator_ = New<data::BinaryShortlistGenerator>(options_, vocabs_.sources().front(), vocabs_.target(),
-                                                                srcIdx, trgIdx, shared_vcb);
-    }
-  }
+  // Try to load shortlist from memory-bundle. If not available, try to load from options_;
 
-  for (size_t idx = 0; idx < replicas; idx++) {
-    loadBackend(idx);
+  int srcIdx = 0, trgIdx = 1;
+  // vocabs_->sources().front() is invoked as we currently only support one source vocab
+  bool shared_vcb = (vocabs_.sources().front() == vocabs_.target());
+
+  if (memory_.shortlist.size() > 0 && memory_.shortlist.begin() != nullptr) {
+    bool check = options_->get<bool>("check-bytearray", false);
+    shortlistGenerator_ = New<data::BinaryShortlistGenerator>(memory_.shortlist.begin(), memory_.shortlist.size(),
+                                                              vocabs_.sources().front(), vocabs_.target(), srcIdx,
+                                                              trgIdx, shared_vcb, check);
+  } else if (options_->hasAndNotEmpty("shortlist")) {
+    // Changed to BinaryShortlistGenerator to enable loading binary shortlist file
+    // This class also supports text shortlist file
+    shortlistGenerator_ = New<data::BinaryShortlistGenerator>(options_, vocabs_.sources().front(), vocabs_.target(),
+                                                              srcIdx, trgIdx, shared_vcb);
+  } else {
+    // In this case, the loadpath does not load shortlist.
+    shortlistGenerator_ = nullptr;
   }
 }
 
@@ -95,13 +94,22 @@ Ptr<Request> TranslationModel::makeRequest(size_t requestId, std::string &&sourc
   Segments segments;
   AnnotatedText annotatedSource;
 
-  HTML html(std::move(source), responseOptions.HTML);
   textProcessor_.process(std::move(source), annotatedSource, segments);
-  ResponseBuilder responseBuilder(responseOptions, std::move(annotatedSource), vocabs_, callback, *qualityEstimator_,
-                                  std::move(html));
+  ResponseBuilder responseBuilder(responseOptions, std::move(annotatedSource), vocabs_, callback, *qualityEstimator_);
 
   Ptr<Request> request =
       New<Request>(requestId, /*model=*/*this, std::move(segments), std::move(responseBuilder), cache);
+  return request;
+}
+
+Ptr<Request> TranslationModel::makePivotRequest(size_t requestId, AnnotatedText &&previousTarget, CallbackType callback,
+                                                const ResponseOptions &responseOptions, TranslationCache *cache) {
+  Segments segments;
+
+  textProcessor_.processFromAnnotation(previousTarget, segments);
+  ResponseBuilder responseBuilder(responseOptions, std::move(previousTarget), vocabs_, callback, *qualityEstimator_);
+
+  Ptr<Request> request = New<Request>(requestId, *this, std::move(segments), std::move(responseBuilder), cache);
   return request;
 }
 
@@ -172,6 +180,12 @@ Ptr<marian::data::CorpusBatch> TranslationModel::convertToMarianBatch(Batch &bat
 
 void TranslationModel::translateBatch(size_t deviceId, Batch &batch) {
   auto &backend = backend_[deviceId];
+
+  if (!backend.initialized) {
+    loadBackend(deviceId);
+    backend.initialized = true;
+  }
+
   BeamSearch search(options_, backend.scorerEnsemble, vocabs_.target());
   Histories histories = search.search(backend.graph, convertToMarianBatch(batch));
   batch.completeBatch(histories);

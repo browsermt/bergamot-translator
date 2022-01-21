@@ -43,7 +43,7 @@ void encodeEntities(string_view const &input, std::string &output) {
 
 size_t countPrefixWhitespaces(string_view const &input) {
   size_t size = 0;
-  while (size < input.size() && input[size] == ' ') ++size;
+  while (size < input.size() && std::isspace(input[size])) ++size;
   return size;
 }
 
@@ -59,6 +59,8 @@ std::ostream &operator<<(std::ostream &out, HTML::Tag const *tag) {
       return out << "<!--" << tag->data << "-->";
     case HTML::Tag::PROCESSING_INSTRUCTION:
       return out << "<?" << tag->data << "?>";
+    case HTML::Tag::WHITESPACE:
+      return out << "[inserted space]";
   }
   return out << "[Unknown tag type]";
 }
@@ -107,27 +109,8 @@ class reversed {
   T const &container_;
 };
 
-bool isBlockElement(std::string_view const &name) {
-  // List of elements that we expect might occur inside words, and that should
-  // not introduce spacings around them. Not strictly inline elements, nor flow
-  // elements. See also https://developer.mozilla.org/en-US/docs/Web/Guide/HTML/Content_categories
-  static std::unordered_set<std::string> inlineishElements{
-      "abbr",  "a",    "b",      "em",  "i",   "kbd",  "mark", "math", "output", "q",   "ruby",
-      "small", "span", "strong", "sub", "sup", "time", "u",    "var",  "wbr",    "ins", "del"};
-
-  return inlineishElements.find(std::string(name)) == inlineishElements.end();
-}
-
-bool isVoidTag(std::string_view const &name) {
-  // List of elements for which we do not expect a closing tag, or self-closing
-  // elements in XHTML. See also https://developer.mozilla.org/en-US/docs/Glossary/Empty_element
-  // More relevant source of this list:
-  // https://searchfox.org/mozilla-central/rev/7d17fd1fe9f0005a2fb19e5d53da4741b06a98ba/dom/base/FragmentOrElement.cpp#1791
-  static std::unordered_set<std::string> voidElements{"area",  "base",  "basefont", "bgsound", "br",    "col",
-                                                      "embed", "frame", "hr",       "img",     "input", "keygen",
-                                                      "link",  "meta",  "param",    "source",  "track", "wbr"};
-
-  return voidElements.find(std::string(name)) != voidElements.end();
+bool contains(std::unordered_set<std::string> const &set, std::string const &name) {
+  return set.find(name) != set.end();
 }
 
 void diffTags(HTML::Taint const &prev, HTML::Taint const &curr, HTML::Taint &opening, HTML::Taint &closing) {
@@ -187,8 +170,6 @@ AnnotatedText apply(AnnotatedText const &in, Fun fun) {
   return out;
 }
 
-bool isContinuation(string_view str) { return !str.empty() && str.compare(0, 1, " ", 1) != 0; }
-
 bool hasAlignments(Response const &response) {
   // Test for each sentence individually as a sentence may be empty (or there)
   // might be no sentences, so just testing for alignments.empty() would not be
@@ -207,85 +188,11 @@ bool hasAlignments(Response const &response) {
   return true;
 }
 
-void hardAlignments(Response const &response, std::vector<std::vector<size_t>> &alignments) {
-  // For each sentence...
-  for (size_t sentenceIdx = 0; sentenceIdx < response.target.numSentences(); ++sentenceIdx) {
-    alignments.emplace_back();
-
-    // Hard-align: find for each target token the most prevalent source token
-    // Note: only search from 0 to N-1 because token N is end-of-sentence token
-    // that can only align with the end-of-sentence token of the target
-    for (size_t t = 0; t + 1 < response.target.numWords(sentenceIdx); ++t) {
-      size_t maxS = 0;
-      for (size_t s = 1; s + 1 < response.source.numWords(sentenceIdx); ++s) {
-        if (response.alignments[sentenceIdx][t][s] > response.alignments[sentenceIdx][t][maxS]) {
-          maxS = s;
-        }
-      }
-
-      alignments.back().push_back(maxS);
-    }
-
-    // Next, we try to smooth out these selected alignments with a few heuristics
-    for (size_t t = 1; t + 1 < response.target.numWords(sentenceIdx); ++t) {
-      // If this token is a continuation of a previous token, pick the tags from the most
-      // prevalent token for the whole word.
-      if (isContinuation(response.target.word(sentenceIdx, t))) {
-        // Note: only looking at the previous token since that will already
-        // have this treatment applied to it.
-        size_t currSentenceIdx = alignments.back()[t];
-        size_t prevSentenceIdx = alignments.back()[t - 1];
-        float currScore = response.alignments[sentenceIdx][t][currSentenceIdx];
-        float prevScore = response.alignments[sentenceIdx][t - 1][prevSentenceIdx];
-
-        if (currScore > prevScore) {
-          // Apply this to all previous tokens in the word
-          for (size_t i = t;; --i) {
-            alignments.back()[i] = currSentenceIdx;
-
-            // Stop if this was the first token or the beginning of the word
-            if (i == 0 || !isContinuation(response.target.word(sentenceIdx, i))) break;
-          }
-        } else {
-          alignments.back()[t] = prevSentenceIdx;
-        }
-      }
-    }
-
-    // Always align target end with source end
-    alignments.back().push_back(response.source.numWords(sentenceIdx) - 1);
-  }
-}
-
-// Internal type used to point to a position in HTML::spans_.
-typedef std::vector<HTML::Span>::const_iterator SpanIterator;
-
-void copyTaint(Response const &response, std::vector<std::vector<size_t>> const &alignments,
-               std::vector<SpanIterator> const &sourceTokenSpans, std::vector<SpanIterator> &targetTokenSpans) {
-  size_t offset = 0;
-
-  // Fill targetTokenSpans based on the alignments we just made up.
-  // NOTE: this should match the exact order of Apply()
-  for (size_t sentenceIdx = 0; sentenceIdx < response.target.numSentences(); ++sentenceIdx) {
-    targetTokenSpans.push_back(sourceTokenSpans[offset]);  // token_tag for sentence ending gap
-    for (size_t t = 0; t < response.target.numWords(sentenceIdx); ++t) {
-      size_t s = alignments[sentenceIdx][t];
-      assert(s < response.source.numWords(sentenceIdx));
-      targetTokenSpans.push_back(sourceTokenSpans[offset + 1 + s]);  // +1 for prefix gap
-    }
-
-    offset += response.source.numWords(sentenceIdx) + 1;  // +1 for prefix gap
-  }
-
-  assert(offset < sourceTokenSpans.size());
-  targetTokenSpans.push_back(sourceTokenSpans[offset]);  // token_tag for ending whitespace
-}
-
 // Little helper class to append HTML to a token
 class TokenFormatter {
  public:
   explicit TokenFormatter(string_view token)
-      : html_(), offset_(0), whitespaceSize_(countPrefixWhitespaces(token)), closeLeft_(true) {
+      : html_(), offset_(0), whitespaceOffset_(0), whitespaceSize_(countPrefixWhitespaces(token)), closeLeft_(true) {
     // Do encoding of any entities that popped up in the translation
     encodeEntities(token, html_);
   }
@@ -303,6 +210,7 @@ class TokenFormatter {
       std::string closeTag = format("</{}>", tag->name);
       html_.insert(offset_ + (closeLeft_ ? 0 : whitespaceSize_), closeTag);
       offset_ += closeTag.size();
+      if (closeLeft_) whitespaceOffset_ += closeTag.size();
     }
 
     for (HTML::Tag const *tag : opening) {
@@ -318,17 +226,28 @@ class TokenFormatter {
         case HTML::Tag::PROCESSING_INSTRUCTION:
           openTag = format("<?{}?>", tag->data);
           break;
+        case HTML::Tag::WHITESPACE: {
+          // Try to eat two newlines (paragraph break) from our segment
+          auto pos = html_.find("\n\n", whitespaceOffset_);
+          if (pos != std::string::npos && pos < whitespaceOffset_ + whitespaceSize_) {
+            html_.erase(pos, 2);
+            whitespaceSize_ -= 2;
+          }
+        } break;
       }
+
       html_.insert(offset_ + whitespaceSize_, openTag);
       offset_ += openTag.size();
-      closeLeft_ = false;
+      closeLeft_ = closeLeft_ && openTag.empty();
     }
   }
 
  private:
-  std::string html_;       // Output html
-  size_t offset_;          // Size added by prepending HTML
-  size_t whitespaceSize_;  // number of prefix whitespace characters
+  std::string html_;         // Output html
+  size_t offset_;            // Size added by prepending HTML
+  size_t whitespaceOffset_;  // position of prefix whitespace characters
+                             // (it moves as closing tags are prepended)
+  size_t whitespaceSize_;    // number of prefix whitespace characters
 
   // Close tags we want to show up left (before) the token, but open tags
   // ideally come directly after any prefix whitespace. However, some tokens
@@ -338,96 +257,6 @@ class TokenFormatter {
   // should also align right, after whitespace, not before. Hence this bool.
   bool closeLeft_;
 };
-
-AnnotatedText restoreSource(AnnotatedText const &in, std::vector<HTML::Span> const &sourceSpans,
-                            std::vector<SpanIterator> &sourceTokenSpans) {
-  auto spanIt = sourceSpans.begin();
-  auto prevIt = sourceSpans.begin();  // safe because first span is always empty span, and
-                                      // and the while-loop below will do the rest
-  assert(prevIt == sourceSpans.end() || prevIt->tags.empty());
-
-  return apply(in, [&](ByteRange range, string_view token, bool last) {
-    TokenFormatter formatter(token);
-
-    // Potential issue: spans and tokens can intersect, e.g.
-    //
-    //    text  <p> h <u> e </u> ll o </p>
-    //   spans     |1|   |2|    |3333| (so only 2 is tainted with <p><u>, others only <p>)
-    //  tokens     |111111111111111|2|
-    //
-    // Now 1 covers span 1 to 3, so what taint should it get? Just <p>, or <p><u>?
-    // Note: only relevant if isBlockElement is used. If we just insert spaces
-    // around all elements, every segment of `hello` will be a token.
-
-    // Seek to the last span that overlaps with this token
-    while (true) {
-      formatter.append(prevIt->tags, spanIt->tags);
-      prevIt = spanIt;
-
-      if (spanIt + 1 != sourceSpans.end() && ((spanIt + 1)->begin < range.end || last)) {
-        spanIt++;
-        continue;
-      }
-
-      break;
-    }
-
-    // TODO: This is just the taint of the last span, not the ones in between.
-    // This makes us lose some markup of parts of tokens as described above.
-    sourceTokenSpans.push_back(prevIt);
-
-    return std::move(formatter.html());
-  });
-}
-
-AnnotatedText restoreTarget(AnnotatedText const &in, std::vector<HTML::Span> const &sourceSpans,
-                            std::vector<SpanIterator> const &targetTokenSpans) {
-  auto prevSpan = sourceSpans.begin();
-  auto targetSpanIt = targetTokenSpans.begin();
-
-  AnnotatedText out = apply(in, [&](ByteRange range, string_view token, bool last) {
-    TokenFormatter formatter(token);
-
-    // First we scan through spans_ to catch up to the span assigned to this
-    // token. We're only interested in empty spans (empty and void elements)
-    for (auto span_it = prevSpan + 1; span_it < *targetSpanIt; span_it++) {
-      // We're only interested in empty spans between the spans in targetSpanIt
-      if (span_it->size() != 0) continue;
-
-      formatter.append(prevSpan->tags, span_it->tags);
-
-      // Note: here, not in 3rd part of for-statement because we don't want to
-      // set prevSpan if the continue clause at the beginning of this for-loop
-      // was hit.
-      prevSpan = span_it;
-    }
-
-    // Now do the same thing but for our target set of tags. Note that we cannot
-    // combine this in the for-loop above (i.e. `span_it <= *targetSpanIt`)
-    // because there is no guarantee that the order in `targetTokenSpans` is
-    // the same as that of `spans`.
-    formatter.append(prevSpan->tags, (*targetSpanIt)->tags);
-
-    // If this is the last token of the response, close all open tags.
-    if (last) {
-      // Note: this assert is true due to our current implementation of
-      // HardAlignments() that always matches the last token of the input with
-      // the last token of the output. But lets assume someone someday changes
-      // HardAlignments(), and then this for-loop will be necessary.
-      // assert((*targetSpanIt)->tags.empty());
-      formatter.append((*targetSpanIt)->tags, HTML::Taint());
-    }
-
-    prevSpan = *targetSpanIt++;
-
-    return std::move(formatter.html());
-  });
-
-  // Assert that we did in fact use all our taints
-  assert(targetSpanIt == targetTokenSpans.end());
-
-  return out;
-}
 
 size_t debugCountTokens(AnnotatedText const &text) {
   size_t tokens = 1;  // for the ending gap
@@ -441,8 +270,9 @@ size_t debugCountTokens(AnnotatedText const &text) {
 
 namespace marian::bergamot {
 
-HTML::HTML(std::string &&source, bool process_markup) {
+HTML::HTML(std::string &&source, bool process_markup, Options &&options) : options_(std::move(options)) {
   if (!process_markup) return;
+
   std::string original = std::move(source);
   markup::instream in(original.data(), original.data() + original.size());
   markup::Scanner scanner(in);
@@ -450,6 +280,8 @@ HTML::HTML(std::string &&source, bool process_markup) {
 
   Tag *tag;
   Taint stack;
+  bool addSentenceBreak = false;
+  bool addSpace = false;
   spans_.push_back(Span{0, 0, {}});
 
   bool stop = false;
@@ -463,24 +295,41 @@ HTML::HTML(std::string &&source, bool process_markup) {
         break;
 
       case markup::Scanner::TT_TEXT: {
+        // If the previous segment was the open or close tag of a block element
+        // we treat the text after it as a new sentence.
+        if (addSentenceBreak) {
+          if (!(source.empty() || (source.size() > 2 && source.substr(source.size() - 2) == ""))) {
+            stack.push_back(makeTag({Tag::WHITESPACE}));
+            // Important: span->size() == 0 to make it behave as a void element.
+            // Also important: position before the \n\n tokens, not after, to
+            // make it easier to remove them later through apply().
+            spans_.push_back(Span{source.size(), source.size(), stack});
+            source.append("\n\n");  // TODO assumes ssplit-mode = wrapped_text
+            stack.pop_back();
+          }
+          addSentenceBreak = false;
+        }
+
+        // If the previous segment was an open or close tag, it might be best
+        // to add a space to make sure we don't append to the previous word.
+        if (addSpace) {
+          if (options_.substituteInlineTagsWithSpaces && !source.empty() && !std::isspace(source.back()) &&
+              !std::isspace(scanner.value()[0])) {
+            source.push_back(' ');
+          }
+          addSpace = false;
+        }
+
         auto begin = source.size();
         source.append(scanner.value());
         spans_.push_back(Span{begin, source.size(), stack});
       } break;
 
-      case markup::Scanner::TT_TAG_START:
-        // If it makes sense to treat this element as a break in a word (e.g.
-        // <br>, <img>, <li>) make sure it does so in this text as well.
-        // TODO: Strong assumption here that the language uses spaces to
-        // separate words
-        if (isBlockElement(scanner.tag()) && !source.empty() && source.back() != ' ') source.push_back(' ');
-
-        // pool_ takes ownership of our tag, makes sure it's freed when necessary
-        pool_.emplace_back(new Tag{isVoidTag(scanner.tag()) ? Tag::VOID_ELEMENT : Tag::ELEMENT,
-                                   std::string(scanner.tag()), std::string()});
+      case markup::Scanner::TT_TAG_START: {
+        std::string name(scanner.tag());
 
         // Tag *tag is used by attribute parsing
-        tag = pool_.back().get();
+        tag = makeTag({contains(options_.voidTags, name) ? Tag::VOID_ELEMENT : Tag::ELEMENT, std::move(name)});
 
         stack.push_back(tag);
 
@@ -491,11 +340,20 @@ HTML::HTML(std::string &&source, bool process_markup) {
           spans_.push_back(Span{source.size(), source.size(), stack});
           stack.pop_back();
         }
-        break;
+
+        // Treat non-inline HTML tags as spaces that break up words.
+        if (!contains(options_.inlineTags, tag->name)) {
+          addSentenceBreak = true;
+        } else {
+          addSpace = true;
+        }
+      } break;
 
       case markup::Scanner::TT_TAG_END:
-        // Note: self-closing tags emit TT_TAG_END immediately after TT_TAG_START
-        // but since we're parsing HTML5, a sole <img> will never emit a TT_TAG_END
+        // If this is the closing bit of a void tag, i.e. triggered by the "/>"
+        // bit of "<img/>", then completely ignore it.
+        if (contains(options_.voidTags, std::string(scanner.tag()))) break;
+
         if (stack.empty()) throw BadHTML(format("Encountered more closing tags ({}) than opening tags", scanner.tag()));
 
         if (stack.back()->name != scanner.tag())
@@ -508,6 +366,13 @@ HTML::HTML(std::string &&source, bool process_markup) {
           spans_.push_back(Span{source.size(), source.size(), stack});
 
         stack.pop_back();
+
+        // Add space if necessary
+        if (!contains(options_.inlineTags, std::string(scanner.tag()))) {
+          addSentenceBreak = true;
+        } else {
+          addSpace = true;
+        }
         break;
 
       case markup::Scanner::TT_ATTRIBUTE:
@@ -516,18 +381,16 @@ HTML::HTML(std::string &&source, bool process_markup) {
         break;
 
       case markup::Scanner::TT_COMMENT_START:
-        // pool_ takes ownership of our tag, makes sure it's freed when necessary
-        pool_.emplace_back(new Tag{Tag::COMMENT});
-        tag = pool_.back().get();
+        // Tag *tag is used when TT_DATA is seen to add the comment's content.
+        tag = makeTag({Tag::COMMENT});
         stack.push_back(tag);
         spans_.push_back(Span{source.size(), source.size(), stack});
         stack.pop_back();
         break;
 
       case markup::Scanner::TT_PROCESSING_INSTRUCTION_START:
-        // pool_ takes ownership of our tag, makes sure it's freed when necessary
-        pool_.emplace_back(new Tag{Tag::PROCESSING_INSTRUCTION});
-        tag = pool_.back().get();
+        // Tag *tag is used when TT_DATA is seen to add the PI's content.
+        tag = makeTag({Tag::PROCESSING_INSTRUCTION});
         stack.push_back(tag);
         spans_.push_back(Span{source.size(), source.size(), stack});
         stack.pop_back();
@@ -551,7 +414,7 @@ HTML::HTML(std::string &&source, bool process_markup) {
   if (!stack.empty()) throw BadHTML(format("Not all tags were closed: {}", stack));
 
   // Add a trailing span (that's empty) to signify all closed tags.
-  spans_.emplace_back(Span{source.size() + 1, source.size() + 1, stack});
+  spans_.emplace_back(Span{source.size(), source.size(), stack});
 }
 
 void HTML::restore(Response &response) {
@@ -580,7 +443,7 @@ void HTML::restore(Response &response) {
 
   // RestoreSource re-inserts HTML into the source text, but also identifies
   // which span each source token fits into best.
-  AnnotatedText source = restoreSource(response.source, spans_, sourceTokenSpans);
+  AnnotatedText source = restoreSource(response.source, sourceTokenSpans);
   assert(sourceTokenSpans.size() == debugCountTokens(response.source));
 
   // Find for every token in target the token in source that best matches.
@@ -591,10 +454,193 @@ void HTML::restore(Response &response) {
   copyTaint(response, alignments, sourceTokenSpans, targetTokenSpans);
   assert(targetTokenSpans.size() == debugCountTokens(response.target));
 
-  AnnotatedText target = restoreTarget(response.target, spans_, targetTokenSpans);
+  AnnotatedText target = restoreTarget(response.target, targetTokenSpans);
 
   response.source = source;
   response.target = target;
+}
+
+AnnotatedText HTML::restoreSource(AnnotatedText const &in, std::vector<SpanIterator> &sourceTokenSpans) {
+  auto spanIt = spans_.begin();
+  auto prevIt = spans_.begin();  // safe because first span is always empty span, and
+                                 // and the while-loop below will do the rest
+  assert(prevIt == spans_.end() || prevIt->tags.empty());
+
+  return apply(in, [&](ByteRange range, string_view token, bool last) {
+    TokenFormatter formatter(token);
+
+    // Potential issue: spans and tokens can intersect, e.g.
+    //
+    //    text  <p> h <u> e </u> ll o </p>
+    //   spans     |1|   |2|    |3333| (so only 2 is tainted with <p><u>, others only <p>)
+    //  tokens     |111111111111111|2|
+    //
+    // Now 1 covers span 1 to 3, so what taint should it get? Just <p>, or <p><u>?
+    // Note: only relevant if isBlockElement is used. If we just insert spaces
+    // around all elements, every segment of `hello` will be a token.
+
+    // Seek to the last span that overlaps with this token
+    while (true) {
+      formatter.append(prevIt->tags, spanIt->tags);
+      prevIt = spanIt;
+
+      if (spanIt + 1 != spans_.end() && ((spanIt + 1)->begin < range.end || last)) {
+        spanIt++;
+        continue;
+      }
+
+      break;
+    }
+
+    // TODO: This is just the taint of the last span, not the ones in between.
+    // This makes us lose some markup of parts of tokens as described above.
+    sourceTokenSpans.push_back(prevIt);
+
+    return std::move(formatter.html());
+  });
+}
+
+AnnotatedText HTML::restoreTarget(AnnotatedText const &in, std::vector<SpanIterator> const &targetTokenSpans) {
+  auto prevSpan = spans_.cbegin();
+  auto targetSpanIt = targetTokenSpans.begin();
+
+  AnnotatedText out = apply(in, [&](ByteRange range, string_view token, bool last) {
+    TokenFormatter formatter(token);
+
+    // First we scan through spans_ to catch up to the span assigned to this
+    // token. We're only interested in empty spans (empty and void elements)
+    for (auto span_it = prevSpan; span_it < *targetSpanIt; span_it++) {
+      // We're only interested in empty spans or spans that would otherwise get
+      // lost because they didn't align with anything between the spans in
+      // targetSpanIt
+      // TODO That std::find makes this O(N*N) NOT GOOD NOT GOOD
+      if (span_it->size() != 0 &&
+          std::find(targetTokenSpans.begin(), targetTokenSpans.end(), span_it) != targetTokenSpans.end())
+        continue;
+
+      formatter.append(prevSpan->tags, span_it->tags);
+
+      // Note: here, not in 3rd part of for-statement because we don't want to
+      // set prevSpan if the continue clause at the beginning of this for-loop
+      // was hit.
+      prevSpan = span_it;
+    }
+
+    // Now do the same thing but for our target set of tags. Note that we cannot
+    // combine this in the for-loop above (i.e. `span_it <= *targetSpanIt`)
+    // because there is no guarantee that the order in `targetTokenSpans` is
+    // the same as that of `spans`.
+    formatter.append(prevSpan->tags, (*targetSpanIt)->tags);
+
+    // If this is the last token of the response, close all open tags.
+    if (last) {
+      // Note: this assert is true due to our current implementation of
+      // HardAlignments() that always matches the last token of the input with
+      // the last token of the output. But lets assume someone someday changes
+      // HardAlignments(), and then this for-loop will be necessary.
+      // assert((*targetSpanIt)->tags.empty());
+      formatter.append((*targetSpanIt)->tags, HTML::Taint());
+    }
+
+    prevSpan = *targetSpanIt;
+    ++targetSpanIt;
+
+    return std::move(formatter.html());
+  });
+
+  // Assert that we did in fact use all our taints
+  assert(targetSpanIt == targetTokenSpans.end());
+
+  return out;
+}
+
+HTML::Tag *HTML::makeTag(Tag &&tag) {
+  pool_.emplace_front(std::move(tag));
+  return &pool_.front();
+}
+
+void HTML::copyTaint(Response const &response, std::vector<std::vector<size_t>> const &alignments,
+                     std::vector<SpanIterator> const &sourceTokenSpans, std::vector<SpanIterator> &targetTokenSpans) {
+  size_t offset = 0;  // Sentence offset in sourceTokenSpans
+
+  // Fill targetTokenSpans based on the alignments we just made up.
+  // NOTE: this should match the exact order of Apply()
+  for (size_t sentenceIdx = 0; sentenceIdx < response.target.numSentences(); ++sentenceIdx) {
+    targetTokenSpans.push_back(sourceTokenSpans[offset]);  // token_tag for sentence ending gap
+    for (size_t t = 0; t < response.target.numWords(sentenceIdx); ++t) {
+      size_t s = alignments[sentenceIdx][t];
+      assert(s < response.source.numWords(sentenceIdx));
+      targetTokenSpans.push_back(sourceTokenSpans[offset + 1 + s]);  // +1 for prefix gap
+    }
+
+    offset += response.source.numWords(sentenceIdx) + 1;  // +1 for prefix gap
+  }
+
+  assert(offset + 1 == sourceTokenSpans.size());
+  targetTokenSpans.push_back(sourceTokenSpans[offset]);  // token_tag for ending whitespace
+}
+
+// Reports if token `str` is likely to be a continuation of a word. This is used
+// to determine whether we should share the markup, or whether we should see
+// this token as a fresh start. This implementation will treat "hello[world]"
+// as 4 words, assuming its tokenised as something like `h ell o [ wor ld ]`.
+bool HTML::isContinuation(string_view prev, string_view str) {
+  if (options_.continuationDelimiters.empty()) return false;
+  if (prev.empty() || str.empty()) return false;
+  return options_.continuationDelimiters.find(str[0]) == std::string::npos &&
+         options_.continuationDelimiters.find(prev.back()) == std::string::npos;
+}
+
+void HTML::hardAlignments(Response const &response, std::vector<std::vector<size_t>> &alignments) {
+  // For each sentence...
+  for (size_t sentenceIdx = 0; sentenceIdx < response.target.numSentences(); ++sentenceIdx) {
+    alignments.emplace_back();
+
+    // Hard-align: find for each target token the most prevalent source token
+    // Note: only search from 0 to N-1 because token N is end-of-sentence token
+    // that can only align with the end-of-sentence token of the target
+    for (size_t t = 0; t + 1 < response.target.numWords(sentenceIdx); ++t) {
+      size_t maxS = 0;
+      for (size_t s = 1; s + 1 < response.source.numWords(sentenceIdx); ++s) {
+        if (response.alignments[sentenceIdx][t][s] > response.alignments[sentenceIdx][t][maxS]) {
+          maxS = s;
+        }
+      }
+
+      alignments.back().push_back(maxS);
+    }
+
+    // Next, we try to smooth out these selected alignments with a few heuristics
+    for (size_t t = 1; t + 1 < response.target.numWords(sentenceIdx); ++t) {
+      // If this token is a continuation of a previous token, pick the tags from the most
+      // prevalent token for the whole word.
+      if (isContinuation(response.target.word(sentenceIdx, t - 1), response.target.word(sentenceIdx, t))) {
+        // Note: only looking at the previous token since that will already
+        // have this treatment applied to it.
+        size_t currSentenceIdx = alignments.back()[t];
+        size_t prevSentenceIdx = alignments.back()[t - 1];
+        float currScore = response.alignments[sentenceIdx][t][currSentenceIdx];
+        float prevScore = response.alignments[sentenceIdx][t - 1][prevSentenceIdx];
+
+        if (currScore >= prevScore) {
+          // Apply this to all previous tokens in the word
+          for (size_t i = t;; --i) {
+            alignments.back()[i] = currSentenceIdx;
+
+            // Stop if this was the first token or the beginning of the word
+            if (i == 0 ||
+                !isContinuation(response.target.word(sentenceIdx, i - 1), response.target.word(sentenceIdx, i)))
+              break;
+          }
+        } else {
+          alignments.back()[t] = prevSentenceIdx;
+        }
+      }
+    }
+
+    // Always align target end with source end
+    alignments.back().push_back(response.source.numWords(sentenceIdx) - 1);
+  }
 }
 
 }  // namespace marian::bergamot

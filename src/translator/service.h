@@ -62,6 +62,22 @@ class BlockingService {
   std::vector<Response> translateMultiple(std::shared_ptr<TranslationModel> translationModel,
                                           std::vector<std::string> &&source, const ResponseOptions &responseOptions);
 
+  std::vector<Response> translateMultipleRaw(std::shared_ptr<TranslationModel> translationModel,
+                                             std::vector<std::string> &&source, const ResponseOptions &responseOptions);
+  /// With the supplied two translation models, translate using first and then the second generating a response as if it
+  /// were translated from first's source language to second's target langauge. Requires first's target to be second's
+  /// source to work correctly - effectively implementing pivoting translation via an intermediate language.
+  ///
+  /// @param[in] first: TranslationModel capable of translating from source language to pivot language.
+  /// @param[in] second: TranslationModel capable of translating between pivot and target language.
+  /// @param[move] sources: The input source texts to be translated.
+  /// @param[in] options: Options indicating whether or not to include optional members in response and pass additional
+  /// configurations. See ResponseOptions.
+  ///
+  /// @returns responses corresponding to the source-text which can be used as if they were translated with
+  /// translateMultiple.
+  std::vector<Response> pivotMultiple(std::shared_ptr<TranslationModel> first, std::shared_ptr<TranslationModel> second,
+                                      std::vector<std::string> &&sources, const ResponseOptions &responseOptions);
   TranslationCache::Stats cacheStats() { return cache_.stats(); }
 
  private:
@@ -111,15 +127,14 @@ class AsyncService {
 
   /// Create a TranslationModel compatible with this instance of Service. Internally assigns how many replicas of
   /// backend needed based on worker threads set. See TranslationModel for documentation on other params.
-  template <class ConfigType>
-  Ptr<TranslationModel> createCompatibleModel(const ConfigType &config, MemoryBundle &&memory = MemoryBundle{}) {
+  Ptr<TranslationModel> createCompatibleModel(const TranslationModel::Config &config) {
     // @TODO: Remove this remove this dependency/coupling.
-    return New<TranslationModel>(config, std::move(memory), /*replicas=*/config_.numWorkers);
+    return New<TranslationModel>(config, /*replicas=*/config_.numWorkers);
   }
 
   /// With the supplied TranslationModel, translate an input. A Response is constructed with optional items set/unset
-  /// indicated via ResponseOptions. Upon completion translation of the input, the client supplied callback is triggered
-  /// with the constructed Response. Concurrent-calls to this function are safe.
+  /// indicated via ResponseOptions. Upon completion translation of the input, the client supplied callback is
+  /// triggered with the constructed Response. Concurrent-calls to this function are safe.
   ///
   /// @param [in] translationModel: TranslationModel to use for the request.
   /// @param [in] source: rvalue reference of the string to be translated. This is available as-is to the client later
@@ -130,16 +145,32 @@ class AsyncService {
   void translate(std::shared_ptr<TranslationModel> translationModel, std::string &&source, CallbackType callback,
                  const ResponseOptions &options = ResponseOptions());
 
+  /// With the supplied two translation models, translate using first and then the second generating a response as if it
+  /// were translated from first's source language to second's target langauge. Requires first's target to be second's
+  /// source to work correctly - effectively implementing pivoting translation via an intermediate language.
+  ///
+  /// @param[in] first: TranslationModel capable of translating from source language to pivot language.
+  /// @param[in] second: TranslationModel capable of translating between pivot and target language.
+  /// @param[move] source: The source text to be translated
+  /// @param[in] clientCallback: The callback to be called with the constructed Response. Expects the callback to
+  /// consume the Response.
+  /// @param[in] options: Options indicating whether or not to include optional members in response and pass additional
+  /// configurations. See ResponseOptions.
+  void pivot(std::shared_ptr<TranslationModel> first, std::shared_ptr<TranslationModel> second, std::string &&source,
+             CallbackType clientCallback, const ResponseOptions &options = ResponseOptions());
+
   /// Clears all pending requests.
   void clear();
 
-  /// Will blocks until all pending translation requests are completed. If you
-  /// do not want to wait, call `clear()` before destructor.
+  /// Thread joins and proper shutdown are required to be handled explicitly.
+  /// If you do not want to wait, call `clear()` before destructor.
   ~AsyncService();
 
   TranslationCache::Stats cacheStats() { return cache_.stats(); }
 
  private:
+  void translateRaw(std::shared_ptr<TranslationModel> translationModel, std::string &&source, CallbackType callback,
+                    const ResponseOptions &options = ResponseOptions());
   AsyncService::Config config_;
 
   std::vector<std::thread> workers_;

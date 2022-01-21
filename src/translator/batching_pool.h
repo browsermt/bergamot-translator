@@ -30,9 +30,10 @@ class BatchingPool {
   void clear();
 
  private:
-  size_t miniBatchWords;
+  size_t miniBatchWords_;
   std::vector<std::set<RequestSentence>> bucket_;
   size_t batchNumber_{0};
+  size_t maxActiveBucketLength_;
 };
 
 }  // namespace bergamot

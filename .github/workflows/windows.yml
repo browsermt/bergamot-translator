@@ -23,8 +23,6 @@ jobs:
         include:
           # Windows CPU-only build
           - name: "Windows CPU-only"
-            cuda: ""
-            arch: "64"
             identifier: "windows-x64"
 
     runs-on: windows-2019

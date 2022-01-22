@@ -94,7 +94,7 @@ jobs:
           -DCMAKE_BUILD_TYPE="Release"
           -DUSE_WASM_COMPATIBLE_SOURCE="OFF"
           -DUSE_STATIC_LIBS="TRUE" 
-          --debug-find'
+          --debug-find
           -DCMAKE_CXX_COMPILER_LAUNCHER=${{github.workspace}}\ccache.exe
           -DCMAKE_C_COMPILER_LAUNCHER=${{github.workspace}}\ccache.exe
         '

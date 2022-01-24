@@ -1,7 +1,7 @@
-diff --git a/src/3rd_party/zstr/strict_fstream.hpp b/src/3rd_party/zstr/strict_fstream.hpp
+diff --git a/3rd_party/marian-dev/src/3rd_party/zstr/strict_fstream.hpp b/3rd_party/marian-dev/src/3rd_party/zstr/strict_fstream.hpp
 index 7b1173931df977e69021f3995fa064a492f89d38..948e91eaf99b6b29ce41cf793fba6717f3b5f5b5 100644
---- a/3rd_party/bergamot-translator/3rd_party/marian-dev/src/3rd_party/zstr/strict_fstream.hpp
-+++ b/3rd_party/bergamot-translator/3rd_party/marian-dev/src/3rd_party/zstr/strict_fstream.hpp
+--- a/3rd_party/marian-dev/src/3rd_party/zstr/strict_fstream.hpp
++++ b/3rd_party/marian-dev/src/3rd_party/zstr/strict_fstream.hpp
 @@ -27,7 +27,7 @@ static std::string strerror()
      {
          buff = "Unknown error";

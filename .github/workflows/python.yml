@@ -282,7 +282,7 @@ jobs:
             python3 -m pytype bindings/python
 
     docs:
-      runs-on: ubuntu-20.04
+      runs-on: ubuntu-18.04
       needs: [python-ubuntu]
       steps:
         - name: Checkout
@@ -336,7 +336,7 @@ jobs:
           working-directory: ./doc
           run: |
             python3 -m pip install -r requirements.txt
-            python3 -m pip install ${{github.workspace}}/artifact/bergamot-*-cp38*.whl
+            python3 -m pip install ${{github.workspace}}/artifact/bergamot-*-cp37*.whl
 
         - name: Build documentation
           working-directory: ./doc

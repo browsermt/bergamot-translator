@@ -131,3 +131,7 @@ else()
   add_subdirectory(app)
 endif(COMPILE_WASM)
 
+if(COMPILE_PYTHON)
+  add_subdirectory(bindings/python)
+endif(COMPILE_PYTHON)
+

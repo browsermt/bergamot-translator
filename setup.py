@@ -134,7 +134,7 @@ with io.open(os.path.join(here, "README.md"), encoding="utf-8") as f:
     long_description = "\n" + f.read()
 
 version = None
-with open(os.path.join(here, "lemonade.version")) as f:
+with open(os.path.join(here, "BERGAMOT_VERSION")) as f:
     version = f.read().strip()
 
 

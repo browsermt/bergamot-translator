@@ -78,7 +78,7 @@ html_static_path = ["_static"]
 html_css_files = ["css/custom.css"]
 
 # The base URL which points to the root of the HTML documentation
-html_baseurl = "http://jerinphilip.github.io/bergamot-translator"
+html_baseurl = "https://browser.mt/docs"
 
 
 # -- Extension configuration -------------------------------------------------

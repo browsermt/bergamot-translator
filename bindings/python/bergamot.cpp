@@ -89,6 +89,16 @@ public:
   std::vector<Response> pivot(Model first, Model second,
                               std::vector<std::string> &inputs,
                               const ResponseOptions &options) {
+    py::scoped_ostream_redirect outstream(
+        std::cout,                                // std::ostream&
+        py::module_::import("sys").attr("stdout") // Python output
+    );
+    py::scoped_ostream_redirect errstream(
+        std::cerr,                                // std::ostream&
+        py::module_::import("sys").attr("stderr") // Python output
+    );
+
+    py::call_guard<py::gil_scoped_release> gil_guard;
     // Prepare promises, save respective futures. Have callback's in async set
     // value to the promises.
     std::vector<std::future<Response>> futures;

@@ -32,9 +32,8 @@ PYBIND11_MAKE_OPAQUE(std::vector<std::string>);
 PYBIND11_MAKE_OPAQUE(Alignments);
 
 class ServicePyAdapter {
-public:
-  ServicePyAdapter(const Service::Config &config)
-      : service_(make_service(config)) {}
+ public:
+  ServicePyAdapter(const Service::Config &config) : service_(make_service(config)) {}
 
   std::shared_ptr<_Model> modelFromConfig(const std::string &config) {
     auto parsedConfig = marian::bergamot::parseOptionsFromString(config);
@@ -46,15 +45,12 @@ public:
     return service_.createCompatibleModel(config);
   }
 
-  std::vector<Response> translate(Model model, std::vector<std::string> &inputs,
-                                  const ResponseOptions &options) {
-    py::scoped_ostream_redirect outstream(
-        std::cout,                                // std::ostream&
-        py::module_::import("sys").attr("stdout") // Python output
+  std::vector<Response> translate(Model model, std::vector<std::string> &inputs, const ResponseOptions &options) {
+    py::scoped_ostream_redirect outstream(std::cout,                                 // std::ostream&
+                                          py::module_::import("sys").attr("stdout")  // Python output
     );
-    py::scoped_ostream_redirect errstream(
-        std::cerr,                                // std::ostream&
-        py::module_::import("sys").attr("stderr") // Python output
+    py::scoped_ostream_redirect errstream(std::cerr,                                 // std::ostream&
+                                          py::module_::import("sys").attr("stderr")  // Python output
     );
 
     py::call_guard<py::gil_scoped_release> gil_guard;
@@ -66,12 +62,9 @@ public:
     promises.resize(inputs.size());
 
     for (size_t i = 0; i < inputs.size(); i++) {
-      auto callback = [&promises, i](Response &&response) {
-        promises[i].set_value(std::move(response));
-      };
+      auto callback = [&promises, i](Response &&response) { promises[i].set_value(std::move(response)); };
 
-      service_.translate(model, std::move(inputs[i]), std::move(callback),
-                         options);
+      service_.translate(model, std::move(inputs[i]), std::move(callback), options);
 
       futures.push_back(std::move(promises[i].get_future()));
     }
@@ -86,16 +79,13 @@ public:
     return responses;
   }
 
-  std::vector<Response> pivot(Model first, Model second,
-                              std::vector<std::string> &inputs,
+  std::vector<Response> pivot(Model first, Model second, std::vector<std::string> &inputs,
                               const ResponseOptions &options) {
-    py::scoped_ostream_redirect outstream(
-        std::cout,                                // std::ostream&
-        py::module_::import("sys").attr("stdout") // Python output
+    py::scoped_ostream_redirect outstream(std::cout,                                 // std::ostream&
+                                          py::module_::import("sys").attr("stdout")  // Python output
     );
-    py::scoped_ostream_redirect errstream(
-        std::cerr,                                // std::ostream&
-        py::module_::import("sys").attr("stderr") // Python output
+    py::scoped_ostream_redirect errstream(std::cerr,                                 // std::ostream&
+                                          py::module_::import("sys").attr("stderr")  // Python output
     );
 
     py::call_guard<py::gil_scoped_release> gil_guard;
@@ -106,12 +96,9 @@ public:
     promises.resize(inputs.size());
 
     for (size_t i = 0; i < inputs.size(); i++) {
-      auto callback = [&promises, i](Response &&response) {
-        promises[i].set_value(std::move(response));
-      };
+      auto callback = [&promises, i](Response &&response) { promises[i].set_value(std::move(response)); };
 
-      service_.pivot(first, second, std::move(inputs[i]), std::move(callback),
-                     options);
+      service_.pivot(first, second, std::move(inputs[i]), std::move(callback), options);
 
       futures.push_back(std::move(promises[i].get_future()));
     }
@@ -126,15 +113,13 @@ public:
     return responses;
   }
 
-private /*functions*/:
+ private /*functions*/:
   static Service make_service(const Service::Config &config) {
-    py::scoped_ostream_redirect outstream(
-        std::cout,                                // std::ostream&
-        py::module_::import("sys").attr("stdout") // Python output
+    py::scoped_ostream_redirect outstream(std::cout,                                 // std::ostream&
+                                          py::module_::import("sys").attr("stdout")  // Python output
     );
-    py::scoped_ostream_redirect errstream(
-        std::cerr,                                // std::ostream&
-        py::module_::import("sys").attr("stderr") // Python output
+    py::scoped_ostream_redirect errstream(std::cerr,                                 // std::ostream&
+                                          py::module_::import("sys").attr("stderr")  // Python output
     );
 
     py::call_guard<py::gil_scoped_release> gil_guard;
@@ -142,7 +127,7 @@ private /*functions*/:
     return Service(config);
   }
 
-private /*data*/:
+ private /*data*/:
   Service service_;
 };
 
@@ -154,8 +139,7 @@ PYBIND11_MODULE(_bergamot, m) {
       .def_readonly("begin", &ByteRange::begin)
       .def_readonly("end", &ByteRange::end)
       .def("__repr__", [](const ByteRange &range) {
-        return "{" + std::to_string(range.begin) + ", " +
-               std::to_string(range.end) + "}";
+        return "{" + std::to_string(range.begin) + ", " + std::to_string(range.end) + "}";
       });
 
   py::class_<AnnotatedText>(m, "AnnotatedText")
@@ -163,14 +147,12 @@ PYBIND11_MODULE(_bergamot, m) {
       .def("numWords", &AnnotatedText::numWords)
       .def("numSentences", &AnnotatedText::numSentences)
       .def("word",
-           [](const AnnotatedText &annotatedText, size_t sentenceIdx,
-              size_t wordIdx) -> std::string {
+           [](const AnnotatedText &annotatedText, size_t sentenceIdx, size_t wordIdx) -> std::string {
              auto view = annotatedText.word(sentenceIdx, wordIdx);
              return std::string(view.data(), view.size());
            })
       .def("sentence",
-           [](const AnnotatedText &annotatedText,
-              size_t sentenceIdx) -> std::string {
+           [](const AnnotatedText &annotatedText, size_t sentenceIdx) -> std::string {
              auto view = annotatedText.sentence(sentenceIdx);
              return std::string(view.data(), view.size());
            })
@@ -193,14 +175,12 @@ PYBIND11_MODULE(_bergamot, m) {
       .export_values();
 
   py::class_<ResponseOptions>(m, "ResponseOptions")
-      .def(py::init<>([](bool qualityScores, bool alignment, bool HTML,
-                         bool sentenceMappings, ConcatStrategy strategy) {
-             return ResponseOptions{qualityScores, alignment, HTML,
-                                    sentenceMappings, strategy};
-           }),
-           py::arg("qualityScores") = true, py::arg("alignment") = false,
-           py::arg("HTML") = false, py::arg("sentenceMappings") = true,
-           py::arg("concatStrategy") = ConcatStrategy::FAITHFUL)
+      .def(
+          py::init<>([](bool qualityScores, bool alignment, bool HTML, bool sentenceMappings, ConcatStrategy strategy) {
+            return ResponseOptions{qualityScores, alignment, HTML, sentenceMappings, strategy};
+          }),
+          py::arg("qualityScores") = true, py::arg("alignment") = false, py::arg("HTML") = false,
+          py::arg("sentenceMappings") = true, py::arg("concatStrategy") = ConcatStrategy::FAITHFUL)
       .def_readwrite("qualityScores", &ResponseOptions::qualityScores)
       .def_readwrite("HTML", &ResponseOptions::HTML)
       .def_readwrite("alignment", &ResponseOptions::alignment)
@@ -215,8 +195,8 @@ PYBIND11_MODULE(_bergamot, m) {
       .def("pivot", &ServicePyAdapter::pivot);
 
   py::class_<Service::Config>(m, "ServiceConfig")
-      .def(py::init<>([](size_t numWorkers, bool cacheEnabled, size_t cacheSize,
-                         size_t cacheMutexBuckets, std::string logging) {
+      .def(py::init<>([](size_t numWorkers, bool cacheEnabled, size_t cacheSize, size_t cacheMutexBuckets,
+                         std::string logging) {
              Service::Config config;
              config.numWorkers = numWorkers;
              config.cacheEnabled = cacheEnabled;
@@ -225,9 +205,8 @@ PYBIND11_MODULE(_bergamot, m) {
              config.logger.level = logging;
              return config;
            }),
-           py::arg("numWorkers") = 1, py::arg("cacheEnabled") = false,
-           py::arg("cacheSize") = 20000, py::arg("cacheMutexBuckets") = 1,
-           py::arg("logLevel") = "off")
+           py::arg("numWorkers") = 1, py::arg("cacheEnabled") = false, py::arg("cacheSize") = 20000,
+           py::arg("cacheMutexBuckets") = 1, py::arg("logLevel") = "off")
       .def_readwrite("numWorkers", &Service::Config::numWorkers)
       .def_readwrite("cacheEnabled", &Service::Config::cacheEnabled)
       .def_readwrite("cacheSize", &Service::Config::cacheSize)

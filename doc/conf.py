@@ -21,7 +21,7 @@ sys.path.insert(0, os.path.abspath("."))
 # -- Project information -----------------------------------------------------
 
 project = "Bergamot Translator"
-copyright = "2021, Bergamot Translator Team"
+copyright = "2021-2022 Bergamot Translator Team"
 author = "Bergamot Translator Team"
 
 # The full version, including alpha/beta/rc tags

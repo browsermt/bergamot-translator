@@ -194,7 +194,7 @@ setup(
     cmdclass={"build_py": build_py, "build_ext": CMakeBuild},
     zip_safe=False,
     extras_require={"test": ["pytest>=6.0"]},
-    license_files=("LICENSE.txt",),
+    license_files=("LICENSE",),
     python_requires=">=3.6",
     packages=["bergamot"],
     package_dir={"bergamot": "bindings/python"},

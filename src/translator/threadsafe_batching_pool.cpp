@@ -28,6 +28,13 @@ void ThreadsafeBatchingPool<BatchingPoolType>::enqueueRequest(Args &&... args) {
 }
 
 template <class BatchingPoolType>
+void ThreadsafeBatchingPool<BatchingPoolType>::clear() {
+  std::unique_lock<std::mutex> lock(mutex_);
+  backend_.clear();
+  enqueued_ = 0;
+}
+
+template <class BatchingPoolType>
 void ThreadsafeBatchingPool<BatchingPoolType>::shutdown() {
   std::unique_lock<std::mutex> lock(mutex_);
   shutdown_ = true;

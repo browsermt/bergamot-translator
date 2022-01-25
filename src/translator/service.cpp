@@ -141,12 +141,15 @@ AsyncService::AsyncService(const AsyncService::Config &config)
   }
 }
 
+void AsyncService::clear() { safeBatchingPool_.clear(); }
+
 AsyncService::~AsyncService() {
   safeBatchingPool_.shutdown();
   for (std::thread &worker : workers_) {
     assert(worker.joinable());
     worker.join();
   }
+  workers_.clear();
 }
 
 void AsyncService::pivot(std::shared_ptr<TranslationModel> first, std::shared_ptr<TranslationModel> second,

@@ -275,8 +275,8 @@ jobs:
             python3 -m pip install black isort pytype
       - name: "Formatting checks: black, isort"
         run: |
-            python3 -m black --check bindings/python/ setup.py
-            python3 -m isort --profile black --diff --check bindings/python setup.py
+            python3 -m black --check bindings/python/ setup.py doc/conf.py
+            python3 -m isort --profile black --diff --check bindings/python setup.py doc/conf.py
       - name: "Static typing checks: pytype"
         run: |-
             python3 -m pytype bindings/python

@@ -43,6 +43,12 @@ class ThreadsafeBatchingPool {
   template <class... Args>
   size_t generateBatch(Args &&... args);
 
+  // Removes any pending requests from the batching pool.
+  void clear();
+
+  // Signals shut down of batching pool. After this no new requests can be enqueued,
+  // but all enqueued requests will be processed. To prevent this from happening,
+  // call `clear()` before `shutdown()`.
   void shutdown();
 
  private:

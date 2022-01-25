@@ -1,0 +1,19 @@
+# In source-root folder
+
+# Obtain an example model from the web.
+mkdir -p models
+wget --quiet --continue --directory models/ \
+    http://data.statmt.org/bergamot/models/deen/ende.student.tiny11.tar.gz 
+(cd models && tar -xzf ende.student.tiny11.tar.gz)
+
+# Patch the config-files generated from marian for use in bergamot.
+python3 bergamot-translator-tests/tools/patch-marian-for-bergamot.py \
+    --config-path models/ende.student.tiny11/config.intgemm8bitalpha.yml \
+    --ssplit-prefix-file $(realpath 3rd_party/ssplit-cpp/nonbreaking_prefixes/nonbreaking_prefix.en)
+
+# Patched config file will be available with .bergamot.yml suffix.
+CONFIG=models/ende.student.tiny11/config.intgemm8bitalpha.yml.bergamot.yml
+
+build/app/bergamot --model-config-paths $CONFIG --cpu-threads 4 <<< "Hello World!"
+# Hallo Welt!
+

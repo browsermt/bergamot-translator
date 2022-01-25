@@ -131,6 +131,10 @@ jobs:
           bergamot-translator-tests/**/*.expected
           bergamot-translator-tests/**/*.log
           bergamot-translator-tests/**/*.out
+    - name: Confirm native-run example script works
+      run: |-
+          bash examples/run-native.sh
+
   mac:
     strategy:
       fail-fast: false
@@ -235,4 +239,7 @@ jobs:
           bergamot-translator-tests/**/*.expected
           bergamot-translator-tests/**/*.log
           bergamot-translator-tests/**/*.out
+    - name: Confirm native-run example script works
+      run: |-
+          bash examples/run-native.sh
 

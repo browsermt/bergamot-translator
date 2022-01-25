@@ -83,6 +83,7 @@ class BlockingService {
     size_t cacheSize{2000};    ///< Size in History items to be stored in the cache. Loosely corresponds to sentences to
                                /// cache in the real world.
     size_t workspaceSizeInMB{1024};
+    Logger::Config logger;     // Configurations for logging
 
     template <class App>
     static void addOptions(App &app, Config &config) {
@@ -90,6 +91,7 @@ class BlockingService {
       app.add_option("--cache-translations", config.cacheEnabled, "Whether to cache translations or not.");
       app.add_option("--cache-size", config.cacheSize, "Number of entries to store in cache.");
       app.add_option("--workspace-size", config.workspaceSizeInMB, "Workspace size to use");
+      Logger::Config::addOptions(app, config.logger);
     }
   };
   /// Construct a BlockingService with configuration loaded from an Options object. Does not require any keys, values to
@@ -111,6 +113,22 @@ class BlockingService {
   std::vector<Response> translateMultiple(std::shared_ptr<TranslationModel> translationModel,
                                           std::vector<std::string> &&source, const ResponseOptions &responseOptions);
 
+  std::vector<Response> translateMultipleRaw(std::shared_ptr<TranslationModel> translationModel,
+                                             std::vector<std::string> &&source, const ResponseOptions &responseOptions);
+  /// With the supplied two translation models, translate using first and then the second generating a response as if it
+  /// were translated from first's source language to second's target langauge. Requires first's target to be second's
+  /// source to work correctly - effectively implementing pivoting translation via an intermediate language.
+  ///
+  /// @param[in] first: TranslationModel capable of translating from source language to pivot language.
+  /// @param[in] second: TranslationModel capable of translating between pivot and target language.
+  /// @param[move] sources: The input source texts to be translated.
+  /// @param[in] options: Options indicating whether or not to include optional members in response and pass additional
+  /// configurations. See ResponseOptions.
+  ///
+  /// @returns responses corresponding to the source-text which can be used as if they were translated with
+  /// translateMultiple.
+  std::vector<Response> pivotMultiple(std::shared_ptr<TranslationModel> first, std::shared_ptr<TranslationModel> second,
+                                      std::vector<std::string> &&sources, const ResponseOptions &responseOptions);
   TranslationCache::Stats cacheStats() { return cache_.stats(); }
 
  private:
@@ -146,6 +164,7 @@ class AsyncService {
                                   ///< reasonably large cache-size.
 
     size_t workspaceSizeInMB{1024};
+    Logger::Config logger;        // Configurations for logging
 
     template <class App>
     static void addOptions(App &app, Config &config) {
@@ -155,6 +174,7 @@ class AsyncService {
       app.add_option("--cache-mutex-buckets", config.cacheMutexBuckets,
                      "Number of mutex buckets to control locking granularity");
       app.add_option("--workspace-size", config.workspaceSizeInMB, "Workspace size to use");
+      Logger::Config::addOptions(app, config.logger);
     }
   };
   /// Construct an AsyncService with configuration loaded from Options. Expects positive integer value for
@@ -163,10 +183,9 @@ class AsyncService {
 
   /// Create a TranslationModel compatible with this instance of Service. Internally assigns how many replicas of
   /// backend needed based on worker threads set. See TranslationModel for documentation on other params.
-  template <class ConfigType>
-  Ptr<TranslationModel> createCompatibleModel(const ConfigType &config, MemoryBundle &&memory = MemoryBundle{}) {
+  Ptr<TranslationModel> createCompatibleModel(const TranslationModel::Config &config) {
     // @TODO: Remove this remove this dependency/coupling.
-    return New<TranslationModel>(config, std::move(memory), /*replicas=*/config_.numWorkers);
+    return New<TranslationModel>(config, /*replicas=*/config_.numWorkers);
   }
 
   /// With the supplied TranslationModel, translate an input. A Response is constructed with optional items set/unset
@@ -182,12 +201,32 @@ class AsyncService {
   void translate(std::shared_ptr<TranslationModel> translationModel, std::string &&source, CallbackType callback,
                  const ResponseOptions &options = ResponseOptions());
 
+  /// With the supplied two translation models, translate using first and then the second generating a response as if it
+  /// were translated from first's source language to second's target langauge. Requires first's target to be second's
+  /// source to work correctly - effectively implementing pivoting translation via an intermediate language.
+  ///
+  /// @param[in] first: TranslationModel capable of translating from source language to pivot language.
+  /// @param[in] second: TranslationModel capable of translating between pivot and target language.
+  /// @param[move] source: The source text to be translated
+  /// @param[in] clientCallback: The callback to be called with the constructed Response. Expects the callback to
+  /// consume the Response.
+  /// @param[in] options: Options indicating whether or not to include optional members in response and pass additional
+  /// configurations. See ResponseOptions.
+  void pivot(std::shared_ptr<TranslationModel> first, std::shared_ptr<TranslationModel> second, std::string &&source,
+             CallbackType clientCallback, const ResponseOptions &options = ResponseOptions());
+
+  /// Clears all pending requests.
+  void clear();
+
   /// Thread joins and proper shutdown are required to be handled explicitly.
+  /// If you do not want to wait, call `clear()` before destructor.
   ~AsyncService();
 
   TranslationCache::Stats cacheStats() { return cache_.stats(); }
 
  private:
+  void translateRaw(std::shared_ptr<TranslationModel> translationModel, std::string &&source, CallbackType callback,
+                    const ResponseOptions &options = ResponseOptions());
   AsyncService::Config config_;
 
   std::vector<std::thread> workers_;

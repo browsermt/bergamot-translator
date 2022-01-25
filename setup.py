@@ -187,6 +187,7 @@ setup(
     version=version,
     author="Jerin Philip",
     author_email="jerinphilip@live.in",
+    url="https://github.com/browsermt/bergamot-translator/",
     description="Bergamot translator python binding.",
     long_description="",
     ext_modules=[CMakeExtension("bergamot/_bergamot")],

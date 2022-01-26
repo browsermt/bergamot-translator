@@ -131,6 +131,7 @@ else()
   add_subdirectory(app)
 endif(COMPILE_WASM)
 
+option(COMPILE_PYTHON "Compile python bindings. Intended to be activated with setup.py" OFF)
 if(COMPILE_PYTHON)
   add_subdirectory(bindings/python)
 endif(COMPILE_PYTHON)

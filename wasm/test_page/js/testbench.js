@@ -110,7 +110,7 @@ function isContinuation(prev, token) {
 }
 
 function hardAlignments({originalTokens, translatedTokens, scores}) {
-  return translatedTokens.map((_, t) => argmax(scores[t]));
+  return translatedTokens.map((_, t) => argmax(scores[t].slice(0, -1)));
 }
 
 function alignmentHeuristics(selected, {originalTokens, translatedTokens, scores}) {

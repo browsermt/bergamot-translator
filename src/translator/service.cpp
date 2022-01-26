@@ -51,6 +51,7 @@ std::vector<Response> BlockingService::translateMultiple(std::shared_ptr<Transla
   std::vector<Response> responses = translateMultipleRaw(translationModel, std::move(sources), responseOptions);
   for (size_t i = 0; i < responses.size(); i++) {
     htmls[i].restore(responses[i]);
+    if (!responseOptions.alignment) responses[i].alignments.clear();
   }
 
   return responses;

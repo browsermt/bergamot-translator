@@ -37,8 +37,7 @@ class HTML {
     // List of characters that occur at the start of a token that indicate that
     // the this token is probably *not* a continuation of a word. Set to empty
     // to never mark a token as a continuation of the word.
-    // std::string continuationDelimiters = "\n ,.(){}[]";
-    std::string continuationDelimiters;
+    std::string continuationDelimiters = "\n ,.(){}[]";
 
     // Should we always add spaces to the places where tags used to be? I.e.
     // `un<u>der</u>line` should become `un der line`?
@@ -86,7 +85,8 @@ class HTML {
   void copyTaint(Response const &response, std::vector<std::vector<size_t>> const &alignments,
                  std::vector<HTML::SpanIterator> const &sourceTokenSpans,
                  std::vector<HTML::SpanIterator> &targetTokenSpans);
-  void hardAlignments(Response const &response, std::vector<std::vector<size_t>> &alignments);
+  void hardAlignments(Response const &response, std::vector<std::vector<size_t>> &alignments,
+                      std::vector<HTML::SpanIterator> const &sourceTokenSpans);
   bool isContinuation(string_view prev, string_view str);
   // Allocates tag in pool_ (which then owns it) and gives a pointer to be used
   // in Taints. Pointer is valid as long as this HTML instance lives on.

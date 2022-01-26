@@ -138,6 +138,15 @@ bool containsTag(HTML::Taint const &stack, HTML::Tag const *tag) {
   return std::find(stack.rbegin(), stack.rend(), tag) != stack.rend();
 }
 
+bool isSubset(HTML::Taint const &a, HTML::Taint const &b) {
+  if (a.size() > b.size()) return false;
+
+  for (auto i = a.begin(), j = b.begin(); i != a.end(); ++i, ++j)
+    if (*i != *j) return false;
+
+  return true;
+}
+
 template <typename Fun>
 AnnotatedText apply(AnnotatedText const &in, Fun fun) {
   AnnotatedText out;
@@ -448,7 +457,7 @@ void HTML::restore(Response &response) {
 
   // Find for every token in target the token in source that best matches.
   std::vector<std::vector<size_t>> alignments;
-  hardAlignments(response, alignments);
+  hardAlignments(response, alignments, sourceTokenSpans);
 
   std::vector<SpanIterator> targetTokenSpans;
   copyTaint(response, alignments, sourceTokenSpans, targetTokenSpans);
@@ -591,7 +600,10 @@ bool HTML::isContinuation(string_view prev, string_view str) {
          options_.continuationDelimiters.find(prev.back()) == std::string::npos;
 }
 
-void HTML::hardAlignments(Response const &response, std::vector<std::vector<size_t>> &alignments) {
+void HTML::hardAlignments(Response const &response, std::vector<std::vector<size_t>> &alignments,
+                          std::vector<SpanIterator> const &sourceTokenSpans) {
+  size_t offset = 0;
+
   // For each sentence...
   for (size_t sentenceIdx = 0; sentenceIdx < response.target.numSentences(); ++sentenceIdx) {
     alignments.emplace_back();
@@ -622,7 +634,14 @@ void HTML::hardAlignments(Response const &response, std::vector<std::vector<size
         float currScore = response.alignments[sentenceIdx][t][currSentenceIdx];
         float prevScore = response.alignments[sentenceIdx][t - 1][prevSentenceIdx];
 
-        if (currScore >= prevScore) {
+        Taint const &currTaint = sourceTokenSpans[offset + 1 + currSentenceIdx]->tags;
+        Taint const &prevTaint = sourceTokenSpans[offset + 1 + prevSentenceIdx]->tags;
+
+        // If this token has more markup, or a better score than the previous
+        // token (and they together are part of a word-ish thing) then mark
+        // this word as aligning. Otherwise just copy the alignment source of
+        // the previous token.
+        if (isSubset(prevTaint, currTaint) || currScore >= prevScore) {
           // Apply this to all previous tokens in the word
           for (size_t i = t;; --i) {
             alignments.back()[i] = currSentenceIdx;
@@ -640,6 +659,8 @@ void HTML::hardAlignments(Response const &response, std::vector<std::vector<size
 
     // Always align target end with source end
     alignments.back().push_back(response.source.numWords(sentenceIdx) - 1);
+
+    offset += response.source.numWords(sentenceIdx) + 1;  // +1 for prefix gap
   }
 }
 

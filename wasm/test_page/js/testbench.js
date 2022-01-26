@@ -279,6 +279,7 @@ function parseModelConfig(file) {
 }
 
 langFrom.addEventListener("change", e => {
+  window.localStorage['lang-from'] = langFrom.value;
   loadModel();
 });
 
@@ -303,6 +304,11 @@ function init() {
     }
   }
 
+  if (langs.some(([code]) => code === window.localStorage['lang-from']))
+    langFrom.value = window.localStorage['lang-from'];
+  else
+    langFrom.value = langs[0];
+  
   if (langs.some(([code]) => code === window.localStorage['lang-to']))
     // If we remember an existing language from last time, load that
     langTo.value = window.localStorage['lang-to'];

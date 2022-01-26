@@ -99,39 +99,6 @@ function stripHTML(html) {
   return html.replace(/\<\/?.+?>/g, '');
 }
 
-function isContinuation(prev, token) {
-  const delimiters = getContinuationDelimiters();  // TODO could have changed since translation request
-  if (delimiters === '') return false;
-  prev = stripHTML(prev);
-  token = stripHTML(token);
-  return prev.length > 0 && token.length > 0
-      && delimiters.indexOf(token.substr(0, 1)) === -1
-      && delimiters.indexOf(prev.substr(-1, 1)) === -1;
-}
-
-function hardAlignments({originalTokens, translatedTokens, scores}) {
-  return translatedTokens.map((_, t) => argmax(scores[t].slice(0, -1)));
-}
-
-function alignmentHeuristics(selected, {originalTokens, translatedTokens, scores}) {
-  // EOS always aligns with EOS
-  selected[translatedTokens.length - 1] = originalTokens.length - 1;
-
-  for (let t = 1; t < translatedTokens.length - 1; ++t) { // -1 to exclude EOS
-    if (isContinuation(translatedTokens[t-1], translatedTokens[t])) {
-      if (scores[t][selected[t]] > scores[t-1][selected[t-1]]) {
-        for (let i = t; ; --i) {
-          selected[i] = selected[t];
-          if (i == 0 || !isContinuation(translatedTokens[i-1], translatedTokens[i])) break;
-        }
-      }
-    }
-  }
-
-  return selected;
-}
-
-
 function renderToken(token) {
   return token
     .split(/(<(\/?)(\w+).*?\>)/)
@@ -151,9 +118,15 @@ function renderToken(token) {
 }
 
 function renderAlignmentsTable({originalTokens, translatedTokens, scores}) {
-  const original = hardAlignments({originalTokens, translatedTokens, scores});
+  // Selected alignments are marked with a +1.0 addition :P
+  const selected = translatedTokens.map((_, t) => scores[t].findIndex(score => score >= 1.0));
 
-  const selected = alignmentHeuristics(original.slice(), {originalTokens, translatedTokens, scores});
+  // Remove that +1.0 score for the selected elements again
+  selected.forEach((s, t) => scores[t][s] -= 1.0);
+
+  // Now do the original argmax to provide an easy way of identifying the
+  // tokens where heuristics took the wheel.
+  const original = translatedTokens.map((_, t) => argmax(scores[t]));
 
   const classNames = (t, o) => {
     const list = [];

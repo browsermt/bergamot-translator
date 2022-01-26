@@ -467,6 +467,10 @@ void HTML::restore(Response &response) {
 
   response.source = source;
   response.target = target;
+
+  for (size_t sentenceIdx = 0; sentenceIdx < alignments.size(); ++sentenceIdx)
+    for (size_t t = 0; t < alignments[sentenceIdx].size(); ++t)
+      response.alignments[sentenceIdx][t][alignments[sentenceIdx][t]] += 1.0;
 }
 
 AnnotatedText HTML::restoreSource(AnnotatedText const &in, std::vector<SpanIterator> &sourceTokenSpans) {

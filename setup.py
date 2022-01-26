@@ -136,6 +136,9 @@ with io.open(os.path.join(here, "README.md"), encoding="utf-8") as f:
 version = None
 with open(os.path.join(here, "BERGAMOT_VERSION")) as f:
     version = f.read().strip()
+    suffix = os.environ.get("PYTHON_LOCAL_VERSION_IDENTIFIER", None)
+    if suffix is not None:
+        version = "{}+{}".format(version, suffix)
 
 
 class UploadCommand(Command):

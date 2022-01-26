@@ -5,3 +5,4 @@ sphinx_rtd_theme
 mistune<2.0.0
 recommonmark
 m2r
+sphinx-argparse

@@ -98,6 +98,12 @@ jobs:
         run: |-
           ccache -s # Print current cache stats
           ccache -z # Zero cache entry
+
+      - name: Inject local version identifier for non tag builds
+        if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
+        run: |-
+          echo "PYTHON_LOCAL_VERSION_IDENTIFIER=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+
       - name: setup.py 
         run: |-
           python3 -m pip install wheel
@@ -185,6 +191,11 @@ jobs:
       - name: Set MACOSX DEPLOYMENT TARGET via environment variable
         run: |-
             echo "MACOSX_DEPLOYMENT_TARGET=10.15" >> $GITHUB_ENV
+
+      - name: Inject local version identifier for non tag builds
+        if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
+        run: |-
+          echo "PYTHON_LOCAL_VERSION_IDENTIFIER=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
 
       - name: setup.py 
         run: |-

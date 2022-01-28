@@ -232,8 +232,6 @@ class Mozilla(Repository):
             "gemmPrecision": "int8ShiftAlphaAll",
         }
 
-        print(config)
-
         with open(configPath, "w") as output_file:
             print(yaml.dump(config, sort_keys=False), file=output_file)
 

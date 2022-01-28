@@ -173,52 +173,42 @@ class Mozilla(Repository):
         self.update()
 
     def update(self):
-        url = "https://raw.githubusercontent.com/mozilla/firefox-translations/main/extension/model/modelRegistry.js"
+        url = "https://gist.githubusercontent.com/jerinphilip/f9bc31d70e4201771b7734ab1cfd1205/raw/d2ddd8ddb822695f1ee2ccccbb12e9c0daeeabbf/mozilla-models.json"
         content = requests.get(url).text
+        self.inventory = json.loads(content)
 
         # Rudimentary parsing, because @jerinphilip is already overworked and don't want to add a dependency
-        pattern = re.compile('modelRegistryRootURL = "(.*)"')
-        matches = pattern.search(content)
-        self.rootUrl = matches.group(1)
-
-        directions = re.compile("model.(.*).intgemm.alphas.bin").findall(content)
-        for direction in directions:
-            code = direction
-            self.inventory[code] = {
-                "vocab": "vocab.{}.spm".format(direction),
-                "model": "model.{}.intgemm.alphas.bin".format(direction),
-                "shortlist": "lex.50.50.{}.s2t.bin".format(direction),
-            }
 
     def models(self, filter_downloaded=True):
         # Fakes a minimum required translateLocally entry
         # TODO(filter_downloaded)
-        return list(self.inventory.keys())
+        return list(self.inventory["modelRegistry"].keys())
 
     def model(self, model_identifier: str) -> t.Any:
-        return toTranslateLocally(self.inventory[model_identifier])
+        return toTranslateLocally(self.inventory["modelRegistry"][model_identifier])
 
     def modelConfigPath(self, model_identifier: str) -> t.Any:
         model_dir = os.path.join(self.dirs["models"], model_identifier)
         return os.path.join(model_dir, "config.bergamot.yml")
 
     def download(self, model_identifier):
-        payloads = self.inventory[model_identifier]
+        payloads = self.inventory["modelRegistry"][model_identifier]
         model_dir = os.path.join(self.dirs["models"], model_identifier)
         os.makedirs(model_dir, exist_ok=True)
-        for code, fname in payloads.items():
+        for code, entry in payloads.items():
+            fname = entry["name"]
             save_location = os.path.join(model_dir, fname)
             resource_url = "{}/{}".format(
-                self.rootUrl, os.path.join(model_identifier, fname)
+                self.inventory["modelRegistryRootURL"], os.path.join(model_identifier, fname)
             )
             download_resource(resource_url, save_location)
         # Create a config-file
         configPath = os.path.join(model_dir, "config.bergamot.yml")
 
         config = {
-            "models": [payloads["model"]],
-            "vocabs": [payloads["vocab"], payloads["vocab"]],
-            "shortlist": [payloads["shortlist"], False],
+            "models": [payloads["model"]["name"]],
+            "vocabs": [payloads["vocab"]["name"], payloads["vocab"]["name"]],
+            "shortlist": [payloads["lex"]["name"], False],
             "ssplit-prefix-file": "",
             "ssplit-mode": "paragraph",
             "max-length-break": 128,

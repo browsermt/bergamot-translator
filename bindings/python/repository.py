@@ -177,7 +177,6 @@ class Mozilla(Repository):
         content = requests.get(url).text
         self.inventory = json.loads(content)
 
-
     def models(self, filter_downloaded=True):
         # Fakes a minimum required translateLocally entry
         # TODO(filter_downloaded)
@@ -197,10 +196,9 @@ class Mozilla(Repository):
             "checksum": "N/A",
             "url": "N/A",
             "name": model_identifier,
-            "code": model_identifier
+            "code": model_identifier,
         }
         return dummy
-
 
     def modelConfigPath(self, model_identifier: str) -> t.Any:
         model_dir = os.path.join(self.dirs["models"], model_identifier)
@@ -214,7 +212,8 @@ class Mozilla(Repository):
             fname = entry["name"]
             save_location = os.path.join(model_dir, fname)
             resource_url = "{}/{}".format(
-                self.inventory["modelRegistryRootURL"], os.path.join(model_identifier, fname)
+                self.inventory["modelRegistryRootURL"],
+                os.path.join(model_identifier, fname),
             )
             download_resource(resource_url, save_location)
         # Create a config-file

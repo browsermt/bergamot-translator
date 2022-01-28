@@ -1,7 +1,7 @@
 import typing
 
 from ._bergamot import *  # type: ignore
-from .repository import Aggregator, TranslateLocallyLike
+from .repository import Aggregator, TranslateLocallyLike, Mozilla
 
 REPOSITORY = Aggregator(
     [
@@ -9,6 +9,7 @@ REPOSITORY = Aggregator(
         TranslateLocallyLike(
             "opus", "https://object.pouta.csc.fi/OPUS-MT-models/app/models.json"
         ),
+        Mozilla(),
     ]
 )
 """

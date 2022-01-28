@@ -8,6 +8,7 @@ from urllib.parse import urlparse
 
 import requests
 from appdirs import AppDirs
+import re
 
 from .typing_utils import URL, PathLike
 from .utils import download_resource, patch_marian_for_bergamot
@@ -149,6 +150,63 @@ class TranslateLocallyLike(Repository):
         fname = os.path.basename(o.path)  # something tar.gz.
         fname_without_extension = fname.replace(".tar.gz", "")
         return fname_without_extension
+
+
+class Mozilla(Repository):
+    def __init__(self):
+        self._name = "mozilla"
+        appDir = AppDirs(APP)
+        f = lambda *args: os.path.join(*args, self._name)
+        self.dirs = {
+            "cache": f(appDir.user_cache_dir),
+            "config": f(appDir.user_config_dir),
+            "data": f(appDir.user_data_dir),
+            "archive": f(appDir.user_data_dir, "archives"),
+            "models": f(appDir.user_data_dir, "models"),
+        }
+
+        for directory in self.dirs.values():
+            os.makedirs(directory, exist_ok=True)
+
+        self.inventory = {}
+        self.update()
+
+    def update(self):
+        url = "https://raw.githubusercontent.com/mozilla/firefox-translations/main/extension/model/modelRegistry.js"
+        content = requests.get(url).text
+
+        # Rudimentary parsing, because @jerinphilip is already overworked and don't want to add a dependency
+        pattern = re.compile('modelRegistryRootURL = "(.*)"')
+        matches = pattern.search(content)
+        self.rootUrl = matches.group(1)
+
+        directions = re.compile("vocab.(.*).spm").findall(content)
+        for direction in directions:
+            code = "mozilla-{}".format(direction)
+            print(code)
+            self.inventory[code] = {
+                "vocab": "vocab.{}.spm".format(direction),
+                "model": "model.{}.intgemm.alphas.bin".format(direction),
+                "shortlist": "lex.50.50.{}.s2t.bin".format(direction),
+            }
+
+    def models(self):
+        return []
+
+    def model(self, model_identifier: str) -> t.Any:
+        return toTranslateLocally(self.inventory[model_identifier])
+
+    def modelConfigPath(self, model_identifier: str) -> t.Any:
+        pass
+
+    def download(self, model_identifier):
+        info = self.inventory[model_identifier]
+        save_location = os.path.join(self.dirs["archive"], model_archive)
+        download_resource(model["url"], save_location)
+
+    @property
+    def name(self):
+        return self._name
 
 
 class Aggregator:

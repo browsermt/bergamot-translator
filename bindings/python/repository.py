@@ -177,7 +177,6 @@ class Mozilla(Repository):
         content = requests.get(url).text
         self.inventory = json.loads(content)
 
-        # Rudimentary parsing, because @jerinphilip is already overworked and don't want to add a dependency
 
     def models(self, filter_downloaded=True):
         # Fakes a minimum required translateLocally entry

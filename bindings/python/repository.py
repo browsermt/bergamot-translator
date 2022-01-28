@@ -1,10 +1,11 @@
 import json
+import yaml
 import os
 import tarfile
 import typing as t
 from abc import ABC, abstractmethod
 from functools import partial
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urljoin
 
 import requests
 from appdirs import AppDirs
@@ -182,27 +183,55 @@ class Mozilla(Repository):
 
         directions = re.compile("vocab.(.*).spm").findall(content)
         for direction in directions:
-            code = "mozilla-{}".format(direction)
-            print(code)
+            code = direction
             self.inventory[code] = {
                 "vocab": "vocab.{}.spm".format(direction),
                 "model": "model.{}.intgemm.alphas.bin".format(direction),
                 "shortlist": "lex.50.50.{}.s2t.bin".format(direction),
             }
 
-    def models(self):
-        return []
+    def models(self, filter_downloaded=True):
+        # Fakes a minimum required translateLocally entry
+        # TODO(filter_downloaded)
+        return list(self.inventory.keys())
 
     def model(self, model_identifier: str) -> t.Any:
         return toTranslateLocally(self.inventory[model_identifier])
 
     def modelConfigPath(self, model_identifier: str) -> t.Any:
-        pass
+        model_dir = os.path.join(self.dirs["models"], model_identifier)
+        return os.path.join(model_dir, "config.bergamot.yml")
 
     def download(self, model_identifier):
-        info = self.inventory[model_identifier]
-        save_location = os.path.join(self.dirs["archive"], model_archive)
-        download_resource(model["url"], save_location)
+        payloads = self.inventory[model_identifier]
+        model_dir = os.path.join(self.dirs["models"], model_identifier)
+        os.makedirs(model_dir, exist_ok=True)
+        for code, fname in payloads.items():
+            save_location = os.path.join(model_dir, fname)
+            resource_url = "{}/{}".format(
+                self.rootUrl, os.path.join(model_identifier, fname)
+            )
+            download_resource(resource_url, save_location)
+        # Create a config-file
+        configPath = os.path.join(model_dir, "config.bergamot.yml")
+
+        config = {
+            "models": [payloads["model"]],
+            "vocabs": [payloads["vocab"], payloads["vocab"]],
+            "shortlist": [payloads["shortlist"], False],
+            "ssplit-prefix-file": "",
+            "ssplit-mode": "paragraph",
+            "max-length-break": 128,
+            "mini-batch-words": 1024,
+            "workspace": 128,  # shipped models use big workspaces. We'd prefer to keep it low.
+            "alignment": "soft",
+            "gemmPrecision": "int8ShiftAlphaAll",
+        }
+
+        print(config)
+
+        with open(configPath, "w") as output_file:
+            print(yaml.dump(config, sort_keys=False), file=output_file)
 
     @property
     def name(self):

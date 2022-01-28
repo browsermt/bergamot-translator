@@ -1,15 +1,15 @@
 import json
-import yaml
 import os
+import re
 import tarfile
 import typing as t
 from abc import ABC, abstractmethod
 from functools import partial
-from urllib.parse import urlparse, urljoin
+from urllib.parse import urljoin, urlparse
 
 import requests
+import yaml
 from appdirs import AppDirs
-import re
 
 from .typing_utils import URL, PathLike
 from .utils import download_resource, patch_marian_for_bergamot
@@ -181,7 +181,7 @@ class Mozilla(Repository):
         matches = pattern.search(content)
         self.rootUrl = matches.group(1)
 
-        directions = re.compile("vocab.(.*).spm").findall(content)
+        directions = re.compile("model.(.*).intgemm.alphas.bin").findall(content)
         for direction in directions:
             code = direction
             self.inventory[code] = {

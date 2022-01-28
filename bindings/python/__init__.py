@@ -1,7 +1,7 @@
 import typing
 
 from ._bergamot import *  # type: ignore
-from .repository import Aggregator, TranslateLocallyLike, Mozilla
+from .repository import Aggregator, Mozilla, TranslateLocallyLike
 
 REPOSITORY = Aggregator(
     [

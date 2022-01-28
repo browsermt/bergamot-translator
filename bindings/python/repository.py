@@ -185,7 +185,23 @@ class Mozilla(Repository):
         return list(self.inventory["modelRegistry"].keys())
 
     def model(self, model_identifier: str) -> t.Any:
-        return toTranslateLocally(self.inventory["modelRegistry"][model_identifier])
+        entry = self.inventory["modelRegistry"][model_identifier]
+        dummy = {
+            "modelName": model_identifier,
+            "shortName": model_identifier,
+            "type": "tiny",
+            "src": "N/A",
+            "trg": "N/A",
+            "repository": "Mozilla",
+            "version": 1,
+            "API": 1,
+            "checksum": "N/A",
+            "url": "N/A",
+            "name": model_identifier,
+            "code": model_identifier
+        }
+        return dummy
+
 
     def modelConfigPath(self, model_identifier: str) -> t.Any:
         model_dir = os.path.join(self.dirs["models"], model_identifier)

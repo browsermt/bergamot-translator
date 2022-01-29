@@ -270,8 +270,12 @@ size_t debugCountTokens(AnnotatedText const &text) {
 
 namespace marian::bergamot {
 
-HTML::HTML(std::string &&source, bool process_markup, Options &&options) : options_(std::move(options)) {
-  if (!process_markup) return;
+HTML::HTML(Options &&options) : options_(std::move(options)) {}
+
+std::optional<HTML::Error> HTML::parse(std::string &source) {
+  // Clean out any possible previous parse state
+  spans_.clear();
+  pool_.clear();
 
   std::string original = std::move(source);
   markup::instream in(original.data(), original.data() + original.size());
@@ -284,11 +288,21 @@ HTML::HTML(std::string &&source, bool process_markup, Options &&options) : optio
   bool addSpace = false;
   spans_.push_back(Span{0, 0, {}});
 
+  // If we encounter an error, clear our internal state so a call to restore()
+  // doesn't do anything half-assed. Also undo any changes to `source` which
+  // we got by reference. Finally format an error message.
+  auto fail = [&](auto &&...args) {
+    source = std::move(original);
+    spans_.clear();
+    pool_.clear();
+    return Error{format(std::forward<decltype(args)>(args)...)};
+  };
+
   bool stop = false;
   while (!stop) {
     switch (scanner.next()) {
       case markup::Scanner::TT_ERROR:
-        throw BadHTML("HTML parse error");
+        return fail("HTML parse error");
 
       case markup::Scanner::TT_EOF:
         stop = true;
@@ -354,10 +368,10 @@ HTML::HTML(std::string &&source, bool process_markup, Options &&options) : optio
         // bit of "<img/>", then completely ignore it.
         if (contains(options_.voidTags, std::string(scanner.tag()))) break;
 
-        if (stack.empty()) throw BadHTML(format("Encountered more closing tags ({}) than opening tags", scanner.tag()));
+        if (stack.empty()) return fail("Encountered more closing tags ({}) than opening tags", scanner.tag());
 
         if (stack.back()->name != scanner.tag())
-          throw BadHTML(format("Encountered unexpected closing tag </{}>, stack is {}", scanner.tag(), stack));
+          return fail("Encountered unexpected closing tag </{}>, stack is {}", scanner.tag(), stack);
 
         // What to do with "<u></u>" case, where tag is immediately closed
         // so it never makes it into the taint of any of the spans? This adds
@@ -407,25 +421,27 @@ HTML::HTML(std::string &&source, bool process_markup, Options &&options) : optio
         break;
 
       default:
-        throw BadHTML("Unsupported scanner token type");
+        return fail("Unsupported scanner token type");
     }
   }
 
-  if (!stack.empty()) throw BadHTML(format("Not all tags were closed: {}", stack));
+  if (!stack.empty()) return fail("Not all tags were closed: {}", stack);
 
   // Add a trailing span (that's empty) to signify all closed tags.
   spans_.emplace_back(Span{source.size(), source.size(), stack});
+
+  return std::nullopt;
 }
 
-void HTML::restore(Response &response) {
-  // No-op if process_markup was false (and thus spans_ is empty)
-  // TODO: replace this with optional<HTML> at a higher level
-  if (spans_.empty()) return;
+std::optional<HTML::Error> HTML::restore(Response &response) {
+  // restore() is a no-op if parse() wasn't called or wasn't successful. We have
+  // no state to restore in that case.
+  if (spans_.empty()) return std::nullopt;
 
   // We need alignment info to transfer the HTML tags from the input to the
   // translation. If those are not available, no HTML in translations for you.
-  ABORT_UNLESS(hasAlignments(response),
-               "Response object does not contain alignments. TranslationModel or ResponseOptions is misconfigured?");
+  if (!hasAlignments(response))
+    return Error{"Response object does not contain alignments. TranslationModel or ResponseOptions is misconfigured?"};
 
   // Reconstruction of HTML tags:
   // 1. Map each token to a Span
@@ -458,6 +474,8 @@ void HTML::restore(Response &response) {
 
   response.source = source;
   response.target = target;
+
+  return std::nullopt;
 }
 
 AnnotatedText HTML::restoreSource(AnnotatedText const &in, std::vector<SpanIterator> &sourceTokenSpans) {

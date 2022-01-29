@@ -62,15 +62,14 @@ std::vector<std::vector<T>> identity_matrix(size_t size) {
 TEST_CASE("Ignore HTML if process_markup is false") {
   std::string html_code("<p>This text &amp; has <b>HTML</b> in it</p>");
 
-  std::string input(html_code);
-  HTML html(std::move(input), false);
-  CHECK(input == html_code);
+  HTML html;
+  // Intentionally missing: html.parse(html_code);
 
   Response response;
   response.source.text = html_code;
   response.target.text = html_code;
   // Note: response.alignments is empty, which is allowed in this case
-  html.restore(response);
+  CHECK(!html.restore(response));
 
   // Assert that restore() does not mess with my HTML code
   CHECK(response.source.text == html_code);
@@ -80,7 +79,8 @@ TEST_CASE("Abort if alignments are missing") {
   marian::setThrowExceptionOnAbort(true);
 
   std::string input("<p>hello <b>world</b></p>\n");
-  HTML html(std::move(input), true);
+  HTML html;
+  CHECK(!html.parse(input));
 
   AnnotatedText source("hello world\n");
   recordSentenceFromByteRange(source, {
@@ -103,16 +103,16 @@ TEST_CASE("Abort if alignments are missing") {
   response.target = target;
   // Note: explicitly not setting response.alignments
 
-  CHECK_THROWS_WITH(
-      html.restore(response),
-      "Response object does not contain alignments. TranslationModel or ResponseOptions is misconfigured?");
+  auto err = html.restore(response);
+  CHECK((err &&
+         err->message ==
+             "Response object does not contain alignments. TranslationModel or ResponseOptions is misconfigured?"));
 }
 
 TEST_CASE("Abort if alignments are misconfigured") {
-  marian::setThrowExceptionOnAbort(true);
-
   std::string input("<p>hello <b>world</b></p>\n");
-  HTML html(std::move(input), true);
+  HTML html;
+  CHECK(!html.parse(input));
 
   AnnotatedText source("hello world\n");
   recordSentenceFromByteRange(source, {
@@ -138,29 +138,33 @@ TEST_CASE("Abort if alignments are misconfigured") {
   // response will have entries for each target word, but they will all be empty.
   response.alignments = {{{}, {}, {}, {}}};
 
-  CHECK_THROWS_WITH(
-      html.restore(response),
-      "Response object does not contain alignments. TranslationModel or ResponseOptions is misconfigured?");
+  auto err = html.restore(response);
+  CHECK((err &&
+         err->message ==
+             "Response object does not contain alignments. TranslationModel or ResponseOptions is misconfigured?"));
 }
 
 TEST_CASE("Do not abort if the input is just empty") {
   std::string input("");
-  HTML html(std::move(input), true);
+  HTML html;
+
+  CHECK(!html.parse(input));
   CHECK(input == "");
 
   Response response;
-  html.restore(response);
+  CHECK(!html.restore(response));
   CHECK(response.source.text == "");
   CHECK(response.target.text == "");
 }
 
 TEST_CASE("Do not abort if the input is just empty element") {
   std::string input("<p></p>");
-  HTML html(std::move(input), true);
+  HTML html;
+  CHECK(!html.parse(input));
   CHECK(input == "");
 
   Response response;
-  html.restore(response);
+  CHECK(!html.restore(response));
   CHECK(response.source.text == "<p></p>");
   CHECK(response.target.text == "<p></p>");
 }
@@ -170,7 +174,8 @@ TEST_CASE("Test case html entities") {
   // can be encoded as UTF-8 so there's no need to encode them through &...; when
   // innerHTML encodes the DOM as HTML.
   std::string input("<p data-attr=\"&quot;&apos;\">This is a sentence &lt;with&gt; named &amp; entities</p>");
-  HTML html(std::move(input), true);
+  HTML html;
+  CHECK(!html.parse(input));
   CHECK(input == "This is a sentence <with> named & entities");
 }
 
@@ -178,7 +183,8 @@ TEST_CASE("Test self-closing tags should be treated as paragraph break") {
   std::string test_str("<p>Space<br>please?</p>");
 
   std::string input(test_str);
-  HTML html(std::move(input), true);
+  HTML html;
+  CHECK(!html.parse(input));
   CHECK(input == "Space\n\nplease?");
 
   Response response;
@@ -218,7 +224,7 @@ TEST_CASE("Test self-closing tags should be treated as paragraph break") {
 
   // Main focus of this test is that the space that was introduced in the text
   // that was being translated does not end up in the translation.
-  html.restore(response);
+  CHECK(!html.restore(response));
   CHECK(response.source.text == "<p>Space<br>please?</p>");
   CHECK(response.target.text == "<p>Platz<br>bitte?</p>");
 }
@@ -227,7 +233,8 @@ TEST_CASE("Test inline tags should be treated as spaces") {
   std::string test_str("un<u>der</u>line");
 
   std::string input(test_str);
-  HTML html(std::move(input), true);
+  HTML html;
+  CHECK(!html.parse(input));
   CHECK(input == "un der line");
 
   Response response;
@@ -268,7 +275,8 @@ TEST_CASE("Test inline tags should not break words") {
   std::string input(test_str);
   HTML::Options options;
   options.substituteInlineTagsWithSpaces = false;
-  HTML html(std::move(input), true, std::move(options));
+  HTML html(std::move(options));
+  CHECK(!html.parse(input));
   CHECK(input == "underline");
 
   Response response;
@@ -288,14 +296,15 @@ TEST_CASE("Test inline tags should not break words") {
 
   response.alignments = {identity_matrix<float>(2)};
 
-  html.restore(response);
+  CHECK(!html.restore(response));
   CHECK(response.source.text == "<u></u>underline");  // TODO not spread <u> to whole word?
   CHECK(response.target.text == "<u></u>subrayar");   // TODO not spread <u> to the whole word?
 }
 
 TEST_CASE("Test reconstruction of target sentence") {
   std::string input("<p>hello <b>world</b></p>\n");
-  HTML html(std::move(input), true);
+  HTML html;
+  CHECK(!html.parse(input));
   CHECK(input == "hello world\n\n\n");  // tripple \n because \n + </p>
 
   AnnotatedText source("hello world\n\n\n");
@@ -319,7 +328,7 @@ TEST_CASE("Test reconstruction of target sentence") {
   response.target = target;
   response.alignments = {identity_matrix<float>(4)};
 
-  html.restore(response);
+  CHECK(!html.restore(response));
 
   std::vector<std::string> html_tokens_source{"", "<p>hell", "o", " <b>world", "", "</b></p>\n"};
 
@@ -331,7 +340,8 @@ TEST_CASE("Test reconstruction of target sentence") {
 
 TEST_CASE("Test reconstruction of target sentence with entities") {
   std::string input("<p>hello <b>world &amp; friends!</b></p>");
-  HTML html(std::move(input), true);
+  HTML html;
+  CHECK(!html.parse(input));
   CHECK(input == "hello world & friends!");
 
   AnnotatedText source("hello world & friends!");
@@ -361,7 +371,7 @@ TEST_CASE("Test reconstruction of target sentence with entities") {
   response.target = target;
   response.alignments = {identity_matrix<float>(7)};
 
-  html.restore(response);
+  CHECK(!html.restore(response));
 
   std::vector<std::string> html_tokens_source{"",         "<p>hell", "o", " <b>world", " &amp;",
                                               " friends", "!",       "",  "</b></p>"};
@@ -377,7 +387,8 @@ TEST_CASE("Test reconstruction of target sentence with entities") {
 TEST_CASE("Test reconstruction of target with multiple sentences") {
   std::string input(
       "<p>hello <b>world!</b> How does this <img> <b>deal <u>with multiple sentences?</u></b> Will it work?</p>");
-  HTML html(std::move(input), true);
+  HTML html;
+  CHECK(!html.parse(input));
 
   AnnotatedText source("hello world! How does this  deal with multiple sentences? Will it work?");
   CHECK(source.text == input);
@@ -447,7 +458,7 @@ TEST_CASE("Test reconstruction of target with multiple sentences") {
   response.source = source;
   response.target = target;
   response.alignments = {identity_matrix<float>(5), identity_matrix<float>(10), identity_matrix<float>(5)};
-  html.restore(response);
+  CHECK(!html.restore(response));
 
   std::vector<std::string> html_tokens_source{"",
                                               "<p>hell",
@@ -478,19 +489,22 @@ TEST_CASE("Test reconstruction of target with multiple sentences") {
 
 TEST_CASE("Test self-closing tag (HTML5)") {
   std::string input("<p>hello <img> <b>world</b> <u>and other <a href=\"#\">creatures</a></u></p>");
-  HTML html(std::move(input), true);
+  HTML html;
+  CHECK(!html.parse(input));
   CHECK(input == "hello  world and other creatures");  // Note double space between "hello" and "world"
 }
 
 TEST_CASE("Test self-closing tag (XHTML)") {
   std::string input("<p>hello<img/>world</p>");
-  HTML html(std::move(input), true);
+  HTML html;
+  CHECK(!html.parse(input));
   CHECK(input == "hello world");  // <img/> introduced space
 }
 
 TEST_CASE("Test empty void tag at end of input") {
   std::string input("hello <br>");
-  HTML html(std::move(input), true);
+  HTML html;
+  CHECK(!html.parse(input));
   CHECK(input == "hello ");
 
   Response response;
@@ -504,14 +518,15 @@ TEST_CASE("Test empty void tag at end of input") {
   response.target.appendSentence("", sentence.begin(), sentence.end());
   response.alignments = {identity_matrix<float>(3)};
 
-  html.restore(response);
+  CHECK(!html.restore(response));
   CHECK(response.source.text == "hello <br>");
   CHECK(response.target.text == "hello <br>");
 }
 
 TEST_CASE("Test empty tag pair at end of input") {
   std::string input("hello <u></u>");
-  HTML html(std::move(input), true);
+  HTML html;
+  CHECK(!html.parse(input));
   CHECK(input == "hello ");
 
   Response response;
@@ -525,14 +540,15 @@ TEST_CASE("Test empty tag pair at end of input") {
   response.target.appendSentence("", sentence.begin(), sentence.end());
   response.alignments = {identity_matrix<float>(3)};
 
-  html.restore(response);
+  CHECK(!html.restore(response));
   CHECK(response.source.text == "hello <u></u>");
   CHECK(response.target.text == "hello <u></u>");
 }
 
 TEST_CASE("Test empty self-closing pair at end of input in parent") {
   std::string input("<p>hello <br></p>");
-  HTML html(std::move(input), true);
+  HTML html;
+  CHECK(!html.parse(input));
   CHECK(input == "hello ");
 }
 
@@ -542,7 +558,8 @@ TEST_CASE("Test empty tag") {
       "id=\"1.2.3\">world</span></p>");
 
   std::string input(test_str);
-  HTML html(std::move(input), true);
+  HTML html;
+  CHECK(!html.parse(input));
   CHECK(input == "hello world");
 
   Response response;
@@ -558,7 +575,7 @@ TEST_CASE("Test empty tag") {
   response.target.appendSentence("", sentence.begin(), sentence.end());
   response.alignments = {identity_matrix<float>(4)};
 
-  html.restore(response);
+  CHECK(!html.restore(response));
   CHECK(response.source.text == test_str);
   CHECK(response.target.text == test_str);
 }
@@ -567,7 +584,8 @@ TEST_CASE("Test <script> element") {
   std::string test_str("hello <script>alert(\"<foo>\");</script>world");
 
   std::string input(test_str);
-  HTML html(std::move(input), true);
+  HTML html;
+  CHECK(!html.parse(input));
   CHECK(input == "hello \n\nworld");
 
   Response response;
@@ -583,7 +601,7 @@ TEST_CASE("Test <script> element") {
   response.target.appendSentence("", sentence.begin(), sentence.end());
   response.alignments = {identity_matrix<float>(5)};
 
-  html.restore(response);
+  CHECK(!html.restore(response));
   CHECK(response.source.text == test_str);
   CHECK(response.target.text == test_str);
 }
@@ -592,7 +610,8 @@ TEST_CASE("Test comment") {
   std::string test_str("foo <!-- <ignore> me -->bar");
 
   std::string input(test_str);
-  HTML html(std::move(input), true);
+  HTML html;
+  CHECK(!html.parse(input));
   CHECK(input == "foo bar");
 
   Response response;
@@ -606,14 +625,15 @@ TEST_CASE("Test comment") {
   response.target.appendSentence("", sentence.begin(), sentence.end());
   response.alignments = {identity_matrix<float>(3)};
 
-  html.restore(response);
+  CHECK(!html.restore(response));
   CHECK(response.source.text == test_str);
   CHECK(response.target.text == test_str);
 }
 
 TEST_CASE("End-to-end translation", "[!mayfail]") {
   std::string input("<p>I <b>like</b> to <u>drive</u> this car.</p>");
-  HTML html(std::move(input), true);
+  HTML html;
+  CHECK(!html.parse(input));
   CHECK(input == "I like to drive this car.");
 
   Response response;
@@ -663,7 +683,7 @@ TEST_CASE("End-to-end translation", "[!mayfail]") {
     response.target.appendSentence("", sentence.begin(), sentence.end());
   }
 
-  html.restore(response);
+  CHECK(!html.restore(response));
 
   {
     AnnotatedText source;
@@ -708,7 +728,8 @@ TEST_CASE("End-to-end translation", "[!mayfail]") {
 
 TEST_CASE("End-to-end translation when no words with markup align", "[!mayfail]") {
   std::string input("<p>I <b>like</b> to <u>drive</u> this car.</p>");
-  HTML html(std::move(input), true);
+  HTML html;
+  CHECK(!html.parse(input));
   CHECK(input == "I like to drive this car.");
 
   Response response;
@@ -754,7 +775,7 @@ TEST_CASE("End-to-end translation when no words with markup align", "[!mayfail]"
     response.target.appendSentence("", sentence.begin(), sentence.end());
   }
 
-  html.restore(response);
+  CHECK(!html.restore(response));
 
   {
     AnnotatedText source;

@@ -42,14 +42,36 @@ BlockingService::BlockingService(const BlockingService::Config &config)
 std::vector<Response> BlockingService::translateMultiple(std::shared_ptr<TranslationModel> translationModel,
                                                          std::vector<std::string> &&sources,
                                                          const ResponseOptions &responseOptions) {
-  std::vector<HTML> htmls;
-  for (auto &&source : sources) {
-    htmls.emplace_back(std::move(source), responseOptions.HTML);
+  HTML html;
+
+  std::vector<HTML> htmls(sources.size());
+  std::vector<Response> responses(sources.size());
+
+  size_t j = 0;
+  for (size_t i = 0; i < sources.size(); ++i) {
+    if (!responseOptions.HTML) {
+      sources[j++] = std::move(sources[i]);
+    } else if (auto err = htmls[i].parse(sources[i])) {
+      responses[i].error = err->message;
+    } else {
+      sources[j++] = std::move(sources[i]);
+    }
   }
-  std::vector<Response> responses = translateMultipleRaw(translationModel, std::move(sources), responseOptions);
-  for (size_t i = 0; i < responses.size(); i++) {
-    htmls[i].restore(responses[i]);
+  sources.resize(j);  // Clip off all the failed parses
+
+  std::vector<Response> translationResponses =
+      translateMultipleRaw(translationModel, std::move(sources), responseOptions);
+
+  auto it = translationResponses.begin();
+  for (size_t i = 0; i < responses.size(); ++i) {
+    if (responses[i].ok()) {
+      responses[i] = std::move(*it++);
+      if (auto err = htmls[i].restore(responses[i])) {
+        responses[i].error = err->message;
+      }
+    }
   }
+  assert(it == translationResponses.end());
 
   return responses;
 }
@@ -57,8 +79,7 @@ std::vector<Response> BlockingService::translateMultiple(std::shared_ptr<Transla
 std::vector<Response> BlockingService::translateMultipleRaw(std::shared_ptr<TranslationModel> translationModel,
                                                             std::vector<std::string> &&sources,
                                                             const ResponseOptions &responseOptions) {
-  std::vector<Response> responses;
-  responses.resize(sources.size());
+  std::vector<Response> responses(sources.size());
 
   for (size_t i = 0; i < sources.size(); i++) {
     auto callback = [i, &responses](Response &&response) { responses[i] = std::move(response); };  //
@@ -152,7 +173,7 @@ AsyncService::~AsyncService() {
 
 void AsyncService::pivot(std::shared_ptr<TranslationModel> first, std::shared_ptr<TranslationModel> second,
                          std::string &&source, CallbackType clientCallback, const ResponseOptions &responseOptions) {
-  Ptr<HTML> html = std::make_shared<HTML>(std::move(source), responseOptions.HTML);
+  Ptr<HTML> html = std::make_shared<HTML>();
   // This is callback chaining or CPS due to async.
 
   // We create a callback which feeds the result of first into a second translation (internalCallback), which is
@@ -174,8 +195,11 @@ void AsyncService::pivot(std::shared_ptr<TranslationModel> first, std::shared_pt
       Response finalResponse = combine(std::move(sourceToPivot), std::move(pivotToTarget));
 
       // Sentences should be consistent now, give way to client.
-      html->restore(finalResponse);
-      clientCallback(std::move(finalResponse));
+      if (auto err = html->restore(finalResponse)) {
+        clientCallback(Response::withError(std::move(err->message)));
+      } else {
+        clientCallback(std::move(finalResponse));
+      }
     };
 
     // Second call.
@@ -185,6 +209,13 @@ void AsyncService::pivot(std::shared_ptr<TranslationModel> first, std::shared_pt
     safeBatchingPool_.enqueueRequest(second, request);
   };
 
+  if (responseOptions.HTML) {
+    if (auto err = html->parse(source)) {
+      clientCallback(Response::withError(std::move(err->message)));
+      return;
+    }
+  }
+
   // First call.
   translateRaw(first, std::move(source), internalCallback, responseOptions);
 }
@@ -192,10 +223,21 @@ void AsyncService::pivot(std::shared_ptr<TranslationModel> first, std::shared_pt
 void AsyncService::translate(std::shared_ptr<TranslationModel> translationModel, std::string &&source,
                              CallbackType callback, const ResponseOptions &responseOptions) {
   // Producer thread, a call to this function adds new work items. If batches are available, notifies workers waiting.
-  Ptr<HTML> html = std::make_shared<HTML>(std::move(source), responseOptions.HTML);
+  Ptr<HTML> html = std::make_shared<HTML>();
+
+  if (responseOptions.HTML) {
+    if (auto err = html->parse(source)) {
+      callback(Response::withError(std::move(err->message)));
+      return;
+    }
+  }
+
   auto internalCallback = [html, callback](Response &&response) {
-    html->restore(response);
-    callback(std::move(response));
+    if (auto err = html->restore(response)) {
+      callback(Response::withError(std::move(err->message)));
+    } else {
+      callback(std::move(response));
+    }
   };
 
   translateRaw(translationModel, std::move(source), internalCallback, responseOptions);

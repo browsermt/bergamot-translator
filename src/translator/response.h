@@ -73,6 +73,23 @@ struct Response {
   const std::string &getOriginalText() const { return source.text; }
 
   const std::string &getTranslatedText() const { return target.text; }
+
+  /// Stores a possible error message if the translation request was
+  /// unsuccessful. Empty message means no error.
+  std::string error;
+
+  /// Test whether this request has not failed yet.
+  /// Shortcut for the empty-message-is-good semantics above.
+  bool ok() const { return error.empty(); }
+
+  /// Factory for creating an error response. Just a shortcut, setting an error
+  /// by changing the `Response.error` field is also valid.
+  inline static Response withError(std::string &&error) {
+    assert(!error.empty());
+    Response response;
+    response.error = std::move(error);
+    return response;
+  }
 };
 
 std::vector<Alignment> remapAlignments(const Response &first, const Response &second);

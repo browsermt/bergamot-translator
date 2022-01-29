@@ -2,6 +2,7 @@
 #define SRC_BERGAMOT_HTML_H_
 
 #include <forward_list>
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <unordered_set>
@@ -13,11 +14,6 @@ namespace marian {
 namespace bergamot {
 
 struct Response;
-
-class BadHTML : public std::runtime_error {
- public:
-  explicit BadHTML(std::string const &what) : std::runtime_error(what) {}
-};
 
 class HTML {
  public:
@@ -45,13 +41,17 @@ class HTML {
     bool substituteInlineTagsWithSpaces = true;
   };
 
+  /// Internal data type that represents an HTML element. Used as markup marker
+  /// in Span.tags.
   struct Tag {
     enum NodeType {
       ELEMENT,
       VOID_ELEMENT,
       COMMENT,
       PROCESSING_INSTRUCTION,
-      WHITESPACE,  // negative space
+      WHITESPACE,  // negative space: parser inserted white space into the
+                   // translation input and this tag marks where that space will
+                   // likely need to be removed.
     };
 
     NodeType type;           // Type of the node
@@ -64,8 +64,12 @@ class HTML {
     // `attributes` and `data` with string_views pointing to it.
   };
 
+  /// Internal data type that represents the (nested!) markup that is being
+  /// applied to a span.
   using Taint = std::vector<Tag *>;
 
+  /// Internal data type that describes what markup (tags!) are applied to a bit
+  /// of translation input.
   struct Span {
     size_t begin;
     size_t end;
@@ -73,9 +77,25 @@ class HTML {
     inline size_t size() const { return end - begin; }
   };
 
-  explicit HTML(std::string &&source, bool process_markup) : HTML(std::move(source), process_markup, HTML::Options{}){};
-  explicit HTML(std::string &&source, bool process_markup, Options &&options);
-  void restore(Response &response);
+  /// Error optionally returned by `parse()` and `restore()`. Used to be done by
+  /// exceptions, but that is not compatible with our WASM bindings.
+  struct Error {
+    std::string message;
+    // @TODO maybe also record line + char position?
+  };
+
+  HTML() : HTML(HTML::Options{}){};
+  explicit HTML(Options &&options);
+
+  /// Parses the HTML in source, and stores the parse state internally. `source`
+  /// is altered by reference and will only contain translatable text. Can
+  /// return an error message in which case `source` is unchanged.
+  std::optional<Error> parse(std::string &source);
+
+  /// Uses the translated text, alignment information in `response` and the
+  /// internal state of the previously parsed HTML, this will recreate the HTML
+  /// markup in `response.target`.
+  std::optional<Error> restore(Response &response);
 
  private:
   using SpanIterator = std::vector<HTML::Span>::const_iterator;
@@ -88,8 +108,9 @@ class HTML {
                  std::vector<HTML::SpanIterator> &targetTokenSpans);
   void hardAlignments(Response const &response, std::vector<std::vector<size_t>> &alignments);
   bool isContinuation(string_view prev, string_view str);
-  // Allocates tag in pool_ (which then owns it) and gives a pointer to be used
-  // in Taints. Pointer is valid as long as this HTML instance lives on.
+
+  /// Allocates tag in pool_ (which then owns it) and gives a pointer to be used
+  /// in Taints. Pointer is valid as long as this HTML instance lives on.
   Tag *makeTag(Tag &&tag);
 
   Options options_;

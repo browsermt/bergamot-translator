@@ -83,7 +83,7 @@ class BlockingService {
     size_t cacheSize{2000};    ///< Size in History items to be stored in the cache. Loosely corresponds to sentences to
                                /// cache in the real world.
     size_t workspaceSizeInMB{1024};
-    Logger::Config logger;     // Configurations for logging
+    Logger::Config logger;  // Configurations for logging
 
     template <class App>
     static void addOptions(App &app, Config &config) {
@@ -164,7 +164,7 @@ class AsyncService {
                                   ///< reasonably large cache-size.
 
     size_t workspaceSizeInMB{1024};
-    Logger::Config logger;        // Configurations for logging
+    Logger::Config logger;  // Configurations for logging
 
     template <class App>
     static void addOptions(App &app, Config &config) {

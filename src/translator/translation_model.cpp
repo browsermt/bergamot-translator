@@ -48,7 +48,6 @@ TranslationModel::TranslationModel(const Config &options, MemoryBundle &&memory 
     // In this case, the loadpath does not load shortlist.
     shortlistGenerator_ = nullptr;
   }
-  */
 }
 
 void TranslationModel::loadBackend(MarianBackend &backend, Workspace &workspace) {

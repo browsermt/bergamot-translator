@@ -173,7 +173,7 @@ class Mozilla(Repository):
         self.update()
 
     def update(self):
-        url = "https://gist.githubusercontent.com/jerinphilip/f9bc31d70e4201771b7734ab1cfd1205/raw/d2ddd8ddb822695f1ee2ccccbb12e9c0daeeabbf/mozilla-models.json"
+        url = "https://gist.githubusercontent.com/jerinphilip/f9bc31d70e4201771b7734ab1cfd1205/raw/242460bffe5cb3774c662ee350612b479b76071b/mozilla-models.json"
         content = requests.get(url).text
         self.inventory = json.loads(content)
 
@@ -210,6 +210,7 @@ class Mozilla(Repository):
         os.makedirs(model_dir, exist_ok=True)
         for code, entry in payloads.items():
             fname = entry["name"]
+            print("Downloading", fname)
             save_location = os.path.join(model_dir, fname)
             resource_url = "{}/{}".format(
                 self.inventory["modelRegistryRootURL"],

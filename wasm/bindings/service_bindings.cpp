@@ -78,7 +78,8 @@ EMSCRIPTEN_BINDINGS(blocking_service_config) {
 EMSCRIPTEN_BINDINGS(blocking_service) {
   class_<BlockingService>("BlockingService")
       .constructor<BlockingService::Config>()
-      .function("translate", &BlockingService::translateMultiple);
+      .function("translate", &BlockingService::translateMultiple)
+      .function("translateViaPivoting", &BlockingService::pivotMultiple);
 
   register_vector<std::string>("VectorString");
 }

@@ -71,6 +71,8 @@ void TestSuite<Service>::TestSuite::run(const std::string &opModeAsString, std::
     translationCache(models.front());
   } else if (opModeAsString == "test-pivot") {
     pivotTranslate(models);
+  } else if (opModeAsString == "test-pivot-with-html") {
+    pivotTranslateWithHTML(models);
   } else if (opModeAsString == "test-html-translation") {
     htmlTranslation(models.front());
   } else {
@@ -224,6 +226,19 @@ void TestSuite<Service>::translationCache(Ptr<TranslationModel> model) {
            "same path, this is expected to be same.");
 
   std::cout << firstResponse.target.text;
+}
+
+template <class Service>
+void TestSuite<Service>::pivotTranslateWithHTML(std::vector<Ptr<TranslationModel>> &models) {
+  ABORT_IF(models.size() != 2, "Forward and backward test needs two models.");
+  ResponseOptions responseOptions;
+  responseOptions.HTML = true;
+  std::string source = readFromStdin();
+  std::promise<Response> responsePromise;
+  std::future<Response> responseFuture = responsePromise.get_future();
+  Response response = bridge_.pivot(service_, models.front(), models.back(), std::move(source), responseOptions);
+  std::cout << response.source.text;
+  std::cout << response.target.text;
 }
 
 template <class Service>

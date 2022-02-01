@@ -25,6 +25,8 @@ std::vector<SentenceQualityScore> getQualityScores(const Response& response) { r
 EMSCRIPTEN_BINDINGS(response) {
   class_<Response>("Response")
       .constructor<>()
+      .property("ok", &Response::ok)
+      .property("error", &Response::error)
       .function("size", &Response::size)
       .function("getQualityScores", &getQualityScores)
       .function("getOriginalText", &Response::getOriginalText)

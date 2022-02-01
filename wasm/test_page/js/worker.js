@@ -245,6 +245,7 @@ const _translateInvolvingEnglish = (from, to, input) => {
   const vectorResponse = translationService.translate(translationModel, vectorSourceText, responseOptions);
 
   // Parse all relevant information from vectorResponse
+  _parseResponseErrors(vectorResponse);
   const listTranslatedText = _parseTranslatedText(vectorResponse);
   const listSourceText = _parseSourceText(vectorResponse);
   const listTranslatedTextSentences = _parseTranslatedTextSentences(vectorResponse);
@@ -261,6 +262,13 @@ const _translateInvolvingEnglish = (from, to, input) => {
   vectorSourceText.delete();
 
   return listTranslatedText;
+}
+
+const _parseResponseErrors = (vectorResponse) => {
+  for (let i = 0; i < vectorResponse.size(); i++) {
+    if (!vectorResponse.get(i).ok)
+      throw Error(`Request ${i} returned an error: ${vectorResponse.get(i).error}`);
+  }
 }
 
 const _parseTranslatedText = (vectorResponse) => {

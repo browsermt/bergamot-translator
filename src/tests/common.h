@@ -88,6 +88,8 @@ class TestSuite {
 
   void pivotTranslate(std::vector<Ptr<TranslationModel>> &models);
 
+  void pivotTranslateWithHTML(std::vector<Ptr<TranslationModel>> &models);
+
   void htmlTranslation(Ptr<TranslationModel> model);
 };
 

@@ -81,6 +81,11 @@ std::vector<Response> BlockingService::pivotMultiple(std::shared_ptr<Translation
                                                      std::shared_ptr<TranslationModel> second,
                                                      std::vector<std::string> &&sources,
                                                      const ResponseOptions &responseOptions) {
+  std::vector<HTML> htmls;
+  for (auto &&source : sources) {
+    htmls.emplace_back(std::move(source), responseOptions.HTML);
+  }
+
   // Translate source to pivots. This is same as calling translateMultiple.
   std::vector<Response> sourcesToPivots;
   sourcesToPivots = translateMultipleRaw(first, std::move(sources), responseOptions);
@@ -113,6 +118,10 @@ std::vector<Response> BlockingService::pivotMultiple(std::shared_ptr<Translation
   for (size_t i = 0; i < sourcesToPivots.size(); i++) {
     Response finalResponse = combine(std::move(sourcesToPivots[i]), std::move(pivotsToTargets[i]));
     finalResponses.push_back(std::move(finalResponse));
+  }
+
+  for (size_t i = 0; i < finalResponses.size(); i++) {
+    htmls[i].restore(finalResponses[i]);
   }
 
   return finalResponses;

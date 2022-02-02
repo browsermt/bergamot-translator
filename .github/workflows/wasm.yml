@@ -38,8 +38,7 @@ jobs:
             # These needs to be done in the activated shell.
             eval $(./emsdk/emsdk construct_env \
                 | sed 's/export PATH=\(.*\);/echo \1 >> $GITHUB_PATH;/' \
-                | sed 's/export \(.*\);/echo \1 >> $GITHUB_ENV;/' \
-                | grep "echo");
+                | sed 's/export \(.*\);/echo \1 >> $GITHUB_ENV;/' );
 
             # This looks more permanent than version pinned, so keeping temporarily to avoid failures.
             echo "${{ github.workspace }}/emsdk/ccache/git-emscripten_64bit/bin" >> $GITHUB_PATH

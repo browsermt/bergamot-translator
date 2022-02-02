@@ -34,17 +34,14 @@ jobs:
             (cd emsdk && ./emsdk activate ${{ env.emsdk_version }} ccache-git-emscripten-64bit)
             # mtime of this file is checked by ccache, we set it to avoid cache misses.
             touch -m -d '1 Jan 2021 12:00' emsdk/.emscripten
-      - name: Setup Paths
-        run: |
-            # Following two variables are set by emsdk activated otherwise
-            echo "_EMCC_CCACHE=1" >> $GITHUB_ENV
-            echo "EM_CONFIG=$(realpath emsdk/.emscripten)" >> $GITHUB_ENV
 
-            # Configure GitHub Paths
-            echo "${{ github.workspace }}/emsdk" >> $GITHUB_PATH
-            echo "${{ github.workspace }}/emsdk/upstream/emscripten" >> $GITHUB_PATH
-            echo "${{ github.workspace }}/emsdk/node/14.18.2_64bit/bin" >> $GITHUB_PATH
-            echo "${{ github.workspace }}/emsdk/ccache/git-emscripten_64bit/bin" >> $GITHUB_PATH
+            # These needs to be done in the activated shell.
+            eval $(./emsdk/emsdk construct_env 2>&1 \
+                | grep -v "\+\=" \
+                | grep "="  \
+                | sed 's/export PATH=\(.*\);/echo \1 >> $GITHUB_PATH;/' \
+                | sed 's/export \(.*\);/echo \1 >> $GITHUB_ENV;/' \
+                | grep "echo");
 
       - name: Generate ccache_vars for ccache based on machine
         shell: bash

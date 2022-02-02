@@ -36,9 +36,7 @@ jobs:
             touch -m -d '1 Jan 2021 12:00' emsdk/.emscripten
 
             # These needs to be done in the activated shell.
-            eval $(./emsdk/emsdk construct_env 2>&1 \
-                | grep -v "\+\=" \
-                | grep "="  \
+            eval $(./emsdk/emsdk construct_env \
                 | sed 's/export PATH=\(.*\);/echo \1 >> $GITHUB_PATH;/' \
                 | sed 's/export \(.*\);/echo \1 >> $GITHUB_ENV;/' \
                 | grep "echo");

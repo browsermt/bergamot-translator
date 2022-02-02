@@ -109,21 +109,13 @@ jobs:
         working-directory: build-wasm
         run: bash ../wasm/patch-artifacts-import-gemm-module.sh
 
-      - name: Check artifacts
-        working-directory: build-wasm
-        run: |
-          ls -all bergamot*
-          if ls bergamot*.wasm &>/dev/null && ls bergamot*.js &>/dev/null
-          then
-            echo "Artifacts Successfully Generated"
-          else
-            echo "Failure: Artifacts Not Present"
-            exit 1
-          fi
-
       - name: Upload wasm artifact
         uses: actions/upload-artifact@v2
         with:
           name: bergamot-translator-worker
-          path: ${{github.workspace}}/build-wasm/bergamot-translator-worker.*
+          if-no-files-found: error
+          path: |
+              ${{github.workspace}}/build-wasm/bergamot-translator-worker.js
+              ${{github.workspace}}/build-wasm/bergamot-translator-worker.wasm
+              ${{github.workspace}}/build-wasm/bergamot-translator-worker.js.bak
 

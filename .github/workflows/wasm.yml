@@ -43,6 +43,9 @@ jobs:
                 | sed 's/export \(.*\);/echo \1 >> $GITHUB_ENV;/' \
                 | grep "echo");
 
+            # This looks more permanent than version pinned, so keeping temporarily to avoid failures.
+            echo "${{ github.workspace }}/emsdk/ccache/git-emscripten_64bit/bin" >> $GITHUB_PATH
+
       - name: Generate ccache_vars for ccache based on machine
         shell: bash
         id: ccache_vars

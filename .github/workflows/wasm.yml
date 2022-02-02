@@ -75,11 +75,11 @@ jobs:
         uses: actions/cache@v2
         with:
           path: ${{ env.ccache_dir }}
-          key: ccache-${{ job.id }}-${{ steps.ccache_vars.outputs.hash }}-${{ github.ref }}-${{ steps.ccache_vars.outputs.timestamp }}
+          key: ccache-${{ job.id }}-${{ env.emsdk_version }}-${{ steps.ccache_vars.outputs.hash }}-${{ github.ref }}-${{ steps.ccache_vars.outputs.timestamp }}
           restore-keys: |-
-            ccache-${{ job.id }}-${{ steps.ccache_vars.outputs.hash }}-${{ github.ref }}
-            ccache-${{ job.id }}-${{ steps.ccache_vars.outputs.hash }}
-            ccache-${{ job.id }}
+            ccache-${{ job.id }}-${{ env.emsdk_version }}-${{ steps.ccache_vars.outputs.hash }}-${{ github.ref }}
+            ccache-${{ job.id }}-${{ env.emsdk_version }}-${{ steps.ccache_vars.outputs.hash }}
+            ccache-${{ job.id }}-${{ env.emsdk_version }}
 
       - name: Configure builds
         run: |

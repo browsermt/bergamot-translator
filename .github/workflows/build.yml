@@ -403,7 +403,6 @@ jobs:
         run: |-
             python3 -m pytype bindings/python
 
-
     docs:
       runs-on: ubuntu-18.04
       needs: [python-ubuntu]

@@ -305,14 +305,14 @@ jobs:
             ccache -z # Zero cache entry
 
         # WORMHOLE=off
-        - name: Configure builds
+        - name: "Configure builds for WORMHOLE=off"
           run: |
             mkdir -p build-wasm-without-wormhole
             cd build-wasm-without-wormhole
             emcmake cmake -DCOMPILE_WASM=on -DWORMHOLE=off ..
 
 
-        - name: Compile
+        - name: "Compile with WORMHOLE=off"
           working-directory: build-wasm-without-wormhole
           run: |
             emmake make -j2
@@ -327,14 +327,14 @@ jobs:
 
 
         # WORMHOLE=on
-        - name: Configure builds
+        - name: "Configure builds for WORMHOLE=on"
           run: |
             mkdir -p build-wasm-with-wormhole
             cd build-wasm-with-wormhole
             emcmake cmake -DCOMPILE_WASM=on -DWORMHOLE=on ..
 
 
-        - name: Compile
+        - name: "Compile with WORMHOLE=on"
           working-directory: build-wasm-with-wormhole
           run: |
             emmake make -j2

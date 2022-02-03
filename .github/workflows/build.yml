@@ -386,11 +386,6 @@ jobs:
        - name: Download artifacts
          uses: actions/download-artifact@v2
         
-       - name: List artefacts
-         run: |
-             find artifact
-             find wasm-artefacts
-  
        - name: Update GitHub prerelease
          uses: marvinpinto/action-automatic-releases@latest
          with:

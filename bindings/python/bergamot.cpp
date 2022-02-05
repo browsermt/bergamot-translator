@@ -33,10 +33,7 @@ PYBIND11_MAKE_OPAQUE(Alignments);
 
 class ServicePyAdapter {
  public:
-  ServicePyAdapter(const Service::Config &config) : service_(make_service(config)) {
-    // Set marian to throw exceptions instead of std::abort()
-    marian::setThrowExceptionOnAbort(true);
-  }
+  ServicePyAdapter(const Service::Config &config) : service_(make_service(config)) {}
 
   std::shared_ptr<_Model> modelFromConfig(const std::string &config) {
     auto parsedConfig = marian::bergamot::parseOptionsFromString(config);

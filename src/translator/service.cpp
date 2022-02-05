@@ -37,10 +37,7 @@ BlockingService::BlockingService(const BlockingService::Config &config)
       requestId_(0),
       batchingPool_(),
       cache_(config.cacheSize, /*mutexBuckets=*/1),
-      logger_(config.logger) {
-  // Set marian to throw exceptions instead of std::abort()
-  marian::setThrowExceptionOnAbort(true);
-}
+      logger_(config.logger) {}
 
 std::vector<Response> BlockingService::translateMultiple(std::shared_ptr<TranslationModel> translationModel,
                                                          std::vector<std::string> &&sources,
@@ -136,8 +133,6 @@ AsyncService::AsyncService(const AsyncService::Config &config)
       safeBatchingPool_(),
       cache_(config_.cacheSize, config_.cacheMutexBuckets),
       logger_(config.logger) {
-  // Set marian to throw exceptions instead of std::abort()
-  marian::setThrowExceptionOnAbort(true);
   ABORT_IF(config_.numWorkers == 0, "Number of workers should be at least 1 in a threaded workflow");
   workers_.reserve(config_.numWorkers);
   for (size_t cpuId = 0; cpuId < config_.numWorkers; cpuId++) {

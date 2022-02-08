@@ -50,11 +50,11 @@ std::vector<Response> BlockingService::translateMultiple(std::shared_ptr<Transla
   size_t j = 0;
   for (size_t i = 0; i < sources.size(); ++i) {
     if (!responseOptions.HTML) {
-      sources[j++] = std::move(sources[i]);
+      if (j++ != i) sources[j] = std::move(sources[i]);
     } else if (auto err = htmls[i].parse(sources[i])) {
       responses[i].error = err->message;
     } else {
-      sources[j++] = std::move(sources[i]);
+      if (j++ != i) sources[j] = std::move(sources[i]);
     }
   }
   sources.resize(j);  // Clip off all the failed parses

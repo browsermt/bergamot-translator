@@ -165,6 +165,16 @@ TEST_CASE("Do not abort if the input is just empty element") {
   CHECK(response.target.text == "<p></p>");
 }
 
+TEST_CASE("Tag names are case insensitive") {
+  // Tests <P> vs </p> and <BR> should be recognized as a void tag <br>.
+  // <B> should be recognized as inline.
+  std::string test_str("<P><B>Spa</B>ce<BR>please?</p>");
+
+  std::string input(test_str);
+  HTML html(std::move(input), true);
+  CHECK(input == "Spa ce\n\nplease?");
+}
+
 TEST_CASE("Test case html entities") {
   // These are all entities I would expect in innerHTML, since all other entities
   // can be encoded as UTF-8 so there's no need to encode them through &...; when

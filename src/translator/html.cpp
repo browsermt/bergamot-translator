@@ -1,5 +1,7 @@
 #include "html.h"
 
+#include <algorithm>
+
 #include "response.h"
 #include "xh_scanner.h"
 
@@ -44,6 +46,13 @@ size_t countPrefixWhitespaces(marian::string_view const &input) {
   size_t size = 0;
   while (size < input.size() && std::isspace(input[size])) ++size;
   return size;
+}
+
+std::string toLowerCase(std::string_view const &input) {
+  std::string out;
+  out.resize(input.size());
+  std::transform(input.begin(), input.end(), out.begin(), [](unsigned char c) { return std::tolower(c); });
+  return out;
 }
 
 // Formatters used for exception messages combined with format()
@@ -335,10 +344,11 @@ HTML::HTML(std::string &&source, bool process_markup, Options &&options) : optio
       } break;
 
       case markup::Scanner::TT_TAG_START: {
-        std::string name(scanner.tag());
+        std::string name = toLowerCase(scanner.tag());
 
         // Tag *tag is used by attribute parsing
-        tag = makeTag({contains(options_.voidTags, name) ? Tag::VOID_ELEMENT : Tag::ELEMENT, std::move(name)});
+        tag =
+            makeTag({contains(options_.voidTags, name) ? Tag::VOID_ELEMENT : Tag::ELEMENT, std::string(scanner.tag())});
 
         stack.push_back(tag);
 
@@ -351,21 +361,22 @@ HTML::HTML(std::string &&source, bool process_markup, Options &&options) : optio
         }
 
         // Treat non-inline HTML tags as spaces that break up words.
-        if (!contains(options_.inlineTags, tag->name)) {
+        if (!contains(options_.inlineTags, name)) {
           addSentenceBreak = true;
         } else {
           addSpace = true;
         }
       } break;
 
-      case markup::Scanner::TT_TAG_END:
+      case markup::Scanner::TT_TAG_END: {
+        std::string tagName = toLowerCase(scanner.tag());
         // If this is the closing bit of a void tag, i.e. triggered by the "/>"
         // bit of "<img/>", then completely ignore it.
-        if (contains(options_.voidTags, std::string(scanner.tag()))) break;
+        if (contains(options_.voidTags, tagName)) break;
 
         if (stack.empty()) throw BadHTML(format("Encountered more closing tags ({}) than opening tags", scanner.tag()));
 
-        if (stack.back()->name != scanner.tag())
+        if (toLowerCase(stack.back()->name) != toLowerCase(scanner.tag()))
           throw BadHTML(format("Encountered unexpected closing tag </{}>, stack is {}", scanner.tag(), stack));
 
         // What to do with "<u></u>" case, where tag is immediately closed
@@ -377,12 +388,12 @@ HTML::HTML(std::string &&source, bool process_markup, Options &&options) : optio
         stack.pop_back();
 
         // Add space if necessary
-        if (!contains(options_.inlineTags, std::string(scanner.tag()))) {
+        if (!contains(options_.inlineTags, tagName)) {
           addSentenceBreak = true;
         } else {
           addSpace = true;
         }
-        break;
+      } break;
 
       case markup::Scanner::TT_ATTRIBUTE:
         assert(tag != nullptr);

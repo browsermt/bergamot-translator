@@ -37,6 +37,12 @@ class HTML {
     // https://developer.mozilla.org/en-US/docs/Web/HTML/Element/wbr
     std::unordered_set<std::string> inWordTags{"wbr"};
 
+    // List of elements we copy as is, but do parse as if they're HTML because
+    // they could be nested. For <script> we just scan for </script> because
+    // the script tag may not be nested, but that is not the case for these
+    // elements per se.
+    std::unordered_set<std::string> ignoredTags{"code", "kbd", "samp", "var", "dir", "acronym", "math", "textarea"};
+
     // List of characters that occur at the start of a token that indicate that
     // the this token is probably *not* a continuation of a word. Set to empty
     // to never mark a token as a continuation of the word.

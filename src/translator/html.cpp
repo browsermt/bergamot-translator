@@ -7,6 +7,7 @@
 
 namespace {
 using marian::bergamot::AnnotatedText;
+using marian::bergamot::BadHTML;
 using marian::bergamot::ByteRange;
 using marian::bergamot::HTML;
 using marian::bergamot::Response;
@@ -284,6 +285,80 @@ size_t debugCountTokens(AnnotatedText const &text) {
   return tokens;
 }
 
+// Helper function that consumes a tag as if it is a special tag, except that it
+// takes nesting into account. I.e. `<a><a></a></a>` will be consumed to the
+// last `</a>`. Assumes TT_TAG_START is already consumed, which was necessary
+// to determine whether this was an element that needed to be ignored.
+void consumeIgnoredTag(markup::Scanner &scanner, HTML::Tag &tag, std::string const &name) {
+  // Only full elements can be consumed this way. With void tags we don't know
+  // where to stop scanning. All other types cannot be nested anyway.
+  assert(tag.type == HTML::Tag::ELEMENT);
+
+  // TT_TAG_START is already consumed.
+  markup::Scanner::TokenType token;
+  size_t inside = 0;
+
+  // Consume the full open tag, i.e. all its attributes
+  while (!inside) {
+    token = scanner.next();
+    switch (token) {
+      case markup::Scanner::TT_ERROR:
+        throw BadHTML("HTML parse error");
+      case markup::Scanner::TT_EOF:
+        throw BadHTML(format("Did not find closing tag </{}>", name));
+      case markup::Scanner::TT_ATTRIBUTE:
+        tag.attributes += format(" {}=\"{}\"", scanner.attribute(), scanner.value());
+        break;
+      default:
+        // Not an attribute! Must be something inside the body or the closing
+        // tag already. Time to jump to the next loop.
+        ++inside;
+        break;
+    }
+  }
+
+  // Last token was something that would have triggered Scanner::scanBody(),
+  // which sets value() to start pointing at the body.
+  const char *start = scanner.value().data();
+
+  while (inside) {
+    switch (token) {
+      case markup::Scanner::TT_ERROR:
+        throw BadHTML("HTML parse error");
+      case markup::Scanner::TT_EOF:
+        throw BadHTML(format("Did not find closing tag </{}>", name));
+      case markup::Scanner::TT_TAG_START:
+      case markup::Scanner::TT_TAG_END:
+        // Note: Looking specifically for only our own type of tag so we don't
+        // have to care about whether other tags we encounter are void tags or
+        // not. Does assume the HTML is valid, as no stack is kept.
+        if (toLowerCase(scanner.tag()) == name) {
+          if (token == markup::Scanner::TT_TAG_END) {
+            if (--inside == 0) break;  // also stops loop because !inside
+          } else {
+            ++inside;
+          }
+        }
+        // intentional fall-through to scanner.next()!
+      default:
+        token = scanner.next();
+        break;
+    }
+  }
+
+  // Only a TAG_END could have stopped the previous loop. If we know the name
+  // of that closing element, e.g. `</code>`, we also know the position of
+  // where the body ended. 2 (`</`) characters before it!
+  assert(token == markup::Scanner::TT_TAG_END);
+  const char *end = scanner.tag().data() - 2;
+
+  // All data between the end of the first open element, and the start of the
+  // last close element, we just treat as raw data that will be printed when
+  // this tag is eventually printed.
+  assert(end >= start);
+  tag.data = std::string_view(start, end - start);
+}
+
 }  // namespace
 
 namespace marian::bergamot {
@@ -356,6 +431,14 @@ HTML::HTML(std::string &&source, bool process_markup, Options &&options) : optio
         // so instead we "apply" them to an empty span in between, and then
         // immediately remove them again from the stack.
         if (tag->type == Tag::VOID_ELEMENT) {
+          spans_.push_back(Span{source.size(), source.size(), stack});
+          stack.pop_back();
+        }
+
+        // Ignored tags have same semantics as void tags with regards to moving
+        // them around with the rest of the content.
+        if (contains(options_.ignoredTags, name)) {
+          consumeIgnoredTag(scanner, *tag, name);
           spans_.push_back(Span{source.size(), source.size(), stack});
           stack.pop_back();
         }

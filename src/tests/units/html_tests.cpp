@@ -637,6 +637,14 @@ TEST_CASE("Test <wbr> element (case-insensitive)") {
   CHECK(input == "hello");
 }
 
+TEST_CASE("Test ignored element") {
+  std::string test_str("hello <var>this is <var>nested</var> var</var> world");
+
+  std::string input(test_str);
+  HTML html(std::move(input), true);
+  CHECK(input == "hello  world");
+}
+
 TEST_CASE("End-to-end translation", "[!mayfail]") {
   std::string input("<p>I <b>like</b> to <u>drive</u> this car.</p>");
   HTML html(std::move(input), true);

@@ -34,6 +34,9 @@ class HTML {
                                                "output", "q", "ruby", "small", "span", "strong", "sub",  "sup",
                                                "time",   "u", "var",  "wbr",   "ins",  "del",    "img"};
 
+    // https://developer.mozilla.org/en-US/docs/Web/HTML/Element/wbr
+    std::unordered_set<std::string> inWordTags{"wbr"};
+
     // List of characters that occur at the start of a token that indicate that
     // the this token is probably *not* a continuation of a word. Set to empty
     // to never mark a token as a continuation of the word.

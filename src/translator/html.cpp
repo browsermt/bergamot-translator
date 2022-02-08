@@ -363,7 +363,7 @@ HTML::HTML(std::string &&source, bool process_markup, Options &&options) : optio
         // Treat non-inline HTML tags as spaces that break up words.
         if (!contains(options_.inlineTags, name)) {
           addSentenceBreak = true;
-        } else {
+        } else if (!contains(options_.inWordTags, name)) {
           addSpace = true;
         }
       } break;
@@ -390,7 +390,7 @@ HTML::HTML(std::string &&source, bool process_markup, Options &&options) : optio
         // Add space if necessary
         if (!contains(options_.inlineTags, tagName)) {
           addSentenceBreak = true;
-        } else {
+        } else if (!contains(options_.inWordTags, tagName)) {
           addSpace = true;
         }
       } break;

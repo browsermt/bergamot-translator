@@ -9,7 +9,7 @@ Response Bridge<BlockingService>::translate(BlockingService &service, std::share
   // vector<Response>, return.
   std::vector<std::string> sources = {source};
   Response response = std::move(service.translateMultiple(model, std::move(sources), responseOptions).front());
-  ABORT_IF(!response.ok(), "Error in response:", response.error);
+  ABORT_IF(!response.ok(), "Error in response: {}", response.error);
   return response;
 }
 
@@ -25,7 +25,7 @@ Response Bridge<AsyncService>::translate(AsyncService &service, std::shared_ptr<
   responseFuture.wait();
 
   Response response = responseFuture.get();
-  ABORT_IF(!response.ok(), "Error in response:", response.error);
+  ABORT_IF(!response.ok(), "Error in response: {}", response.error);
   return response;
 }
 

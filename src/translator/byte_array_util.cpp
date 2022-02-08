@@ -1,9 +1,9 @@
 #include "byte_array_util.h"
-#include "common/io.h"
 
 #include <cstdlib>
 #include <memory>
 
+#include "common/io.h"
 #include "data/shortlist.h"
 
 namespace marian {

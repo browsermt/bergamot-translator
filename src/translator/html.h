@@ -14,11 +14,6 @@ namespace bergamot {
 
 struct Response;
 
-class BadHTML : public std::runtime_error {
- public:
-  explicit BadHTML(std::string const &what) : std::runtime_error(what) {}
-};
-
 class HTML {
  public:
   struct Options {

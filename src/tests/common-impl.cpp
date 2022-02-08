@@ -8,7 +8,9 @@ Response Bridge<BlockingService>::translate(BlockingService &service, std::share
   // project source to a vector of std::string, send in, unpack the first element from
   // vector<Response>, return.
   std::vector<std::string> sources = {source};
-  return service.translateMultiple(model, std::move(sources), responseOptions).front();
+  Response response = std::move(service.translateMultiple(model, std::move(sources), responseOptions).front());
+  ABORT_IF(!response.ok(), "Error in response:", response.error);
+  return response;
 }
 
 Response Bridge<AsyncService>::translate(AsyncService &service, std::shared_ptr<TranslationModel> &model,
@@ -23,6 +25,7 @@ Response Bridge<AsyncService>::translate(AsyncService &service, std::shared_ptr<
   responseFuture.wait();
 
   Response response = responseFuture.get();
+  ABORT_IF(!response.ok(), "Error in response:", response.error);
   return response;
 }
 

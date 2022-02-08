@@ -17,6 +17,7 @@ This is developer documentation.
    marian-integration
    wasm-example
    api/library_index
+   python
 
 
 

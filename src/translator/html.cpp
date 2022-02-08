@@ -291,7 +291,7 @@ std::optional<HTML::Error> HTML::parse(std::string &source) {
   // If we encounter an error, clear our internal state so a call to restore()
   // doesn't do anything half-assed. Also undo any changes to `source` which
   // we got by reference. Finally format an error message.
-  auto fail = [&](auto &&...args) {
+  auto fail = [&](auto &&... args) {
     source = std::move(original);
     spans_.clear();
     pool_.clear();

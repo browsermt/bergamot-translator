@@ -94,13 +94,16 @@ AlignedMemory loadFileToMemory(const std::string& path, size_t alignment) {
 AlignedMemory getModelMemoryFromConfig(marian::Ptr<marian::Options> options) {
   auto models = options->get<std::vector<std::string>>("models");
   ABORT_IF(models.size() != 1, "Loading multiple binary models is not supported for now as it is not necessary.");
+
+  // If binary model we load into aligned memory. If .npz we leave it be to
+  // return empty aligned memory, thus allowing traditional file system loads.
   if (marian::io::isBin(models[0])) {
     AlignedMemory alignedMemory = loadFileToMemory(models[0], 256);
     return alignedMemory;
   } else if (marian::io::isNpz(models[0])) {
     return AlignedMemory();
   } else {
-    ABORT("Unknown extension for model: {}", models[0]);
+    ABORT("Unknown extension for model: {}, should be one of `.bin` or `.npz`", models[0]);
   }
   return AlignedMemory();
 }

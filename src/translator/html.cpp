@@ -4,17 +4,16 @@
 #include "xh_scanner.h"
 
 namespace {
-using marian::string_view;
 using marian::bergamot::AnnotatedText;
 using marian::bergamot::ByteRange;
 using marian::bergamot::HTML;
 using marian::bergamot::Response;
 
-void encodeEntities(string_view const &input, std::string &output) {
+void encodeEntities(marian::string_view const &input, std::string &output) {
   output.clear();
   output.reserve(input.size());  // assumes there are no entities in most cases
 
-  for (auto it = input.begin(); it != input.end(); ++it) {
+  for (const char *it = input.begin(); it != input.end(); ++it) {
     switch (*it) {
       case '&':
         output.append("&amp;");
@@ -41,7 +40,7 @@ void encodeEntities(string_view const &input, std::string &output) {
   }
 }
 
-size_t countPrefixWhitespaces(string_view const &input) {
+size_t countPrefixWhitespaces(marian::string_view const &input) {
   size_t size = 0;
   while (size < input.size() && std::isspace(input[size])) ++size;
   return size;
@@ -98,10 +97,10 @@ std::string format(std::string const &formatTemplate, Arg arg, Args... args) {
 // `for (auto &&item : reversed(container))` instead of the needlessly verbose
 // `for (auto it = container.rbegin(); it != container.rend(); ++it)`
 template <typename T>
-class reversed {
+class Reversed {
  public:
-  typedef typename T::const_reverse_iterator iterator;
-  explicit reversed(T const &container) : container_(container){};
+  using iterator = typename T::const_reverse_iterator;
+  explicit Reversed(T const &container) : container_(container){};
   iterator begin() const { return container_.rbegin(); }
   iterator end() const { return container_.rend(); }
 
@@ -167,9 +166,10 @@ AnnotatedText apply(AnnotatedText const &in, Fun fun) {
     // expects
     // TODO: extend AnnotatedText::appendSentence to accept str + ByteRanges
     // directly
-    std::vector<string_view> views(tokens.size());
-    std::transform(tokens.begin(), tokens.end(), views.begin(),
-                   [&](ByteRange const &range) { return string_view(sentence.data() + range.begin, range.size()); });
+    std::vector<marian::string_view> views(tokens.size());
+    std::transform(tokens.begin(), tokens.end(), views.begin(), [&](ByteRange const &range) {
+      return marian::string_view(sentence.data() + range.begin, range.size());
+    });
 
     out.appendSentence(prefix, views.begin(), views.end());
   }
@@ -200,8 +200,8 @@ bool hasAlignments(Response const &response) {
 // Little helper class to append HTML to a token
 class TokenFormatter {
  public:
-  explicit TokenFormatter(string_view token)
-      : html_(), offset_(0), whitespaceOffset_(0), whitespaceSize_(countPrefixWhitespaces(token)), closeLeft_(true) {
+  explicit TokenFormatter(marian::string_view token)
+      : offset_(0), whitespaceOffset_(0), whitespaceSize_(countPrefixWhitespaces(token)), closeLeft_(true) {
     // Do encoding of any entities that popped up in the translation
     encodeEntities(token, html_);
   }
@@ -214,7 +214,7 @@ class TokenFormatter {
 
     diffTags(prev, curr, opening, closing);
 
-    for (HTML::Tag const *tag : reversed(closing)) {
+    for (HTML::Tag const *tag : Reversed(closing)) {
       assert(tag->type == HTML::Tag::ELEMENT);
       std::string closeTag = format("</{}>", tag->name);
       html_.insert(offset_ + (closeLeft_ ? 0 : whitespaceSize_), closeTag);

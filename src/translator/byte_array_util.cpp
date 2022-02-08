@@ -1,4 +1,5 @@
 #include "byte_array_util.h"
+#include "common/io.h"
 
 #include <cstdlib>
 #include <memory>
@@ -93,10 +94,15 @@ AlignedMemory loadFileToMemory(const std::string& path, size_t alignment) {
 AlignedMemory getModelMemoryFromConfig(marian::Ptr<marian::Options> options) {
   auto models = options->get<std::vector<std::string>>("models");
   ABORT_IF(models.size() != 1, "Loading multiple binary models is not supported for now as it is not necessary.");
-  marian::filesystem::Path modelPath(models[0]);
-  ABORT_IF(modelPath.extension() != marian::filesystem::Path(".bin"), "The file of binary model should end with .bin");
-  AlignedMemory alignedMemory = loadFileToMemory(models[0], 256);
-  return alignedMemory;
+  if (marian::io::isBin(models[0])) {
+    AlignedMemory alignedMemory = loadFileToMemory(models[0], 256);
+    return alignedMemory;
+  } else if (marian::io::isNpz(models[0])) {
+    return AlignedMemory();
+  } else {
+    ABORT("Unknown extension for model: {}", models[0]);
+  }
+  return AlignedMemory();
 }
 
 AlignedMemory getShortlistMemoryFromConfig(marian::Ptr<marian::Options> options) {

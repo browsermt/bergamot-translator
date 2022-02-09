@@ -637,12 +637,54 @@ TEST_CASE("Test <wbr> element (case-insensitive)") {
   CHECK(input == "hello");
 }
 
-TEST_CASE("Test ignored element") {
-  std::string test_str("hello <var>this is <var>nested</var> var</var> world");
+TEST_CASE("Test ignored element (nested)") {
+  std::string test_str("foo <var><var>nested</var></var> bar");
+  std::string expected_str("foo  <var><var>nested</var></var>bar");
 
   std::string input(test_str);
   HTML html(std::move(input), true);
-  CHECK(input == "hello  world");
+  CHECK(input == "foo  bar");
+
+  Response response;
+  std::string sentence_str("foo  bar");
+  std::vector<string_view> sentence{
+      string_view(sentence_str.data() + 0, 3),  // foo
+      string_view(sentence_str.data() + 3, 1),  // _
+      string_view(sentence_str.data() + 4, 4),  // _bar
+      string_view(sentence_str.data() + 8, 0),  // ""
+  };
+  response.source.appendSentence("", sentence.begin(), sentence.end());
+  response.target.appendSentence("", sentence.begin(), sentence.end());
+  response.alignments = {identity_matrix<float>(4)};
+
+  html.restore(response);
+  CHECK(response.source.text == expected_str);
+  CHECK(response.target.text == expected_str);
+}
+
+TEST_CASE("Test ignored element (with entity)") {
+  std::string test_str("foo <var>&amp;</var> bar");
+  std::string expected_str("foo  <var>&amp;</var>bar");
+
+  std::string input(test_str);
+  HTML html(std::move(input), true);
+  CHECK(input == "foo  bar");
+
+  Response response;
+  std::string sentence_str("foo  bar");
+  std::vector<string_view> sentence{
+      string_view(sentence_str.data() + 0, 3),  // foo
+      string_view(sentence_str.data() + 3, 1),  // _
+      string_view(sentence_str.data() + 4, 4),  // _bar
+      string_view(sentence_str.data() + 8, 0),  // ""
+  };
+  response.source.appendSentence("", sentence.begin(), sentence.end());
+  response.target.appendSentence("", sentence.begin(), sentence.end());
+  response.alignments = {identity_matrix<float>(4)};
+
+  html.restore(response);
+  CHECK(response.source.text == expected_str);
+  CHECK(response.target.text == expected_str);
 }
 
 TEST_CASE("End-to-end translation", "[!mayfail]") {

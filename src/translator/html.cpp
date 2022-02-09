@@ -319,8 +319,9 @@ void consumeIgnoredTag(markup::Scanner &scanner, HTML::Tag &tag, std::string con
 
   // Last token was something that would have triggered Scanner::scanBody(),
   // which sets value() to start pointing at the body.
-  const char *start = scanner.value().data();
+  const char *start = scanner.start();
 
+  // Consume the rest of the HTML until (including) the final closing tag.
   while (inside) {
     switch (token) {
       case markup::Scanner::TT_ERROR:
@@ -346,11 +347,10 @@ void consumeIgnoredTag(markup::Scanner &scanner, HTML::Tag &tag, std::string con
     }
   }
 
-  // Only a TAG_END could have stopped the previous loop. If we know the name
-  // of that closing element, e.g. `</code>`, we also know the position of
-  // where the body ended. 2 (`</`) characters before it!
+  // Only a TAG_END could have stopped the previous loop. We take the start
+  // of the final closing tag as the end of our data.
   assert(token == markup::Scanner::TT_TAG_END);
-  const char *end = scanner.tag().data() - 2;
+  const char *end = scanner.start();
 
   // All data between the end of the first open element, and the start of the
   // last close element, we just treat as raw data that will be printed when

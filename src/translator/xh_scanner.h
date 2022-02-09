@@ -83,6 +83,7 @@ class Scanner {
         tagName_{nullptr, 0},
         attributeName_{nullptr, 0},
         input_(is),
+        start_(nullptr),
         scanFun_(&Scanner::scanBody),
         gotTail_(false) {}
 
@@ -97,6 +98,8 @@ class Scanner {
 
   // get tag name
   std::string_view tag() const;
+
+  inline const char *start() const { return start_; }
 
  private: /* methods */
   typedef TokenType (Scanner::*ScanPtr)();
@@ -136,6 +139,9 @@ class Scanner {
   ScanPtr scanFun_;  // current 'reader'
 
   instream &input_;
+
+  // Start position of a token.
+  const char *start_;
 
   bool gotTail_;  // aux flag used in scanComment, scanSpecial, scanProcessingInstruction
 };

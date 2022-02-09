@@ -52,6 +52,8 @@ std::string_view Scanner::tag() const { return std::string_view(tagName_.data, t
 Scanner::TokenType Scanner::scanBody() {
   value_ = string_ref{input_.pos(), 0};
 
+  start_ = input_.pos();
+
   switch (input_.peek()) {
     case '\0':
       return TT_EOF;
@@ -198,6 +200,7 @@ Scanner::TokenType Scanner::scanAttribute() {
 // - TT_ENTITY_START
 // - TT_ERROR if unexpected character or end
 Scanner::TokenType Scanner::scanTag() {
+  start_ = input_.pos();
   if (input_.consume() != '<') return TT_ERROR;
 
   bool is_tail = input_.peek() == '/';
@@ -234,6 +237,7 @@ Scanner::TokenType Scanner::scanTag() {
 
 Scanner::TokenType Scanner::scanEntity(TokenType parentTokenType) {
   // `entity` includes starting '&' and ending ';'
+  start_ = input_.pos();
   string_ref entity{input_.pos(), 0};
   bool hasEnd = false;
 
@@ -312,11 +316,13 @@ bool Scanner::isWhitespace(char c) {
 
 Scanner::TokenType Scanner::scanComment() {
   if (gotTail_) {
+    start_ = input_.pos() - 3;  // minus "-->"
     scanFun_ = &Scanner::scanBody;
     gotTail_ = false;
     return TT_COMMENT_END;
   }
 
+  start_ = input_.pos();
   value_ = string_ref{input_.pos(), 0};
 
   while (true) {
@@ -334,11 +340,13 @@ Scanner::TokenType Scanner::scanComment() {
 
 Scanner::TokenType Scanner::scanProcessingInstruction() {
   if (gotTail_) {
+    start_ = input_.pos() - 2;
     scanFun_ = &Scanner::scanBody;
     gotTail_ = false;
     return TT_PROCESSING_INSTRUCTION_END;
   }
 
+  start_ = input_.pos();
   value_ = string_ref{input_.pos(), 0};
 
   while (true) {
@@ -356,11 +364,13 @@ Scanner::TokenType Scanner::scanProcessingInstruction() {
 
 Scanner::TokenType Scanner::scanSpecial() {
   if (gotTail_) {
+    start_ = input_.pos() - (tagName_.size + 3);
     scanFun_ = &Scanner::scanBody;
     gotTail_ = false;
     return TT_TAG_END;
   }
 
+  start_ = input_.pos();
   value_ = string_ref{input_.pos(), 0};
 
   while (true) {

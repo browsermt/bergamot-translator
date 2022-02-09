@@ -47,32 +47,6 @@ size_t countPrefixWhitespaces(string_view const &input) {
   return size;
 }
 
-// Formatters used for exception messages combined with format()
-std::ostream &operator<<(std::ostream &out, HTML::Tag const *tag) {
-  if (tag == nullptr) return out << "[nullptr]";
-  switch (tag->type) {
-    case HTML::Tag::ELEMENT:
-      return out << '<' << tag->name << tag->attributes << '>';
-    case HTML::Tag::VOID_ELEMENT:
-      return out << '<' << tag->name << tag->attributes << "/>";
-    case HTML::Tag::COMMENT:
-      return out << "<!--" << tag->data << "-->";
-    case HTML::Tag::PROCESSING_INSTRUCTION:
-      return out << "<?" << tag->data << "?>";
-    case HTML::Tag::WHITESPACE:
-      return out << "[inserted space]";
-  }
-  return out << "[Unknown tag type]";
-}
-
-std::ostream &operator<<(std::ostream &out, HTML::Taint const &tags) {
-  for (auto it = tags.begin(); it != tags.end(); ++it) {
-    if (it != tags.begin()) out << ' ';
-    out << *it;
-  }
-  return out;
-}
-
 // Very simple replacement for std::format introduced in C++20
 std::string format(std::string const &formatTemplate) { return formatTemplate; }
 
@@ -270,6 +244,32 @@ size_t debugCountTokens(AnnotatedText const &text) {
 
 namespace marian::bergamot {
 
+// Formatters used for exception messages combined with format()
+std::ostream &operator<<(std::ostream &out, HTML::Tag const *tag) {
+  if (tag == nullptr) return out << "[nullptr]";
+  switch (tag->type) {
+    case HTML::Tag::ELEMENT:
+      return out << '<' << tag->name << tag->attributes << '>';
+    case HTML::Tag::VOID_ELEMENT:
+      return out << '<' << tag->name << tag->attributes << "/>";
+    case HTML::Tag::COMMENT:
+      return out << "<!--" << tag->data << "-->";
+    case HTML::Tag::PROCESSING_INSTRUCTION:
+      return out << "<?" << tag->data << "?>";
+    case HTML::Tag::WHITESPACE:
+      return out << "[inserted space]";
+  }
+  return out << "[Unknown tag type]";
+}
+
+std::ostream &operator<<(std::ostream &out, HTML::Taint const &tags) {
+  for (auto it = tags.begin(); it != tags.end(); ++it) {
+    if (it != tags.begin()) out << ' ';
+    out << *it;
+  }
+  return out;
+}
+
 HTML::HTML(std::string &&source, bool process_markup, Options &&options) : options_(std::move(options)) {
   if (!process_markup) return;
 
@@ -288,7 +288,7 @@ HTML::HTML(std::string &&source, bool process_markup, Options &&options) : optio
   while (!stop) {
     switch (scanner.next()) {
       case markup::Scanner::TT_ERROR:
-        throw BadHTML("HTML parse error");
+        ABORT("HTML parse error");
 
       case markup::Scanner::TT_EOF:
         stop = true;
@@ -354,10 +354,10 @@ HTML::HTML(std::string &&source, bool process_markup, Options &&options) : optio
         // bit of "<img/>", then completely ignore it.
         if (contains(options_.voidTags, std::string(scanner.tag()))) break;
 
-        if (stack.empty()) throw BadHTML(format("Encountered more closing tags ({}) than opening tags", scanner.tag()));
+        ABORT_IF(stack.empty(), "Encountered more closing tags ({}) than opening tags", scanner.tag());
 
-        if (stack.back()->name != scanner.tag())
-          throw BadHTML(format("Encountered unexpected closing tag </{}>, stack is {}", scanner.tag(), stack));
+        ABORT_IF(stack.back()->name != scanner.tag(), "Encountered unexpected closing tag </{}>, stack is {}",
+                 scanner.tag(), stack);
 
         // What to do with "<u></u>" case, where tag is immediately closed
         // so it never makes it into the taint of any of the spans? This adds
@@ -407,11 +407,11 @@ HTML::HTML(std::string &&source, bool process_markup, Options &&options) : optio
         break;
 
       default:
-        throw BadHTML("Unsupported scanner token type");
+        ABORT("Unsupported scanner token type");
     }
   }
 
-  if (!stack.empty()) throw BadHTML(format("Not all tags were closed: {}", stack));
+  ABORT_IF(!stack.empty(), "Not all tags were closed: {}", stack);
 
   // Add a trailing span (that's empty) to signify all closed tags.
   spans_.emplace_back(Span{source.size(), source.size(), stack});

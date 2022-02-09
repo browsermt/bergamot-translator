@@ -75,9 +75,15 @@ EMSCRIPTEN_BINDINGS(blocking_service_config) {
   // aggregate-batching etc.
 }
 
+std::shared_ptr<BlockingService> BlockingServiceFactory(const BlockingService::Config& config) {
+  auto copy = config;
+  copy.logger.level = "critical";
+  return std::make_shared<BlockingService>(copy);
+}
+
 EMSCRIPTEN_BINDINGS(blocking_service) {
   class_<BlockingService>("BlockingService")
-      .constructor<BlockingService::Config>()
+      .smart_ptr_constructor("BlockingService", &BlockingServiceFactory)
       .function("translate", &BlockingService::translateMultiple)
       .function("translateViaPivoting", &BlockingService::pivotMultiple);
 

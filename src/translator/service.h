@@ -73,8 +73,8 @@ class BlockingService {
   /// @param[in] first: TranslationModel capable of translating from source language to pivot language.
   /// @param[in] second: TranslationModel capable of translating between pivot and target language.
   /// @param[move] sources: The input source texts to be translated.
-  /// @param[in] options: Options indicating whether or not to include optional members in response and pass additional
-  /// configurations. See ResponseOptions.
+  /// @param[in] options: Options indicating whether or not to include optional members per source-text. See
+  /// ResponseOptions.
   ///
   /// @returns responses corresponding to the source-text which can be used as if they were translated with
   /// translateMultiple.

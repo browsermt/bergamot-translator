@@ -2,7 +2,7 @@
 using namespace marian::bergamot;
 
 void wasm(BlockingService &service, std::shared_ptr<TranslationModel> &model) {
-  ResponseOptions responseOptions;
+  std::vector<ResponseOptions> responseOptions = {ResponseOptions()};
   std::vector<std::string> texts;
 
   // WASM always requires HTML and alignment.

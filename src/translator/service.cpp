@@ -41,10 +41,10 @@ BlockingService::BlockingService(const BlockingService::Config &config)
 
 std::vector<Response> BlockingService::translateMultiple(std::shared_ptr<TranslationModel> translationModel,
                                                          std::vector<std::string> &&sources,
-                                                         const ResponseOptions &responseOptions) {
+                                                         const std::vector<ResponseOptions> &responseOptions) {
   std::vector<HTML> htmls;
-  for (auto &&source : sources) {
-    htmls.emplace_back(std::move(source), responseOptions.HTML);
+  for (size_t i = 0; i < sources.size(); i++) {
+    htmls.emplace_back(std::move(sources[i]), responseOptions[i].HTML);
   }
   std::vector<Response> responses = translateMultipleRaw(translationModel, std::move(sources), responseOptions);
   for (size_t i = 0; i < responses.size(); i++) {
@@ -56,7 +56,7 @@ std::vector<Response> BlockingService::translateMultiple(std::shared_ptr<Transla
 
 std::vector<Response> BlockingService::translateMultipleRaw(std::shared_ptr<TranslationModel> translationModel,
                                                             std::vector<std::string> &&sources,
-                                                            const ResponseOptions &responseOptions) {
+                                                            const std::vector<ResponseOptions> &responseOptions) {
   std::vector<Response> responses;
   responses.resize(sources.size());
 
@@ -64,7 +64,7 @@ std::vector<Response> BlockingService::translateMultipleRaw(std::shared_ptr<Tran
     auto callback = [i, &responses](Response &&response) { responses[i] = std::move(response); };  //
     TranslationCache *cache = config_.cacheEnabled ? &cache_ : nullptr;
     Ptr<Request> request =
-        translationModel->makeRequest(requestId_++, std::move(sources[i]), callback, responseOptions, cache);
+        translationModel->makeRequest(requestId_++, std::move(sources[i]), callback, responseOptions[i], cache);
     batchingPool_.enqueueRequest(translationModel, request);
   }
 
@@ -80,10 +80,10 @@ std::vector<Response> BlockingService::translateMultipleRaw(std::shared_ptr<Tran
 std::vector<Response> BlockingService::pivotMultiple(std::shared_ptr<TranslationModel> first,
                                                      std::shared_ptr<TranslationModel> second,
                                                      std::vector<std::string> &&sources,
-                                                     const ResponseOptions &responseOptions) {
+                                                     const std::vector<ResponseOptions> &responseOptions) {
   std::vector<HTML> htmls;
-  for (auto &&source : sources) {
-    htmls.emplace_back(std::move(source), responseOptions.HTML);
+  for (size_t i = 0; i < sources.size(); i++) {
+    htmls.emplace_back(std::move(sources[i]), responseOptions[i].HTML);
   }
 
   // Translate source to pivots. This is same as calling translateMultiple.
@@ -103,7 +103,7 @@ std::vector<Response> BlockingService::pivotMultiple(std::shared_ptr<Translation
 
     TranslationCache *cache = config_.cacheEnabled ? &cache_ : nullptr;
     Ptr<Request> request =
-        second->makePivotRequest(requestId_++, std::move(intermediate), callback, responseOptions, cache);
+        second->makePivotRequest(requestId_++, std::move(intermediate), callback, responseOptions[i], cache);
     batchingPool_.enqueueRequest(second, request);
   }
 

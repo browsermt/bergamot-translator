@@ -2,21 +2,32 @@
 using namespace marian::bergamot;
 
 void wasm(BlockingService &service, std::shared_ptr<TranslationModel> &model) {
-  std::vector<ResponseOptions> responseOptions;
+  std::vector<std::string> plainTexts = {
+      "Hello World!",                                 //
+      "The quick brown fox jumps over the lazy dog."  //
+  };
+
+  std::vector<std::string> htmlTexts = {
+      "<a href=\"#\">Hello</a> world.",                                                   //
+      "The quick brown <b id=\"fox\">fox</b> jumps over the lazy <i id=\"dog\">dog</i>."  //
+  };
+
   std::vector<std::string> texts;
-
-  // WASM always requires HTML and alignment.
-  // TODO(jerinphilip): Fix this, bring in actual tests.
-  // responseOptions.HTML = true;
-  // responseOptions.alignment = true;  // Necessary for HTML
-
-  // Hide the translateMultiple operation
-  for (std::string line; std::getline(std::cin, line);) {
-    texts.emplace_back(line);
-    responseOptions.emplace_back();
+  std::vector<ResponseOptions> options;
+  for (auto &plainText : plainTexts) {
+    texts.push_back(plainText);
+    ResponseOptions opt;
+    options.push_back(opt);
   }
 
-  auto results = service.translateMultiple(model, std::move(texts), responseOptions);
+  for (auto &htmlText : htmlTexts) {
+    texts.push_back(htmlText);
+    ResponseOptions opt;
+    opt.HTML = true;
+    options.push_back(opt);
+  }
+
+  auto results = service.translateMultiple(model, std::move(texts), options);
 
   for (auto &result : results) {
     std::cout << result.getTranslatedText() << std::endl;

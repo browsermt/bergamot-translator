@@ -57,8 +57,8 @@ class BlockingService {
 
   /// @param [in] translationModel: TranslationModel to use for the request.
   /// @param [in] source: rvalue reference of the string to be translated
-  /// @param [in] responseOptions: ResponseOptions indicating whether or not to include some member in the Response,
-  /// also specify any additional configurable parameters.
+  /// @param [in] responseOptions: ResponseOptions per source-item indicating whether or not to include some member in
+  /// the Response, also specify any additional configurable parameters.
   std::vector<Response> translateMultiple(std::shared_ptr<TranslationModel> translationModel,
                                           std::vector<std::string> &&source,
                                           const std::vector<ResponseOptions> &responseOptions);

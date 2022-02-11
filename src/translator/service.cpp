@@ -75,10 +75,10 @@ std::vector<Response> BlockingService::translateMultipleRaw(std::shared_ptr<Tran
   Ptr<TranslationModel> model{nullptr};
   while (batchingPool_.generateBatch(model, batch)) {
     model->translateBatch(/*deviceId=*/0, batch);
-  }  // namespace bergamot
+  }
 
   return responses;
-}  // namespace marian
+}
 
 std::vector<Response> BlockingService::pivotMultiple(std::shared_ptr<TranslationModel> first,
                                                      std::shared_ptr<TranslationModel> second,

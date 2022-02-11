@@ -119,16 +119,16 @@ const translate = (from, to, input) => {
 
   // Prepare the arguments (ResponseOptions and vectorSourceText (vector<string>)) of Translation API and call it.
   // Result is a vector<Response> where each of its item corresponds to one item of vectorSourceText in the same order.
-  const responseOptions = _prepareResponseOptions();
+  const vectorResponseOptions = _prepareResponseOptions();
   let vectorSourceText = _prepareSourceText(input);
   let vectorResponse;
   if (translationModels.length == 2) {
     // This implies translation should be done via pivoting
-    vectorResponse = translationService.translateViaPivoting(translationModels[0], translationModels[1], vectorSourceText, responseOptions);
+    vectorResponse = translationService.translateViaPivoting(translationModels[0], translationModels[1], vectorSourceText, vectorResponseOptions);
   }
   else {
     // This implies translation should be done without pivoting
-    vectorResponse = translationService.translate(translationModels[0], vectorSourceText, responseOptions);
+    vectorResponse = translationService.translate(translationModels[0], vectorSourceText, vectorResponseOptions);
   }
 
   // Parse all relevant information from vectorResponse
@@ -146,6 +146,7 @@ const translate = (from, to, input) => {
 
   // Delete prepared SourceText to avoid memory leak
   vectorSourceText.delete();
+  vectorResponseOptions.delete();
 
   return listTranslatedText;
 }
@@ -341,7 +342,9 @@ const _parseTranslatedTextSentenceQualityScores = (vectorResponse) => {
 }
 
 const _prepareResponseOptions = () => {
-  return {qualityScores: true, alignment: true, html: true};
+  const vector = new Module.VectorResponseOptions();
+  vector.push_back({qualityScores: true, alignment: true, html: true})
+  return vector;
 }
 
 const _prepareSourceText = (input) => {

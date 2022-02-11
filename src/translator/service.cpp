@@ -62,9 +62,8 @@ std::vector<Response> BlockingService::translateMultipleRaw(std::shared_ptr<Tran
 
   for (size_t i = 0; i < sources.size(); i++) {
     auto callback = [i, &responses](Response &&response) { responses[i] = std::move(response); };  //
-    TranslationCache *cache = config_.cacheEnabled ? &cache_ : nullptr;
     Ptr<Request> request =
-        translationModel->makeRequest(requestId_++, std::move(sources[i]), callback, responseOptions[i], cache);
+        translationModel->makeRequest(requestId_++, std::move(sources[i]), callback, responseOptions[i], maybeCache());
     batchingPool_.enqueueRequest(translationModel, request);
   }
 
@@ -101,9 +100,8 @@ std::vector<Response> BlockingService::pivotMultiple(std::shared_ptr<Translation
                                     // it in allows further use in makePivotRequest
     auto callback = [i, &pivotsToTargets](Response &&response) { pivotsToTargets[i] = std::move(response); };  //
 
-    TranslationCache *cache = config_.cacheEnabled ? &cache_ : nullptr;
     Ptr<Request> request =
-        second->makePivotRequest(requestId_++, std::move(intermediate), callback, responseOptions[i], cache);
+        second->makePivotRequest(requestId_++, std::move(intermediate), callback, responseOptions[i], maybeCache());
     batchingPool_.enqueueRequest(second, request);
   }
 
@@ -188,9 +186,8 @@ void AsyncService::pivot(std::shared_ptr<TranslationModel> first, std::shared_pt
     };
 
     // Second call.
-    TranslationCache *cache = config_.cacheEnabled ? &cache_ : nullptr;
     Ptr<Request> request =
-        second->makePivotRequest(requestId_++, std::move(intermediate), joiningCallback, responseOptions, cache);
+        second->makePivotRequest(requestId_++, std::move(intermediate), joiningCallback, responseOptions, maybeCache());
     safeBatchingPool_.enqueueRequest(second, request);
   };
 
@@ -213,9 +210,8 @@ void AsyncService::translate(std::shared_ptr<TranslationModel> translationModel,
 void AsyncService::translateRaw(std::shared_ptr<TranslationModel> translationModel, std::string &&source,
                                 CallbackType callback, const ResponseOptions &responseOptions) {
   // Producer thread, a call to this function adds new work items. If batches are available, notifies workers waiting.
-  TranslationCache *cache = config_.cacheEnabled ? &cache_ : nullptr;
   Ptr<Request> request =
-      translationModel->makeRequest(requestId_++, std::move(source), callback, responseOptions, cache);
+      translationModel->makeRequest(requestId_++, std::move(source), callback, responseOptions, maybeCache());
   safeBatchingPool_.enqueueRequest(translationModel, request);
 }
 

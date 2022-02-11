@@ -85,6 +85,8 @@ class BlockingService {
                                              std::vector<std::string> &&source,
                                              const std::vector<ResponseOptions> &responseOptions);
 
+  TranslationCache *maybeCache() { return config_.cacheEnabled ? &cache_ : nullptr; }
+
   ///  Numbering requests processed through this instance. Used to keep account of arrival times of the request. This
   ///  allows for using this quantity in priority based ordering.
   size_t requestId_;
@@ -170,6 +172,9 @@ class AsyncService {
  private:
   void translateRaw(std::shared_ptr<TranslationModel> translationModel, std::string &&source, CallbackType callback,
                     const ResponseOptions &options = ResponseOptions());
+
+  TranslationCache *maybeCache() { return config_.cacheEnabled ? &cache_ : nullptr; }
+
   AsyncService::Config config_;
 
   std::vector<std::thread> workers_;

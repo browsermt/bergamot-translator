@@ -131,7 +131,7 @@ AsyncService::AsyncService(const AsyncService::Config &config)
     : requestId_(0),
       config_(config),
       safeBatchingPool_(),
-      cache_(config_.cacheSize, config_.cacheMutexBuckets),
+      cache_(config_.cacheSize, /*mutexBuckets=*/config_.numWorkers),
       logger_(config.logger) {
   ABORT_IF(config_.numWorkers == 0, "Number of workers should be at least 1 in a threaded workflow");
   workers_.reserve(config_.numWorkers);

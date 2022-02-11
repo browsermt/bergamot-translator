@@ -78,14 +78,14 @@ class BlockingService {
   std::vector<Response> pivotMultiple(std::shared_ptr<TranslationModel> first, std::shared_ptr<TranslationModel> second,
                                       std::vector<std::string> &&sources,
                                       const std::vector<ResponseOptions> &responseOptions);
-  TranslationCache::Stats cacheStats() { return cache_.stats(); }
+  TranslationCache::Stats cacheStats() { return cache_ ? cache_->stats() : TranslationCache::Stats(); }
 
  private:
   std::vector<Response> translateMultipleRaw(std::shared_ptr<TranslationModel> translationModel,
                                              std::vector<std::string> &&source,
                                              const std::vector<ResponseOptions> &responseOptions);
 
-  TranslationCache *maybeCache() { return config_.cacheEnabled ? &cache_ : nullptr; }
+  TranslationCache *maybeCache() { return cache_ ? &(cache_.value()) : nullptr; }
 
   ///  Numbering requests processed through this instance. Used to keep account of arrival times of the request. This
   ///  allows for using this quantity in priority based ordering.
@@ -99,7 +99,7 @@ class BlockingService {
 
   // Logger which shuts down cleanly with service.
   Logger logger_;
-  TranslationCache cache_;
+  std::optional<TranslationCache> cache_;
 };
 
 /// Effectively a threadpool, providing an API to take a translation request of a source-text, paramaterized by
@@ -167,13 +167,13 @@ class AsyncService {
   /// If you do not want to wait, call `clear()` before destructor.
   ~AsyncService();
 
-  TranslationCache::Stats cacheStats() { return cache_.stats(); }
+  TranslationCache::Stats cacheStats() { return cache_ ? cache_->stats() : TranslationCache::Stats(); }
 
  private:
   void translateRaw(std::shared_ptr<TranslationModel> translationModel, std::string &&source, CallbackType callback,
                     const ResponseOptions &options = ResponseOptions());
 
-  TranslationCache *maybeCache() { return config_.cacheEnabled ? &cache_ : nullptr; }
+  TranslationCache *maybeCache() { return cache_ ? &(cache_.value()) : nullptr; }
 
   AsyncService::Config config_;
 
@@ -193,7 +193,7 @@ class AsyncService {
 
   // Logger which shuts down cleanly with service.
   Logger logger_;
-  TranslationCache cache_;
+  std::optional<TranslationCache> cache_;
 };
 
 }  // namespace bergamot

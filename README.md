@@ -1,87 +1,124 @@
-# Bergamot Translator
+<img src="https://browser.mt/images/about.jpg">
 
-[![CircleCI badge](https://img.shields.io/circleci/project/github/browsermt/bergamot-translator/main.svg?label=CircleCI)](https://circleci.com/gh/browsermt/bergamot-translator/)
+# bergamot-translator
 
-Bergamot translator provides a unified API for ([Marian NMT](https://marian-nmt.github.io/) framework based) neural machine translation functionality in accordance with the [Bergamot](https://browser.mt/) project that focuses on improving client-side machine translation in a web browser.
+[![native](https://github.com/browsermt/bergamot-translator/actions/workflows/native.yml/badge.svg)]()
+[![python + wasm](https://github.com/browsermt/bergamot-translator/actions/workflows/build.yml/badge.svg)]()
+[![PyPI version](https://badge.fury.io/py/bergamot.svg)](https://badge.fury.io/py/bergamot)
+[![twitter](https://img.shields.io/twitter/url.svg?label=Follow%20@BergamotProject&style=social&url=http://twitter.com/BergamotProject)](https://twitter.com/BergamotProject)
 
-## Build Instructions
+bergamot-translator enables client-side machine translation on the
+consumer-grade machine. Developed as part of the
+[Bergamot](https://browser.mt/) project, the library builds on top of:
 
-### Build Natively
-Create a folder where you want to build all the artifacts (`build-native` in this case) and compile
+1. [Marian](https://marian-nmt.github.io/): Neural Machine Translation (NMT)
+   library. This repository uses the fork
+   [browsermt/marian-dev](https://github.com/browsermt/marian-dev), which
+   optimizes for faster inference on intel CPUs and WebAssembly support.
+2. [student models](https://github.com/browsermt/students): Compressed neural
+   models that enable translation on consumer-grade devices.
+
+bergamot-translator wraps marian to add sentence splitting, on-the-fly
+batching, HTML markup translation, and a more suitable API to develop
+applications. Development continuously tests the functionality on Windows,
+MacOS and Linux operating systems on `x86_64`. and WebAssembly cross-platform
+target in addition. `aarch64` native support is under development.
+
+## Usage
+
+### As a C++ library
+
+bergamot-translator uses the CMake build system. Use the library target
+`bergamot-translator` in projects that intend to build applications on top of
+the library. Latest developer documentation is available at
+[browser.mt/docs/main](https://browser.mt/docs/main).
+
+### In other languages
+
+We provide bindings to Python and JavaScript through WebAssembly.
+
+#### Python
+
+This repository provides a python module which also comes with  a command-line
+interface to use available models. This is available through PyPI.
+
 
 ```bash
-mkdir build-native
-cd build-native
-cmake ../
-make -j2
+python3 -m pip install bergamot
 ```
 
-### Build WASM
-#### Prerequisite
+Find an example for a quick-start on Colab below:
 
-Building on wasm requires Emscripten toolchain. It can be downloaded and installed using following instructions:
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1AHpgewVJBFaupwAbZq0e6TdX6REx0Ul0)
 
-* Get the latest sdk: `git clone https://github.com/emscripten-core/emsdk.git`
-* Enter the cloned directory: `cd emsdk`
-* Install the sdk: `./emsdk install 3.1.8`
-* Activate the sdk: `./emsdk activate 3.1.8`
-* Activate path variables: `source ./emsdk_env.sh`
+For more comprehensive documentation of using the in python as a library see
+[browser.mt/docs/main/python.html](https://browser.mt/docs/main/python.html).
 
-#### <a name="Compile"></a> Compile
+#### JavaScript/WebAssembly
 
-To build a version that translates with higher speeds on Firefox Nightly browser, follow these instructions:
+WebAssembly and JavaScript support is developed for an offline-translation
+browser extension intended for use in Mozilla Firefox web-browser. emscripten
+is used to compile C/C++ sources to WebAssembly. You may use the pre-built
+`bergamot-translator-worker.js` and `bergamot-translator-worker.wasm` available
+from [releases](https://github.com/browsermt/bergamot-translator/releases).
 
-   1. Create a folder where you want to build all the artifacts (`build-wasm` in this case) and compile
-       ```bash
-       mkdir build-wasm
-       cd build-wasm
-       emcmake cmake -DCOMPILE_WASM=on ../
-       emmake make -j2
-       ```
+WebAssembly is available in Firefox and Google Chrome. It is also possible to
+use these through NodeJS. For an example of how to use this, please look at
+this [Hello World](./wasm/node-test.js) example.  For a complete demo that
+works locally in your modern browser see
+[mozilla.github.io/translate](https://mozilla.github.io/translate/).
 
-       The wasm artifacts (.js and .wasm files) will be available in the build directory ("build-wasm" in this case).
+WebAssembly is slower due to lack of optimized matrix-multiply primitives.
+Nightly builds of Mozilla Firefox have faster GEMM (Generalized Matrix
+Multiplication) capabilities and are expected to be slightly faster.
 
-   2. Enable SIMD Wormhole via Wasm instantiation API in generated artifacts
-       ```bash
-       bash ../wasm/patch-artifacts-enable-wormhole.sh
-       ```
+## Applications
 
-   3. Patch generated artifacts to import GEMM library from a separate wasm module
-       ```bash
-       bash ../wasm/patch-artifacts-import-gemm-module.sh
-       ```
+### translateLocally
 
-To build a version that runs on all browsers (including Firefox Nightly) but translates slowly, follow these instructions:
+For a cross platform batteries included GUI application that builds on top of
+bergamot-translator, checkout
+[translateLocally](https://github.com/XapaJIaMnu/translateLocally).
+translateLocally provides model downloading from a repository and curates
+available models. 
 
-  1. Create a folder where you want to build all the artifacts (`build-wasm` in this case) and compile
-      ```bash
-      mkdir build-wasm
-      cd build-wasm
-      emcmake cmake -DCOMPILE_WASM=on -DWORMHOLE=off ../
-      emmake make -j2
-      ```
+### Browser Extension
 
-  2. Patch generated artifacts to import GEMM library from a separate wasm module
-       ```bash
-       bash ../wasm/patch-artifacts-import-gemm-module.sh
-       ```
+Mozilla, as part of Bergamot Project builds and maintains
+[firefox-translations](https://github.com/mozilla/firefox-translations/). The
+official Firefox extension uses WebAssembly.
 
-#### Recompiling
-As long as you don't update any submodule, just follow [Compile](#Compile) steps.\
-If you update a submodule, execute following command in repository root folder before executing
-[Compile](#Compile) steps.
-```bash
-git submodule update --init --recursive
-```
+See
+[jelmervdl/firefox-translations](https://github.com/jelmervdl/firefox-translations/)
+for Chrome extension (Manifest V2), which in addition to WebAssembly, supports
+faster local translation via [Native
+Messaging](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/Native_messaging)
+supported by
+[translateLocally](https://github.com/XapaJIaMnu/translateLocally).
 
 
-## How to use
+## Contributing
 
-### Using Native version
+We appreciate all contributions. There are several ways to contribute to this
+project.
 
-The builds generate library that can be integrated to any project. All the public header files are specified in `src` folder.\
-A short example of how to use the APIs is provided in `app/main.cpp` file.
+1. **Code**: Improvements to the source are always welcome. If you are planning to
+   contribute back bug-fixes to this repository, please do so without any
+   further discussion.  If you plan to contribute new features, utility functions,
+   or extensions to the core, please
+   [discuss](https://github.com/browsermt/bergamot-translator/discussions) the
+   feature with us first.
+2. **Models**: Bergamot, being a wrapper on marian should comfortably work with
+   models trained using marian. We prefer models that are trained following the
+   recipe in
+   [browsermt/students](https://github.com/browsermt/students/tree/master/train-student)
+   so that they are smaller in size and enable fast inference on the
+   consumer-grade machine.
 
-### Using WASM version
+## Acknowledgements
 
-Please follow the `README` inside the `wasm` folder of this repository that demonstrates how to use the translator in JavaScript.
+This project has received funding from the European Union’s Horizon 2020
+research and innovation programme under grant agreement No 825303.
+
+
+

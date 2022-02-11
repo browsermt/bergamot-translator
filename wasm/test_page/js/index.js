@@ -27,14 +27,27 @@ document.querySelector("#input").addEventListener("keyup", function (event) {
   translateCall();
 });
 
+const _prepareTranslateOptions = (paragraphs) => {
+  const translateOptions = [];
+  paragraphs.forEach(paragraph => {
+    // Each option object can be different for each entry. But to keep the test page simple,
+    // we just keep all the options same (specifically avoiding parsing the input to determine
+    // html/non-html text)
+    translateOptions.push({"isQualityScores": true, "isHtml": true});
+  });
+  return translateOptions;
+};
+
 const translateCall = () => {
   const text = document.querySelector("#input").value + "  ";
   if (!text.trim().length) return;
+
   const paragraphs = text.split("\n");
+  const translateOptions = _prepareTranslateOptions(paragraphs);
   $("#output").setAttribute("disabled", true);
   const lngFrom = langFrom.value;
   const lngTo = langTo.value;
-  worker.postMessage(["translate", lngFrom, lngTo, paragraphs]);
+  worker.postMessage(["translate", lngFrom, lngTo, paragraphs, translateOptions]);
 };
 
 worker.onmessage = function (e) {

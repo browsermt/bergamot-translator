@@ -606,27 +606,28 @@ AnnotatedText HTML::restoreSource(AnnotatedText const &in, std::vector<SpanItera
 AnnotatedText HTML::restoreTarget(AnnotatedText const &in, std::vector<SpanIterator> const &targetTokenSpans) {
   auto prevSpan = spans_.cbegin();
   auto targetSpanIt = targetTokenSpans.begin();
+  auto straggerSpanIt = spans_.cbegin();
 
   AnnotatedText out = apply(in, [&](ByteRange range, string_view token, bool last) {
     TokenFormatter formatter(token);
 
     // First we scan through spans_ to catch up to the span assigned to this
     // token. We're only interested in empty spans (empty and void elements)
-    for (auto span_it = prevSpan; span_it < *targetSpanIt; span_it++) {
+    for (; straggerSpanIt < *targetSpanIt; ++straggerSpanIt) {
       // We're only interested in empty spans or spans that would otherwise get
       // lost because they didn't align with anything between the spans in
       // targetSpanIt
       // TODO That std::find makes this O(N*N) NOT GOOD NOT GOOD
-      if (span_it->size() != 0 &&
-          std::find(targetTokenSpans.begin(), targetTokenSpans.end(), span_it) != targetTokenSpans.end())
+      if (straggerSpanIt->size() != 0 &&
+          std::find(targetTokenSpans.begin(), targetTokenSpans.end(), straggerSpanIt) != targetTokenSpans.end())
         continue;
 
-      formatter.append(prevSpan->tags, span_it->tags);
+      formatter.append(prevSpan->tags, straggerSpanIt->tags);
 
       // Note: here, not in 3rd part of for-statement because we don't want to
       // set prevSpan if the continue clause at the beginning of this for-loop
       // was hit.
-      prevSpan = span_it;
+      prevSpan = straggerSpanIt;
     }
 
     // Now do the same thing but for our target set of tags. Note that we cannot

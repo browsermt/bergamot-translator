@@ -63,9 +63,6 @@ class BlockingService {
                                           std::vector<std::string> &&source,
                                           const std::vector<ResponseOptions> &responseOptions);
 
-  std::vector<Response> translateMultipleRaw(std::shared_ptr<TranslationModel> translationModel,
-                                             std::vector<std::string> &&source,
-                                             const std::vector<ResponseOptions> &responseOptions);
   /// With the supplied two translation models, translate using first and then the second generating a response as if it
   /// were translated from first's source language to second's target langauge. Requires first's target to be second's
   /// source to work correctly - effectively implementing pivoting translation via an intermediate language.
@@ -84,6 +81,10 @@ class BlockingService {
   TranslationCache::Stats cacheStats() { return cache_.stats(); }
 
  private:
+  std::vector<Response> translateMultipleRaw(std::shared_ptr<TranslationModel> translationModel,
+                                             std::vector<std::string> &&source,
+                                             const std::vector<ResponseOptions> &responseOptions);
+
   ///  Numbering requests processed through this instance. Used to keep account of arrival times of the request. This
   ///  allows for using this quantity in priority based ordering.
   size_t requestId_;

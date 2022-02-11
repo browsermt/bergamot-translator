@@ -54,7 +54,7 @@ class Request {
   /// @param [in] cache: Cache supplied externally to attempt to fetch translations or store them after completion for
   /// reuse later.
   Request(size_t Id, const TranslationModel &model, Segments &&segments, ResponseBuilder &&responseBuilder,
-          TranslationCache *cache);
+          std::optional<TranslationCache> &cache);
 
   /// Obtain the count of tokens in the segment correponding to index. Used to
   /// insert sentence from multiple requests into the corresponding size bucket.
@@ -100,8 +100,8 @@ class Request {
   /// std::vector<Ptr<Vocab const>> *vocabs_;
   ResponseBuilder responseBuilder_;
 
-  /// Cache used to hold unit translations. If nullptr, means no-caching.
-  TranslationCache *cache_;
+  /// Cache used to hold unit translations. If nullopt, means no-caching.
+  std::optional<TranslationCache> &cache_;
 };
 
 /// A RequestSentence provides a view to a sentence within a Request. Existence

@@ -67,7 +67,7 @@ std::vector<Response> BlockingService::translateMultipleRaw(std::shared_ptr<Tran
   for (size_t i = 0; i < sources.size(); i++) {
     auto callback = [i, &responses](Response &&response) { responses[i] = std::move(response); };  //
     Ptr<Request> request =
-        translationModel->makeRequest(requestId_++, std::move(sources[i]), callback, responseOptions[i], maybeCache());
+        translationModel->makeRequest(requestId_++, std::move(sources[i]), callback, responseOptions[i], cache_);
     batchingPool_.enqueueRequest(translationModel, request);
   }
 
@@ -105,7 +105,7 @@ std::vector<Response> BlockingService::pivotMultiple(std::shared_ptr<Translation
     auto callback = [i, &pivotsToTargets](Response &&response) { pivotsToTargets[i] = std::move(response); };  //
 
     Ptr<Request> request =
-        second->makePivotRequest(requestId_++, std::move(intermediate), callback, responseOptions[i], maybeCache());
+        second->makePivotRequest(requestId_++, std::move(intermediate), callback, responseOptions[i], cache_);
     batchingPool_.enqueueRequest(second, request);
   }
 
@@ -191,7 +191,7 @@ void AsyncService::pivot(std::shared_ptr<TranslationModel> first, std::shared_pt
 
     // Second call.
     Ptr<Request> request =
-        second->makePivotRequest(requestId_++, std::move(intermediate), joiningCallback, responseOptions, maybeCache());
+        second->makePivotRequest(requestId_++, std::move(intermediate), joiningCallback, responseOptions, cache_);
     safeBatchingPool_.enqueueRequest(second, request);
   };
 
@@ -215,7 +215,7 @@ void AsyncService::translateRaw(std::shared_ptr<TranslationModel> translationMod
                                 CallbackType callback, const ResponseOptions &responseOptions) {
   // Producer thread, a call to this function adds new work items. If batches are available, notifies workers waiting.
   Ptr<Request> request =
-      translationModel->makeRequest(requestId_++, std::move(source), callback, responseOptions, maybeCache());
+      translationModel->makeRequest(requestId_++, std::move(source), callback, responseOptions, cache_);
   safeBatchingPool_.enqueueRequest(translationModel, request);
 }
 

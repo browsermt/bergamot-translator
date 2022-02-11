@@ -23,7 +23,7 @@ size_t hashForCache(const TranslationModel &model, const marian::Words &words) {
 
 // -----------------------------------------------------------------
 Request::Request(size_t Id, const TranslationModel &model, Segments &&segments, ResponseBuilder &&responseBuilder,
-                 TranslationCache *cache)
+                 std::optional<TranslationCache> &cache)
     : Id_(Id),
       model_(model),
       segments_(std::move(segments)),
@@ -42,7 +42,7 @@ Request::Request(size_t Id, const TranslationModel &model, Segments &&segments, 
     counter_ = segments_.size();
     histories_.resize(segments_.size());
 
-    if (cache_ != nullptr) {
+    if (cache_) {
       // Iterate through segments, see if any can be prefilled from cache. If prefilled, mark the particular segments as
       // complete (non-empty ProcessedRequestSentence). Also update accounting used elsewhere (counter_) to reflect one
       // less segment to translate.
@@ -76,7 +76,7 @@ void Request::processHistory(size_t index, Ptr<History> history) {
   // Fill in placeholder from History obtained by freshly translating. Since this was a cache-miss to have got through,
   // update cache if available to store the result.
   histories_[index] = history;
-  if (cache_ != nullptr) {
+  if (cache_) {
     size_t key = hashForCache(model_, getSegment(index));
     cache_->store(key, histories_[index]);
   }

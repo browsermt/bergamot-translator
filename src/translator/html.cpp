@@ -406,8 +406,7 @@ HTML::HTML(std::string &&source, bool process_markup, Options &&options) : optio
         // If the previous segment was an open or close tag, it might be best
         // to add a space to make sure we don't append to the previous word.
         if (addSpace) {
-          if (options_.substituteInlineTagsWithSpaces && !source.empty() && !std::isspace(source.back()) &&
-              !std::isspace(scanner.value()[0])) {
+          if (options_.substituteInlineTagsWithSpaces && isContinuation(source, scanner.value())) {
             source.push_back(' ');
           }
           addSpace = false;
@@ -688,11 +687,15 @@ void HTML::copyTaint(Response const &response, std::vector<std::vector<size_t>> 
 // to determine whether we should share the markup, or whether we should see
 // this token as a fresh start. This implementation will treat "hello[world]"
 // as 4 words, assuming its tokenised as something like `h ell o [ wor ld ]`.
-bool HTML::isContinuation(string_view prev, string_view str) {
+bool HTML::isContinuation(std::string_view prev, std::string_view str) {
   if (options_.continuationDelimiters.empty()) return false;
   if (prev.empty() || str.empty()) return false;
   return options_.continuationDelimiters.find(str[0]) == std::string::npos &&
          options_.continuationDelimiters.find(prev.back()) == std::string::npos;
+}
+
+bool HTML::isContinuation(marian::string_view prev, marian::string_view str) {
+  return isContinuation(std::string_view(prev.data(), prev.size()), std::string_view(str.data(), str.size()));
 }
 
 void HTML::hardAlignments(Response const &response, std::vector<std::vector<size_t>> &alignments,

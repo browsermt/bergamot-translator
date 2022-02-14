@@ -10,6 +10,17 @@
 using namespace marian::bergamot;
 using marian::string_view;
 
+class MarianThrowsExceptionsFixture {
+ protected:
+  MarianThrowsExceptionsFixture() : prev_(marian::getThrowExceptionOnAbort()) {
+    marian::setThrowExceptionOnAbort(true);
+  }
+  ~MarianThrowsExceptionsFixture() { marian::setThrowExceptionOnAbort(prev_); }
+
+ private:
+  bool prev_;
+};
+
 std::ostream &operator<<(std::ostream &out, std::pair<ByteRange, ByteRange> const &b) {
   return out << '(' << b.first << ',' << b.second << ')';
 }
@@ -76,9 +87,7 @@ TEST_CASE("Ignore HTML if process_markup is false") {
   CHECK(response.source.text == html_code);
 }
 
-TEST_CASE("Abort if alignments are missing") {
-  marian::setThrowExceptionOnAbort(true);
-
+TEST_CASE_METHOD(MarianThrowsExceptionsFixture, "Abort if alignments are missing") {
   std::string input("<p>hello <b>world</b></p>\n");
   HTML html(std::move(input), true);
 
@@ -108,9 +117,7 @@ TEST_CASE("Abort if alignments are missing") {
       "Response object does not contain alignments. TranslationModel or ResponseOptions is misconfigured?");
 }
 
-TEST_CASE("Abort if alignments are misconfigured") {
-  marian::setThrowExceptionOnAbort(true);
-
+TEST_CASE_METHOD(MarianThrowsExceptionsFixture, "Abort if alignments are misconfigured") {
   std::string input("<p>hello <b>world</b></p>\n");
   HTML html(std::move(input), true);
 

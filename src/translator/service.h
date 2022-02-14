@@ -57,13 +57,12 @@ class BlockingService {
 
   /// @param [in] translationModel: TranslationModel to use for the request.
   /// @param [in] source: rvalue reference of the string to be translated
-  /// @param [in] responseOptions: ResponseOptions indicating whether or not to include some member in the Response,
-  /// also specify any additional configurable parameters.
+  /// @param [in] responseOptions: ResponseOptions per source-item indicating whether or not to include some member in
+  /// the Response, also specify any additional configurable parameters.
   std::vector<Response> translateMultiple(std::shared_ptr<TranslationModel> translationModel,
-                                          std::vector<std::string> &&source, const ResponseOptions &responseOptions);
+                                          std::vector<std::string> &&source,
+                                          const std::vector<ResponseOptions> &responseOptions);
 
-  std::vector<Response> translateMultipleRaw(std::shared_ptr<TranslationModel> translationModel,
-                                             std::vector<std::string> &&source, const ResponseOptions &responseOptions);
   /// With the supplied two translation models, translate using first and then the second generating a response as if it
   /// were translated from first's source language to second's target langauge. Requires first's target to be second's
   /// source to work correctly - effectively implementing pivoting translation via an intermediate language.
@@ -71,16 +70,21 @@ class BlockingService {
   /// @param[in] first: TranslationModel capable of translating from source language to pivot language.
   /// @param[in] second: TranslationModel capable of translating between pivot and target language.
   /// @param[move] sources: The input source texts to be translated.
-  /// @param[in] options: Options indicating whether or not to include optional members in response and pass additional
-  /// configurations. See ResponseOptions.
+  /// @param[in] options: Options indicating whether or not to include optional members per source-text. See
+  /// ResponseOptions.
   ///
   /// @returns responses corresponding to the source-text which can be used as if they were translated with
   /// translateMultiple.
   std::vector<Response> pivotMultiple(std::shared_ptr<TranslationModel> first, std::shared_ptr<TranslationModel> second,
-                                      std::vector<std::string> &&sources, const ResponseOptions &responseOptions);
+                                      std::vector<std::string> &&sources,
+                                      const std::vector<ResponseOptions> &responseOptions);
   TranslationCache::Stats cacheStats() { return cache_.stats(); }
 
  private:
+  std::vector<Response> translateMultipleRaw(std::shared_ptr<TranslationModel> translationModel,
+                                             std::vector<std::string> &&source,
+                                             const std::vector<ResponseOptions> &responseOptions);
+
   ///  Numbering requests processed through this instance. Used to keep account of arrival times of the request. This
   ///  allows for using this quantity in priority based ordering.
   size_t requestId_;

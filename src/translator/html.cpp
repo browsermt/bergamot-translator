@@ -7,7 +7,6 @@
 
 namespace {
 using marian::bergamot::AnnotatedText;
-using marian::bergamot::BadHTML;
 using marian::bergamot::ByteRange;
 using marian::bergamot::HTML;
 using marian::bergamot::Response;
@@ -53,32 +52,6 @@ std::string toLowerCase(std::string_view const &input) {
   std::string out;
   out.resize(input.size());
   std::transform(input.begin(), input.end(), out.begin(), [](unsigned char c) { return std::tolower(c); });
-  return out;
-}
-
-// Formatters used for exception messages combined with format()
-std::ostream &operator<<(std::ostream &out, HTML::Tag const *tag) {
-  if (tag == nullptr) return out << "[nullptr]";
-  switch (tag->type) {
-    case HTML::Tag::ELEMENT:
-      return out << '<' << tag->name << tag->attributes << '>';
-    case HTML::Tag::VOID_ELEMENT:
-      return out << '<' << tag->name << tag->attributes << "/>";
-    case HTML::Tag::COMMENT:
-      return out << "<!--" << tag->data << "-->";
-    case HTML::Tag::PROCESSING_INSTRUCTION:
-      return out << "<?" << tag->data << "?>";
-    case HTML::Tag::WHITESPACE:
-      return out << "[inserted space]";
-  }
-  return out << "[Unknown tag type]";
-}
-
-std::ostream &operator<<(std::ostream &out, HTML::Taint const &tags) {
-  for (auto it = tags.begin(); it != tags.end(); ++it) {
-    if (it != tags.begin()) out << ' ';
-    out << *it;
-  }
   return out;
 }
 
@@ -303,9 +276,9 @@ void consumeIgnoredTag(markup::Scanner &scanner, HTML::Tag &tag, std::string con
     token = scanner.next();
     switch (token) {
       case markup::Scanner::TT_ERROR:
-        throw BadHTML("HTML parse error");
+        ABORT("HTML parse error");
       case markup::Scanner::TT_EOF:
-        throw BadHTML(format("Did not find closing tag </{}>", name));
+        ABORT("Did not find closing tag </{}>", name);
       case markup::Scanner::TT_ATTRIBUTE:
         tag.attributes += format(" {}=\"{}\"", scanner.attribute(), scanner.value());
         break;
@@ -325,9 +298,9 @@ void consumeIgnoredTag(markup::Scanner &scanner, HTML::Tag &tag, std::string con
   while (inside) {
     switch (token) {
       case markup::Scanner::TT_ERROR:
-        throw BadHTML("HTML parse error");
+        ABORT("HTML parse error");
       case markup::Scanner::TT_EOF:
-        throw BadHTML(format("Did not find closing tag </{}>", name));
+        ABORT("Did not find closing tag </{}>");
       case markup::Scanner::TT_TAG_START:
       case markup::Scanner::TT_TAG_END:
         // Note: Looking specifically for only our own type of tag so we don't
@@ -363,6 +336,32 @@ void consumeIgnoredTag(markup::Scanner &scanner, HTML::Tag &tag, std::string con
 
 namespace marian::bergamot {
 
+// Formatters used for exception messages combined with format()
+std::ostream &operator<<(std::ostream &out, HTML::Tag const *tag) {
+  if (tag == nullptr) return out << "[nullptr]";
+  switch (tag->type) {
+    case HTML::Tag::ELEMENT:
+      return out << '<' << tag->name << tag->attributes << '>';
+    case HTML::Tag::VOID_ELEMENT:
+      return out << '<' << tag->name << tag->attributes << "/>";
+    case HTML::Tag::COMMENT:
+      return out << "<!--" << tag->data << "-->";
+    case HTML::Tag::PROCESSING_INSTRUCTION:
+      return out << "<?" << tag->data << "?>";
+    case HTML::Tag::WHITESPACE:
+      return out << "[inserted space]";
+  }
+  return out << "[Unknown tag type]";
+}
+
+std::ostream &operator<<(std::ostream &out, HTML::Taint const &tags) {
+  for (auto it = tags.begin(); it != tags.end(); ++it) {
+    if (it != tags.begin()) out << ' ';
+    out << *it;
+  }
+  return out;
+}
+
 HTML::HTML(std::string &&source, bool process_markup, Options &&options) : options_(std::move(options)) {
   if (!process_markup) return;
 
@@ -381,7 +380,7 @@ HTML::HTML(std::string &&source, bool process_markup, Options &&options) : optio
   while (!stop) {
     switch (scanner.next()) {
       case markup::Scanner::TT_ERROR:
-        throw BadHTML("HTML parse error");
+        ABORT("HTML parse error");
 
       case markup::Scanner::TT_EOF:
         stop = true;
@@ -456,10 +455,10 @@ HTML::HTML(std::string &&source, bool process_markup, Options &&options) : optio
         // bit of "<img/>", then completely ignore it.
         if (contains(options_.voidTags, tagName)) break;
 
-        if (stack.empty()) throw BadHTML(format("Encountered more closing tags ({}) than opening tags", scanner.tag()));
+        ABORT_IF(stack.empty(), "Encountered more closing tags ({}) than opening tags", scanner.tag());
 
-        if (toLowerCase(stack.back()->name) != toLowerCase(scanner.tag()))
-          throw BadHTML(format("Encountered unexpected closing tag </{}>, stack is {}", scanner.tag(), stack));
+        ABORT_IF(toLowerCase(stack.back()->name) != toLowerCase(scanner.tag()),
+                 "Encountered unexpected closing tag </{}>, stack is {}", scanner.tag(), stack);
 
         // What to do with "<u></u>" case, where tag is immediately closed
         // so it never makes it into the taint of any of the spans? This adds
@@ -509,11 +508,11 @@ HTML::HTML(std::string &&source, bool process_markup, Options &&options) : optio
         break;
 
       default:
-        throw BadHTML("Unsupported scanner token type");
+        ABORT("Unsupported scanner token type");
     }
   }
 
-  if (!stack.empty()) throw BadHTML(format("Not all tags were closed: {}", stack));
+  ABORT_IF(!stack.empty(), "Not all tags were closed: {}", stack);
 
   // Add a trailing span (that's empty) to signify all closed tags.
   spans_.emplace_back(Span{source.size(), source.size(), stack});

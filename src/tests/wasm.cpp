@@ -2,7 +2,7 @@
 using namespace marian::bergamot;
 
 void wasm(BlockingService &service, std::shared_ptr<TranslationModel> &model) {
-  ResponseOptions responseOptions;
+  std::vector<ResponseOptions> responseOptions;
   std::vector<std::string> texts;
 
   // WASM always requires HTML and alignment.
@@ -13,6 +13,7 @@ void wasm(BlockingService &service, std::shared_ptr<TranslationModel> &model) {
   // Hide the translateMultiple operation
   for (std::string line; std::getline(std::cin, line);) {
     texts.emplace_back(line);
+    responseOptions.emplace_back();
   }
 
   auto results = service.translateMultiple(model, std::move(texts), responseOptions);

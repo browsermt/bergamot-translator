@@ -8,7 +8,8 @@ Response Bridge<BlockingService>::translate(BlockingService &service, std::share
   // project source to a vector of std::string, send in, unpack the first element from
   // vector<Response>, return.
   std::vector<std::string> sources = {source};
-  return service.translateMultiple(model, std::move(sources), responseOptions).front();
+  std::vector<ResponseOptions> options = {responseOptions};
+  return service.translateMultiple(model, std::move(sources), options).front();
 }
 
 Response Bridge<AsyncService>::translate(AsyncService &service, std::shared_ptr<TranslationModel> &model,
@@ -30,7 +31,8 @@ Response Bridge<BlockingService>::pivot(BlockingService &service, std::shared_pt
                                         std::shared_ptr<TranslationModel> &pivotToTarget, std::string &&source,
                                         const ResponseOptions &responseOptions) {
   std::vector<std::string> sources = {source};
-  return service.pivotMultiple(sourceToPivot, pivotToTarget, std::move(sources), responseOptions).front();
+  std::vector<ResponseOptions> options = {responseOptions};
+  return service.pivotMultiple(sourceToPivot, pivotToTarget, std::move(sources), options).front();
 }
 
 Response Bridge<AsyncService>::pivot(AsyncService &service, std::shared_ptr<TranslationModel> &sourceToPivot,

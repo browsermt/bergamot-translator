@@ -54,6 +54,7 @@ onmessage = async function(e) {
       const from = e.data[1];
       const to = e.data[2];
       const input = e.data[3];
+      const translateOptions = e.data[4];
       let inputWordCount = 0;
       let inputBlockElements = 0;
       input.forEach(sentence => {
@@ -63,7 +64,7 @@ onmessage = async function(e) {
       let start = Date.now();
       try {
         log(`Blocks to translate: ${inputBlockElements}`);
-        result = translate(from, to, input);
+        result = translate(from, to, input, translateOptions);
         const secs = (Date.now() - start) / 1000;
         log(`Translation '${from}${to}' Successful. Speed: ${Math.round(inputWordCount / secs)} WPS (${inputWordCount} words in ${secs} secs)`);
       } catch (error) {
@@ -107,7 +108,7 @@ const constructTranslationModel = async (from, to) => {
 }
 
 // Translates text from source language to target language (via pivoting if necessary).
-const translate = (from, to, input) => {
+const translate = (from, to, input, translateOptions) => {
   const languagePairs = _getLanguagePairs(from, to);
   log(`Translating for language pair(s): '${languagePairs.toString()}'`);
 
@@ -117,9 +118,9 @@ const translate = (from, to, input) => {
     throw Error(`Insufficient no. of loaded translation models. Required:'${languagePairs.length}' Found:'${translationModels.length}'`);
   }
 
-  // Prepare the arguments (ResponseOptions and vectorSourceText (vector<string>)) of Translation API and call it.
+  // Prepare the arguments (vectorResponseOptions and vectorSourceText (vector<string>)) of Translation API and call it.
   // Result is a vector<Response> where each of its item corresponds to one item of vectorSourceText in the same order.
-  const vectorResponseOptions = _prepareResponseOptions();
+  const vectorResponseOptions = _prepareResponseOptions(translateOptions);
   let vectorSourceText = _prepareSourceText(input);
   let vectorResponse;
   if (translationModels.length == 2) {
@@ -341,10 +342,12 @@ const _parseTranslatedTextSentenceQualityScores = (vectorResponse) => {
   return result;
 }
 
-const _prepareResponseOptions = () => {
-  const vector = new Module.VectorResponseOptions();
-  vector.push_back({qualityScores: true, alignment: true, html: true})
-  return vector;
+const _prepareResponseOptions = (translateOptions) => {
+  const vectorResponseOptions = new Module.VectorResponseOptions;
+  translateOptions.forEach(translateOption => {
+    vectorResponseOptions.push_back({qualityScores: translateOption["isQualityScores"], alignment: true, html: translateOption["isHtml"]});
+  });
+  return vectorResponseOptions;
 }
 
 const _prepareSourceText = (input) => {

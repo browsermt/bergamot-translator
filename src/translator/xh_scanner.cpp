@@ -101,7 +101,7 @@ Scanner::TokenType Scanner::scanAttribute() {
       input_.consume();
 
       // Treat some elements as opaque, e.g. <script>, <style>
-      if (equalsCaseInsensitive(tagName_, "title") || equalsCaseInsensitive(tagName_, "script") ||
+      if (/*equalsCaseInsensitive(tagName_, "title") ||*/ equalsCaseInsensitive(tagName_, "script") ||
           equalsCaseInsensitive(tagName_, "style") || equalsCaseInsensitive(tagName_, "textarea") ||
           equalsCaseInsensitive(tagName_, "iframe") || equalsCaseInsensitive(tagName_, "noembed") ||
           equalsCaseInsensitive(tagName_, "noscript") || equalsCaseInsensitive(tagName_, "noframes")) {

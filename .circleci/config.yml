@@ -82,20 +82,24 @@ jobs:
           destination: "wasm-without-wormhole"
 
   publish_to_github:
-     docker:
-       - image: cibuilds/github:0.10
-     steps:
-       - attach_workspace:
+    docker:
+      - image: cibuilds/github:0.10
+    steps:
+      - attach_workspace:
           # Must be absolute path or relative path from working_directory
           at: ./
-       - run:
-          name: "Publish Release on GitHub"
-          command: |
-            export TAG_VERSION=$(cat ./artifacts/BERGAMOT_VERSION)
-            ls -lsa ./artifacts/ > ./artifacts/FILESIZES
-            cat ./artifacts/SHA256-1 ./artifacts/SHA256-2 > ./artifacts/SHA256
-            rm ./artifacts/SHA256-1 ./artifacts/SHA256-2 ./artifacts/BERGAMOT_VERSION
-            ghr -t ${GHTOKEN} -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} -delete ${TAG_VERSION} ./artifacts/
+      - when:
+          condition:
+            equal: [ 'https://github.com/mozilla/bergamot-translator', << pipeline.project.git_url >> ]
+          steps:
+            - run:
+                name: "Publish Release on GitHub"
+                command: |
+                  export TAG_VERSION=$(cat ./artifacts/BERGAMOT_VERSION)
+                  ls -lsa ./artifacts/ > ./artifacts/FILESIZES
+                  cat ./artifacts/SHA256-1 ./artifacts/SHA256-2 > ./artifacts/SHA256
+                  rm ./artifacts/SHA256-1 ./artifacts/SHA256-2 ./artifacts/BERGAMOT_VERSION
+                  ghr -t ${GHTOKEN} -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} -delete ${TAG_VERSION} ./artifacts/
 
 workflows:
   build:

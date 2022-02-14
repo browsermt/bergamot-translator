@@ -99,13 +99,14 @@ Scanner::TokenType Scanner::scanAttribute() {
   switch (input_.peek()) {
     case '>':
       input_.consume();
-      if (equalsCaseInsensitive(tagName_, "script")) {
+
+      // Treat some elements as opaque, e.g. <script>, <style>
+      if (equalsCaseInsensitive(tagName_, "title") || equalsCaseInsensitive(tagName_, "script") ||
+          equalsCaseInsensitive(tagName_, "style") || equalsCaseInsensitive(tagName_, "textarea") ||
+          equalsCaseInsensitive(tagName_, "iframe") || equalsCaseInsensitive(tagName_, "noembed") ||
+          equalsCaseInsensitive(tagName_, "noscript") || equalsCaseInsensitive(tagName_, "noframes")) {
         // script is special because we want to parse the attributes,
         // but not the content
-        scanFun_ = &Scanner::scanSpecial;
-        return scanSpecial();
-      } else if (equalsCaseInsensitive(tagName_, "style")) {
-        // same with style
         scanFun_ = &Scanner::scanSpecial;
         return scanSpecial();
       } else {

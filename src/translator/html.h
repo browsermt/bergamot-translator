@@ -38,7 +38,7 @@ class HTML {
     // they could be nested. For <script> we just scan for </script> because
     // the script tag may not be nested, but that is not the case for these
     // elements per se.
-    std::unordered_set<std::string> ignoredTags{"code", "kbd", "samp", "var", "dir", "acronym", "math", "textarea"};
+    std::unordered_set<std::string> ignoredTags{"code", "kbd", "samp", "var", "dir", "acronym", "math"};
 
     // List of characters that occur at the start of a token that indicate that
     // the this token is probably *not* a continuation of a word. Set to empty

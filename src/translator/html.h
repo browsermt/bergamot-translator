@@ -83,11 +83,12 @@ class HTML {
   void restore(Response &response);
 
  private:
-  using SpanIterator = std::vector<HTML::Span>::const_iterator;
+  using SpanIterator = std::vector<HTML::Span>::iterator;
   using AnnotatedText = marian::bergamot::AnnotatedText;
 
   AnnotatedText restoreSource(AnnotatedText const &in, std::vector<SpanIterator> &sourceTokenSpans);
-  AnnotatedText restoreTarget(AnnotatedText const &in, std::vector<SpanIterator> const &targetTokenSpans);
+  AnnotatedText restoreTarget(AnnotatedText const &in, std::vector<SpanIterator> const &targetTokenSpans,
+                              std::vector<HTML::Taint> const &targetTokenTags);
   void copyTaint(Response const &response, std::vector<std::vector<size_t>> const &alignments,
                  std::vector<HTML::SpanIterator> const &sourceTokenSpans,
                  std::vector<HTML::SpanIterator> &targetTokenSpans);

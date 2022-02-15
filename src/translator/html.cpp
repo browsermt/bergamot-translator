@@ -29,12 +29,12 @@ void encodeEntities(marian::string_view const &input, std::string &output) {
       // case ???:
       //   output.append("&nbsp;");
       //   break;
-      // case '"':
-      //   output.append("&quot;");
-      //   break;
-      // case '\'':
-      //   output.append("&apos;");
-      //   break;
+      case '"':
+        output.append("&quot;");
+        break;
+      case '\'':
+        output.append("&apos;");
+        break;
       default:
         output.push_back(*it);
         break;
@@ -555,7 +555,44 @@ void HTML::restore(Response &response) {
   copyTaint(response, alignments, sourceTokenSpans, targetTokenSpans);
   assert(targetTokenSpans.size() == debugCountTokens(response.target));
 
-  AnnotatedText target = restoreTarget(response.target, targetTokenSpans);
+  std::vector<HTML::Taint> targetTokenTags;
+
+  // Insert <font> a font tag at the end of each stack with the original
+  // sentence as its title. Tag diffing in the TokenFormatter will make this
+  // wrap the parts that were originally text nodes in <font> tags so that you
+  // can hover over a part of a sentence and see what the original sentence was.
+  {
+    auto spanIt = targetTokenSpans.begin();
+    for (size_t sentenceIdx = 0; sentenceIdx < response.target.numSentences(); ++sentenceIdx) {
+      // Sentence prefix
+      targetTokenTags.push_back((*spanIt)->tags);
+      spanIt++;
+
+      // Create a single <font> tag for this sentence. Luckily at this point
+      // `response.source` is still the unrestored (HTML-less) version of the
+      // input text!
+      Tag *tag = makeTag({Tag::ELEMENT, "font"});
+      std::string original;
+      encodeEntities(response.source.sentence(sentenceIdx), original);
+      tag->attributes += format(" title=\"{}\"", original);
+
+      // Add this tag at the end of the tag stack for each token.
+      for (size_t t = 0; t < response.target.numWords(sentenceIdx); ++t) {
+        HTML::Taint tags((*spanIt)->tags);
+        tags.push_back(tag);
+        targetTokenTags.push_back(tags);
+        spanIt++;
+      }
+    }
+
+    // Suffix
+    targetTokenTags.push_back((*spanIt)->tags);
+    spanIt++;
+
+    assert(spanIt == targetTokenSpans.end());
+  }
+
+  AnnotatedText target = restoreTarget(response.target, targetTokenSpans, targetTokenTags);
 
   response.source = source;
   response.target = target;
@@ -601,9 +638,11 @@ AnnotatedText HTML::restoreSource(AnnotatedText const &in, std::vector<SpanItera
   });
 }
 
-AnnotatedText HTML::restoreTarget(AnnotatedText const &in, std::vector<SpanIterator> const &targetTokenSpans) {
-  auto prevSpan = spans_.cbegin();
+AnnotatedText HTML::restoreTarget(AnnotatedText const &in, std::vector<SpanIterator> const &targetTokenSpans,
+                                  std::vector<Taint> const &targetTokenTags) {
+  auto prevTags = spans_.cbegin()->tags;
   auto targetSpanIt = targetTokenSpans.begin();
+  auto targetTagIt = targetTokenTags.begin();
   auto straggerSpanIt = spans_.cbegin();
 
   AnnotatedText out = apply(in, [&](ByteRange range, string_view token, bool last) {
@@ -620,19 +659,20 @@ AnnotatedText HTML::restoreTarget(AnnotatedText const &in, std::vector<SpanItera
           std::find(targetTokenSpans.begin(), targetTokenSpans.end(), straggerSpanIt) != targetTokenSpans.end())
         continue;
 
-      formatter.append(prevSpan->tags, straggerSpanIt->tags);
+      formatter.append(prevTags, straggerSpanIt->tags);
 
       // Note: here, not in 3rd part of for-statement because we don't want to
       // set prevSpan if the continue clause at the beginning of this for-loop
       // was hit.
-      prevSpan = straggerSpanIt;
+      prevTags = straggerSpanIt->tags;
     }
 
     // Now do the same thing but for our target set of tags. Note that we cannot
     // combine this in the for-loop above (i.e. `span_it <= *targetSpanIt`)
     // because there is no guarantee that the order in `targetTokenSpans` is
     // the same as that of `spans`.
-    formatter.append(prevSpan->tags, (*targetSpanIt)->tags);
+
+    formatter.append(prevTags, *targetTagIt);
 
     // If this is the last token of the response, close all open tags.
     if (last) {
@@ -641,11 +681,12 @@ AnnotatedText HTML::restoreTarget(AnnotatedText const &in, std::vector<SpanItera
       // the last token of the output. But lets assume someone someday changes
       // HardAlignments(), and then this for-loop will be necessary.
       // assert((*targetSpanIt)->tags.empty());
-      formatter.append((*targetSpanIt)->tags, HTML::Taint());
+      formatter.append(*targetTagIt, HTML::Taint());
     }
 
-    prevSpan = *targetSpanIt;
+    prevTags = *targetTagIt;
     ++targetSpanIt;
+    ++targetTagIt;
 
     return std::move(formatter.html());
   });

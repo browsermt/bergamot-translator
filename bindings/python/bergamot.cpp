@@ -172,6 +172,10 @@ PYBIND11_MODULE(_bergamot, m) {
   py::bind_vector<std::vector<std::string>>(m, "VectorString");
   py::bind_vector<std::vector<Response>>(m, "VectorResponse");
 
+  py::bind_vector<std::vector<float>>(m, "VectorFloat");
+  py::bind_vector<Alignment>(m, "Alignment");
+  py::bind_vector<Alignments>(m, "Alignments");
+
   py::enum_<ConcatStrategy>(m, "ConcatStrategy")
       .value("FAITHFUL", ConcatStrategy::FAITHFUL)
       .value("SPACE", ConcatStrategy::SPACE)

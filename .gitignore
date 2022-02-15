@@ -23,3 +23,5 @@ wasm/test_page/js/bergamot-translator-worker.*
 
 # VSCode
 .vscode
+
+*.pyc

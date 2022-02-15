@@ -32,7 +32,7 @@ class Repository(ABC):
         pass
 
     @abstractmethod
-    def models(self) -> t.List[str]:
+    def models(self, filter_downloaded: bool) -> t.List[str]:
         """returns identifiers for available models"""
         pass
 

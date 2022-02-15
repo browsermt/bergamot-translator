@@ -1,3 +1,4 @@
+# type: ignore
 import pytest
 from bergamot import REPOSITORY, ResponseOptions, Service, ServiceConfig, VectorString
 

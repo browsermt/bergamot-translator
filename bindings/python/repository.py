@@ -187,7 +187,9 @@ class Aggregator:
         )
 
     def models(self, name: str, filter_downloaded: bool = True) -> t.List[str]:
-        return self.repositories.get(name, self.default_repository).models(filter_downloaded)
+        return self.repositories.get(name, self.default_repository).models(
+            filter_downloaded
+        )
 
     def model(self, name: str, model_identifier: str) -> t.Any:
         return self.repositories.get(name, self.default_repository).model(

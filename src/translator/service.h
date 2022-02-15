@@ -31,9 +31,15 @@ class BlockingService {
  public:
   struct Config {
     bool cacheEnabled{false};  ///< Whether to enable cache or not.
-    size_t cacheSize{2000};    ///< Size in History items to be stored in the cache. Loosely corresponds to sentences to
-                               /// cache in the real world.
-    Logger::Config logger;     // Configurations for logging
+
+    /// Size in History items to be stored in the cache. Loosely corresponds to sentences to
+    /// cache in the real world. Note that cache has a random-eviction policy. The peak
+    /// storage at full occupancy is controlled by this parameter. However, whether we attain
+    /// full occupancy or not is controlled by random factors - specifically how uniformly
+    /// the hash distributes.
+    size_t cacheSize{2000};
+
+    Logger::Config logger;  ///< Configurations for logging
 
     template <class App>
     static void addOptions(App &app, Config &config) {

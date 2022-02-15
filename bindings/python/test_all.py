@@ -24,6 +24,7 @@ def test_basic():
             responses = service.translate(model, VectorString([source]), options)
             for response in responses:
                 print(response.target.text, end="")
+                print(response.alignments)
             print()
 
 

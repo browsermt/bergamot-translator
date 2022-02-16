@@ -11,8 +11,7 @@
 #include "data/types.h"
 #include "definitions.h"
 
-namespace marian {
-namespace bergamot {
+namespace marian::bergamot {
 
 struct Response;
 
@@ -93,8 +92,8 @@ class HTML {
                  std::vector<HTML::SpanIterator> &targetTokenSpans);
   void hardAlignments(Response const &response, std::vector<std::vector<size_t>> &alignments,
                       std::vector<HTML::SpanIterator> const &sourceTokenSpans);
-  bool isContinuation(marian::string_view prev, marian::string_view str);
-  bool isContinuation(std::string_view prev, std::string_view str);
+  bool isContinuation(marian::string_view prev, marian::string_view str) const;
+  bool isContinuation(std::string_view prev, std::string_view str) const;
   // Allocates tag in pool_ (which then owns it) and gives a pointer to be used
   // in Taints. Pointer is valid as long as this HTML instance lives on.
   Tag *makeTag(Tag &&tag);

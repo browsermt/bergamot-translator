@@ -15,8 +15,8 @@ void encodeEntities(marian::string_view const &input, std::string &output) {
   output.clear();
   output.reserve(input.size());  // assumes there are no entities in most cases
 
-  for (const char *it = input.begin(); it != input.end(); ++it) {
-    switch (*it) {
+  for (char it : input) {
+    switch (it) {
       case '&':
         output.append("&amp;");
         break;
@@ -36,7 +36,7 @@ void encodeEntities(marian::string_view const &input, std::string &output) {
       //   output.append("&apos;");
       //   break;
       default:
-        output.push_back(*it);
+        output.push_back(it);
         break;
     }
   }
@@ -99,7 +99,7 @@ void diffTags(HTML::Taint const &prev, HTML::Taint const &curr, HTML::Taint &ope
   opening.clear();
   closing.clear();
 
-  size_t i = 0;
+  std::int64_t i = 0;
 
   // Find first difference
   for (; i < prev.size(); ++i)
@@ -129,6 +129,18 @@ bool isSubset(HTML::Taint const &a, HTML::Taint const &b) {
   return true;
 }
 
+template <typename T>
+size_t argmax(std::vector<T> const &items) {
+  assert(!items.empty());
+  size_t best = 0;
+  for (size_t i = 1; i + 1 < items.size(); ++i) {
+    if (items[i] > items[best]) {
+      best = i;
+    }
+  }
+  return best;
+}
+
 template <typename Fun>
 AnnotatedText apply(AnnotatedText const &in, Fun fun) {
   AnnotatedText out;
@@ -147,8 +159,6 @@ AnnotatedText apply(AnnotatedText const &in, Fun fun) {
 
     // Convert our ByteRanges to string_views since that's what appendSentence
     // expects
-    // TODO: extend AnnotatedText::appendSentence to accept str + ByteRanges
-    // directly
     std::vector<marian::string_view> views(tokens.size());
     std::transform(tokens.begin(), tokens.end(), views.begin(), [&](ByteRange const &range) {
       return marian::string_view(sentence.data() + range.begin, range.size());
@@ -606,7 +616,7 @@ AnnotatedText HTML::restoreTarget(AnnotatedText const &in, std::vector<SpanItera
   auto targetSpanIt = targetTokenSpans.begin();
   auto straggerSpanIt = spans_.cbegin();
 
-  AnnotatedText out = apply(in, [&](ByteRange range, string_view token, bool last) {
+  AnnotatedText out = apply(in, [&]([[maybe_unused]] ByteRange range, string_view token, bool last) {
     TokenFormatter formatter(token);
 
     // First we scan through spans_ to catch up to the span assigned to this
@@ -686,14 +696,14 @@ void HTML::copyTaint(Response const &response, std::vector<std::vector<size_t>> 
 // to determine whether we should share the markup, or whether we should see
 // this token as a fresh start. This implementation will treat "hello[world]"
 // as 4 words, assuming its tokenised as something like `h ell o [ wor ld ]`.
-bool HTML::isContinuation(std::string_view prev, std::string_view str) {
+bool HTML::isContinuation(std::string_view prev, std::string_view str) const {
   if (options_.continuationDelimiters.empty()) return false;
   if (prev.empty() || str.empty()) return false;
   return options_.continuationDelimiters.find(str[0]) == std::string::npos &&
          options_.continuationDelimiters.find(prev.back()) == std::string::npos;
 }
 
-bool HTML::isContinuation(marian::string_view prev, marian::string_view str) {
+bool HTML::isContinuation(marian::string_view prev, marian::string_view str) const {
   return isContinuation(std::string_view(prev.data(), prev.size()), std::string_view(str.data(), str.size()));
 }
 
@@ -709,14 +719,7 @@ void HTML::hardAlignments(Response const &response, std::vector<std::vector<size
     // Note: only search from 0 to N-1 because token N is end-of-sentence token
     // that can only align with the end-of-sentence token of the target
     for (size_t t = 0; t + 1 < response.target.numWords(sentenceIdx); ++t) {
-      size_t maxS = 0;
-      for (size_t s = 1; s + 1 < response.source.numWords(sentenceIdx); ++s) {
-        if (response.alignments[sentenceIdx][t][s] > response.alignments[sentenceIdx][t][maxS]) {
-          maxS = s;
-        }
-      }
-
-      alignments.back().push_back(maxS);
+      alignments.back().push_back(::argmax(response.alignments[sentenceIdx][t]));
     }
 
     // Next, we try to smooth out these selected alignments with a few heuristics

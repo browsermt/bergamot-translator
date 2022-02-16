@@ -5,7 +5,7 @@ from bergamot import REPOSITORY, ResponseOptions, Service, ServiceConfig, Vector
 
 def test_basic():
     keys = ["browsermt"]
-    models = ['de-en-tiny']
+    models = ["de-en-tiny"]
     config = ServiceConfig(numWorkers=1, logLevel="critical")
     service = Service(config)
     for repository in keys:

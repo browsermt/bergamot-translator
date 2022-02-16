@@ -400,7 +400,8 @@ HTML::HTML(std::string &&source, bool process_markup, Options &&options) : optio
         // If the previous segment was the open or close tag of a block element
         // we treat the text after it as a new sentence.
         if (addSentenceBreak) {
-          if (!(source.empty() || (source.size() > 2 && source.substr(source.size() - 2) == ""))) {
+          // If there isn't already a \n\n at the end of source...
+          if (source.size() < 2 || source.substr(source.size() - 2) != "\n\n") {
             stack.push_back(makeTag({Tag::WHITESPACE}));
             // Important: span->size() == 0 to make it behave as a void element.
             // Also important: position before the \n\n tokens, not after, to

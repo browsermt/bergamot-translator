@@ -207,7 +207,7 @@ setup(
     extras_require={"test": ["pytest>=6.0"]},
     license_files=("LICENSE",),
     python_requires=">=3.6",
-    packages=["bergamot"],
+    packages=["bergamot", "bergamot.tests"],
     package_dir={"bergamot": "bindings/python"},
     install_requires=["requests", "pyyaml>=5.1", "appdirs"],
     entry_points={

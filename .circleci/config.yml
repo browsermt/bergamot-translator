@@ -20,13 +20,18 @@ jobs:
           working_directory: build-wasm
           command: |
             ARTIFACT_BASE="bergamot-translator-worker"
+            ARTIFACT_SUFFIX="with-wormhole"
+            ARTIFACT_FINAL=$ARTIFACT_BASE-$ARTIFACT_SUFFIX
+
             if [[ -f "$ARTIFACT_BASE.js" && -f "$ARTIFACT_BASE.wasm" ]]; then
               echo "Artifacts Successfully Generated"
               mkdir ../artifacts
-              cp $ARTIFACT_BASE.wasm ../artifacts/$ARTIFACT_BASE-with-wormhole.wasm
-              cp $ARTIFACT_BASE.js ../artifacts/$ARTIFACT_BASE-with-wormhole.js
-              shasum -a 256 ../artifacts/* > ../artifacts/SHA256-1
-              cp ../BERGAMOT_VERSION ../artifacts/
+              cp $ARTIFACT_BASE.wasm ../artifacts/$ARTIFACT_FINAL.wasm
+              cp $ARTIFACT_BASE.js ../artifacts/$ARTIFACT_FINAL.js
+              cd ../artifacts
+              shasum -a 256 $ARTIFACT_FINAL.wasm $ARTIFACT_FINAL.js >> sha256-filesize-$ARTIFACT_SUFFIX
+              ls -lsa $ARTIFACT_FINAL.wasm $ARTIFACT_FINAL.js >> sha256-filesize-$ARTIFACT_SUFFIX
+              cp ../BERGAMOT_VERSION .
             else
               echo "Failure: Artifacts Not Present"
               exit 1
@@ -61,12 +66,17 @@ jobs:
           working_directory: build-wasm
           command: |
             ARTIFACT_BASE="bergamot-translator-worker"
+            ARTIFACT_SUFFIX="without-wormhole"
+            ARTIFACT_FINAL=$ARTIFACT_BASE-$ARTIFACT_SUFFIX
+
             if [[ -f "$ARTIFACT_BASE.js" && -f "$ARTIFACT_BASE.wasm" ]]; then
               echo "Artifacts Successfully Generated"
               mkdir ../artifacts
-              cp $ARTIFACT_BASE.wasm ../artifacts/$ARTIFACT_BASE-without-wormhole.wasm
-              cp $ARTIFACT_BASE.js ../artifacts/$ARTIFACT_BASE-without-wormhole.js
-              shasum -a 256 ../artifacts/* > ../artifacts/SHA256-2
+              cp $ARTIFACT_BASE.wasm ../artifacts/$ARTIFACT_FINAL.wasm
+              cp $ARTIFACT_BASE.js ../artifacts/$ARTIFACT_FINAL.js
+              cd ../artifacts
+              shasum -a 256 $ARTIFACT_FINAL.wasm $ARTIFACT_FINAL.js >> sha256-filesize-$ARTIFACT_SUFFIX
+              ls -lsa $ARTIFACT_FINAL.wasm $ARTIFACT_FINAL.js >> sha256-filesize-$ARTIFACT_SUFFIX
             else
               echo "Failure: Artifacts Not Present"
               exit 1
@@ -96,9 +106,8 @@ jobs:
                 name: "Publish Release on GitHub"
                 command: |
                   export TAG_VERSION=$(cat ./artifacts/BERGAMOT_VERSION)
-                  ls -lsa ./artifacts/ > ./artifacts/FILESIZES
-                  cat ./artifacts/SHA256-1 ./artifacts/SHA256-2 > ./artifacts/SHA256
-                  rm ./artifacts/SHA256-1 ./artifacts/SHA256-2 ./artifacts/BERGAMOT_VERSION
+                  cat ./artifacts/sha256-filesize-without-wormhole ./artifacts/sha256-filesize-with-wormhole >> ./artifacts/sha256-filesize
+                  rm ./artifacts/sha256-filesize-without-wormhole ./artifacts/sha256-filesize-with-wormhole ./artifacts/BERGAMOT_VERSION
                   ghr -t ${GHTOKEN} -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} -delete ${TAG_VERSION} ./artifacts/
 
 workflows:

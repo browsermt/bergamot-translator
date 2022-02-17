@@ -21,8 +21,6 @@ class QualityEstimator {
   virtual void computeQualityScores(const Histories &histories, Response &response) const = 0;
 };
 
-using SubwordRange = ByteRange;
-
 /// Unsupervised Quality Estimator model. It uses the translator model's log probabilities (log probs) as a proxy for
 /// quality scores. Then, for a given word, its quality score is computed by taking the mean of the log probs of the
 /// tokens that make it up. The sentence score is the mean of all word's log probs.
@@ -208,15 +206,5 @@ inline std::shared_ptr<QualityEstimator> createQualityEstimator(const AlignedMem
 /// @param [in] sentenceIdx: the id of a candidate sentence
 std::vector<SubwordRange> mapWords(const std::vector<float> &logProbs, const AnnotatedText &target,
                                    const size_t sentenceIdx);
-
-/// Given a vector of subwordRanges, it maps the elements to be real words rather than sublevel tokens. The words are
-/// represented through ByteRanges.
-
-/// @param [in] wordIndices: A vector where each element correspond to the index of a real word and its values are
-/// represented by the SubwordRanges (which are aliases of ByteRanges) which represents sublevel token positions
-/// @param [in] target: AnnotatedText target value
-/// @param [in] sentenceIdx: the id of a candidate sentence
-std::vector<ByteRange> subwordToWords(const std::vector<SubwordRange> &wordIndices, const AnnotatedText &target,
-                                      const size_t sentenceIdx);
 
 }  // namespace marian::bergamot

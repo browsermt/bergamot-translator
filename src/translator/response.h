@@ -30,8 +30,8 @@ struct Response {
   struct SentenceQualityScore {
     /// Quality score of each translated word
     std::vector<float> wordScores;
-    /// Each word position in the translated text
-    std::vector<ByteRange> wordByteRanges;
+    /// Position of start and end token of each word in the translated text
+    std::vector<SubwordRange> wordRanges;
     /// Whole sentence quality score (it is composed by the mean of its words)
     float sentenceScore = 0.0;
   };

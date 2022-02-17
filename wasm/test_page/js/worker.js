@@ -326,6 +326,7 @@ const _parseTranslatedTextSentenceQualityScores = (vectorResponse) => {
       sentenceQualityScores.push(sentenceQualityScore);
     }
     result.push(sentenceQualityScores);
+    vectorSentenceQualityScore.delete();
   }
   return result;
 }

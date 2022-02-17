@@ -240,11 +240,8 @@ alignment: soft
   languagePairToTranslationModels.set(languagePair, translationModel);
 }
 
-const _isPivotingRequired = (lang1, lang2) => {
-  if ((lang1 === PIVOT_LANGUAGE) || (lang2 === PIVOT_LANGUAGE)) {
-    return false;
-  }
-  return true;
+const _isPivotingRequired = (from, to) => {
+  return (from !== PIVOT_LANGUAGE) && (to !== PIVOT_LANGUAGE);
 }
 
 const _getLanguagePair = (srcLang, tgtLang) => {
@@ -334,10 +331,18 @@ const _parseTranslatedTextSentenceQualityScores = (vectorResponse) => {
 }
 
 const _prepareResponseOptions = (translateOptions) => {
-  const vectorResponseOptions = new Module.VectorResponseOptions;
+  let vectorResponseOptions = new Module.VectorResponseOptions;
   translateOptions.forEach(translateOption => {
-    vectorResponseOptions.push_back({qualityScores: translateOption["isQualityScores"], alignment: true, html: translateOption["isHtml"]});
+    vectorResponseOptions.push_back({
+      qualityScores: translateOption["isQualityScores"],
+      alignment: true,
+      html: translateOption["isHtml"]
+    });
   });
+  if (vectorResponseOptions.size() == 0) {
+    vectorResponseOptions.delete();
+    throw Error(`No Translation Options provided`);
+  }
   return vectorResponseOptions;
 }
 
@@ -350,6 +355,10 @@ const _prepareSourceText = (input) => {
     }
     vectorSourceText.push_back(paragraph.trim())
   })
+  if (vectorSourceText.size() == 0) {
+    vectorSourceText.delete();
+    throw Error(`No text provided to translate`);
+  }
   return vectorSourceText;
 }
 

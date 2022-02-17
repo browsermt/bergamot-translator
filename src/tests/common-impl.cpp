@@ -155,10 +155,13 @@ void TestSuite<Service>::qualityEstimatorWords(Ptr<TranslationModel> model) {
   std::string source = readFromStdin();
   const Response response = bridge_.translate(service_, model, std::move(source), responseOptions);
 
-  for (const auto &sentenceQualityEstimate : response.qualityScores) {
+  for (size_t sentenceIdx = 0; sentenceIdx < response.qualityScores.size(); ++sentenceIdx) {
+    const auto &sentenceQualityEstimate = response.qualityScores[sentenceIdx];
     std::cout << "[SentenceBegin]\n";
 
-    for (const auto &wordByteRange : sentenceQualityEstimate.wordByteRanges) {
+    for (const auto &wordRange : sentenceQualityEstimate.wordRanges) {
+      const ByteRange wordByteRange{response.target.wordAsByteRange(sentenceIdx, wordRange.begin).begin,
+                                    response.target.wordAsByteRange(sentenceIdx, wordRange.end).begin};
       const string_view word(response.target.text.data() + wordByteRange.begin, wordByteRange.size());
       std::cout << word << "\n";
     }

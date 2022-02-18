@@ -2,8 +2,10 @@ import os
 
 import requests
 import yaml
-
+import json
+from ._bergamot import Response, AnnotatedText, Alignments
 from .typing_utils import URL, PathLike
+import typing as t
 
 
 def download_resource(url: URL, save_location: PathLike, force_download=False):
@@ -50,3 +52,26 @@ def patch_marian_for_bergamot(
     # Write-out.
     with open(bergamot_config_path, "w") as output_file:
         print(yaml.dump(data, sort_keys=False), file=output_file)
+
+
+def toJSON(response: Response, *args, **kwargs) -> str:
+    def toPyNative(annotatedText: AnnotatedText) -> t.Dict[t.Any, t.Any]:
+        result = []
+        for sentenceIdx in range(annotatedText.numSentences()):
+            wordLs = []
+            for wordIdx in range(annotatedText.numWords(sentenceIdx)):
+                word = annotatedText.wordAsByteRange(sentenceIdx, wordIdx)
+                wordLs.append((word.begin, word.end))
+            result.append(wordLs)
+
+        return {
+            "text": annotatedText.text,
+            "annotation": result
+        }
+
+
+    return json.dumps({
+        "source": toPyNative(response.source),
+        "target": toPyNative(response.target),
+        "alignments": list(response.alignments)
+    }, *args, **kwargs)

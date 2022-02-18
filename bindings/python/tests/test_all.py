@@ -1,6 +1,7 @@
 # type: ignore
 import pytest
 from bergamot import REPOSITORY, ResponseOptions, Service, ServiceConfig, VectorString
+from bergamot.utils import toJSON
 
 
 def test_basic():
@@ -21,6 +22,4 @@ def test_basic():
             source = "1 2 3 4 5 6 7 8 9"
             responses = service.translate(model, VectorString([source]), options)
             for response in responses:
-                print(response.target.text, end="")
-                print(response.alignments)
-            print()
+                print(toJSON(response, indent=4))

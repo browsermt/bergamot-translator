@@ -15,7 +15,7 @@ from .utils import download_resource, patch_marian_for_bergamot
 APP = "bergamot"
 
 
-class Repository(ABC): # pragma: no cover
+class Repository(ABC):  # pragma: no cover
     """
     An interface for several repositories. Intended to enable interchangable
     use of translateLocally and Mozilla repositories for usage through python.

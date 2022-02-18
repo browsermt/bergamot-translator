@@ -24,7 +24,3 @@ def test_basic():
                 print(response.target.text, end="")
                 print(response.alignments)
             print()
-
-
-if __name__ == "__main__":
-    test_basic()

@@ -5,7 +5,7 @@ import typing as t
 import requests
 import yaml
 
-from ._bergamot import Alignments, AnnotatedText, Response
+from . import Alignments, AnnotatedText, Response
 from .typing_utils import URL, PathLike
 
 

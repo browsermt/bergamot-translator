@@ -1,11 +1,12 @@
+import json
 import os
+import typing as t
 
 import requests
 import yaml
-import json
-from ._bergamot import Response, AnnotatedText, Alignments
+
+from ._bergamot import Alignments, AnnotatedText, Response
 from .typing_utils import URL, PathLike
-import typing as t
 
 
 def download_resource(url: URL, save_location: PathLike, force_download=False):
@@ -64,14 +65,14 @@ def toJSON(response: Response, *args, **kwargs) -> str:
                 wordLs.append((word.begin, word.end))
             result.append(wordLs)
 
-        return {
-            "text": annotatedText.text,
-            "annotation": result
-        }
+        return {"text": annotatedText.text, "annotation": result}
 
-
-    return json.dumps({
-        "source": toPyNative(response.source),
-        "target": toPyNative(response.target),
-        "alignments": list(response.alignments)
-    }, *args, **kwargs)
+    return json.dumps(
+        {
+            "source": toPyNative(response.source),
+            "target": toPyNative(response.target),
+            "alignments": list(response.alignments),
+        },
+        *args,
+        **kwargs
+    )

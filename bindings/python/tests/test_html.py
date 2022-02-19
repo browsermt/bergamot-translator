@@ -33,7 +33,7 @@ def test_html():
         responses = service.translate(model, VectorString([src]), options)
         return responses[0].target.text
 
-    def get_surrounding_text(el):
+    def get_surrounding_text(element):
         """
         Places for spaces: 0 <b> 1 … 2 </b> 3
         0 before_open: prev.tail[-1] if prev else parent.text[-1]
@@ -42,34 +42,34 @@ def test_html():
         3 after_close: elem.tail[0]
         """
         before_open = (
-            el.getprevious().tail
-            if el.getprevious() is not None
-            else el.getparent().text
+            element.getprevious().tail
+            if element.getprevious() is not None
+            else element.getparent().text
         )
-        after_open = el.text
-        last_child = next(el.iterchildren(reversed=True), None)
-        before_close = last_child.tail if last_child is not None else el.text
-        after_close = el.tail
+        after_open = element.text
+        last_child = next(element.iterchildren(reversed=True), None)
+        before_close = last_child.tail if last_child is not None else element.text
+        after_close = element.tail
         return [before_open, after_open, before_close, after_close]
 
-    def has_surrounding_text(el):
+    def has_surrounding_text(element):
         return [
-            text is not None and text.strip() != "" for text in get_surrounding_text(el)
+            text is not None and text.strip() != "" for text in get_surrounding_text(element)
         ]
 
-    def has_surrounding_spaces(el):
+    def has_surrounding_spaces(element):
         return [
             isinstance(text, str) and len(text) > 0 and text[index] in whitespace
-            for text, index in zip(get_surrounding_text(el), [-1, 0, -1, 0])
+            for text, index in zip(get_surrounding_text(element), [-1, 0, -1, 0])
         ]
 
     def format_whitespace(slots):
         return "{}<t>{}…{}</t>{}".format(*["␣" if slot else "⊘" for slot in slots])
 
-    def format_element(el):
+    def format_element(element):
         return "<{}{}>".format(
-            el.tag,
-            "".join(f' {key}="{val}"' for key, val in el.items() if key != "x-test-id"),
+            element.tag,
+            "".join(f' {key}="{val}"' for key, val in element.items() if key != "x-test-id"),
         )
 
     def clean_html(src):

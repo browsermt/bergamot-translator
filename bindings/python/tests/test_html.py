@@ -54,7 +54,8 @@ def test_html():
 
     def has_surrounding_text(element):
         return [
-            text is not None and text.strip() != "" for text in get_surrounding_text(element)
+            text is not None and text.strip() != ""
+            for text in get_surrounding_text(element)
         ]
 
     def has_surrounding_spaces(element):
@@ -69,7 +70,9 @@ def test_html():
     def format_element(element):
         return "<{}{}>".format(
             element.tag,
-            "".join(f' {key}="{val}"' for key, val in element.items() if key != "x-test-id"),
+            "".join(
+                f' {key}="{val}"' for key, val in element.items() if key != "x-test-id"
+            ),
         )
 
     def clean_html(src):

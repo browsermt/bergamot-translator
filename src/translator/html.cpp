@@ -126,7 +126,9 @@ bool contains(HTML::TagStack const &stack, HTML::Tag const *tag) {
   return std::find(stack.rbegin(), stack.rend(), tag) != stack.rend();
 }
 
-bool isSubset(HTML::TagStack const &a, HTML::TagStack const &b) {
+/// Is tag stack B an extended version of A? I.e. same tags, but maybe a few
+/// more nested deeper.
+bool extends(HTML::TagStack const &b, HTML::TagStack const &a) {
   if (a.size() > b.size()) return false;
 
   for (auto i = a.begin(), j = b.begin(); i != a.end(); ++i, ++j)
@@ -758,7 +760,7 @@ void HTML::hardAlignments(Response const &response, std::vector<std::vector<size
         // token (and they together are part of a word-ish thing) then mark
         // this word as aligning. Otherwise just copy the alignment source of
         // the previous token.
-        if (isSubset(prevTagStack, currTagStack) || currScore >= prevScore) {
+        if (extends(currTagStack, prevTagStack) || currScore >= prevScore) {
           // Apply this to all previous tokens in the word
           for (size_t i = t;; --i) {
             alignments.back()[i] = currSentenceIdx;

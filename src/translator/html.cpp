@@ -273,7 +273,9 @@ void consumeIgnoredTag(markup::Scanner &scanner, HTML::Tag &tag, std::string con
   // which sets value() to start pointing at the body.
   const char *start = scanner.start();
 
-  // Consume the rest of the HTML until (including) the final closing tag.
+  // Consume the rest of the HTML until (including) the final closing tag. We
+  // start with the token that caused the previous loop to fall into the default
+  // case.
   while (inside) {
     switch (token) {
       case markup::Scanner::TT_ERROR:
@@ -281,22 +283,22 @@ void consumeIgnoredTag(markup::Scanner &scanner, HTML::Tag &tag, std::string con
       case markup::Scanner::TT_EOF:
         ABORT("Did not find closing tag </{}>");
       case markup::Scanner::TT_TAG_START:
-      case markup::Scanner::TT_TAG_END:
         // Note: Looking specifically for only our own type of tag so we don't
         // have to care about whether other tags we encounter are void tags or
         // not. Does assume the HTML is valid, as no stack is kept.
-        if (toLowerCase(scanner.tag()) == name) {
-          if (token == markup::Scanner::TT_TAG_END) {
-            if (--inside == 0) break;  // also stops loop because !inside
-          } else {
-            ++inside;
-          }
-        }
-        // intentional fall-through to scanner.next()!
+        if (toLowerCase(scanner.tag()) == name) ++inside;
+        break;
+      case markup::Scanner::TT_TAG_END:
+        if (toLowerCase(scanner.tag()) == name) --inside;
+        break;
       default:
-        token = scanner.next();
         break;
     }
+
+    // Only continue scanning if we're still inside. We could have just read the
+    // TT_TAG_END token that ended this element, and we don't want to continue
+    // consuming tokens at that point.
+    if (inside) token = scanner.next();
   }
 
   // Only a TAG_END could have stopped the previous loop. We take the start

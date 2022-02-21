@@ -159,9 +159,7 @@ void TestSuite<Service>::qualityEstimatorWords(Ptr<TranslationModel> model) {
     const auto &sentenceQualityEstimate = response.qualityScores[sentenceIdx];
     std::cout << "[SentenceBegin]\n";
 
-    for (const auto &wordRange : sentenceQualityEstimate.wordRanges) {
-      const ByteRange wordByteRange{response.target.wordAsByteRange(sentenceIdx, wordRange.begin).begin,
-                                    response.target.wordAsByteRange(sentenceIdx, wordRange.end).begin};
+    for (const auto &wordByteRange : getWordByteRanges(response, sentenceIdx)) {
       const string_view word(response.target.text.data() + wordByteRange.begin, wordByteRange.size());
       std::cout << word << "\n";
     }

@@ -35,16 +35,8 @@ std::vector<SentenceQualityScore> getQualityScores(const Response& response) {
   scores.reserve(response.qualityScores.size());
 
   for (size_t sentenceIdx = 0; sentenceIdx < response.qualityScores.size(); ++sentenceIdx) {
-    std::vector<ByteRange> wordByteRanges;
-    wordByteRanges.reserve(response.qualityScores[sentenceIdx].wordRanges.size());
-
-    for (auto&& word : response.qualityScores[sentenceIdx].wordRanges) {
-      wordByteRanges.emplace_back();
-      wordByteRanges.back().begin = response.target.wordAsByteRange(sentenceIdx, word.begin).begin;
-      wordByteRanges.back().end = response.target.wordAsByteRange(sentenceIdx, word.end).begin;
-    }
-
-    scores.emplace_back(SentenceQualityScore{response.qualityScores[sentenceIdx].wordScores, std::move(wordByteRanges),
+    scores.emplace_back(SentenceQualityScore{response.qualityScores[sentenceIdx].wordScores,
+                                             marian::bergamot::getWordByteRanges(response, sentenceIdx),
                                              response.qualityScores[sentenceIdx].sentenceScore});
   }
 

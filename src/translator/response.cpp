@@ -142,4 +142,22 @@ std::vector<Alignment> remapAlignments(const Response &first, const Response &se
   return alignments;
 }
 
+std::vector<ByteRange> getWordByteRanges(const Response &response, size_t sentenceIdx) {
+  std::vector<ByteRange> wordByteRanges;
+  wordByteRanges.reserve(response.qualityScores[sentenceIdx].wordRanges.size());
+
+  for (auto &&word : response.qualityScores[sentenceIdx].wordRanges) {
+    size_t wordBegin = response.target.wordAsByteRange(sentenceIdx, word.begin).begin;
+    size_t wordEnd = response.target.wordAsByteRange(sentenceIdx, word.end).begin;
+
+    if (std::isspace(response.target.text.at(wordBegin))) {
+      ++wordBegin;
+    }
+
+    wordByteRanges.emplace_back(ByteRange{wordBegin, wordEnd});
+  }
+
+  return wordByteRanges;
+}
+
 }  // namespace marian::bergamot

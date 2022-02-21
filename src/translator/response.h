@@ -77,6 +77,8 @@ struct Response {
 
 std::vector<Alignment> remapAlignments(const Response &first, const Response &second);
 
+std::vector<ByteRange> getWordByteRanges(Response const &response, size_t sentenceIdx);
+
 }  // namespace bergamot
 }  // namespace marian
 

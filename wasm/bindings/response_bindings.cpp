@@ -39,9 +39,14 @@ std::vector<SentenceQualityScore> getQualityScores(const Response& response) {
     wordByteRanges.reserve(response.qualityScores[sentenceIdx].wordRanges.size());
 
     for (auto&& word : response.qualityScores[sentenceIdx].wordRanges) {
-      wordByteRanges.emplace_back();
-      wordByteRanges.back().begin = response.target.wordAsByteRange(sentenceIdx, word.begin).begin;
-      wordByteRanges.back().end = response.target.wordAsByteRange(sentenceIdx, word.end).begin;
+      size_t wordBegin = response.target.wordAsByteRange(sentenceIdx, word.begin).begin;
+      size_t wordEnd = response.target.wordAsByteRange(sentenceIdx, word.end).begin;
+
+      if (std::isspace(response.target.text.at(wordBegin))) {
+        ++wordBegin;
+      }
+
+      wordByteRanges.emplace_back(ByteRange{wordBegin, wordEnd});
     }
 
     scores.emplace_back(SentenceQualityScore{response.qualityScores[sentenceIdx].wordScores, std::move(wordByteRanges),

@@ -73,7 +73,7 @@ label {
   align-self: center;
 }
 
-textarea {
+textarea, .output-area {
   padding: 1rem;
   font-family: sans-serif;
   font-size: 1rem;
@@ -96,4 +96,19 @@ button:hover {
 
 #output {
   background-color: #f4f4f4;
+}
+
+.output-area [x-bergamot-word-score].bad {
+  background-image:
+    linear-gradient(45deg, transparent 65%, red 80%, transparent 90%),
+    linear-gradient(135deg, transparent 5%, red 15%, transparent 25%),
+    linear-gradient(135deg, transparent 45%, red 55%, transparent 65%),
+    linear-gradient(45deg, transparent 25%, red 35%, transparent 50%);
+  background-repeat:repeat-x;
+  background-size: 8px 2px;
+  background-position:0 95%;
+}
+
+.output-area [x-bergamot-sentence-score].bad {
+  background: rgba(255, 255, 128, 0.8);
 }

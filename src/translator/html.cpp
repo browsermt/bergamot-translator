@@ -137,41 +137,6 @@ bool extends(HTML::TagStack const &b, HTML::TagStack const &a) {
   return true;
 }
 
-/// Utility function to call `fun` on each word (subword token effectively) in
-/// an `AnnotatedText`. `fun` is called with the `ByteRange`, the `string_view`
-/// with the word, and a `bool` to indicate whether it is the last word in the
-/// `AnnotatedText`, which is also the ending whitespace slot of AnnotatedText.
-template <typename Fun>
-AnnotatedText apply(AnnotatedText const &in, Fun fun) {
-  AnnotatedText out;
-
-  for (size_t sentenceIdx = 0; sentenceIdx < in.numSentences(); ++sentenceIdx) {
-    std::string sentence;
-    std::vector<ByteRange> tokens;
-
-    std::string prefix = fun(in.annotation.gap(sentenceIdx), in.gap(sentenceIdx), false);
-
-    for (size_t wordIdx = 0; wordIdx < in.numWords(sentenceIdx); ++wordIdx) {
-      std::string token = fun(in.wordAsByteRange(sentenceIdx, wordIdx), in.word(sentenceIdx, wordIdx), false);
-      tokens.push_back(ByteRange{sentence.size(), sentence.size() + token.size()});
-      sentence += token;
-    }
-
-    // Convert our ByteRanges to string_views since that's what appendSentence
-    // expects
-    std::vector<marian::string_view> views(tokens.size());
-    std::transform(tokens.begin(), tokens.end(), views.begin(), [&](ByteRange const &range) {
-      return marian::string_view(sentence.data() + range.begin, range.size());
-    });
-
-    out.appendSentence(prefix, views.begin(), views.end());
-  }
-
-  out.appendEndingWhitespace(fun(in.annotation.gap(in.numSentences()), in.gap(in.numSentences()), true));
-
-  return out;
-}
-
 /// Tests whether `response` has alignment info associated with it or not.
 bool hasAlignments(Response const &response) {
   // Test for each sentence individually as a sentence may be empty (or there)
@@ -587,7 +552,7 @@ AnnotatedText HTML::restoreSource(AnnotatedText const &in, std::vector<SpanItera
                                  // and the while-loop below will do the rest
   assert(prevIt == spans_.end() || prevIt->tags.empty());
 
-  return apply(in, [&](ByteRange range, string_view token, bool last) {
+  return in.apply([&](ByteRange range, string_view token, bool last) {
     TokenFormatter formatter(token);
 
     // Potential issue: spans and tokens can intersect, e.g.
@@ -628,7 +593,7 @@ AnnotatedText HTML::restoreTarget(AnnotatedText const &in, std::vector<SpanItera
   auto targetSpanIt = targetTokenSpans.begin();
   auto straggerSpanIt = spans_.cbegin();
 
-  AnnotatedText out = apply(in, [&]([[maybe_unused]] ByteRange range, string_view token, bool last) {
+  AnnotatedText out = in.apply([&]([[maybe_unused]] ByteRange range, string_view token, bool last) {
     TokenFormatter formatter(token);
 
     // First we scan through spans_ to catch up to the span assigned to this

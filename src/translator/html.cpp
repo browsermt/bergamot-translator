@@ -135,18 +135,6 @@ bool isSubset(HTML::TagStack const &a, HTML::TagStack const &b) {
   return true;
 }
 
-template <typename T>
-size_t argmax(std::vector<T> const &items) {
-  assert(!items.empty());
-  size_t best = 0;
-  for (size_t i = 1; i + 1 < items.size(); ++i) {
-    if (items[i] > items[best]) {
-      best = i;
-    }
-  }
-  return best;
-}
-
 /// Utility function to call `fun` on each word (subword token effectively) in
 /// an `AnnotatedText`. `fun` is called with the `ByteRange`, the `string_view`
 /// with the word, and a `bool` to indicate whether it is the last word in the
@@ -746,7 +734,9 @@ void HTML::hardAlignments(Response const &response, std::vector<std::vector<size
     // Note: only search from 0 to N-1 because token N is end-of-sentence token
     // that can only align with the end-of-sentence token of the target
     for (size_t t = 0; t + 1 < response.target.numWords(sentenceIdx); ++t) {
-      alignments.back().push_back(::argmax(response.alignments[sentenceIdx][t]));
+      alignments.back().push_back(
+          std::max_element(response.alignments[sentenceIdx][t].begin(), response.alignments[sentenceIdx][t].end()) -
+          response.alignments[sentenceIdx][t].begin());
     }
 
     // Next, we try to smooth out these selected alignments with a few heuristics

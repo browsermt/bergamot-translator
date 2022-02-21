@@ -103,16 +103,18 @@ void diffTags(HTML::TagStack const &prev, HTML::TagStack const &curr, HTML::TagS
   opening.clear();
   closing.clear();
 
-  std::int64_t i = 0;
+  size_t i = 0;
 
   // Find first difference
   for (; i < prev.size(); ++i)
     if (i >= curr.size() || prev[i] != curr[i]) break;
 
   // Only nodes of type ELEMENT can have children and thus would need a closing tag.
+  // NOLINTNEXTLINE(bugprone-narrowing-conversions)
   std::copy_if(prev.begin() + i, prev.end(), std::back_inserter(closing),
                [&](HTML::Tag *tag) { return tag->type == HTML::Tag::ELEMENT; });
 
+  // NOLINTNEXTLINE(bugprone-narrowing-conversions)
   opening.insert(opening.end(), curr.begin() + i, curr.end());
 }
 

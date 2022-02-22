@@ -31,7 +31,7 @@ Response combine(Response &&first, Response &&second) {
 }
 
 std::optional<TranslationCache> makeOptionalCache(size_t size, size_t mutexBuckets) {
-  return size == 0 ? std::make_optional<TranslationCache>(size, mutexBuckets) : std::nullopt;
+  return size > 0 ? std::make_optional<TranslationCache>(size, mutexBuckets) : std::nullopt;
 }
 
 }  // namespace

@@ -31,12 +31,12 @@ void encodeEntities(marian::string_view const &input, std::string &output) {
       // case ???:
       //   output.append("&nbsp;");
       //   break;
-      case '"':
-        output.append("&quot;");
-        break;
-      case '\'':
-        output.append("&apos;");
-        break;
+      // case '"':
+      //   output.append("&quot;");
+      //   break;
+      // case '\'':
+      //   output.append("&apos;");
+      //   break;
       default:
         output.push_back(it);
         break;

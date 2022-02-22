@@ -71,10 +71,10 @@ class TranslationModel {
   /// @param [in] responseOptions: Configuration used to prepare the Response corresponding to the created request.
   //  @returns Request created from the query parameters wrapped within a shared-pointer.
   Ptr<Request> makeRequest(size_t requestId, std::string&& source, CallbackType callback,
-                           const ResponseOptions& responseOptions, TranslationCache* cache);
+                           const ResponseOptions& responseOptions, std::optional<TranslationCache>& cache);
 
   Ptr<Request> makePivotRequest(size_t requestId, AnnotatedText&& previousTarget, CallbackType callback,
-                                const ResponseOptions& responseOptions, TranslationCache* cache);
+                                const ResponseOptions& responseOptions, std::optional<TranslationCache>& cache);
 
   /// Relays a request to the batching-pool specific to this translation model.
   /// @param [in] request: Request constructed through makeRequest

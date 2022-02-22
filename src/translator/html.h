@@ -183,6 +183,21 @@ class HTML {
   bool isContinuation(marian::string_view prev, marian::string_view str) const;
   bool isContinuation(std::string_view prev, std::string_view str) const;
 
+  /// Copies span pointers from the subwords/tokens from the source text to the
+  /// subwords of the target text in `targetTokenSpans` using alignment
+  /// information in `response`.
+  void copyTagStack(Response const &response, std::vector<std::vector<size_t>> const &alignments,
+                    std::vector<HTML::SpanIterator> const &sourceTokenSpans,
+                    std::vector<HTML::SpanIterator> &targetTokenSpans);
+
+  /// Turns the alignment scores in `response.alignments` into one source token
+  /// per target token. Has some heuristics to keep all target tokens of a
+  /// single word pointing to the same span, and prefers spans with more markup
+  /// over spans with less to try to retain as much of the input markup as
+  /// possible.
+  void hardAlignments(Response const &response, std::vector<std::vector<size_t>> &alignments,
+                      std::vector<HTML::SpanIterator> const &sourceTokenSpans);
+
   /// Allocates a tag in `pool_` (which then owns it) and gives a pointer to be
   /// used in TagStacks. Pointer is valid as long as this HTML instance lives on.
   Tag *makeTag(Tag &&tag);

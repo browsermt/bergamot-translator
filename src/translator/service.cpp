@@ -30,8 +30,8 @@ Response combine(Response &&first, Response &&second) {
   return combined;
 }
 
-std::optional<TranslationCache> makeOptionalCache(bool enabled, size_t size, size_t mutexBuckets) {
-  return enabled ? std::make_optional<TranslationCache>(size, mutexBuckets) : std::nullopt;
+std::optional<TranslationCache> makeOptionalCache(size_t size, size_t mutexBuckets) {
+  return size == 0 ? std::make_optional<TranslationCache>(size, mutexBuckets) : std::nullopt;
 }
 
 }  // namespace
@@ -40,7 +40,7 @@ BlockingService::BlockingService(const BlockingService::Config &config)
     : config_(config),
       requestId_(0),
       batchingPool_(),
-      cache_(makeOptionalCache(config.cacheEnabled, config.cacheSize, /*mutexBuckets = */ 1)),
+      cache_(makeOptionalCache(config.cacheSize, /*mutexBuckets = */ 1)),
       logger_(config.logger) {}
 
 std::vector<Response> BlockingService::translateMultiple(std::shared_ptr<TranslationModel> translationModel,
@@ -133,7 +133,7 @@ AsyncService::AsyncService(const AsyncService::Config &config)
     : requestId_(0),
       config_(config),
       safeBatchingPool_(),
-      cache_(makeOptionalCache(config_.cacheEnabled, config_.cacheSize, /*mutexBuckets=*/config_.numWorkers)),
+      cache_(makeOptionalCache(config_.cacheSize, /*mutexBuckets=*/config_.numWorkers)),
       logger_(config.logger) {
   ABORT_IF(config_.numWorkers == 0, "Number of workers should be at least 1 in a threaded workflow");
   workers_.reserve(config_.numWorkers);

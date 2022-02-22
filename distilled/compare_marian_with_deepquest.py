@@ -11,10 +11,10 @@ assert numpy.allclose(marian_results['embedded_text_src'],
 torch.set_printoptions(precision=5,sci_mode=False)
 numpy.set_printoptions(precision=5,suppress=True)
 
-print('Marian')
+print("MARIAN")
 print(marian_results['encoded_text_src'][0][0])
-print('DeepQuest')
+print("DEEPQUEST")
 print(deep_quest_results['encoded_text_src'][0][0])
 
-assert numpy.allclose(marian_results['encoded_text_src'][0][0],
-                      deep_quest_results['encoded_text_src'][0][0], atol=1e-4)
+assert numpy.allclose(marian_results['encoded_text_src'],
+                      deep_quest_results['encoded_text_src'], atol=1e-6)

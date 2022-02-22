@@ -38,7 +38,7 @@ void forward(Ptr<ExpressionGraph>& graph, const std::vector<WordIndex>& tokens_s
   
   auto mask_src_expr = graph->constant({static_cast< int >( mask_src.size() ), 1, 1 }, marian::inits::fromVector(mask_src));
 
-  // auto encoded_text_src = encoderS2S.applyEncoderRNN(graph, embedded_text_src, mask_src_expr , "bidirectional");
+  auto encoded_text_src = encoderS2S.applyEncoderRNN(graph, embedded_text_src, mask_src_expr , "bidirectional");
   
   auto encoder_s2s_text_src_bi_b = graph->get("encoder_s2s_text_src_bi_b");
   auto encoder_s2s_text_src_bi_bu = graph->get("encoder_s2s_text_src_bi_bu");
@@ -49,18 +49,13 @@ void forward(Ptr<ExpressionGraph>& graph, const std::vector<WordIndex>& tokens_s
   auto encoder_s2s_text_src_bi_r_bu = graph->get("encoder_s2s_text_src_bi_r_bu");
   auto encoder_s2s_text_src_bi_r_W = graph->get("encoder_s2s_text_src_bi_r_W");
   auto encoder_s2s_text_src_bi_r_U = graph->get("encoder_s2s_text_src_bi_r_U");
-
-  auto xW = dot(embedded_text_src,encoder_s2s_text_src_bi_W );
-  
-  debug(embedded_text_src, "embedded_text_src");
-  debug(encoder_s2s_text_src_bi_W, "encoder_s2s_text_src_bi_W");
-  debug(xW, "xW");
   
   std::cout<< graph->graphviz() << std::endl;
 
   graph->forward();
 
-  saveResults({{"embedded_text_src", embedded_text_src} });
+  saveResults({{"embedded_text_src", embedded_text_src},
+               {"encoded_text_src", encoded_text_src} });
 }
 
 int main(const int argc, const char* argv[]) {

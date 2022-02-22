@@ -70,7 +70,6 @@ EMSCRIPTEN_BINDINGS(translation_model) {
 
 EMSCRIPTEN_BINDINGS(blocking_service_config) {
   value_object<BlockingService::Config>("BlockingServiceConfig")
-      .field("cacheEnabled", &BlockingService::Config::cacheEnabled)
       .field("cacheSize", &BlockingService::Config::cacheSize);
 }
 

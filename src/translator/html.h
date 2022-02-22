@@ -151,7 +151,10 @@ class HTML {
   explicit HTML(std::string &&source, bool processMarkup, Options &&options);
 
   /// It is not save to copy a HTML instance.
-  HTML(const HTML &copy) = delete;
+  HTML(const HTML &) = delete;
+
+  /// Moving is fine
+  HTML(HTML &&) = default;
 
   /// Reconstructs (not perfectly) the HTML as it was parsed from `source`,
   /// and uses alignment information to also reconstruct the same markup in

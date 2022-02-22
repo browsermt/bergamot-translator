@@ -21,9 +21,11 @@ struct Response;
 /// When parsing the HTML, it treats tags as markup, where a list of nested tags
 /// can be seen as a list of markups that are applicable to all the text that
 /// follows. This list is stored as a `TagStack`. Whenever an HTML tag opens or
-/// closes, a new TagStack is created to reflect that. The text between tags
-/// themselves is stored in the input variable. In `spans_`, the TagStack that
-/// is associated with a substring of that text is stored.
+/// closes, a new TagStack is created to reflect that. TagStack used to be
+/// called `Taint` because it *tainted* the text it was associated with with
+/// those tags as markup. The text between tags themselves is stored in the
+/// input variable. In `spans_`, the TagStack that is associated with a
+/// substring of that text is stored.
 /// When transferring the HTML from the source text to the translated target
 /// text, the TagStacks are first associated with each of the subwords from the
 /// source text. Using hard alignment, each subword in the source text is linked
@@ -171,13 +173,13 @@ class HTML {
   /// `targetTokenSpans`, which points to a `Span` for each token (subword) in
   /// `response.target`.
   AnnotatedText restoreTarget(AnnotatedText const &in, std::vector<SpanIterator> const &targetTokenSpans);
-  
+
   /// Utilities to test whether subword `str` is part of a word together with
   /// the subword `prev`, or a separate word. Basically *does `str` start with
   /// a space, but bit more complex to deal with punctuation.
   bool isContinuation(marian::string_view prev, marian::string_view str) const;
   bool isContinuation(std::string_view prev, std::string_view str) const;
-  
+
   /// Allocates a tag in `pool_` (which then owns it) and gives a pointer to be
   /// used in TagStacks. Pointer is valid as long as this HTML instance lives on.
   Tag *makeTag(Tag &&tag);

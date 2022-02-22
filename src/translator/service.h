@@ -34,7 +34,7 @@ class BlockingService {
     /// to cache in the real world. Note that cache has a random-eviction policy. The peak storage at full occupancy is
     /// controlled by this parameter. However, whether we attain full occupancy or not is controlled by random factors -
     /// specifically how uniformly the hash distributes.
-    size_t cacheSize{2000};
+    size_t cacheSize{0};
 
     Logger::Config logger;  ///< Configurations for logging
 
@@ -108,10 +108,10 @@ class BlockingService {
 class AsyncService {
  public:
   struct Config {
-    size_t numWorkers{1};    ///< How many worker translation threads to spawn.
-    size_t cacheSize{2000};  ///< Size in History items to be stored in the cache. Loosely corresponds to sentences to
-                             /// cache in the real world. A value of 0 means no caching.
-    Logger::Config logger;   // Configurations for logging
+    size_t numWorkers{1};   ///< How many worker translation threads to spawn.
+    size_t cacheSize{0};    ///< Size in History items to be stored in the cache. Loosely corresponds to sentences to
+                            /// cache in the real world. A value of 0 means no caching.
+    Logger::Config logger;  // Configurations for logging
 
     template <class App>
     static void addOptions(App &app, Config &config) {

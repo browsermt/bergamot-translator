@@ -185,6 +185,41 @@ struct AnnotatedText {
   /// Returns a ByteRange representing sentence corresponding to sentenceIdx.
   ByteRange sentenceAsByteRange(size_t sentenceIdx) const { return annotation.sentence(sentenceIdx); }
 
+  /// Utility function to call `fun` on each word (subword token effectively) in
+  /// an `AnnotatedText`. `fun` is called with the `ByteRange`, the `string_view`
+  /// with the word, and a `bool` to indicate whether it is the last word in the
+  /// `AnnotatedText`, which is also the ending whitespace slot of AnnotatedText.
+  template <typename Fun>
+  AnnotatedText apply(Fun fun) const {
+    AnnotatedText out;
+
+    for (size_t sentenceIdx = 0; sentenceIdx < numSentences(); ++sentenceIdx) {
+      std::string sentence;
+      std::vector<ByteRange> tokens;
+
+      std::string prefix = fun(annotation.gap(sentenceIdx), gap(sentenceIdx), false);
+
+      for (size_t wordIdx = 0; wordIdx < numWords(sentenceIdx); ++wordIdx) {
+        std::string token = fun(wordAsByteRange(sentenceIdx, wordIdx), word(sentenceIdx, wordIdx), false);
+        tokens.push_back(ByteRange{sentence.size(), sentence.size() + token.size()});
+        sentence += token;
+      }
+
+      // Convert our ByteRanges to string_views since that's what appendSentence
+      // expects
+      std::vector<marian::string_view> views(tokens.size());
+      std::transform(tokens.begin(), tokens.end(), views.begin(), [&](ByteRange const &range) {
+        return marian::string_view(sentence.data() + range.begin, range.size());
+      });
+
+      out.appendSentence(prefix, views.begin(), views.end());
+    }
+
+    out.appendEndingWhitespace(fun(annotation.gap(numSentences()), gap(numSentences()), true));
+
+    return out;
+  }
+
  private:
   string_view asStringView(const ByteRange &byteRange) const {
     return string_view(text.data() + byteRange.begin, byteRange.size());

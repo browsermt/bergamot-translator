@@ -172,6 +172,16 @@ TEST_CASE("Do not abort if the input is just empty element") {
   CHECK(response.target.text == "<p></p>");
 }
 
+TEST_CASE("Tag names are case insensitive") {
+  // Tests <P> vs </p> and <BR> should be recognized as a void tag <br>.
+  // <B> should be recognized as inline.
+  std::string test_str("<P><B>Spa</B>ce<BR>please?</p>");
+
+  std::string input(test_str);
+  HTML html(std::move(input), true);
+  CHECK(input == "Spa ce\n\nplease?");
+}
+
 TEST_CASE("Test case html entities") {
   // These are all entities I would expect in innerHTML, since all other entities
   // can be encoded as UTF-8 so there's no need to encode them through &...; when
@@ -616,6 +626,72 @@ TEST_CASE("Test comment") {
   html.restore(response);
   CHECK(response.source.text == test_str);
   CHECK(response.target.text == test_str);
+}
+
+TEST_CASE("Test <wbr> element") {
+  std::string test_str("hel<wbr>lo");
+
+  std::string input(test_str);
+  HTML html(std::move(input), true);
+  CHECK(input == "hello");
+}
+
+TEST_CASE("Test <wbr> element (case-insensitive)") {
+  std::string test_str("hel<WBR>lo");
+
+  std::string input(test_str);
+  HTML html(std::move(input), true);
+  CHECK(input == "hello");
+}
+
+TEST_CASE("Test ignored element (nested)") {
+  std::string test_str("foo <var><var>nested</var></var> bar");
+  std::string expected_str("foo  <var><var>nested</var></var>bar");
+
+  std::string input(test_str);
+  HTML html(std::move(input), true);
+  CHECK(input == "foo  bar");
+
+  Response response;
+  std::string sentence_str("foo  bar");
+  std::vector<string_view> sentence{
+      string_view(sentence_str.data() + 0, 3),  // foo
+      string_view(sentence_str.data() + 3, 1),  // _
+      string_view(sentence_str.data() + 4, 4),  // _bar
+      string_view(sentence_str.data() + 8, 0),  // ""
+  };
+  response.source.appendSentence("", sentence.begin(), sentence.end());
+  response.target.appendSentence("", sentence.begin(), sentence.end());
+  response.alignments = {identity_matrix<float>(4)};
+
+  html.restore(response);
+  CHECK(response.source.text == expected_str);
+  CHECK(response.target.text == expected_str);
+}
+
+TEST_CASE("Test ignored element (with entity)") {
+  std::string test_str("foo <var>&amp;</var> bar");
+  std::string expected_str("foo  <var>&amp;</var>bar");
+
+  std::string input(test_str);
+  HTML html(std::move(input), true);
+  CHECK(input == "foo  bar");
+
+  Response response;
+  std::string sentence_str("foo  bar");
+  std::vector<string_view> sentence{
+      string_view(sentence_str.data() + 0, 3),  // foo
+      string_view(sentence_str.data() + 3, 1),  // _
+      string_view(sentence_str.data() + 4, 4),  // _bar
+      string_view(sentence_str.data() + 8, 0),  // ""
+  };
+  response.source.appendSentence("", sentence.begin(), sentence.end());
+  response.target.appendSentence("", sentence.begin(), sentence.end());
+  response.alignments = {identity_matrix<float>(4)};
+
+  html.restore(response);
+  CHECK(response.source.text == expected_str);
+  CHECK(response.target.text == expected_str);
 }
 
 TEST_CASE("End-to-end translation", "[!mayfail]") {

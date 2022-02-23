@@ -30,21 +30,17 @@ class AsyncService;
 class BlockingService {
  public:
   struct Config {
-    bool cacheEnabled{false};  ///< Whether to enable cache or not.
-
-    /// Size in History items to be stored in the cache. Loosely corresponds to sentences to
-    /// cache in the real world. Note that cache has a random-eviction policy. The peak
-    /// storage at full occupancy is controlled by this parameter. However, whether we attain
-    /// full occupancy or not is controlled by random factors - specifically how uniformly
-    /// the hash distributes.
-    size_t cacheSize{2000};
+    /// Size in History items to be stored in the cache. A value of 0 means no caching. Loosely corresponds to sentences
+    /// to cache in the real world. Note that cache has a random-eviction policy. The peak storage at full occupancy is
+    /// controlled by this parameter. However, whether we attain full occupancy or not is controlled by random factors -
+    /// specifically how uniformly the hash distributes.
+    size_t cacheSize{0};
 
     Logger::Config logger;  ///< Configurations for logging
 
     template <class App>
     static void addOptions(App &app, Config &config) {
       // Options will come here.
-      app.add_option("--cache-translations", config.cacheEnabled, "Whether to cache translations or not.");
       app.add_option("--cache-size", config.cacheSize, "Number of entries to store in cache.");
       Logger::Config::addOptions(app, config.logger);
     }
@@ -112,16 +108,14 @@ class BlockingService {
 class AsyncService {
  public:
   struct Config {
-    size_t numWorkers{1};      ///< How many worker translation threads to spawn.
-    bool cacheEnabled{false};  ///< Whether to enable cache or not.
-    size_t cacheSize{2000};    ///< Size in History items to be stored in the cache. Loosely corresponds to sentences to
-                               /// cache in the real world.
-    Logger::Config logger;     // Configurations for logging
+    size_t numWorkers{1};   ///< How many worker translation threads to spawn.
+    size_t cacheSize{0};    ///< Size in History items to be stored in the cache. Loosely corresponds to sentences to
+                            /// cache in the real world. A value of 0 means no caching.
+    Logger::Config logger;  // Configurations for logging
 
     template <class App>
     static void addOptions(App &app, Config &config) {
       app.add_option("--cpu-threads", config.numWorkers, "Workers to form translation backend");
-      app.add_option("--cache-translations", config.cacheEnabled, "Whether to cache translations or not.");
       app.add_option("--cache-size", config.cacheSize, "Number of entries to store in cache.");
       Logger::Config::addOptions(app, config.logger);
     }

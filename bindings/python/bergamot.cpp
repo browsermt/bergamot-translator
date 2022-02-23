@@ -198,18 +198,15 @@ PYBIND11_MODULE(_bergamot, m) {
       .def("pivot", &ServicePyAdapter::pivot);
 
   py::class_<Service::Config>(m, "ServiceConfig")
-      .def(py::init<>([](size_t numWorkers, bool cacheEnabled, size_t cacheSize, std::string logging) {
+      .def(py::init<>([](size_t numWorkers, size_t cacheSize, std::string logging) {
              Service::Config config;
              config.numWorkers = numWorkers;
-             config.cacheEnabled = cacheEnabled;
              config.cacheSize = cacheSize;
              config.logger.level = logging;
              return config;
            }),
-           py::arg("numWorkers") = 1, py::arg("cacheEnabled") = false, py::arg("cacheSize") = 20000,
-           py::arg("logLevel") = "off")
+           py::arg("numWorkers") = 1, py::arg("cacheSize") = 0, py::arg("logLevel") = "off")
       .def_readwrite("numWorkers", &Service::Config::numWorkers)
-      .def_readwrite("cacheEnabled", &Service::Config::cacheEnabled)
       .def_readwrite("cacheSize", &Service::Config::cacheSize);
 
   py::class_<_Model, std::shared_ptr<_Model>>(m, "TranslationModel");

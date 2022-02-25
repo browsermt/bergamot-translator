@@ -162,7 +162,7 @@ class HTML {
   void restore(Response &response);
 
  private:
-  using SpanIterator = std::vector<HTML::Span>::const_iterator;
+  using SpanIterator = std::vector<HTML::Span>::iterator;
   using AnnotatedText = marian::bergamot::AnnotatedText;
 
   /// Reconstructs HTML in `response.source` (passed as `in`) and makes a list
@@ -175,7 +175,8 @@ class HTML {
   /// Inserts the HTML into `response.target` (passed as `in`) based on
   /// `targetTokenSpans`, which points to a `Span` for each token (subword) in
   /// `response.target`.
-  AnnotatedText restoreTarget(AnnotatedText const &in, std::vector<SpanIterator> const &targetTokenSpans);
+  AnnotatedText restoreTarget(AnnotatedText const &in, std::vector<SpanIterator> const &targetTokenSpans,
+                              std::vector<HTML::TagStack> const &targetTokenTags);
 
   /// Utilities to test whether subword `str` is part of a word together with
   /// the subword `prev`, or a separate word. Basically *does `str` start with
@@ -189,6 +190,9 @@ class HTML {
   void copyTagStack(Response const &response, std::vector<std::vector<size_t>> const &alignments,
                     std::vector<HTML::SpanIterator> const &sourceTokenSpans,
                     std::vector<HTML::SpanIterator> &targetTokenSpans);
+
+  void annotateTagStack(Response const &response, std::vector<SpanIterator> const &targetTokenSpans,
+                        std::vector<HTML::TagStack> &targetTokenTags);
 
   /// Turns the alignment scores in `response.alignments` into one source token
   /// per target token. Has some heuristics to keep all target tokens of a

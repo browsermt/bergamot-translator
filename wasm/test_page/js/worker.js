@@ -137,13 +137,11 @@ const translate = (from, to, input, translateOptions) => {
     const listSourceText = _parseSourceText(vectorResponse);
     const listTranslatedTextSentences = _parseTranslatedTextSentences(vectorResponse);
     const listSourceTextSentences = _parseSourceTextSentences(vectorResponse);
-    const listTranslatedTextSentenceQualityScores = _parseTranslatedTextSentenceQualityScores(vectorResponse);
 
     log(`Source text: ${listSourceText}`);
     log(`Translated text: ${listTranslatedText}`);
     log(`Translated sentences: ${JSON.stringify(listTranslatedTextSentences)}`);
     log(`Source sentences: ${JSON.stringify(listSourceTextSentences)}`);
-    log(`Translated sentence quality scores: ${JSON.stringify(listTranslatedTextSentenceQualityScores)}`);
 
     return listTranslatedText;
   } finally {
@@ -288,44 +286,6 @@ const _parseSourceTextSentences = (vectorResponse) => {
   for (let i = 0; i < vectorResponse.size(); i++) {
     const response = vectorResponse.get(i);
     result.push(_getSourceSentences(response));
-  }
-  return result;
-}
-
-const _parseTranslatedTextSentenceQualityScores = (vectorResponse) => {
-  const result = [];
-  for (let i = 0; i < vectorResponse.size(); i++) {
-    const response = vectorResponse.get(i);
-    const translatedText = response.getTranslatedText();
-    const vectorSentenceQualityScore = response.getQualityScores();
-    log(`No. of sentences: "${vectorSentenceQualityScore.size()}"`);
-    const sentenceQualityScores = [];
-    for (let sentenceIndex=0; sentenceIndex < vectorSentenceQualityScore.size(); sentenceIndex++) {
-      const sentenceQualityScoreObject = vectorSentenceQualityScore.get(sentenceIndex);
-      const wordByteRangeList = [];
-      const wordList = [];
-      const wordScoreList = [];
-      const vectorWordScore = sentenceQualityScoreObject.wordScores;
-      const vectorWordByteRange = sentenceQualityScoreObject.wordByteRanges;
-
-      for (let wordIndex = 0; wordIndex < vectorWordScore.size(); wordIndex++) {
-        const wordScore = vectorWordScore.get(wordIndex);
-        const wordByteRange = vectorWordByteRange.get(wordIndex);
-        wordScoreList.push(wordScore);
-        wordByteRangeList.push(wordByteRange);
-        const word = _getSubString(translatedText, wordByteRange);
-        wordList.push(word);
-      }
-
-      const sentenceQualityScore = {
-        wordByteRanges: wordByteRangeList,
-        words: wordList,
-        wordScores: wordScoreList,
-        sentenceScore: sentenceQualityScoreObject.sentenceScore
-      };
-      sentenceQualityScores.push(sentenceQualityScore);
-    }
-    result.push(sentenceQualityScores);
   }
   return result;
 }

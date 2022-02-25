@@ -3,6 +3,7 @@
 #include <algorithm>
 
 #include "response.h"
+#include "translator/definitions.h"
 #include "xh_scanner.h"
 
 namespace {
@@ -544,7 +545,12 @@ void HTML::restore(Response &response) {
   copyTagStack(response, alignments, sourceTokenSpans, targetTokenSpans);
   assert(targetTokenSpans.size() == debugCountTokens(response.target));
 
-  AnnotatedText target = restoreTarget(response.target, targetTokenSpans);
+  // Take the spans, and use them to make a taint for every word in the
+  // translation. Optionally add extra tags, like quality score metadata.
+  std::vector<HTML::TagStack> targetTokenTags;
+  annotateTagStack(response, targetTokenSpans, targetTokenTags);
+
+  AnnotatedText target = restoreTarget(response.target, targetTokenSpans, targetTokenTags);
 
   response.source = source;
   response.target = target;
@@ -592,38 +598,37 @@ AnnotatedText HTML::restoreSource(AnnotatedText const &in, std::vector<SpanItera
   });
 }
 
-AnnotatedText HTML::restoreTarget(AnnotatedText const &in, std::vector<SpanIterator> const &targetTokenSpans) {
-  auto prevSpan = spans_.cbegin();
+AnnotatedText HTML::restoreTarget(AnnotatedText const &in, std::vector<SpanIterator> const &targetTokenSpans,
+                                  std::vector<TagStack> const &targetTokenTags) {
+  auto prevTags = spans_.cbegin()->tags;
+  auto stragglerSpanIt = spans_.cbegin();
   auto targetSpanIt = targetTokenSpans.begin();
-  auto straggerSpanIt = spans_.cbegin();
+  auto targetTagIt = targetTokenTags.begin();
 
   AnnotatedText out = in.apply([&]([[maybe_unused]] ByteRange range, string_view token, bool last) {
     TokenFormatter formatter(token);
 
     // First we scan through spans_ to catch up to the span assigned to this
     // token. We're only interested in empty spans (empty and void elements)
-    for (; straggerSpanIt < *targetSpanIt; ++straggerSpanIt) {
+    for (; stragglerSpanIt < *targetSpanIt; stragglerSpanIt++) {
       // We're only interested in empty spans or spans that would otherwise get
       // lost because they didn't align with anything between the spans in
       // targetSpanIt
       // TODO That std::find makes this O(N*N) NOT GOOD NOT GOOD
-      if (straggerSpanIt->size() != 0 &&
-          std::find(targetTokenSpans.begin(), targetTokenSpans.end(), straggerSpanIt) != targetTokenSpans.end())
+      if (stragglerSpanIt->size() != 0 &&
+          std::find(targetTokenSpans.begin(), targetTokenSpans.end(), stragglerSpanIt) != targetTokenSpans.end())
         continue;
 
-      formatter.append(prevSpan->tags, straggerSpanIt->tags);
-
-      // Note: here, not in 3rd part of for-statement because we don't want to
-      // set prevSpan if the continue clause at the beginning of this for-loop
-      // was hit.
-      prevSpan = straggerSpanIt;
+      formatter.append(prevTags, stragglerSpanIt->tags);
+      prevTags = stragglerSpanIt->tags;
     }
 
     // Now do the same thing but for our target set of tags. Note that we cannot
     // combine this in the for-loop above (i.e. `span_it <= *targetSpanIt`)
     // because there is no guarantee that the order in `targetTokenSpans` is
     // the same as that of `spans`.
-    formatter.append(prevSpan->tags, (*targetSpanIt)->tags);
+
+    formatter.append(prevTags, *targetTagIt);
 
     // If this is the last token of the response, close all open tags.
     if (last) {
@@ -632,11 +637,12 @@ AnnotatedText HTML::restoreTarget(AnnotatedText const &in, std::vector<SpanItera
       // the last token of the output. But lets assume someone someday changes
       // HardAlignments(), and then this for-loop will be necessary.
       // assert((*targetSpanIt)->tags.empty());
-      formatter.append((*targetSpanIt)->tags, HTML::TagStack());
+      formatter.append(*targetTagIt, HTML::TagStack());
     }
 
-    prevSpan = *targetSpanIt;
+    prevTags = *targetTagIt;
     ++targetSpanIt;
+    ++targetTagIt;
 
     return std::move(formatter.html());
   });
@@ -672,6 +678,56 @@ void HTML::copyTagStack(Response const &response, std::vector<std::vector<size_t
 
   assert(offset + 1 == sourceTokenSpans.size());
   targetTokenSpans.push_back(sourceTokenSpans[offset]);  // token_tag for ending whitespace
+}
+
+void HTML::annotateTagStack(Response const &response, std::vector<SpanIterator> const &targetTokenSpans,
+                            std::vector<HTML::TagStack> &targetTokenTags) {
+  auto spanIt = targetTokenSpans.begin();
+  for (size_t sentenceIdx = 0; sentenceIdx < response.target.numSentences(); ++sentenceIdx) {
+    // Sentence prefix
+    targetTokenTags.push_back((*spanIt)->tags);
+    spanIt++;
+
+    // Offset in targetTokenTags at which this sentence's tags start.
+    size_t tagOffset = targetTokenTags.size();
+
+    // Initially, just copy the span's tags to this token
+    for (size_t t = 0; t < response.target.numWords(sentenceIdx); ++t) {
+      targetTokenTags.emplace_back((*spanIt)->tags);
+      spanIt++;
+    }
+
+    // If we have quality score information, add that as metadata as well.
+    if (!response.qualityScores.empty()) {
+      auto const &sentenceQuality = response.qualityScores[sentenceIdx];
+      // Create a single <font> tag for this sentence with sentence level info
+      Tag *sentenceTag = makeTag({Tag::ELEMENT, "font"});
+      sentenceTag->attributes += format(" x-bergamot-sentence-index=\"{}\" x-bergamot-sentence-score=\"{}\"",
+                                        sentenceIdx, sentenceQuality.sentenceScore);
+
+      // Add that tag to all tokens in this sentence.
+      for (size_t tokenIdx = 0; tokenIdx < response.target.numWords(sentenceIdx); ++tokenIdx) {
+        targetTokenTags[tagOffset + tokenIdx].push_back(sentenceTag);
+      }
+
+      // Add word level <font> tags as well to all tokens that make up a word.
+      for (size_t wordIdx = 0; wordIdx < sentenceQuality.wordRanges.size(); ++wordIdx) {
+        Tag *wordTag = makeTag({Tag::ELEMENT, "font"});
+        wordTag->attributes += format(" x-bergamot-word-index=\"{}\" x-bergamot-word-score=\"{}\"", wordIdx,
+                                      sentenceQuality.wordScores[wordIdx]);
+        auto const &range = sentenceQuality.wordRanges[wordIdx];
+        for (size_t tokenIdx = range.begin; tokenIdx < range.end; ++tokenIdx) {
+          targetTokenTags[tagOffset + tokenIdx].push_back(wordTag);
+        }
+      }
+    }
+  }
+
+  // Suffix
+  targetTokenTags.push_back((*spanIt)->tags);
+  spanIt++;
+
+  assert(spanIt == targetTokenSpans.end());
 }
 
 // Reports if token `str` is likely to be a continuation of a word. This is used

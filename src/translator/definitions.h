@@ -42,6 +42,16 @@ struct ByteRange {
   bool operator==(ByteRange other) const { return begin == other.begin && end == other.end; }
 };
 
+/// A Subword range is mechanically the same as a `ByteRange`, but instead of
+/// describing a span of bytes, it describes a span of Subword tokens. Using
+/// `Annotation.word()` you can switch between the two.
+struct SubwordRange {
+  size_t begin;
+  size_t end;
+  const size_t size() const { return end - begin; }
+  bool operator==(SubwordRange other) const { return begin == other.begin && end == other.end; }
+};
+
 class Response;
 using CallbackType = std::function<void(Response &&)>;
 

@@ -702,7 +702,8 @@ void HTML::annotateTagStack(Response const &response, std::vector<SpanIterator> 
       auto const &sentenceQuality = response.qualityScores[sentenceIdx];
       // Create a single <font> tag for this sentence with sentence level info
       Tag *sentenceTag = makeTag({Tag::ELEMENT, "font"});
-      sentenceTag->attributes += format(" x-bergamot-sentence-score=\"{}\"", sentenceQuality.sentenceScore);
+      sentenceTag->attributes += format(" x-bergamot-sentence-index=\"{}\" x-bergamot-sentence-score=\"{}\"",
+                                        sentenceIdx, sentenceQuality.sentenceScore);
 
       // Add that tag to all tokens in this sentence.
       for (size_t tokenIdx = 0; tokenIdx < response.target.numWords(sentenceIdx); ++tokenIdx) {
@@ -712,7 +713,8 @@ void HTML::annotateTagStack(Response const &response, std::vector<SpanIterator> 
       // Add word level <font> tags as well to all tokens that make up a word.
       for (size_t wordIdx = 0; wordIdx < sentenceQuality.wordRanges.size(); ++wordIdx) {
         Tag *wordTag = makeTag({Tag::ELEMENT, "font"});
-        wordTag->attributes += format(" x-bergamot-word-score=\"{}\"", sentenceQuality.wordScores[wordIdx]);
+        wordTag->attributes += format(" x-bergamot-word-index=\"{}\" x-bergamot-word-score=\"{}\"", wordIdx,
+                                      sentenceQuality.wordScores[wordIdx]);
         auto const &range = sentenceQuality.wordRanges[wordIdx];
         for (size_t tokenIdx = range.begin; tokenIdx < range.end; ++tokenIdx) {
           targetTokenTags[tagOffset + tokenIdx].push_back(wordTag);

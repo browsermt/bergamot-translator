@@ -121,6 +121,13 @@ $(".swap").addEventListener("click", e => {
   loadModel();
 });
 
+$('#output').addEventListener('mouseover', e => {
+  const sentence = e.target.parentNode.hasAttribute('x-bergamot-sentence-index') ? e.target.parentNode.getAttribute('x-bergamot-sentence-index') : null;  
+  document.querySelectorAll('#output font[x-bergamot-sentence-index]').forEach(el => {
+    el.classList.toggle('highlight-sentence', el.getAttribute('x-bergamot-sentence-index') === sentence);
+  })
+})
+
 function init() {
   // try to guess input language from user agent
   let myLang = navigator.language;

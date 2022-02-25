@@ -48,7 +48,7 @@ const translateCall = () => {
   const text = document.querySelector("#input").value;
   if (!text.trim().length) return;
 
-  const paragraphs = [textToHTML(text)]; // escape HTML 
+  const paragraphs = text.split(/\n+/).map(textToHTML); // escape HTML 
   const translateOptions = _prepareTranslateOptions(paragraphs);
   const lngFrom = langFrom.value;
   const lngTo = langTo.value;
@@ -78,8 +78,18 @@ const addQualityClasses = (root) => {
 
 worker.onmessage = function (e) {
   if (e.data[0] === "translate_reply" && e.data[1]) {
-    document.querySelector("#output").innerHTML = e.data[1];
-    addQualityClasses(document.querySelector("#output"));
+    // Clear output of previous translation
+    document.querySelector("#output").innerHTML = '';
+
+    // Add each translation in its own div to have a known root in which the
+    // sentence ids are unique. Used for highlighting sentences.
+    e.data[1].forEach(translatedHTML => {
+      const translation = document.createElement('div');
+      translation.classList.add('translation');
+      translation.innerHTML = translatedHTML;
+      addQualityClasses(translation);
+      document.querySelector("#output").appendChild(translation);
+    });
   } else if (e.data[0] === "load_model_reply" && e.data[1]) {
     status(e.data[1]);
     translateCall();
@@ -122,9 +132,10 @@ $(".swap").addEventListener("click", e => {
 });
 
 $('#output').addEventListener('mouseover', e => {
+  const root = e.target.closest('.translation');
   const sentence = e.target.parentNode.hasAttribute('x-bergamot-sentence-index') ? e.target.parentNode.getAttribute('x-bergamot-sentence-index') : null;  
   document.querySelectorAll('#output font[x-bergamot-sentence-index]').forEach(el => {
-    el.classList.toggle('highlight-sentence', el.getAttribute('x-bergamot-sentence-index') === sentence);
+    el.classList.toggle('highlight-sentence', el.getAttribute('x-bergamot-sentence-index') === sentence && el.closest('.translation') === root);
   })
 })
 

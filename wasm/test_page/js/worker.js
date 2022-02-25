@@ -78,7 +78,7 @@ onmessage = async function(e) {
 // Instantiates the Translation Service
 const constructTranslationService = async () => {
   if (!translationService) {
-    var translationServiceConfig = {};
+    var translationServiceConfig = {cacheSize: 20000};
     log(`Creating Translation Service with config: ${translationServiceConfig}`);
     translationService = new Module.BlockingService(translationServiceConfig);
     log(`Translation Service created successfully`);

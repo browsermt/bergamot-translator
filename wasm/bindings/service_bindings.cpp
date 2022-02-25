@@ -69,10 +69,8 @@ EMSCRIPTEN_BINDINGS(translation_model) {
 }
 
 EMSCRIPTEN_BINDINGS(blocking_service_config) {
-  value_object<BlockingService::Config>("BlockingServiceConfig");
-  // .field("name", &BlockingService::Config::name")
-  // The above is a future hook. Note that more will come - for cache, for workspace-size or graph details  limits on
-  // aggregate-batching etc.
+  value_object<BlockingService::Config>("BlockingServiceConfig")
+      .field("cacheSize", &BlockingService::Config::cacheSize);
 }
 
 std::shared_ptr<BlockingService> BlockingServiceFactory(const BlockingService::Config& config) {

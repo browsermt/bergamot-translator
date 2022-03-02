@@ -60,12 +60,12 @@ const addQualityClasses = (root) => {
 
   root.querySelectorAll('[x-bergamot-sentence-score]').forEach(el => {
     // Note: these thresholds are just examples, they are not good thresholds!  
-    el.classList.toggle('bad', parseFloat(el.getAttribute('x-bergamot-sentence-score')) > -0.1);
+    el.classList.toggle('bad', parseFloat(el.getAttribute('x-bergamot-sentence-score')) < -0.5);
   });
 
   root.querySelectorAll('[x-bergamot-word-score]').forEach(el => {
     // Note: these thresholds are just examples, they are not good thresholds!
-    el.classList.toggle('bad', parseFloat(el.getAttribute('x-bergamot-word-score')) > -0.1);
+    el.classList.toggle('bad', parseFloat(el.getAttribute('x-bergamot-word-score')) < -0.5);
   });
 
   // Add tooltips to each (sub)word with sentence and word score.

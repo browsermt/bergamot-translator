@@ -59,13 +59,13 @@ const addQualityClasses = (root) => {
   // You can do this wit CSS variables, calc() and min/max, but JS is just easier
 
   root.querySelectorAll('[x-bergamot-sentence-score]').forEach(el => {
-    // Note: these thresholds are just examples, they are not good thresholds!  
-    el.classList.toggle('bad', parseFloat(el.getAttribute('x-bergamot-sentence-score')) > -0.1);
+    // The threshold is ln(0.5) (https://github.com/browsermt/bergamot-translator/pull/370#issuecomment-1058123399)
+    el.classList.toggle('bad', parseFloat(el.getAttribute('x-bergamot-sentence-score')) < -0.6931);
   });
 
   root.querySelectorAll('[x-bergamot-word-score]').forEach(el => {
-    // Note: these thresholds are just examples, they are not good thresholds!
-    el.classList.toggle('bad', parseFloat(el.getAttribute('x-bergamot-word-score')) > -0.1);
+    // The threshold is ln(0.5) (https://github.com/browsermt/bergamot-translator/pull/370#issuecomment-1058123399)
+    el.classList.toggle('bad', parseFloat(el.getAttribute('x-bergamot-word-score')) < -0.6931);
   });
 
   // Add tooltips to each (sub)word with sentence and word score.

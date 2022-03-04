@@ -169,12 +169,10 @@ const _downloadAsArrayBuffer = async(url) => {
 // Constructs and initializes the AlignedMemory from the array buffer and alignment size
 const _prepareAlignedMemoryFromBuffer = async (buffer, alignmentSize) => {
   var byteArray = new Int8Array(buffer);
-  log(`Constructing Aligned memory. Size: ${byteArray.byteLength} bytes, Alignment: ${alignmentSize}`);
   var alignedMemory = new Module.AlignedMemory(byteArray.byteLength, alignmentSize);
-  log(`Aligned memory construction done`);
   const alignedByteArrayView = alignedMemory.getByteArrayView();
   alignedByteArrayView.set(byteArray);
-  log(`Aligned memory initialized`);
+  log(`Aligned memory construction done. Size: ${byteArray.byteLength} bytes, Alignment: ${alignmentSize}`);
   return alignedMemory;
 }
 
@@ -203,43 +201,30 @@ alignment: soft
 
   const modelFile = `${MODEL_ROOT_URL}/${languagePair}/${modelRegistry[languagePair]["model"].name}`;
   const shortlistFile = `${MODEL_ROOT_URL}/${languagePair}/${modelRegistry[languagePair]["lex"].name}`;
-  const vocabFiles = [`${MODEL_ROOT_URL}/${languagePair}/${modelRegistry[languagePair]["vocab"].name}`,
-                      `${MODEL_ROOT_URL}/${languagePair}/${modelRegistry[languagePair]["vocab"].name}`];
-
-  const uniqueVocabFiles = new Set(vocabFiles);
-  log(`modelFile: ${modelFile}\nshortlistFile: ${shortlistFile}\nNo. of unique vocabs: ${uniqueVocabFiles.size}`);
-  uniqueVocabFiles.forEach(item => log(`unique vocabFile: ${item}`));
+  const vocabFile = `${MODEL_ROOT_URL}/${languagePair}/${modelRegistry[languagePair]["vocab"].name}`;
+  log(`modelFile: ${modelFile}\nshortlistFile: ${shortlistFile}\nvocabFile: ${vocabFile}`);
 
   // Download the files as buffers from the given urls
   let start = Date.now();
-  const downloadedBuffers = await Promise.all([_downloadAsArrayBuffer(modelFile), _downloadAsArrayBuffer(shortlistFile)]);
-  const modelBuffer = downloadedBuffers[0];
-  const shortListBuffer = downloadedBuffers[1];
-
-  const downloadedVocabBuffers = [];
-  for (let item of uniqueVocabFiles.values()) {
-    downloadedVocabBuffers.push(await _downloadAsArrayBuffer(item));
-  }
+  const downloadedBuffers = await Promise.all([
+    _downloadAsArrayBuffer(modelFile),
+    _downloadAsArrayBuffer(shortlistFile),
+    _downloadAsArrayBuffer(vocabFile)
+  ]);
   log(`Total Download time for all files of '${languagePair}': ${(Date.now() - start) / 1000} secs`);
 
   // Construct AlignedMemory objects with downloaded buffers
-  let constructedAlignedMemories = await Promise.all([_prepareAlignedMemoryFromBuffer(modelBuffer, 256),
-                                                      _prepareAlignedMemoryFromBuffer(shortListBuffer, 64)]);
-  let alignedModelMemory = constructedAlignedMemories[0];
-  let alignedShortlistMemory = constructedAlignedMemories[1];
-  let alignedVocabsMemoryList = new Module.AlignedMemoryList;
-  for(let item of downloadedVocabBuffers) {
-    let alignedMemory = await _prepareAlignedMemoryFromBuffer(item, 64);
-    alignedVocabsMemoryList.push_back(alignedMemory);
-  }
-  for (let vocabs=0; vocabs < alignedVocabsMemoryList.size(); vocabs++) {
-    log(`Aligned vocab memory${vocabs+1} size: ${alignedVocabsMemoryList.get(vocabs).size()}`);
-  }
-  log(`Aligned model memory size: ${alignedModelMemory.size()}`);
-  log(`Aligned shortlist memory size: ${alignedShortlistMemory.size()}`);
+  let alignedMemories = await Promise.all([
+    _prepareAlignedMemoryFromBuffer(downloadedBuffers[0], 256),
+    _prepareAlignedMemoryFromBuffer(downloadedBuffers[1], 64),
+    _prepareAlignedMemoryFromBuffer(downloadedBuffers[2], 64)
+  ]);
+  log(`Aligned memory sizes: Model:${alignedMemories[0].size()} Shortlist:${alignedMemories[1].size()} Vocab:${alignedMemories[2].size()}`);
 
   log(`Translation Model config: ${modelConfig}`);
-  var translationModel = new Module.TranslationModel(modelConfig, alignedModelMemory, alignedShortlistMemory, alignedVocabsMemoryList);
+  const alignedVocabMemoryList = new Module.AlignedMemoryList();
+  alignedVocabMemoryList.push_back(alignedMemories[2]);
+  var translationModel = new Module.TranslationModel(modelConfig, alignedMemories[0], alignedMemories[1], alignedVocabMemoryList);
   languagePairToTranslationModels.set(languagePair, translationModel);
 }
 

@@ -176,6 +176,15 @@ const _prepareAlignedMemoryFromBuffer = async (buffer, alignmentSize) => {
   return alignedMemory;
 }
 
+async function prepareAlignedMemory(file, languagePair) {
+  const fileName = `${MODEL_ROOT_URL}/${languagePair}/${modelRegistry[languagePair][file.type].name}`;
+  const buffer = await _downloadAsArrayBuffer(fileName);
+  const alignedMemory = await _prepareAlignedMemoryFromBuffer(buffer, file.alignment);
+  log(`"${file.type}" aligned memory prepared. Size:${alignedMemory.size()} bytes, alignment:${file.alignment}`);
+  return alignedMemory;
+  //return {${file.type}: alignedMemory;
+}
+
 const _constructTranslationModelHelper = async (languagePair) => {
   log(`Constructing translation model ${languagePair}`);
 
@@ -199,9 +208,24 @@ gemm-precision: int8shiftAlphaAll
 alignment: soft
 `;
 
+  const files = [
+    {"type": "model", "alignment": 256},
+    {"type": "lex", "alignment": 64},
+    {"type": "vocab", "alignment": 64},
+    {"type": "qe", "alignment": 64}
+  ];
+  const promises = [];
+  files.filter(file => modelRegistry[languagePair].hasOwnProperty(file.type))
+  .map((file) => {
+      promises.push(prepareAlignedMemory(file, languagePair));
+  });
+
+  const alignedMemories = await Promise.all(promises);
+  /*
   const modelFile = `${MODEL_ROOT_URL}/${languagePair}/${modelRegistry[languagePair]["model"].name}`;
   const shortlistFile = `${MODEL_ROOT_URL}/${languagePair}/${modelRegistry[languagePair]["lex"].name}`;
   const vocabFile = `${MODEL_ROOT_URL}/${languagePair}/${modelRegistry[languagePair]["vocab"].name}`;
+  const qeFile = `${MODEL_ROOT_URL}/${languagePair}/${modelRegistry[languagePair]["qe"].name}`;
   log(`modelFile: ${modelFile}\nshortlistFile: ${shortlistFile}\nvocabFile: ${vocabFile}`);
 
   // Download the files as buffers from the given urls
@@ -218,7 +242,7 @@ alignment: soft
     _prepareAlignedMemoryFromBuffer(downloadedBuffers[0], 256),
     _prepareAlignedMemoryFromBuffer(downloadedBuffers[1], 64),
     _prepareAlignedMemoryFromBuffer(downloadedBuffers[2], 64)
-  ]);
+  ]);*/
   log(`Aligned memory sizes: Model:${alignedMemories[0].size()} Shortlist:${alignedMemories[1].size()} Vocab:${alignedMemories[2].size()}`);
 
   log(`Translation Model config: ${modelConfig}`);

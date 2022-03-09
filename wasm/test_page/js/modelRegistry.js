@@ -325,4 +325,23 @@ const modelRegistry = {
         "aac98a2371e216ee2d4843cbe896c617f6687501e17225ac83482eba52fd0028",
     },
   },
+  uken: {
+    config: {
+      "gemm-precision": "int8shiftAll"
+    },
+    vocab: {
+      src: {
+        name: "vocab.src.spm"
+      },
+      trg: {
+        name: "vocab.trg.spm"
+      }
+    },
+    lex: {
+      name: "lex.s2t.bin"
+    },
+    model: {
+      name: "model.intgemm8.bin"
+    },
+  }
 };

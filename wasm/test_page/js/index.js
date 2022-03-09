@@ -16,6 +16,7 @@ const langs = [
   ["de", "German"],
   ["es", "Spanish"],
   ["et", "Estonian"],
+  ["uk", "Ukrainian"],
 ];
 
 if (window.Worker) {

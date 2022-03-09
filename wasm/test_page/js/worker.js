@@ -181,7 +181,7 @@ const _constructTranslationModelHelper = async (languagePair) => {
     Vocab files are re-used in both translation directions.
     DO NOT CHANGE THE SPACES BETWEEN EACH ENTRY OF CONFIG
   */
-  const modelConfig = `beam-size: 1
+  let modelConfig = `beam-size: 1
 normalize: 1.0
 word-penalty: 0
 max-length-break: 128
@@ -196,10 +196,19 @@ gemm-precision: int8shiftAlphaAll
 alignment: soft
 `;
 
-  const modelFile = `${rootURL}/${languagePair}/${modelRegistry[languagePair]["model"].name}`;
-  const shortlistFile = `${rootURL}/${languagePair}/${modelRegistry[languagePair]["lex"].name}`;
-  const vocabFiles = [`${rootURL}/${languagePair}/${modelRegistry[languagePair]["vocab"].name}`,
-                      `${rootURL}/${languagePair}/${modelRegistry[languagePair]["vocab"].name}`];
+  if ('config' in modelRegistry[languagePair]) {
+    modelConfig += Object.entries(modelRegistry[languagePair].config).map(([key, val]) => `${key}: ${val}\n`).join();
+  }
+
+  const root = modelRegistry[languagePair].root || rootURL;
+
+  const modelFile = `${root}/${languagePair}/${modelRegistry[languagePair]["model"].name}`;
+  const shortlistFile = `${root}/${languagePair}/${modelRegistry[languagePair]["lex"].name}`;
+  const vocabFiles = 'src' in modelRegistry[languagePair]["vocab"]
+   ? [`${root}/${languagePair}/${modelRegistry[languagePair]["vocab"].src.name}`,
+      `${root}/${languagePair}/${modelRegistry[languagePair]["vocab"].trg.name}`]
+   : [`${root}/${languagePair}/${modelRegistry[languagePair]["vocab"].name}`,
+      `${root}/${languagePair}/${modelRegistry[languagePair]["vocab"].name}`];
 
   const uniqueVocabFiles = new Set(vocabFiles);
   log(`modelFile: ${modelFile}\nshortlistFile: ${shortlistFile}\nNo. of unique vocabs: ${uniqueVocabFiles.size}`);

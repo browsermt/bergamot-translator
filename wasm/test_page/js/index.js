@@ -141,19 +141,8 @@ $('#output').addEventListener('mouseover', e => {
 })
 
 function init() {
-  // try to guess input language from user agent
-  let myLang = navigator.language;
-  if (myLang) {
-    myLang = myLang.split("-")[0];
-    let langIndex = langs.findIndex(([code]) => code === myLang);
-    if (langIndex > -1) {
-      console.log("guessing input language is", myLang);
-      langFrom.value = myLang;
-    }
-  }
-
-  // find first output lang that *isn't* input language
-  langTo.value = langs.find(([code]) => code !== langFrom.value)[0];
+  langFrom.value = 'uk';
+  langTo.value = 'en';
   // load this model
   loadModel();
 }

@@ -342,6 +342,25 @@ const modelRegistry = {
     },
     model: {
       name: "model.intgemm8.bin"
+    }
+  },
+  enuk: {
+    config: {
+      "gemm-precision": "int8shiftAll"
     },
+    vocab: {
+      src: {
+        name: "vocab.src.spm"
+      },
+      trg: {
+        name: "vocab.trg.spm"
+      }
+    },
+    lex: {
+      name: "lex.s2t.bin"
+    },
+    model: {
+      name: "model.intgemm8.bin"
+    }
   }
 };

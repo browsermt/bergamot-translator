@@ -24,7 +24,7 @@ if (window.Worker) {
   worker.postMessage(["import"]);
 }
 
-document.querySelector("#input").addEventListener("keyup", function (event) {
+document.querySelector("#input").addEventListener("input", function (event) {
   translateCall();
 });
 

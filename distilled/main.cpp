@@ -1,5 +1,7 @@
 #include <algorithm>
+#include <vector>
 
+#include "CLI/CLI.hpp"
 #include "layers/generic.h"
 #include "marian.h"
 #include "models/decoder.h"
@@ -8,51 +10,26 @@
 #include "models/s2s.h"
 
 using namespace marian;
-
-std::string work_dir = "/workspaces/bergamot/bergamot-translator/distilled";
+using Exprs = std::vector<std::pair<std::string, Expr> >;
 
 void createGraphParams(Ptr<ExpressionGraph>& graph, const int dim_vocab, const int dim_emb) {
   graph->param("embeddings_txt_src", {dim_vocab, dim_emb}, inits::glorotUniform());
 }
 
-void saveResults(const std::vector<std::pair<std::string, Expr> >& exprs);
-
-void forward(Ptr<ExpressionGraph>& graph, const std::vector<WordIndex>& tokens_src, const int dim_emb, const std::vector< float >& mask_src) {
-  const int dim_batch = 1;
-  const int dim_tokens_src = tokens_src.size();
-
-  auto embeddings_txt_src = graph->get("embeddings_txt_src");
-
-  auto embedded_text_src = reshape(rows(embeddings_txt_src, tokens_src), {dim_batch, dim_tokens_src, dim_emb});
-  
-  auto options = New<Options>( "enc-depth", 1,
-                               "dropout-rnn", 0.0f,
-                               "enc-cell", "gru",
-                               "dim-rnn", dim_emb,
-                               "layer-normalization", false,
-                               "skip", false,
-                               "enc-cell-depth", 1,
-                               "prefix", "encoder_s2s_text_src" );
-  
-  marian::EncoderS2S encoderS2S(graph, options);
-
-  auto embedded_text_src_t = transpose( embedded_text_src, { 1, 0 , 2 } );
-  
-  auto mask_src_expr = graph->constant({static_cast< int >( mask_src.size() ), 1, 1 }, marian::inits::fromVector(mask_src));
-
-  auto encoded_text_src_t = encoderS2S.applyEncoderRNN(graph, embedded_text_src_t, mask_src_expr , "bidirectional");
-  
-  auto encoded_text_src = transpose( encoded_text_src_t, { 1, 0 , 2 } );
-  
-  std::cout<< graph->graphviz() << std::endl;
-
-  graph->forward();
-
-  saveResults({{"embedded_text_src", embedded_text_src},
-               {"encoded_text_src", encoded_text_src} });
-}
+void saveResults(const std::string& filePath, const Exprs& exprs);
+Exprs forward(Ptr<ExpressionGraph>& graph, const std::vector<WordIndex>& tokens_src, const int dim_emb,
+              const std::vector<float>& mask_src);
 
 int main(const int argc, const char* argv[]) {
+  std::string modelPath;
+  std::string outputPath;
+
+  CLI::App cliApp("Disttilied Model");
+  cliApp.add_option("-m,--model", modelPath, "model weights npz file path")->check(CLI::ExistingFile)->required();
+  cliApp.add_option("-o,--output", outputPath, "creates a output npz file with the inference results");
+
+  CLI11_PARSE(cliApp, argc, argv);
+
   createLoggers();
 
   auto graph = New<ExpressionGraph>();
@@ -75,31 +52,64 @@ int main(const int argc, const char* argv[]) {
 
   auto dim_vocab = static_cast<int>(vocab.size());
   auto tokens_src = toWordIndexVector(tokens_word_src);
-  std::vector<float> mask_src( tokens_src.size(), 1.0 );
+  std::vector<float> mask_src(tokens_src.size(), 1.0);
 
   // // Create randon params
   // forward(graph, tokens_src, dim_emb, mask);
 
   // Load converted python model
-  graph->load(work_dir + "/distilled.npz");
+  graph->load(modelPath);
 
   // Simulating the python tokenizer
   dim_vocab = 31781;
   tokens_src = {1, 1, 1, 1, 118, 1, 1, 3061, 1,    1, 1, 1, 2, 1,    1, 1, 1, 1, 1,
                 1, 1, 1, 1, 3,   1, 1, 1,    1542, 1, 1, 1, 1, 1542, 1, 2, 1, 1};
-                
-  mask_src = {1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
-              1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
-              1.0, 1.0, 1.0, 1.0, 1.0};
-           
+
+  mask_src = {1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
+              1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0};
+
   // createGraphParams( graph, dim_vocab, dim_emb);
 
-  forward(graph, tokens_src, dim_emb, mask_src);
+  const auto results = forward(graph, tokens_src, dim_emb, mask_src);
+
+  if (!outputPath.empty()) {
+    saveResults(outputPath, results);
+  }
 
   return 0;
 }
 
-void saveResults(const std::vector<std::pair<std::string, Expr> >& exprs) {
+Exprs forward(Ptr<ExpressionGraph>& graph, const std::vector<WordIndex>& tokens_src, const int dim_emb,
+              const std::vector<float>& mask_src) {
+  const int dim_batch = 1;
+  const int dim_tokens_src = tokens_src.size();
+
+  auto embeddings_txt_src = graph->get("embeddings_txt_src");
+
+  auto embedded_text_src = reshape(rows(embeddings_txt_src, tokens_src), {dim_batch, dim_tokens_src, dim_emb});
+
+  auto options =
+      New<Options>("enc-depth", 1, "dropout-rnn", 0.0f, "enc-cell", "gru", "dim-rnn", dim_emb, "layer-normalization",
+                   false, "skip", false, "enc-cell-depth", 1, "prefix", "encoder_s2s_text_src");
+
+  marian::EncoderS2S encoderS2S(graph, options);
+
+  auto embedded_text_src_t = transpose(embedded_text_src, {1, 0, 2});
+
+  auto mask_src_expr = graph->constant({static_cast<int>(mask_src.size()), 1, 1}, marian::inits::fromVector(mask_src));
+
+  auto encoded_text_src_t = encoderS2S.applyEncoderRNN(graph, embedded_text_src_t, mask_src_expr, "bidirectional");
+
+  auto encoded_text_src = transpose(encoded_text_src_t, {1, 0, 2});
+
+  std::cout << graph->graphviz() << std::endl;
+
+  graph->forward();
+
+  return {{"embedded_text_src", embedded_text_src}, {"encoded_text_src", encoded_text_src}};
+}
+
+void saveResults(const std::string& filePath, const Exprs& exprs) {
   std::vector<io::Item> items;
 
   std::transform(std::begin(exprs), std::end(exprs), std::back_inserter(items), [](const auto& expr) {
@@ -108,5 +118,5 @@ void saveResults(const std::vector<std::pair<std::string, Expr> >& exprs) {
     return item;
   });
 
-  io::saveItems(work_dir + "/distillied_marian_results.npz", items);
+  io::saveItems(filePath, items);
 }

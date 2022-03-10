@@ -1,20 +1,18 @@
 import numpy
-import torch
+import argparse
 
-marian_results = numpy.load('distillied_marian_results.npz')
-deep_quest_results = numpy.load('distillied_py_results.npz')
+parser = argparse.ArgumentParser(description='Compare the distilled marian results with deepQuest')
+parser.add_argument('--marian', help='Marian result file path', required=True)
+parser.add_argument('--dq', help='DeepQuest results file path', required=True)
+args = parser.parse_args()
+
+marian_results = numpy.load(args.marian)
+deep_quest_results = numpy.load(args.dq)
 
 assert numpy.allclose(marian_results['embedded_text_src'],
                       deep_quest_results['embedded_text_src'], atol=1e-6)
 
-
-torch.set_printoptions(precision=5,sci_mode=False)
-numpy.set_printoptions(precision=5,suppress=True)
-
-print("MARIAN")
-print(marian_results['encoded_text_src'][0][0])
-print("DEEPQUEST")
-print(deep_quest_results['encoded_text_src'][0][0])
-
 assert numpy.allclose(marian_results['encoded_text_src'],
                       deep_quest_results['encoded_text_src'], atol=1e-6)
+
+print("Success")

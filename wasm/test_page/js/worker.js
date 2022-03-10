@@ -18,6 +18,9 @@ var Module = {
     log(`Time until Module.preRun: ${(Date.now() - start) / 1000} secs`);
     moduleLoadStart = Date.now();
   }],
+  onAbort(what) {
+    postMessage(['abort', what.toString()]);
+  },
   onRuntimeInitialized: function() {
     log(`Wasm Runtime initialized Successfully (preRun -> onRuntimeInitialized) in ${(Date.now() - moduleLoadStart) / 1000} secs`);
     importScripts(MODEL_REGISTRY);

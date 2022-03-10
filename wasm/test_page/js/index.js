@@ -97,6 +97,9 @@ worker.onmessage = function (e) {
   } else if (e.data[0] === "import_reply" && e.data[1]) {
     modelRegistry = e.data[1];
     init();
+  } else if (e.data[0] === "abort") {
+    status(`Error: ${e.data[1]}`);
+    document.body.classList.add('aborted');
   }
 };
 

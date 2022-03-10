@@ -137,3 +137,7 @@ button:hover {
   width: 130px;
   float: left;
 }
+
+.aborted .app > :not(#status) {
+  opacity: 0.25;
+}

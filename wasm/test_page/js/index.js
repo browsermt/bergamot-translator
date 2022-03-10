@@ -98,7 +98,10 @@ worker.onmessage = function (e) {
     modelRegistry = e.data[1];
     init();
   } else if (e.data[0] === "abort") {
-    status(`Error: ${e.data[1]}`);
+    if (e.data[1].startsWith("CompileError: WebAssembly.Module doesn't parse"))
+      status(`Error: This browser does not yet support the necessary features. Try this page in Mozilla Firefox or Google Chrome.`)
+    else
+      status(`Error: ${e.data[1]}`);
     document.body.classList.add('aborted');
   }
 };

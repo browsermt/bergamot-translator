@@ -138,6 +138,11 @@ button:hover {
   float: left;
 }
 
+.aborted select,
+.aborted button {
+  pointer-events: none; /* Disable interactive UI, but allow text to still be copy/pasted */
+}
+
 .aborted .app > :not(#status) {
   opacity: 0.25;
 }

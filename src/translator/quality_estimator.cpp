@@ -27,7 +27,7 @@ Response::SentenceQualityScore UnsupervisedQualityEstimator::computeSentenceScor
   const float sentenceScore =
       std::accumulate(std::begin(wordScores), std::end(wordScores), float(0.0)) / wordScores.size();
 
-  return {wordScores, subwordToWords(wordIndices, target, sentenceIdx), sentenceScore};
+  return {wordScores, wordIndices, sentenceScore};
 }
 
 LogisticRegressorQualityEstimator::Matrix::Matrix(const size_t rowsParam, const size_t colsParam)
@@ -160,7 +160,7 @@ Response::SentenceQualityScore LogisticRegressorQualityEstimator::computeSentenc
   const float sentenceScore =
       std::accumulate(std::begin(wordScores), std::end(wordScores), float(0.0)) / wordScores.size();
 
-  return {wordScores, subwordToWords(wordIndices, target, sentenceIdx), sentenceScore};
+  return {wordScores, wordIndices, sentenceScore};
 }
 
 std::vector<float> LogisticRegressorQualityEstimator::predict(const Matrix& features) const {
@@ -265,24 +265,6 @@ std::vector<SubwordRange> mapWords(const std::vector<float>& logProbs, const Ann
   wordIndices.back().end = logProbs.size() - 1;
 
   return wordIndices;
-}
-
-std::vector<ByteRange> subwordToWords(const std::vector<SubwordRange>& wordIndices, const AnnotatedText& target,
-                                      const size_t sentenceIdx) {
-  std::vector<ByteRange> words;
-
-  for (const SubwordRange& wordIndice : wordIndices) {
-    size_t wordBegin = target.wordAsByteRange(sentenceIdx, wordIndice.begin).begin;
-    size_t wordEnd = target.wordAsByteRange(sentenceIdx, wordIndice.end).begin;
-
-    if (isspace(target.text.at(wordBegin))) {
-      ++wordBegin;
-    }
-
-    words.emplace_back(ByteRange{wordBegin, wordEnd});
-  }
-
-  return words;
 }
 
 }  // namespace marian::bergamot

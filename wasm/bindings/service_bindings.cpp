@@ -69,16 +69,21 @@ EMSCRIPTEN_BINDINGS(translation_model) {
 }
 
 EMSCRIPTEN_BINDINGS(blocking_service_config) {
-  value_object<BlockingService::Config>("BlockingServiceConfig");
-  // .field("name", &BlockingService::Config::name")
-  // The above is a future hook. Note that more will come - for cache, for workspace-size or graph details  limits on
-  // aggregate-batching etc.
+  value_object<BlockingService::Config>("BlockingServiceConfig")
+      .field("cacheSize", &BlockingService::Config::cacheSize);
+}
+
+std::shared_ptr<BlockingService> BlockingServiceFactory(const BlockingService::Config& config) {
+  auto copy = config;
+  copy.logger.level = "critical";
+  return std::make_shared<BlockingService>(copy);
 }
 
 EMSCRIPTEN_BINDINGS(blocking_service) {
   class_<BlockingService>("BlockingService")
-      .constructor<BlockingService::Config>()
-      .function("translate", &BlockingService::translateMultiple);
+      .smart_ptr_constructor("BlockingService", &BlockingServiceFactory)
+      .function("translate", &BlockingService::translateMultiple)
+      .function("translateViaPivoting", &BlockingService::pivotMultiple);
 
   register_vector<std::string>("VectorString");
 }

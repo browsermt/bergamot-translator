@@ -37,6 +37,11 @@ bool operator==(markup::string_ref const &str, const Char_t (&str2)[Len]) {
   return str.size == Len - 1 && std::memcmp(str.data, str2, Len - 1) == 0;
 }
 
+template <size_t N>
+constexpr size_t length(char const (&/*unused*/)[N]) {
+  return N - 1;
+}
+
 }  // end namespace
 
 namespace markup {
@@ -51,6 +56,8 @@ std::string_view Scanner::tag() const { return std::string_view(tagName_.data, t
 
 Scanner::TokenType Scanner::scanBody() {
   value_ = string_ref{input_.pos(), 0};
+
+  start_ = input_.pos();
 
   switch (input_.peek()) {
     case '\0':
@@ -97,13 +104,14 @@ Scanner::TokenType Scanner::scanAttribute() {
   switch (input_.peek()) {
     case '>':
       input_.consume();
-      if (equalsCaseInsensitive(tagName_, "script")) {
+
+      // Treat some elements as opaque, e.g. <script>, <style>
+      if (/*equalsCaseInsensitive(tagName_, "title") ||*/ equalsCaseInsensitive(tagName_, "script") ||
+          equalsCaseInsensitive(tagName_, "style") || equalsCaseInsensitive(tagName_, "textarea") ||
+          equalsCaseInsensitive(tagName_, "iframe") || equalsCaseInsensitive(tagName_, "noembed") ||
+          equalsCaseInsensitive(tagName_, "noscript") || equalsCaseInsensitive(tagName_, "noframes")) {
         // script is special because we want to parse the attributes,
         // but not the content
-        scanFun_ = &Scanner::scanSpecial;
-        return scanSpecial();
-      } else if (equalsCaseInsensitive(tagName_, "style")) {
-        // same with style
         scanFun_ = &Scanner::scanSpecial;
         return scanSpecial();
       } else {
@@ -198,10 +206,11 @@ Scanner::TokenType Scanner::scanAttribute() {
 // - TT_ENTITY_START
 // - TT_ERROR if unexpected character or end
 Scanner::TokenType Scanner::scanTag() {
+  start_ = input_.pos();
   if (input_.consume() != '<') return TT_ERROR;
 
-  bool is_tail = input_.peek() == '/';
-  if (is_tail) input_.consume();
+  bool isTail = input_.peek() == '/';
+  if (isTail) input_.consume();
 
   tagName_ = string_ref{input_.pos(), 0};
 
@@ -226,7 +235,7 @@ Scanner::TokenType Scanner::scanTag() {
 
   if (!input_.peek()) return TT_EOF;
 
-  if (is_tail) return input_.consume() == '>' ? TT_TAG_END : TT_ERROR;
+  if (isTail) return input_.consume() == '>' ? TT_TAG_END : TT_ERROR;
 
   scanFun_ = &Scanner::scanAttribute;
   return TT_TAG_START;
@@ -234,6 +243,7 @@ Scanner::TokenType Scanner::scanTag() {
 
 Scanner::TokenType Scanner::scanEntity(TokenType parentTokenType) {
   // `entity` includes starting '&' and ending ';'
+  start_ = input_.pos();
   string_ref entity{input_.pos(), 0};
   bool hasEnd = false;
 
@@ -312,11 +322,13 @@ bool Scanner::isWhitespace(char c) {
 
 Scanner::TokenType Scanner::scanComment() {
   if (gotTail_) {
+    start_ = input_.pos() - length("-->");  // minus "-->"
     scanFun_ = &Scanner::scanBody;
     gotTail_ = false;
     return TT_COMMENT_END;
   }
 
+  start_ = input_.pos();
   value_ = string_ref{input_.pos(), 0};
 
   while (true) {
@@ -325,7 +337,7 @@ Scanner::TokenType Scanner::scanComment() {
 
     if (endsWith(value_, "-->")) {
       gotTail_ = true;
-      value_.size -= 3;
+      value_.size -= length("-->");
       break;
     }
   }
@@ -334,11 +346,13 @@ Scanner::TokenType Scanner::scanComment() {
 
 Scanner::TokenType Scanner::scanProcessingInstruction() {
   if (gotTail_) {
+    start_ = input_.pos() - length("?>");
     scanFun_ = &Scanner::scanBody;
     gotTail_ = false;
     return TT_PROCESSING_INSTRUCTION_END;
   }
 
+  start_ = input_.pos();
   value_ = string_ref{input_.pos(), 0};
 
   while (true) {
@@ -347,7 +361,7 @@ Scanner::TokenType Scanner::scanProcessingInstruction() {
 
     if (endsWith(value_, "?>")) {
       gotTail_ = true;
-      value_.size -= 2;
+      value_.size -= length("?>");
       break;
     }
   }
@@ -356,11 +370,13 @@ Scanner::TokenType Scanner::scanProcessingInstruction() {
 
 Scanner::TokenType Scanner::scanSpecial() {
   if (gotTail_) {
+    start_ = input_.pos() - (tagName_.size + length("</>"));
     scanFun_ = &Scanner::scanBody;
     gotTail_ = false;
     return TT_TAG_END;
   }
 
+  start_ = input_.pos();
   value_ = string_ref{input_.pos(), 0};
 
   while (true) {
@@ -369,17 +385,17 @@ Scanner::TokenType Scanner::scanSpecial() {
 
     // Test for </tag>
     // TODO: no whitespaces allowed? Is that okay?
-    if (value_.data[value_.size - 1] == '>' && value_.size >= tagName_.size + 3) {
+    if (value_.data[value_.size - 1] == '>' && value_.size >= tagName_.size + length("</>")) {
       // Test for the "</"" bit of "</tag>"
-      size_t pos_tag_start = value_.size - tagName_.size - 3;
-      if (std::memcmp(value_.data + pos_tag_start, "</", 2) != 0) continue;
+      size_t posTagStart = value_.size - tagName_.size - length("</>");
+      if (std::memcmp(value_.data + posTagStart, "</", length("</")) != 0) continue;
 
       // Test for the "tag" bit of "</tag>". Doing case insensitive compare because <I>...</i> is okay.
-      size_t pos_tag_name = value_.size - tagName_.size - 1;  // end - tag>
-      if (!equalsCaseInsensitive(value_.data + pos_tag_name, tagName_.data, tagName_.size)) continue;
+      size_t posTagName = value_.size - tagName_.size - length(">");  // end - tag>
+      if (!equalsCaseInsensitive(value_.data + posTagName, tagName_.data, tagName_.size)) continue;
 
       gotTail_ = true;
-      value_.size -= tagName_.size + 3;
+      value_.size -= tagName_.size + length("</>");
       break;
     }
   }

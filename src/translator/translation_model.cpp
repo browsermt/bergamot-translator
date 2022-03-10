@@ -101,7 +101,8 @@ void TranslationModel::loadBackend(MarianBackend &backend, Workspace &workspace)
 
 // Make request process is shared between Async and Blocking workflow of translating.
 Ptr<Request> TranslationModel::makeRequest(size_t requestId, std::string &&source, CallbackType callback,
-                                           const ResponseOptions &responseOptions, TranslationCache *cache) {
+                                           const ResponseOptions &responseOptions,
+                                           std::optional<TranslationCache> &cache) {
   Segments segments;
   AnnotatedText annotatedSource;
 
@@ -114,7 +115,8 @@ Ptr<Request> TranslationModel::makeRequest(size_t requestId, std::string &&sourc
 }
 
 Ptr<Request> TranslationModel::makePivotRequest(size_t requestId, AnnotatedText &&previousTarget, CallbackType callback,
-                                                const ResponseOptions &responseOptions, TranslationCache *cache) {
+                                                const ResponseOptions &responseOptions,
+                                                std::optional<TranslationCache> &cache) {
   Segments segments;
 
   textProcessor_.processFromAnnotation(previousTarget, segments);

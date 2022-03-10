@@ -1,10 +1,12 @@
 // All variables specific to translation service
 var translationService = undefined;
+
 // A map of language-pair to TranslationModel object
 var languagePairToTranslationModels = new Map();
 
 const BERGAMOT_TRANSLATOR_MODULE = "bergamot-translator-worker.js";
 const MODEL_REGISTRY = "modelRegistry.js";
+const PIVOT_LANGUAGE = 'en';
 
 const encoder = new TextEncoder(); // string to utf-8 converter
 const decoder = new TextDecoder(); // utf-8 to string converter
@@ -52,6 +54,7 @@ onmessage = async function(e) {
       const from = e.data[1];
       const to = e.data[2];
       const input = e.data[3];
+      const translateOptions = e.data[4];
       let inputWordCount = 0;
       let inputBlockElements = 0;
       input.forEach(sentence => {
@@ -61,7 +64,7 @@ onmessage = async function(e) {
       let start = Date.now();
       try {
         log(`Blocks to translate: ${inputBlockElements}`);
-        result = translate(from, to, input);
+        result = translate(from, to, input, translateOptions);
         const secs = (Date.now() - start) / 1000;
         log(`Translation '${from}${to}' Successful. Speed: ${Math.round(inputWordCount / secs)} WPS (${inputWordCount} words in ${secs} secs)`);
       } catch (error) {
@@ -75,14 +78,15 @@ onmessage = async function(e) {
 // Instantiates the Translation Service
 const constructTranslationService = async () => {
   if (!translationService) {
-    var translationServiceConfig = {};
+    var translationServiceConfig = {cacheSize: 20000};
     log(`Creating Translation Service with config: ${translationServiceConfig}`);
     translationService = new Module.BlockingService(translationServiceConfig);
     log(`Translation Service created successfully`);
   }
 }
 
-// Constructs a translation model object for the source and target language pair
+// Constructs translation model(s) for the source and target language pair (using
+// pivoting if required).
 const constructTranslationModel = async (from, to) => {
   // Delete all previously constructed translation models and clear the map
   languagePairToTranslationModels.forEach((value, key) => {
@@ -91,31 +95,60 @@ const constructTranslationModel = async (from, to) => {
   });
   languagePairToTranslationModels.clear();
 
-  // If none of the languages is English then construct multiple models with
-  // English as a pivot language.
-  if (from !== 'en' && to !== 'en') {
-    log(`Constructing model '${from}${to}' via pivoting: '${from}en' and 'en${to}'`);
-    await Promise.all([_constructTranslationModelInvolvingEnglish(from, 'en'),
-                        _constructTranslationModelInvolvingEnglish('en', to)]);
+  if (_isPivotingRequired(from, to)) {
+    // Pivoting requires 2 translation models
+    const languagePairSrcToPivot = _getLanguagePair(from, PIVOT_LANGUAGE);
+    const languagePairPivotToTarget = _getLanguagePair(PIVOT_LANGUAGE, to);
+    await Promise.all([_constructTranslationModelHelper(languagePairSrcToPivot),
+                      _constructTranslationModelHelper(languagePairPivotToTarget)]);
   }
   else {
-    log(`Constructing model '${from}${to}'`);
-    await _constructTranslationModelInvolvingEnglish(from, to);
+    // Non-pivoting case requires only 1 translation model
+    await _constructTranslationModelHelper(_getLanguagePair(from, to));
   }
 }
 
-// Translates text from source language to target language.
-const translate = (from, to, input) => {
-  // If none of the languages is English then perform translation with
-  // English as a pivot language.
-  if (from !== 'en' && to !== 'en') {
-    log(`Translating '${from}${to}' via pivoting: '${from}en' -> 'en${to}'`);
-    const translatedTextInEnglish = _translateInvolvingEnglish(from, 'en', input);
-    return _translateInvolvingEnglish('en', to, translatedTextInEnglish);
-  }
-  else {
-    log(`Translating '${from}${to}'`);
-    return _translateInvolvingEnglish(from, to, input);
+// Translates text from source language to target language (via pivoting if necessary).
+const translate = (from, to, input, translateOptions) => {
+  let vectorResponseOptions, vectorSourceText, vectorResponse;
+  try {
+    // Prepare the arguments (vectorResponseOptions and vectorSourceText (vector<string>)) of Translation API and call it.
+    // Result is a vector<Response> where each of its item corresponds to one item of vectorSourceText in the same order.
+    vectorResponseOptions = _prepareResponseOptions(translateOptions);
+    vectorSourceText = _prepareSourceText(input);
+
+    if (_isPivotingRequired(from, to)) {
+      // Translate via pivoting
+      const translationModelSrcToPivot = _getLoadedTranslationModel(from, PIVOT_LANGUAGE);
+      const translationModelPivotToTarget = _getLoadedTranslationModel(PIVOT_LANGUAGE, to);
+      vectorResponse = translationService.translateViaPivoting(translationModelSrcToPivot,
+                                                              translationModelPivotToTarget,
+                                                              vectorSourceText,
+                                                              vectorResponseOptions);
+    }
+    else {
+      // Translate without pivoting
+      const translationModel = _getLoadedTranslationModel(from, to);
+      vectorResponse = translationService.translate(translationModel, vectorSourceText, vectorResponseOptions);
+    }
+
+    // Parse all relevant information from vectorResponse
+    const listTranslatedText = _parseTranslatedText(vectorResponse);
+    const listSourceText = _parseSourceText(vectorResponse);
+    const listTranslatedTextSentences = _parseTranslatedTextSentences(vectorResponse);
+    const listSourceTextSentences = _parseSourceTextSentences(vectorResponse);
+
+    log(`Source text: ${listSourceText}`);
+    log(`Translated text: ${listTranslatedText}`);
+    log(`Translated sentences: ${JSON.stringify(listTranslatedTextSentences)}`);
+    log(`Source sentences: ${JSON.stringify(listSourceTextSentences)}`);
+
+    return listTranslatedText;
+  } finally {
+    // Necessary clean up
+    if (vectorSourceText != null) vectorSourceText.delete();
+    if (vectorResponseOptions != null) vectorResponseOptions.delete();
+    if (vectorResponse != null) vectorResponse.delete();
   }
 }
 
@@ -140,38 +173,14 @@ const _prepareAlignedMemoryFromBuffer = async (buffer, alignmentSize) => {
   return alignedMemory;
 }
 
-const _constructTranslationModelInvolvingEnglish = async (from, to) => {
-  const languagePair = `${from}${to}`;
+const _constructTranslationModelHelper = async (languagePair) => {
+  log(`Constructing translation model ${languagePair}`);
 
   /*Set the Model Configuration as YAML formatted string.
     For available configuration options, please check: https://marian-nmt.github.io/docs/cmd/marian-decoder/
-    Vocab files are re-used in both translation directions
-    const vocabLanguagePair = from === "en" ? `${to}${from}` : languagePair;
-    const modelConfig = `models:
-      - /${languagePair}/model.${languagePair}.intgemm.alphas.bin
-      vocabs:
-      - /${languagePair}/vocab.${vocabLanguagePair}.spm
-      - /${languagePair}/vocab.${vocabLanguagePair}.spm
-      beam-size: 1
-      normalize: 1.0
-      word-penalty: 0
-      max-length-break: 128
-      mini-batch-words: 1024
-      workspace: 128
-      max-length-factor: 2.0
-      skip-cost: true
-      cpu-threads: 0
-      quiet: true
-      quiet-translation: true
-      shortlist:
-          - /${languagePair}/lex.${languagePair}.s2t
-          - 50
-          - 50
-      `;
-      */
-
-  // TODO: gemm-precision: int8shiftAlphaAll (for the models that support this)
-  // DONOT CHANGE THE SPACES BETWEEN EACH ENTRY OF CONFIG
+    Vocab files are re-used in both translation directions.
+    DO NOT CHANGE THE SPACES BETWEEN EACH ENTRY OF CONFIG
+  */
   const modelConfig = `beam-size: 1
 normalize: 1.0
 word-penalty: 0
@@ -229,38 +238,20 @@ alignment: soft
   languagePairToTranslationModels.set(languagePair, translationModel);
 }
 
-const _translateInvolvingEnglish = (from, to, input) => {
-  const languagePair = `${from}${to}`;
+const _isPivotingRequired = (from, to) => {
+  return (from !== PIVOT_LANGUAGE) && (to !== PIVOT_LANGUAGE);
+}
+
+const _getLanguagePair = (srcLang, tgtLang) => {
+  return `${srcLang}${tgtLang}`;
+}
+
+const _getLoadedTranslationModel = (srcLang, tgtLang) => {
+  const languagePair = _getLanguagePair(srcLang, tgtLang);
   if (!languagePairToTranslationModels.has(languagePair)) {
-    throw Error(`Please load translation model '${languagePair}' before translating`);
+    throw Error(`Translation model '${languagePair}' not loaded`);
   }
-  translationModel = languagePairToTranslationModels.get(languagePair);
-
-  // Prepare the arguments of translate() API i.e. ResponseOptions and vectorSourceText (i.e. a vector<string>)
-  const responseOptions = _prepareResponseOptions();
-  let vectorSourceText = _prepareSourceText(input);
-
-  // Call translate() API; result is vector<Response> where every item of vector<Response> corresponds
-  // to an item of vectorSourceText in the same order
-  const vectorResponse = translationService.translate(translationModel, vectorSourceText, responseOptions);
-
-  // Parse all relevant information from vectorResponse
-  const listTranslatedText = _parseTranslatedText(vectorResponse);
-  const listSourceText = _parseSourceText(vectorResponse);
-  const listTranslatedTextSentences = _parseTranslatedTextSentences(vectorResponse);
-  const listSourceTextSentences = _parseSourceTextSentences(vectorResponse);
-  const listTranslatedTextSentenceQualityScores = _parseTranslatedTextSentenceQualityScores(vectorResponse);
-
-  log(`Source text: ${listSourceText}`);
-  log(`Translated text: ${listTranslatedText}`);
-  log(`Translated sentences: ${JSON.stringify(listTranslatedTextSentences)}`);
-  log(`Source sentences: ${JSON.stringify(listSourceTextSentences)}`);
-  log(`Translated sentence quality scores: ${JSON.stringify(listTranslatedTextSentenceQualityScores)}`);
-
-  // Delete prepared SourceText to avoid memory leak
-  vectorSourceText.delete();
-
-  return listTranslatedText;
+  return languagePairToTranslationModels.get(languagePair);
 }
 
 const _parseTranslatedText = (vectorResponse) => {
@@ -299,46 +290,20 @@ const _parseSourceTextSentences = (vectorResponse) => {
   return result;
 }
 
-const _parseTranslatedTextSentenceQualityScores = (vectorResponse) => {
-  const result = [];
-  for (let i = 0; i < vectorResponse.size(); i++) {
-    const response = vectorResponse.get(i);
-    const translatedText = response.getTranslatedText();
-    const vectorSentenceQualityScore = response.getQualityScores();
-    log(`No. of sentences: "${vectorSentenceQualityScore.size()}"`);
-    const sentenceQualityScores = [];
-    for (let sentenceIndex=0; sentenceIndex < vectorSentenceQualityScore.size(); sentenceIndex++) {
-      const sentenceQualityScoreObject = vectorSentenceQualityScore.get(sentenceIndex);
-      const wordByteRangeList = [];
-      const wordList = [];
-      const wordScoreList = [];
-      const vectorWordScore = sentenceQualityScoreObject.wordScores;
-      const vectorWordByteRange = sentenceQualityScoreObject.wordByteRanges;
-
-      for (let wordIndex = 0; wordIndex < vectorWordScore.size(); wordIndex++) {
-        const wordScore = vectorWordScore.get(wordIndex);
-        const wordByteRange = vectorWordByteRange.get(wordIndex);
-        wordScoreList.push(wordScore);
-        wordByteRangeList.push(wordByteRange);
-        const word = _getSubString(translatedText, wordByteRange);
-        wordList.push(word);
-      }
-
-      const sentenceQualityScore = {
-        wordByteRanges: wordByteRangeList,
-        words: wordList,
-        wordScores: wordScoreList,
-        sentenceScore: sentenceQualityScoreObject.sentenceScore
-      };
-      sentenceQualityScores.push(sentenceQualityScore);
-    }
-    result.push(sentenceQualityScores);
+const _prepareResponseOptions = (translateOptions) => {
+  let vectorResponseOptions = new Module.VectorResponseOptions;
+  translateOptions.forEach(translateOption => {
+    vectorResponseOptions.push_back({
+      qualityScores: translateOption["isQualityScores"],
+      alignment: true,
+      html: translateOption["isHtml"]
+    });
+  });
+  if (vectorResponseOptions.size() == 0) {
+    vectorResponseOptions.delete();
+    throw Error(`No Translation Options provided`);
   }
-  return result;
-}
-
-const _prepareResponseOptions = () => {
-  return {qualityScores: true, alignment: true, html: true};
+  return vectorResponseOptions;
 }
 
 const _prepareSourceText = (input) => {
@@ -350,6 +315,10 @@ const _prepareSourceText = (input) => {
     }
     vectorSourceText.push_back(paragraph.trim())
   })
+  if (vectorSourceText.size() == 0) {
+    vectorSourceText.delete();
+    throw Error(`No text provided to translate`);
+  }
   return vectorSourceText;
 }
 

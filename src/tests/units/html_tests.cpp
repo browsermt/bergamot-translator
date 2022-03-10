@@ -10,6 +10,17 @@
 using namespace marian::bergamot;
 using marian::string_view;
 
+class MarianThrowsExceptionsFixture {
+ protected:
+  MarianThrowsExceptionsFixture() : prev_(marian::getThrowExceptionOnAbort()) {
+    marian::setThrowExceptionOnAbort(true);
+  }
+  ~MarianThrowsExceptionsFixture() { marian::setThrowExceptionOnAbort(prev_); }
+
+ private:
+  bool prev_;
+};
+
 std::ostream &operator<<(std::ostream &out, std::pair<ByteRange, ByteRange> const &b) {
   return out << '(' << b.first << ',' << b.second << ')';
 }
@@ -76,9 +87,7 @@ TEST_CASE("Ignore HTML if process_markup is false") {
   CHECK(response.source.text == html_code);
 }
 
-TEST_CASE("Abort if alignments are missing") {
-  marian::setThrowExceptionOnAbort(true);
-
+TEST_CASE_METHOD(MarianThrowsExceptionsFixture, "Abort if alignments are missing") {
   std::string input("<p>hello <b>world</b></p>\n");
   HTML html(std::move(input), true);
 
@@ -108,9 +117,7 @@ TEST_CASE("Abort if alignments are missing") {
       "Response object does not contain alignments. TranslationModel or ResponseOptions is misconfigured?");
 }
 
-TEST_CASE("Abort if alignments are misconfigured") {
-  marian::setThrowExceptionOnAbort(true);
-
+TEST_CASE_METHOD(MarianThrowsExceptionsFixture, "Abort if alignments are misconfigured") {
   std::string input("<p>hello <b>world</b></p>\n");
   HTML html(std::move(input), true);
 
@@ -163,6 +170,16 @@ TEST_CASE("Do not abort if the input is just empty element") {
   html.restore(response);
   CHECK(response.source.text == "<p></p>");
   CHECK(response.target.text == "<p></p>");
+}
+
+TEST_CASE("Tag names are case insensitive") {
+  // Tests <P> vs </p> and <BR> should be recognized as a void tag <br>.
+  // <B> should be recognized as inline.
+  std::string test_str("<P><B>Spa</B>ce<BR>please?</p>");
+
+  std::string input(test_str);
+  HTML html(std::move(input), true);
+  CHECK(input == "Spa ce\n\nplease?");
 }
 
 TEST_CASE("Test case html entities") {
@@ -609,6 +626,72 @@ TEST_CASE("Test comment") {
   html.restore(response);
   CHECK(response.source.text == test_str);
   CHECK(response.target.text == test_str);
+}
+
+TEST_CASE("Test <wbr> element") {
+  std::string test_str("hel<wbr>lo");
+
+  std::string input(test_str);
+  HTML html(std::move(input), true);
+  CHECK(input == "hello");
+}
+
+TEST_CASE("Test <wbr> element (case-insensitive)") {
+  std::string test_str("hel<WBR>lo");
+
+  std::string input(test_str);
+  HTML html(std::move(input), true);
+  CHECK(input == "hello");
+}
+
+TEST_CASE("Test ignored element (nested)") {
+  std::string test_str("foo <var><var>nested</var></var> bar");
+  std::string expected_str("foo  <var><var>nested</var></var>bar");
+
+  std::string input(test_str);
+  HTML html(std::move(input), true);
+  CHECK(input == "foo  bar");
+
+  Response response;
+  std::string sentence_str("foo  bar");
+  std::vector<string_view> sentence{
+      string_view(sentence_str.data() + 0, 3),  // foo
+      string_view(sentence_str.data() + 3, 1),  // _
+      string_view(sentence_str.data() + 4, 4),  // _bar
+      string_view(sentence_str.data() + 8, 0),  // ""
+  };
+  response.source.appendSentence("", sentence.begin(), sentence.end());
+  response.target.appendSentence("", sentence.begin(), sentence.end());
+  response.alignments = {identity_matrix<float>(4)};
+
+  html.restore(response);
+  CHECK(response.source.text == expected_str);
+  CHECK(response.target.text == expected_str);
+}
+
+TEST_CASE("Test ignored element (with entity)") {
+  std::string test_str("foo <var>&amp;</var> bar");
+  std::string expected_str("foo  <var>&amp;</var>bar");
+
+  std::string input(test_str);
+  HTML html(std::move(input), true);
+  CHECK(input == "foo  bar");
+
+  Response response;
+  std::string sentence_str("foo  bar");
+  std::vector<string_view> sentence{
+      string_view(sentence_str.data() + 0, 3),  // foo
+      string_view(sentence_str.data() + 3, 1),  // _
+      string_view(sentence_str.data() + 4, 4),  // _bar
+      string_view(sentence_str.data() + 8, 0),  // ""
+  };
+  response.source.appendSentence("", sentence.begin(), sentence.end());
+  response.target.appendSentence("", sentence.begin(), sentence.end());
+  response.alignments = {identity_matrix<float>(4)};
+
+  html.restore(response);
+  CHECK(response.source.text == expected_str);
+  CHECK(response.target.text == expected_str);
 }
 
 TEST_CASE("End-to-end translation", "[!mayfail]") {

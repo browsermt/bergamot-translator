@@ -45,7 +45,8 @@ std::vector<std::shared_ptr<AlignedMemory>> prepareVocabsSmartMemories(std::vect
 }
 
 MemoryBundle prepareMemoryBundle(AlignedMemory* modelMemory, AlignedMemory* shortlistMemory,
-                                 std::vector<AlignedMemory*> uniqueVocabsMemories, AlignedMemory* qualityEstimatorMemory) {
+                                 std::vector<AlignedMemory*> uniqueVocabsMemories,
+                                 AlignedMemory* qualityEstimatorMemory) {
   MemoryBundle memoryBundle;
   memoryBundle.model = std::move(*modelMemory);
   memoryBundle.shortlist = std::move(*shortlistMemory);
@@ -60,8 +61,8 @@ MemoryBundle prepareMemoryBundle(AlignedMemory* modelMemory, AlignedMemory* shor
 // This allows only shared_ptrs to be operational in JavaScript, according to emscripten.
 // https://emscripten.org/docs/porting/connecting_cpp_and_javascript/embind.html#smart-pointers
 std::shared_ptr<TranslationModel> TranslationModelFactory(const std::string& config, AlignedMemory* model,
-                                                          AlignedMemory* shortlist,
-                                                          std::vector<AlignedMemory*> vocabs, AlignedMemory* qualityEstimator) {
+                                                          AlignedMemory* shortlist, std::vector<AlignedMemory*> vocabs,
+                                                          AlignedMemory* qualityEstimator) {
   MemoryBundle memoryBundle = prepareMemoryBundle(model, shortlist, vocabs, qualityEstimator);
   return std::make_shared<TranslationModel>(config, std::move(memoryBundle));
 }

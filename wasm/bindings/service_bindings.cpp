@@ -45,13 +45,13 @@ std::vector<std::shared_ptr<AlignedMemory>> prepareVocabsSmartMemories(std::vect
 }
 
 MemoryBundle prepareMemoryBundle(AlignedMemory* modelMemory, AlignedMemory* shortlistMemory,
-                                 std::vector<AlignedMemory*> uniqueVocabsMemories, AlignedMemory* qeMemory) {
+                                 std::vector<AlignedMemory*> uniqueVocabsMemories, AlignedMemory* qualityEstimatorMemory) {
   MemoryBundle memoryBundle;
   memoryBundle.model = std::move(*modelMemory);
   memoryBundle.shortlist = std::move(*shortlistMemory);
   memoryBundle.vocabs = std::move(prepareVocabsSmartMemories(uniqueVocabsMemories));
-  if (qeMemory != nullptr) {
-    memoryBundle.qualityEstimatorMemory = std::move(*qeMemory);
+  if (qualityEstimatorMemory != nullptr) {
+    memoryBundle.qualityEstimatorMemory = std::move(*qualityEstimatorMemory);
   }
 
   return memoryBundle;
@@ -61,8 +61,8 @@ MemoryBundle prepareMemoryBundle(AlignedMemory* modelMemory, AlignedMemory* shor
 // https://emscripten.org/docs/porting/connecting_cpp_and_javascript/embind.html#smart-pointers
 std::shared_ptr<TranslationModel> TranslationModelFactory(const std::string& config, AlignedMemory* model,
                                                           AlignedMemory* shortlist,
-                                                          std::vector<AlignedMemory*> vocabs, AlignedMemory* qe = nullptr) {
-  MemoryBundle memoryBundle = prepareMemoryBundle(model, shortlist, vocabs, qe);
+                                                          std::vector<AlignedMemory*> vocabs, AlignedMemory* qualityEstimator) {
+  MemoryBundle memoryBundle = prepareMemoryBundle(model, shortlist, vocabs, qualityEstimator);
   return std::make_shared<TranslationModel>(config, std::move(memoryBundle));
 }
 

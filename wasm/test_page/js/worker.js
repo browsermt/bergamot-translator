@@ -182,7 +182,6 @@ async function prepareAlignedMemory(file, languagePair) {
   const alignedMemory = await _prepareAlignedMemoryFromBuffer(buffer, file.alignment);
   log(`"${file.type}" aligned memory prepared. Size:${alignedMemory.size()} bytes, alignment:${file.alignment}`);
   return alignedMemory;
-  //return {${file.type}: alignedMemory;
 }
 
 const _constructTranslationModelHelper = async (languagePair) => {
@@ -212,8 +211,9 @@ alignment: soft
     {"type": "model", "alignment": 256},
     {"type": "lex", "alignment": 64},
     {"type": "vocab", "alignment": 64},
-    {"type": "qe", "alignment": 64}
+    {"type": "qualityModel", "alignment": 64}
   ];
+
   const promises = [];
   files.filter(file => modelRegistry[languagePair].hasOwnProperty(file.type))
   .map((file) => {
@@ -243,12 +243,21 @@ alignment: soft
     _prepareAlignedMemoryFromBuffer(downloadedBuffers[1], 64),
     _prepareAlignedMemoryFromBuffer(downloadedBuffers[2], 64)
   ]);*/
-  log(`Aligned memory sizes: Model:${alignedMemories[0].size()} Shortlist:${alignedMemories[1].size()} Vocab:${alignedMemories[2].size()}`);
 
   log(`Translation Model config: ${modelConfig}`);
   const alignedVocabMemoryList = new Module.AlignedMemoryList();
   alignedVocabMemoryList.push_back(alignedMemories[2]);
-  var translationModel = new Module.TranslationModel(modelConfig, alignedMemories[0], alignedMemories[1], alignedVocabMemoryList);
+  let translationModel;
+  if (alignedMemories.length === files.length) {
+    log(`USING QE MODEL`);
+    log(`Aligned memory sizes: Model:${alignedMemories[0].size()} Shortlist:${alignedMemories[1].size()} Vocab:${alignedMemories[2].size()} QE:${alignedMemories[3].size()}`);
+    translationModel = new Module.TranslationModel(modelConfig, alignedMemories[0], alignedMemories[1], alignedVocabMemoryList, alignedMemories[3]);
+  }
+  else {
+    log(`WITHOUT QE MODEL`);
+    log(`Aligned memory sizes: Model:${alignedMemories[0].size()} Shortlist:${alignedMemories[1].size()} Vocab:${alignedMemories[2].size()}`);
+    translationModel = new Module.TranslationModel(modelConfig, alignedMemories[0], alignedMemories[1], alignedVocabMemoryList, null);
+  }
   languagePairToTranslationModels.set(languagePair, translationModel);
 }
 

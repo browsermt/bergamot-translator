@@ -16,6 +16,7 @@ Please refer to the file `test_page/js/worker.js` that demonstrates how to use t
     cd test_page
     git clone --depth 1 --branch main --single-branch https://github.com/mozilla/firefox-translations-models/
     mkdir models
+    cp -rf firefox-translations-models/registry.json models
     cp -rf firefox-translations-models/models/prod/* models
     cp -rf firefox-translations-models/models/dev/* models
     gunzip models/*/*

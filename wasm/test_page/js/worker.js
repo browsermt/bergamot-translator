@@ -12,6 +12,14 @@ const MODEL_REGISTRY = "../models/registry.json";
 const MODEL_ROOT_URL = "../models/";
 const PIVOT_LANGUAGE = 'en';
 
+// Information corresponding to each file type
+const fileInfo = [
+  {"type": "model", "alignment": 256},
+  {"type": "lex", "alignment": 64},
+  {"type": "vocab", "alignment": 64},
+  {"type": "qualityModel", "alignment": 64}
+];
+
 const encoder = new TextEncoder(); // string to utf-8 converter
 const decoder = new TextDecoder(); // utf-8 to string converter
 
@@ -172,7 +180,6 @@ const _prepareAlignedMemoryFromBuffer = async (buffer, alignmentSize) => {
   var alignedMemory = new Module.AlignedMemory(byteArray.byteLength, alignmentSize);
   const alignedByteArrayView = alignedMemory.getByteArrayView();
   alignedByteArrayView.set(byteArray);
-  log(`Aligned memory construction done. Size: ${byteArray.byteLength} bytes, Alignment: ${alignmentSize}`);
   return alignedMemory;
 }
 
@@ -207,55 +214,24 @@ gemm-precision: int8shiftAlphaAll
 alignment: soft
 `;
 
-  const files = [
-    {"type": "model", "alignment": 256},
-    {"type": "lex", "alignment": 64},
-    {"type": "vocab", "alignment": 64},
-    {"type": "qualityModel", "alignment": 64}
-  ];
-
   const promises = [];
-  files.filter(file => modelRegistry[languagePair].hasOwnProperty(file.type))
+  fileInfo.filter(file => modelRegistry[languagePair].hasOwnProperty(file.type))
   .map((file) => {
       promises.push(prepareAlignedMemory(file, languagePair));
   });
 
   const alignedMemories = await Promise.all(promises);
-  /*
-  const modelFile = `${MODEL_ROOT_URL}/${languagePair}/${modelRegistry[languagePair]["model"].name}`;
-  const shortlistFile = `${MODEL_ROOT_URL}/${languagePair}/${modelRegistry[languagePair]["lex"].name}`;
-  const vocabFile = `${MODEL_ROOT_URL}/${languagePair}/${modelRegistry[languagePair]["vocab"].name}`;
-  const qeFile = `${MODEL_ROOT_URL}/${languagePair}/${modelRegistry[languagePair]["qe"].name}`;
-  log(`modelFile: ${modelFile}\nshortlistFile: ${shortlistFile}\nvocabFile: ${vocabFile}`);
-
-  // Download the files as buffers from the given urls
-  let start = Date.now();
-  const downloadedBuffers = await Promise.all([
-    _downloadAsArrayBuffer(modelFile),
-    _downloadAsArrayBuffer(shortlistFile),
-    _downloadAsArrayBuffer(vocabFile)
-  ]);
-  log(`Total Download time for all files of '${languagePair}': ${(Date.now() - start) / 1000} secs`);
-
-  // Construct AlignedMemory objects with downloaded buffers
-  let alignedMemories = await Promise.all([
-    _prepareAlignedMemoryFromBuffer(downloadedBuffers[0], 256),
-    _prepareAlignedMemoryFromBuffer(downloadedBuffers[1], 64),
-    _prepareAlignedMemoryFromBuffer(downloadedBuffers[2], 64)
-  ]);*/
 
   log(`Translation Model config: ${modelConfig}`);
+  log(`Aligned memory sizes: Model:${alignedMemories[0].size()} Shortlist:${alignedMemories[1].size()} Vocab:${alignedMemories[2].size()}`);
   const alignedVocabMemoryList = new Module.AlignedMemoryList();
   alignedVocabMemoryList.push_back(alignedMemories[2]);
   let translationModel;
-  if (alignedMemories.length === files.length) {
-    log(`USING QE MODEL`);
-    log(`Aligned memory sizes: Model:${alignedMemories[0].size()} Shortlist:${alignedMemories[1].size()} Vocab:${alignedMemories[2].size()} QE:${alignedMemories[3].size()}`);
+  if (alignedMemories.length === fileInfo.length) {
+    log(`QE:${alignedMemories[3].size()}`);
     translationModel = new Module.TranslationModel(modelConfig, alignedMemories[0], alignedMemories[1], alignedVocabMemoryList, alignedMemories[3]);
   }
   else {
-    log(`WITHOUT QE MODEL`);
-    log(`Aligned memory sizes: Model:${alignedMemories[0].size()} Shortlist:${alignedMemories[1].size()} Vocab:${alignedMemories[2].size()}`);
     translationModel = new Module.TranslationModel(modelConfig, alignedMemories[0], alignedMemories[1], alignedVocabMemoryList, null);
   }
   languagePairToTranslationModels.set(languagePair, translationModel);

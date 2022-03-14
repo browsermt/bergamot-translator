@@ -1,11 +1,15 @@
 // All variables specific to translation service
 var translationService = undefined;
 
+// Model registry
+let modelRegistry = undefined;
+
 // A map of language-pair to TranslationModel object
 var languagePairToTranslationModels = new Map();
 
 const BERGAMOT_TRANSLATOR_MODULE = "bergamot-translator-worker.js";
-const MODEL_REGISTRY = "modelRegistry.js";
+const MODEL_REGISTRY = "../models/registry.json";
+const MODEL_ROOT_URL = "../models/";
 const PIVOT_LANGUAGE = 'en';
 
 const encoder = new TextEncoder(); // string to utf-8 converter
@@ -18,9 +22,10 @@ var Module = {
     log(`Time until Module.preRun: ${(Date.now() - start) / 1000} secs`);
     moduleLoadStart = Date.now();
   }],
-  onRuntimeInitialized: function() {
+  onRuntimeInitialized: async function() {
     log(`Wasm Runtime initialized Successfully (preRun -> onRuntimeInitialized) in ${(Date.now() - moduleLoadStart) / 1000} secs`);
-    importScripts(MODEL_REGISTRY);
+    const response = await fetch(MODEL_REGISTRY);
+    modelRegistry = await response.json();
     postMessage([`import_reply`, modelRegistry]);
   }
 };
@@ -196,10 +201,10 @@ gemm-precision: int8shiftAlphaAll
 alignment: soft
 `;
 
-  const modelFile = `${rootURL}/${languagePair}/${modelRegistry[languagePair]["model"].name}`;
-  const shortlistFile = `${rootURL}/${languagePair}/${modelRegistry[languagePair]["lex"].name}`;
-  const vocabFiles = [`${rootURL}/${languagePair}/${modelRegistry[languagePair]["vocab"].name}`,
-                      `${rootURL}/${languagePair}/${modelRegistry[languagePair]["vocab"].name}`];
+  const modelFile = `${MODEL_ROOT_URL}/${languagePair}/${modelRegistry[languagePair]["model"].name}`;
+  const shortlistFile = `${MODEL_ROOT_URL}/${languagePair}/${modelRegistry[languagePair]["lex"].name}`;
+  const vocabFiles = [`${MODEL_ROOT_URL}/${languagePair}/${modelRegistry[languagePair]["vocab"].name}`,
+                      `${MODEL_ROOT_URL}/${languagePair}/${modelRegistry[languagePair]["vocab"].name}`];
 
   const uniqueVocabFiles = new Set(vocabFiles);
   log(`modelFile: ${modelFile}\nshortlistFile: ${shortlistFile}\nNo. of unique vocabs: ${uniqueVocabFiles.size}`);

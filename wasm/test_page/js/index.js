@@ -19,9 +19,9 @@ const langs = [
   ["uk", "Ukrainian"],
 ];
 
-if (window.Worker) {
-  worker = new Worker("js/worker.js");
-  worker.postMessage(["import"]);
+function getWorkerURL(url) {
+  const content = `importScripts("${url}");`;
+  return URL.createObjectURL(new Blob([content], {type: "text/javascript"}));
 }
 
 document.querySelector("#input").addEventListener("input", function (event) {
@@ -77,35 +77,6 @@ const addQualityClasses = (root) => {
   });
 }
 
-worker.onmessage = function (e) {
-  if (e.data[0] === "translate_reply" && e.data[1]) {
-    // Clear output of previous translation
-    document.querySelector("#output").innerHTML = '';
-
-    // Add each translation in its own div to have a known root in which the
-    // sentence ids are unique. Used for highlighting sentences.
-    e.data[1].forEach(translatedHTML => {
-      const translation = document.createElement('div');
-      translation.classList.add('translation');
-      translation.innerHTML = translatedHTML;
-      addQualityClasses(translation);
-      document.querySelector("#output").appendChild(translation);
-    });
-  } else if (e.data[0] === "load_model_reply" && e.data[1]) {
-    status(e.data[1]);
-    translateCall();
-  } else if (e.data[0] === "import_reply" && e.data[1]) {
-    modelRegistry = e.data[1];
-    init();
-  } else if (e.data[0] === "abort") {
-    if (e.data[1].startsWith("CompileError: WebAssembly.Module doesn't parse"))
-      status(`Error: This browser does not yet support the necessary features. Try this page in Mozilla Firefox or Google Chrome.`)
-    else
-      status(`Error: ${e.data[1]}`);
-    document.body.classList.add('aborted');
-  }
-};
-
 langs.forEach(([code, name]) => {
   langFrom.innerHTML += `<option value="${code}">${name}</option>`;
   langTo.innerHTML += `<option value="${code}">${name}</option>`;
@@ -115,7 +86,7 @@ const loadModel = () => {
   const lngFrom = langFrom.value;
   const lngTo = langTo.value;
   if (lngFrom !== lngTo) {
-    status(`Installing model...`);
+    status(`Installing translation model…`);
     console.log(`Loading model '${lngFrom}${lngTo}'`);
     worker.postMessage(["load_model", lngFrom, lngTo]);
   } else {
@@ -151,4 +122,42 @@ function init() {
   langTo.value = 'en';
   // load this model
   loadModel();
+}
+
+if (window.Worker) {
+  status('Loading translator…');
+  // https://stackoverflow.com/a/62914052
+  const url = getWorkerURL('https://bergamot.s3.amazonaws.com/js/worker.js');
+  worker = new Worker(url);
+  URL.revokeObjectURL(url);
+  worker.postMessage(["import"]);
+
+  worker.onmessage = function (e) {
+    if (e.data[0] === "translate_reply" && e.data[1]) {
+      // Clear output of previous translation
+      document.querySelector("#output").innerHTML = '';
+
+      // Add each translation in its own div to have a known root in which the
+      // sentence ids are unique. Used for highlighting sentences.
+      e.data[1].forEach(translatedHTML => {
+        const translation = document.createElement('div');
+        translation.classList.add('translation');
+        translation.innerHTML = translatedHTML;
+        addQualityClasses(translation);
+        document.querySelector("#output").appendChild(translation);
+      });
+    } else if (e.data[0] === "load_model_reply" && e.data[1]) {
+      status(e.data[1]);
+      translateCall();
+    } else if (e.data[0] === "import_reply" && e.data[1]) {
+      modelRegistry = e.data[1];
+      init();
+    } else if (e.data[0] === "abort") {
+      if (e.data[1].startsWith("CompileError: WebAssembly.Module doesn't parse"))
+        status(`Error: This browser does not yet support the necessary features. Try this page in Mozilla Firefox or Google Chrome.`)
+      else
+        status(`Error: ${e.data[1]}`);
+      document.body.classList.add('aborted');
+    }
+  };
 }

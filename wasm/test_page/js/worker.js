@@ -4,8 +4,8 @@ var translationService = undefined;
 // A map of language-pair to TranslationModel object
 var languagePairToTranslationModels = new Map();
 
-const BERGAMOT_TRANSLATOR_MODULE = "bergamot-translator-worker.js";
-const MODEL_REGISTRY = "modelRegistry.js";
+const BERGAMOT_TRANSLATOR_MODULE = "https://bergamot.s3.amazonaws.com/js/bergamot-translator-worker.js";
+const MODEL_REGISTRY = "https://bergamot.s3.amazonaws.com/js/modelRegistry.js";
 const PIVOT_LANGUAGE = 'en';
 
 const encoder = new TextEncoder(); // string to utf-8 converter

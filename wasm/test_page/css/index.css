@@ -129,12 +129,11 @@ button:hover {
 
 .funding p {
   display: block;
-  max-width: 20rem;
+  max-width: 30rem;
   font-size: 0.6rem;
 }
 
 .funding img {
-  width: 130px;
   float: left;
 }
 

@@ -1,6 +1,6 @@
 
 //const rootURL = "https://storage.googleapis.com/bergamot-models-sandbox/0.2.10";
-const rootURL = "../models";
+const rootURL = "https://bergamot.s3.amazonaws.com/models";
 
 const modelRegistry = {
   enit: {

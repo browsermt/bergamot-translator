@@ -29,7 +29,9 @@ body {
 
 @media screen and (max-width: 640px) {
   .app {
-    grid: "from from" auto "status swap" auto "to to" auto "funding funding" auto / 1fr;
+    grid: "from from" auto "to to" auto "status swap" auto "funding funding" auto / 1fr;
+    max-height: calc(100% + 8rem);
+    padding: 0;
   }
 }
 
@@ -85,6 +87,7 @@ textarea, .output-area {
   border-radius: 2px;
   border: 1px solid #ccc;
   overflow: auto;
+  min-height: 4rem;
 }
 
 button {

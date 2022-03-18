@@ -186,7 +186,7 @@ PYBIND11_MODULE(_bergamot, m) {
           py::init<>([](bool qualityScores, bool alignment, bool HTML, bool sentenceMappings, ConcatStrategy strategy) {
             return ResponseOptions{qualityScores, alignment, HTML, sentenceMappings, strategy};
           }),
-          py::arg("qualityScores") = true, py::arg("alignment") = false, py::arg("HTML") = false,
+          py::arg("qualityScores") = false, py::arg("alignment") = false, py::arg("HTML") = false,
           py::arg("sentenceMappings") = true, py::arg("concatStrategy") = ConcatStrategy::FAITHFUL)
       .def_readwrite("qualityScores", &ResponseOptions::qualityScores)
       .def_readwrite("HTML", &ResponseOptions::HTML)

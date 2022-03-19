@@ -45,11 +45,15 @@ std::vector<std::shared_ptr<AlignedMemory>> prepareVocabsSmartMemories(std::vect
 }
 
 MemoryBundle prepareMemoryBundle(AlignedMemory* modelMemory, AlignedMemory* shortlistMemory,
-                                 std::vector<AlignedMemory*> uniqueVocabsMemories) {
+                                 std::vector<AlignedMemory*> uniqueVocabsMemories,
+                                 AlignedMemory* qualityEstimatorMemory) {
   MemoryBundle memoryBundle;
   memoryBundle.model = std::move(*modelMemory);
   memoryBundle.shortlist = std::move(*shortlistMemory);
   memoryBundle.vocabs = std::move(prepareVocabsSmartMemories(uniqueVocabsMemories));
+  if (qualityEstimatorMemory != nullptr) {
+    memoryBundle.qualityEstimatorMemory = std::move(*qualityEstimatorMemory);
+  }
 
   return memoryBundle;
 }
@@ -57,9 +61,9 @@ MemoryBundle prepareMemoryBundle(AlignedMemory* modelMemory, AlignedMemory* shor
 // This allows only shared_ptrs to be operational in JavaScript, according to emscripten.
 // https://emscripten.org/docs/porting/connecting_cpp_and_javascript/embind.html#smart-pointers
 std::shared_ptr<TranslationModel> TranslationModelFactory(const std::string& config, AlignedMemory* model,
-                                                          AlignedMemory* shortlist,
-                                                          std::vector<AlignedMemory*> vocabs) {
-  MemoryBundle memoryBundle = prepareMemoryBundle(model, shortlist, vocabs);
+                                                          AlignedMemory* shortlist, std::vector<AlignedMemory*> vocabs,
+                                                          AlignedMemory* qualityEstimator) {
+  MemoryBundle memoryBundle = prepareMemoryBundle(model, shortlist, vocabs, qualityEstimator);
   return std::make_shared<TranslationModel>(config, std::move(memoryBundle));
 }
 
@@ -69,16 +73,21 @@ EMSCRIPTEN_BINDINGS(translation_model) {
 }
 
 EMSCRIPTEN_BINDINGS(blocking_service_config) {
-  value_object<BlockingService::Config>("BlockingServiceConfig");
-  // .field("name", &BlockingService::Config::name")
-  // The above is a future hook. Note that more will come - for cache, for workspace-size or graph details  limits on
-  // aggregate-batching etc.
+  value_object<BlockingService::Config>("BlockingServiceConfig")
+      .field("cacheSize", &BlockingService::Config::cacheSize);
+}
+
+std::shared_ptr<BlockingService> BlockingServiceFactory(const BlockingService::Config& config) {
+  auto copy = config;
+  copy.logger.level = "critical";
+  return std::make_shared<BlockingService>(copy);
 }
 
 EMSCRIPTEN_BINDINGS(blocking_service) {
   class_<BlockingService>("BlockingService")
-      .constructor<BlockingService::Config>()
-      .function("translate", &BlockingService::translateMultiple);
+      .smart_ptr_constructor("BlockingService", &BlockingServiceFactory)
+      .function("translate", &BlockingService::translateMultiple)
+      .function("translateViaPivoting", &BlockingService::pivotMultiple);
 
   register_vector<std::string>("VectorString");
 }

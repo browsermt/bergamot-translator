@@ -1,10 +1,24 @@
 // All variables specific to translation service
 var translationService = undefined;
+
+// Model registry
+let modelRegistry = undefined;
+
 // A map of language-pair to TranslationModel object
 var languagePairToTranslationModels = new Map();
 
 const BERGAMOT_TRANSLATOR_MODULE = "bergamot-translator-worker.js";
-const MODEL_REGISTRY = "modelRegistry.js";
+const MODEL_REGISTRY = "../models/registry.json";
+const MODEL_ROOT_URL = "../models/";
+const PIVOT_LANGUAGE = 'en';
+
+// Information corresponding to each file type
+const fileInfo = [
+  {"type": "model", "alignment": 256},
+  {"type": "lex", "alignment": 64},
+  {"type": "vocab", "alignment": 64},
+  {"type": "qualityModel", "alignment": 64}
+];
 
 const encoder = new TextEncoder(); // string to utf-8 converter
 const decoder = new TextDecoder(); // utf-8 to string converter
@@ -16,9 +30,10 @@ var Module = {
     log(`Time until Module.preRun: ${(Date.now() - start) / 1000} secs`);
     moduleLoadStart = Date.now();
   }],
-  onRuntimeInitialized: function() {
+  onRuntimeInitialized: async function() {
     log(`Wasm Runtime initialized Successfully (preRun -> onRuntimeInitialized) in ${(Date.now() - moduleLoadStart) / 1000} secs`);
-    importScripts(MODEL_REGISTRY);
+    const response = await fetch(MODEL_REGISTRY);
+    modelRegistry = await response.json();
     postMessage([null, `import_reply`, modelRegistry, BERGAMOT_VERSION_FULL]);
   }
 };
@@ -48,13 +63,12 @@ onmessage = async function(e) {
       log(`'${command}' command done, Posting message back to main script`);
       postMessage([id, `${command}_reply`, result]);
   } else if (command === 'translate') {
-      const [from, to, input] = e.data.slice(2, 2+3);
-      const options = e.data.length >= 6 ? e.data[5] : {};
-      let inputWordCount = input.trim().split(" ").filter(word => word.trim() !== "").length;
-      let start = Date.now();
+      const [from, to, input, options] = e.data.slice(2, 2+4);
+      let inputWordCount = input.reduce((acc, text) => acc + text.trim().replace(/\<\/?.+?>/g, '').split(" ").filter(word => word.trim() !== "").length, 0);
+      let start = performance.now();
       try {
         result = translate(from, to, input, options);
-        const secs = (Date.now() - start) / 1000;
+        const secs = (performance.now() - start) / 1000;
         log(`Translation '${from}${to}' Successful. Speed: ${Math.round(inputWordCount / secs)} WPS (${inputWordCount} words in ${secs} secs)`);
       } catch (error) {
         log(`Error: ${error.message}`);
@@ -68,14 +82,15 @@ onmessage = async function(e) {
 // Instantiates the Translation Service
 const constructTranslationService = async () => {
   if (!translationService) {
-    var translationServiceConfig = {};
+    var translationServiceConfig = {cacheSize: 20000};
     log(`Creating Translation Service with config: ${translationServiceConfig}`);
     translationService = new Module.BlockingService(translationServiceConfig);
     log(`Translation Service created successfully`);
   }
 }
 
-// Constructs a translation model object for the source and target language pair
+// Constructs translation model(s) for the source and target language pair (using
+// pivoting if required).
 const constructTranslationModel = async (from, to, files) => {
   // Delete all previously constructed translation models and clear the map
   languagePairToTranslationModels.forEach((value, key) => {
@@ -84,31 +99,65 @@ const constructTranslationModel = async (from, to, files) => {
   });
   languagePairToTranslationModels.clear();
 
-  // If none of the languages is English then construct multiple models with
-  // English as a pivot language.
-  if (from !== 'en' && to !== 'en' && files === undefined) {
-    log(`Constructing model '${from}${to}' via pivoting: '${from}en' and 'en${to}'`);
-    await Promise.all([_constructTranslationModelInvolvingEnglish(from, 'en'),
-                        _constructTranslationModelInvolvingEnglish('en', to)]);
+  if (_isPivotingRequired(from, to) & files === undefined) {
+    // Pivoting requires 2 translation models
+    const languagePairSrcToPivot = _getLanguagePair(from, PIVOT_LANGUAGE);
+    const languagePairPivotToTarget = _getLanguagePair(PIVOT_LANGUAGE, to);
+    await Promise.all([_constructTranslationModelHelper(languagePairSrcToPivot),
+                      _constructTranslationModelHelper(languagePairPivotToTarget)]);
   }
   else {
-    log(`Constructing model '${from}${to}'`);
-    await _constructTranslationModelInvolvingEnglish(from, to, files);
+    // Non-pivoting case requires only 1 translation model
+    await _constructTranslationModelHelper(_getLanguagePair(from, to), files);
   }
 }
 
-// Translates text from source language to target language.
-const translate = (from, to, input, options) => {
-  // If none of the languages is English then perform translation with
-  // English as a pivot language.
-  if (from !== 'en' && to !== 'en' && !languagePairToTranslationModels.has(`${from}${to}`)) {
-    log(`Translating '${from}${to}' via pivoting: '${from}en' -> 'en${to}'`);
-    const translatedTextInEnglish = _translateInvolvingEnglish(from, 'en', input);
-    return _translateInvolvingEnglish('en', to, translatedTextInEnglish, options);
-  }
-  else {
-    log(`Translating '${from}${to}'`);
-    return _translateInvolvingEnglish(from, to, input, options);
+// Translates text from source language to target language (via pivoting if necessary).
+const translate = (from, to, input, translateOptions) => {
+  let vectorResponseOptions, vectorSourceText, vectorResponse;
+  try {
+    // Prepare the arguments (vectorResponseOptions and vectorSourceText (vector<string>)) of Translation API and call it.
+    // Result is a vector<Response> where each of its item corresponds to one item of vectorSourceText in the same order.
+    vectorResponseOptions = _prepareResponseOptions(translateOptions);
+    vectorSourceText = _prepareSourceText(input);
+
+    if (_isPivotingRequired(from, to)) {
+      // Translate via pivoting
+      const translationModelSrcToPivot = _getLoadedTranslationModel(from, PIVOT_LANGUAGE);
+      const translationModelPivotToTarget = _getLoadedTranslationModel(PIVOT_LANGUAGE, to);
+      vectorResponse = translationService.translateViaPivoting(translationModelSrcToPivot,
+                                                              translationModelPivotToTarget,
+                                                              vectorSourceText,
+                                                              vectorResponseOptions);
+    }
+    else {
+      // Translate without pivoting
+      const translationModel = _getLoadedTranslationModel(from, to);
+      vectorResponse = translationService.translate(translationModel, vectorSourceText, vectorResponseOptions);
+    }
+
+    // Parse all relevant information from vectorResponse
+    const listTranslatedText = _parseTranslatedText(vectorResponse);
+    const listSourceText = _parseSourceText(vectorResponse);
+    const listTranslatedTextSentences = _parseTranslatedTextSentences(vectorResponse);
+    const listSourceTextSentences = _parseSourceTextSentences(vectorResponse);
+    const listAlignments = _parseAlignments(vectorResponse);
+
+    log(`Source text: ${listSourceText}`);
+    log(`Translated text: ${listTranslatedText}`);
+    log(`Translated sentences: ${JSON.stringify(listTranslatedTextSentences)}`);
+    log(`Source sentences: ${JSON.stringify(listSourceTextSentences)}`);
+
+    return {
+      source: listSourceText[0],
+      translated: listTranslatedText[0],
+      alignments: listAlignments[0],
+    };
+  } finally {
+    // Necessary clean up
+    if (vectorSourceText != null) vectorSourceText.delete();
+    if (vectorResponseOptions != null) vectorResponseOptions.delete();
+    if (vectorResponse != null) vectorResponse.delete();
   }
 }
 
@@ -133,12 +182,9 @@ const _readAsArrayBuffer = async (file) => {
 // Constructs and initializes the AlignedMemory from the array buffer and alignment size
 const _prepareAlignedMemoryFromBuffer = async (buffer, alignmentSize) => {
   var byteArray = new Int8Array(buffer);
-  log(`Constructing Aligned memory. Size: ${byteArray.byteLength} bytes, Alignment: ${alignmentSize}`);
   var alignedMemory = new Module.AlignedMemory(byteArray.byteLength, alignmentSize);
-  log(`Aligned memory construction done`);
   const alignedByteArrayView = alignedMemory.getByteArrayView();
   alignedByteArrayView.set(byteArray);
-  log(`Aligned memory initialized`);
   return alignedMemory;
 }
 
@@ -146,38 +192,22 @@ function unique(items) {
   return new Set(items).values();
 }
 
-const _constructTranslationModelInvolvingEnglish = async (from, to, files) => {
-  const languagePair = `${from}${to}`;
+async function prepareAlignedMemory(file, languagePair) {
+  const fileName = `${MODEL_ROOT_URL}/${languagePair}/${modelRegistry[languagePair][file.type].name}`;
+  const buffer = await _downloadAsArrayBuffer(fileName);
+  const alignedMemory = await _prepareAlignedMemoryFromBuffer(buffer, file.alignment);
+  log(`"${file.type}" aligned memory prepared. Size:${alignedMemory.size()} bytes, alignment:${file.alignment}`);
+  return alignedMemory;
+}
+
+const _constructTranslationModelHelper = async (languagePair, files) => {
+  log(`Constructing translation model ${languagePair}`);
 
   /*Set the Model Configuration as YAML formatted string.
     For available configuration options, please check: https://marian-nmt.github.io/docs/cmd/marian-decoder/
-    Vocab files are re-used in both translation directions
-    const vocabLanguagePair = from === "en" ? `${to}${from}` : languagePair;
-    const modelConfig = `models:
-      - /${languagePair}/model.${languagePair}.intgemm.alphas.bin
-      vocabs:
-      - /${languagePair}/vocab.${vocabLanguagePair}.spm
-      - /${languagePair}/vocab.${vocabLanguagePair}.spm
-      beam-size: 1
-      normalize: 1.0
-      word-penalty: 0
-      max-length-break: 128
-      mini-batch-words: 1024
-      workspace: 128
-      max-length-factor: 2.0
-      skip-cost: true
-      cpu-threads: 0
-      quiet: true
-      quiet-translation: true
-      shortlist:
-          - /${languagePair}/lex.${languagePair}.s2t
-          - 50
-          - 50
-      `;
-      */
-
-  // TODO: gemm-precision: int8shiftAlphaAll (for the models that support this)
-  // DONOT CHANGE THE SPACES BETWEEN EACH ENTRY OF CONFIG
+    Vocab files are re-used in both translation directions.
+    DO NOT CHANGE THE SPACES BETWEEN EACH ENTRY OF CONFIG
+  */
   const modelConfig = `beam-size: 1
 normalize: 1.0
 word-penalty: 0
@@ -193,85 +223,47 @@ gemm-precision: int8shiftAlphaAll
 alignment: soft
 `;
 
-  let modelBuffer = null;
-  let shortlistBuffer = null;
-  let downloadedVocabBuffers = [];
+  let promises = [];
 
-  if (files) {
-    let start = Date.now();
-    [modelBuffer, shortlistBuffer, ...downloadedVocabBuffers] = await Promise.all([files.modelFile, files.shortlistFile, ...unique(files.vocabFiles)].map(file => _readAsArrayBuffer(file)));
-    log(`Total Read time for all files: ${(Date.now() - start) / 1000} secs`);
+  if (files === undefined) {
+    promises = fileInfo.filter(file => modelRegistry[languagePair].hasOwnProperty(file.type))
+    .map((file) => prepareAlignedMemory(file, languagePair));
   } else {
-    const modelFile = `${rootURL}/${languagePair}/${modelRegistry[languagePair]["model"].name}`;
-    const shortlistFile = `${rootURL}/${languagePair}/${modelRegistry[languagePair]["lex"].name}`;
-    const vocabFiles = [`${rootURL}/${languagePair}/${modelRegistry[languagePair]["vocab"].name}`,
-                        `${rootURL}/${languagePair}/${modelRegistry[languagePair]["vocab"].name}`];
-
-    // Download the files as buffers from the given urls
-    let start = Date.now();
-    [modelBuffer, shortlistBuffer, ...downloadedVocabBuffers] = await Promise.all([modelFile, shortlistFile, ...unique(vocabFiles)].map(url => _downloadAsArrayBuffer(url)));
-    log(`Total Download time for all files of '${languagePair}': ${(Date.now() - start) / 1000} secs`);
+    promises = [files.modelFile, files.shortlistFile, ...unique(files.vocabFiles)]
+    .map(async (file, i) => _prepareAlignedMemoryFromBuffer(await _readAsArrayBuffer(file), fileInfo[i].alignment));
   }
 
-  // Construct AlignedMemory objects with downloaded buffers
-  let constructedAlignedMemories = await Promise.all([_prepareAlignedMemoryFromBuffer(modelBuffer, 256),
-                                                      _prepareAlignedMemoryFromBuffer(shortlistBuffer, 64)]);
-  let alignedModelMemory = constructedAlignedMemories[0];
-  let alignedShortlistMemory = constructedAlignedMemories[1];
-  let alignedVocabsMemoryList = new Module.AlignedMemoryList;
-  for(let item of downloadedVocabBuffers) {
-    let alignedMemory = await _prepareAlignedMemoryFromBuffer(item, 64);
-    alignedVocabsMemoryList.push_back(alignedMemory);
-  }
-  for (let vocabs=0; vocabs < alignedVocabsMemoryList.size(); vocabs++) {
-    log(`Aligned vocab memory${vocabs+1} size: ${alignedVocabsMemoryList.get(vocabs).size()}`);
-  }
-  log(`Aligned model memory size: ${alignedModelMemory.size()}`);
-  log(`Aligned shortlist memory size: ${alignedShortlistMemory.size()}`);
+  const alignedMemories = await Promise.all(promises);
 
   log(`Translation Model config: ${modelConfig}`);
-  var translationModel = new Module.TranslationModel(modelConfig, alignedModelMemory, alignedShortlistMemory, alignedVocabsMemoryList);
+  log(`Aligned memory sizes: Model:${alignedMemories[0].size()} Shortlist:${alignedMemories[1].size()} Vocab:${alignedMemories[2].size()}`);
+  const alignedVocabMemoryList = new Module.AlignedMemoryList();
+  alignedVocabMemoryList.push_back(alignedMemories[2]);
+  let translationModel;
+  if (alignedMemories.length === fileInfo.length) {
+    log(`QE:${alignedMemories[3].size()}`);
+    translationModel = new Module.TranslationModel(modelConfig, alignedMemories[0], alignedMemories[1], alignedVocabMemoryList, alignedMemories[3]);
+  }
+  else {
+    translationModel = new Module.TranslationModel(modelConfig, alignedMemories[0], alignedMemories[1], alignedVocabMemoryList, null);
+  }
   languagePairToTranslationModels.set(languagePair, translationModel);
 }
 
-const _translateInvolvingEnglish = (from, to, input, options) => {
-  const languagePair = `${from}${to}`;
+const _isPivotingRequired = (from, to) => {
+  return (from !== PIVOT_LANGUAGE) && (to !== PIVOT_LANGUAGE);
+}
+
+const _getLanguagePair = (srcLang, tgtLang) => {
+  return `${srcLang}${tgtLang}`;
+}
+
+const _getLoadedTranslationModel = (srcLang, tgtLang) => {
+  const languagePair = _getLanguagePair(srcLang, tgtLang);
   if (!languagePairToTranslationModels.has(languagePair)) {
-    throw Error(`Please load translation model '${languagePair}' before translating`);
+    throw Error(`Translation model '${languagePair}' not loaded`);
   }
-  translationModel = languagePairToTranslationModels.get(languagePair);
-
-  // Prepare the arguments of translate() API i.e. ResponseOptions and vectorSourceText (i.e. a vector<string>)
-  const responseOptions = _prepareResponseOptions(options);
-  let vectorSourceText = _prepareSourceText(input);
-
-  // Call translate() API; result is vector<Response> where every item of vector<Response> corresponds
-  // to an item of vectorSourceText in the same order
-  const vectorResponse = translationService.translate(translationModel, vectorSourceText, responseOptions);
-
-  // Parse all relevant information from vectorResponse
-  const listTranslatedText = _parseTranslatedText(vectorResponse);
-  const listSourceText = _parseSourceText(vectorResponse);
-  const listTranslatedTextSentences = _parseTranslatedTextSentences(vectorResponse);
-  const listSourceTextSentences = _parseSourceTextSentences(vectorResponse);
-  const listTranslatedTextSentenceQualityScores = _parseTranslatedTextSentenceQualityScores(vectorResponse);
-
-  const listAlignments = _parseAlignments(vectorResponse);
-
-  log(`Source text: ${listSourceText}`);
-  log(`Translated text: ${listTranslatedText}`);
-  log(`Translated sentences: ${JSON.stringify(listTranslatedTextSentences)}`);
-  log(`Source sentences: ${JSON.stringify(listSourceTextSentences)}`);
-  log(`Translated sentence quality scores: ${JSON.stringify(listTranslatedTextSentenceQualityScores)}`);
-
-  // Delete prepared SourceText to avoid memory leak
-  vectorSourceText.delete();
-
-  return {
-    source: listSourceText[0],
-    translated: listTranslatedText[0],
-    alignments: listAlignments[0]
-  };
+  return languagePairToTranslationModels.get(languagePair);
 }
 
 const _parseTranslatedText = (vectorResponse) => {
@@ -310,42 +302,30 @@ const _parseSourceTextSentences = (vectorResponse) => {
   return result;
 }
 
-const _parseTranslatedTextSentenceQualityScores = (vectorResponse) => {
-  const result = [];
-  for (let i = 0; i < vectorResponse.size(); i++) {
-    const response = vectorResponse.get(i);
-    const translatedText = response.getTranslatedText();
-    const vectorSentenceQualityScore = response.getQualityScores();
-    log(`No. of sentences: "${vectorSentenceQualityScore.size()}"`);
-    const sentenceQualityScores = [];
-    for (let sentenceIndex=0; sentenceIndex < vectorSentenceQualityScore.size(); sentenceIndex++) {
-      const sentenceQualityScoreObject = vectorSentenceQualityScore.get(sentenceIndex);
-      const wordByteRangeList = [];
-      const wordList = [];
-      const wordScoreList = [];
-      const vectorWordScore = sentenceQualityScoreObject.wordScores;
-      const vectorWordByteRange = sentenceQualityScoreObject.wordByteRanges;
+const _prepareResponseOptions = (translateOptions) => {
+  let vectorResponseOptions = new Module.VectorResponseOptions;
+  translateOptions.forEach(translateOption => {
+    const htmlOptions = new Module.HTMLOptions();
 
-      for (let wordIndex = 0; wordIndex < vectorWordScore.size(); wordIndex++) {
-        const wordScore = vectorWordScore.get(wordIndex);
-        const wordByteRange = vectorWordByteRange.get(wordIndex);
-        wordScoreList.push(wordScore);
-        wordByteRangeList.push(wordByteRange);
-        const word = _getSubString(translatedText, wordByteRange);
-        wordList.push(word);
-      }
-
-      const sentenceQualityScore = {
-        wordByteRanges: wordByteRangeList,
-        words: wordList,
-        wordScores: wordScoreList,
-        sentenceScore: sentenceQualityScoreObject.sentenceScore
-      };
-      sentenceQualityScores.push(sentenceQualityScore);
+    if ("htmlOptions" in translateOption) {
+      Object.entries(translateOption["htmlOptions"]).forEach(([option, value]) => {
+        htmlOptions[`set${option.substr(0, 1).toUpperCase()}${option.substr(1)}`](value);
+      });
     }
-    result.push(sentenceQualityScores);
+
+    vectorResponseOptions.push_back({
+      qualityScores: translateOption["isQualityScores"],
+      alignment: true,
+      html: translateOption["isHtml"],
+      htmlOptions
+    });
+  });
+  if (vectorResponseOptions.size() == 0) {
+    vectorResponseOptions.delete();
+    throw Error(`No Translation Options provided`);
   }
-  return result;
+
+  return vectorResponseOptions;
 }
 
 const _parseAlignments = (vectorResponse) => {
@@ -387,27 +367,19 @@ const _parseAlignments = (vectorResponse) => {
   return result;
 }
 
-const _prepareResponseOptions = ({html, htmlOptions}) => {
-  const options = {
-    qualityScores: true,
-    alignment: true,
-    html: !!html
-  };
-
-  if (htmlOptions !== undefined) {
-    options.htmlOptions = new Module.HTMLOptions();
-
-    Object.entries(htmlOptions).forEach(([option, value]) => {
-      options.htmlOptions[`set${option.substr(0, 1).toUpperCase()}${option.substr(1)}`](value);
-    });
-  }
-
-  return options;
-}
-
 const _prepareSourceText = (input) => {
   let vectorSourceText = new Module.VectorString;
-  vectorSourceText.push_back(input.trim());
+  input.forEach(paragraph => {
+    // prevent empty paragraph - it breaks the translation
+    if (paragraph.trim() === "") {
+      return;
+    }
+    vectorSourceText.push_back(paragraph.trim())
+  })
+  if (vectorSourceText.size() == 0) {
+    vectorSourceText.delete();
+    throw Error(`No text provided to translate`);
+  }
   return vectorSourceText;
 }
 

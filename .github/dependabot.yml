@@ -1,0 +1,9 @@
+version: 2
+
+updates:
+  # Maintain dependencies for Git Submodules
+  - package-ecosystem: "gitsubmodule"
+    directory: "/"
+    schedule:
+      interval: "daily"
+

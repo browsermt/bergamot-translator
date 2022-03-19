@@ -56,16 +56,18 @@ const translateCall = () => {
   const lngFrom = langFrom.value;
   const lngTo = langTo.value;
   const options = {
-    html: document.querySelector("#input-is-html").checked,
+    isHtml: document.querySelector("#input-is-html").checked,
     htmlOptions: {
       voidTags: document.querySelector("#html-void-tags").value,
       inlineTags: document.querySelector("#html-inline-tags").value,
+      inWordTags: document.querySelector("#html-in-word-tags").value,
+      ignoredTags: document.querySelector("#html-ignored-tags").value,
       continuationDelimiters: getContinuationDelimiters(),
       substituteInlineTagsWithSpaces: document.querySelector("#html-substitute-inline-tags-with-spaces").checked
     }
   };
 
-  worker.postMessage([id, "translate", lngFrom, lngTo, text, options]);
+  worker.postMessage([id, "translate", lngFrom, lngTo, [text], [options]]);
 
   const panel = panelTemplate.content.cloneNode(true);
   panel.querySelector('.panel').id = `translation-output-${id}`;

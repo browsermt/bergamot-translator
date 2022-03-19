@@ -8,7 +8,8 @@ Response Bridge<BlockingService>::translate(BlockingService &service, std::share
   // project source to a vector of std::string, send in, unpack the first element from
   // vector<Response>, return.
   std::vector<std::string> sources = {source};
-  return service.translateMultiple(model, std::move(sources), responseOptions).front();
+  std::vector<ResponseOptions> options = {responseOptions};
+  return service.translateMultiple(model, std::move(sources), options).front();
 }
 
 Response Bridge<AsyncService>::translate(AsyncService &service, std::shared_ptr<TranslationModel> &model,
@@ -30,7 +31,8 @@ Response Bridge<BlockingService>::pivot(BlockingService &service, std::shared_pt
                                         std::shared_ptr<TranslationModel> &pivotToTarget, std::string &&source,
                                         const ResponseOptions &responseOptions) {
   std::vector<std::string> sources = {source};
-  return service.pivotMultiple(sourceToPivot, pivotToTarget, std::move(sources), responseOptions).front();
+  std::vector<ResponseOptions> options = {responseOptions};
+  return service.pivotMultiple(sourceToPivot, pivotToTarget, std::move(sources), options).front();
 }
 
 Response Bridge<AsyncService>::pivot(AsyncService &service, std::shared_ptr<TranslationModel> &sourceToPivot,
@@ -71,6 +73,8 @@ void TestSuite<Service>::TestSuite::run(const std::string &opModeAsString, std::
     translationCache(models.front());
   } else if (opModeAsString == "test-pivot") {
     pivotTranslate(models);
+  } else if (opModeAsString == "test-pivot-with-html") {
+    pivotTranslateWithHTML(models);
   } else if (opModeAsString == "test-html-translation") {
     htmlTranslation(models.front());
   } else {
@@ -151,10 +155,11 @@ void TestSuite<Service>::qualityEstimatorWords(Ptr<TranslationModel> model) {
   std::string source = readFromStdin();
   const Response response = bridge_.translate(service_, model, std::move(source), responseOptions);
 
-  for (const auto &sentenceQualityEstimate : response.qualityScores) {
+  for (size_t sentenceIdx = 0; sentenceIdx < response.qualityScores.size(); ++sentenceIdx) {
+    const auto &sentenceQualityEstimate = response.qualityScores[sentenceIdx];
     std::cout << "[SentenceBegin]\n";
 
-    for (const auto &wordByteRange : sentenceQualityEstimate.wordByteRanges) {
+    for (const auto &wordByteRange : getWordByteRanges(response, sentenceIdx)) {
       const string_view word(response.target.text.data() + wordByteRange.begin, wordByteRange.size());
       std::cout << word << "\n";
     }
@@ -224,6 +229,19 @@ void TestSuite<Service>::translationCache(Ptr<TranslationModel> model) {
            "same path, this is expected to be same.");
 
   std::cout << firstResponse.target.text;
+}
+
+template <class Service>
+void TestSuite<Service>::pivotTranslateWithHTML(std::vector<Ptr<TranslationModel>> &models) {
+  ABORT_IF(models.size() != 2, "Forward and backward test needs two models.");
+  ResponseOptions responseOptions;
+  responseOptions.HTML = true;
+  std::string source = readFromStdin();
+  std::promise<Response> responsePromise;
+  std::future<Response> responseFuture = responsePromise.get_future();
+  Response response = bridge_.pivot(service_, models.front(), models.back(), std::move(source), responseOptions);
+  std::cout << response.source.text;
+  std::cout << response.target.text;
 }
 
 template <class Service>

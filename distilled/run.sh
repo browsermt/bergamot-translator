@@ -1,9 +1,9 @@
-
+set -e
 DTM_FOLDER=$( realpath $(dirname $0)/../build/distilled)
 
 # convert torch weights to marian 
 
-python3 dp2marian.py --model "weights.th" --output "distilled.npz"
+python3 dq2marian.py --model "weights.th" --output "distilled.npz"
 
 # run distilled model test conversion and save the results on a npz file
 

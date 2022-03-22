@@ -90,7 +90,7 @@ Exprs forward(Ptr<ExpressionGraph>& graph, const std::vector<WordIndex>& tokens_
 
   auto options =
       New<Options>("enc-depth", 1, "dropout-rnn", 0.0f, "enc-cell", "gru", "dim-rnn", dim_emb, "layer-normalization",
-                   false, "skip", false, "enc-cell-depth", 1, "prefix", "encoder_s2s_text_src");
+                   false, "skip", false, "enc-cell-depth", 1, "prefix", "encoder_s2s_text_src", "hidden-bias", true);
 
   marian::EncoderS2S encoderS2S(graph, options);
 

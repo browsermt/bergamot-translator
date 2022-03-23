@@ -111,7 +111,7 @@ langTo.addEventListener("change", e => {
 
 $(".swap").addEventListener("click", e => {
   [langFrom.value, langTo.value] = [langTo.value, langFrom.value];
-  $("#input").value = $("#output").innerHTML;
+  $("#input").value = $("#output").innerText;
   loadModel();
 });
 

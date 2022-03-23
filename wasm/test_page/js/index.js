@@ -7,17 +7,6 @@ const status = message => ($("#status").innerText = message);
 const langFrom = $("#lang-from");
 const langTo = $("#lang-to");
 
-const langs = [
-  ["en", "English"],
-  ["it", "Italian"],
-  ["pt", "Portuguese"],
-  ["ru", "Russian"],
-  ["cs", "Czech"],
-  ["de", "German"],
-  ["es", "Spanish"],
-  ["et", "Estonian"],
-];
-
 if (window.Worker) {
   worker = new Worker("js/worker.js");
   worker.postMessage(["import"]);
@@ -99,11 +88,6 @@ worker.onmessage = function (e) {
   }
 };
 
-langs.forEach(([code, name]) => {
-  langFrom.innerHTML += `<option value="${code}">${name}</option>`;
-  langTo.innerHTML += `<option value="${code}">${name}</option>`;
-});
-
 const loadModel = () => {
   const lngFrom = langFrom.value;
   const lngTo = langTo.value;
@@ -140,11 +124,25 @@ $('#output').addEventListener('mouseover', e => {
 })
 
 function init() {
+  // Populate langs
+  const langs = Array.from(new Set(Object.keys(modelRegistry).reduce((acc, key) => acc.concat([key.substr(0, 2), key.substr(2, 2)]), [])));
+  const langNames = new Intl.DisplayNames(undefined, {type: "language"});
+
+  // Sort languages by display name
+  langs.sort((a, b) => langNames.of(a).localeCompare(langNames.of(b)));
+
+  // Populate the dropdowns 
+  langs.forEach(code => {
+    const name = langNames.of(code);
+    langFrom.innerHTML += `<option value="${code}">${name}</option>`;
+    langTo.innerHTML += `<option value="${code}">${name}</option>`;
+  });
+
   // try to guess input language from user agent
   let myLang = navigator.language;
   if (myLang) {
     myLang = myLang.split("-")[0];
-    let langIndex = langs.findIndex(([code]) => code === myLang);
+    let langIndex = langs.indexOf(myLang);
     if (langIndex > -1) {
       console.log("guessing input language is", myLang);
       langFrom.value = myLang;
@@ -152,7 +150,7 @@ function init() {
   }
 
   // find first output lang that *isn't* input language
-  langTo.value = langs.find(([code]) => code !== langFrom.value)[0];
+  langTo.value = langs.find(code => code !== langFrom.value);
   // load this model
   loadModel();
 }

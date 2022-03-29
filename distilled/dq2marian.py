@@ -50,14 +50,14 @@ dqModel = torch.load(args.model, map_location=torch.device("cpu"))
 
 marianModel = {}
 
-# Embedding
+# Source Embedding
 marianModel["embeddings_txt_src"] = as_rowmajor(
     dqModel["_text_field_embedder_src.token_embedder_tokens.weight"]
 )
 
 dimEmb = marianModel["embeddings_txt_src"].shape[1]
 
-# Seq2Seq source Encoder
+# Source Seq2Seq Encoder
 seq2seq_weights_conversion(
     dqModel,
     marianModel,
@@ -74,6 +74,8 @@ seq2seq_weights_conversion(
     dimEmb,
 )
 
-# marianModel['encoder_s2s_text_src_bi_r_bu'] = as_rowmajor(dqModel['seq2seq_encoder_src._module.bias_hh_l0_reverse'].T)
+# Source Linear Layer
+marianModel["linear_layer_src_weight"] = as_rowmajor( dqModel["_linear_layer_src.weight"])
+marianModel["linear_layer_src_bias"] = as_rowmajor( dqModel["_linear_layer_src.bias"])
 
 numpy.savez(args.output, **marianModel)

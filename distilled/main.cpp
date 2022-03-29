@@ -84,10 +84,12 @@ Exprs forward(Ptr<ExpressionGraph>& graph, const std::vector<WordIndex>& tokens_
   const int dim_batch = 1;
   const int dim_tokens_src = tokens_src.size();
 
+  // Source Embedding
   auto embeddings_txt_src = graph->get("embeddings_txt_src");
 
   auto embedded_text_src = reshape(rows(embeddings_txt_src, tokens_src), {dim_batch, dim_tokens_src, dim_emb});
 
+  // Source Seq2seq Encoder
   auto options =
       New<Options>("enc-depth", 1, "dropout-rnn", 0.0f, "enc-cell", "gru", "dim-rnn", dim_emb, "layer-normalization",
                    false, "skip", false, "enc-cell-depth", 1, "prefix", "encoder_s2s_text_src", "hidden-bias", true);
@@ -102,11 +104,19 @@ Exprs forward(Ptr<ExpressionGraph>& graph, const std::vector<WordIndex>& tokens_
 
   auto encoded_text_src = transpose(encoded_text_src_t, {1, 0, 2});
 
+  // Source Linear Layer
+  auto linear_layer_src_weight = graph->get("linear_layer_src_weight");
+  auto linear_layer_src_bias = graph->get("linear_layer_src_bias");
+
+  auto encoded_text_src_linear_op = dot(encoded_text_src, linear_layer_src_weight, false, true) + linear_layer_src_bias;
+
   std::cout << graph->graphviz() << std::endl;
 
   graph->forward();
 
-  return {{"embedded_text_src", embedded_text_src}, {"encoded_text_src", encoded_text_src}};
+  return {{"embedded_text_src", embedded_text_src},
+          {"encoded_text_src", encoded_text_src},
+          {"encoded_text_src_linear_op", encoded_text_src_linear_op}};
 }
 
 void saveResults(const std::string& filePath, const Exprs& exprs) {

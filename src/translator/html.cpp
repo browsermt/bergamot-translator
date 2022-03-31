@@ -48,7 +48,7 @@ void encodeEntities(marian::string_view const &input, std::string &output) {
 /// for determining where to insert an open or close tag.
 size_t countPrefixWhitespaces(marian::string_view const &input) {
   size_t size = 0;
-  while (size < input.size() && std::isspace(input[size])) ++size;
+  while (size < input.size() && std::isspace(static_cast<unsigned char>(input[size]))) ++size;
   return size;
 }
 

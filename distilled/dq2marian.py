@@ -78,4 +78,8 @@ seq2seq_weights_conversion(
 marianModel["linear_layer_src_weight"] = as_rowmajor( dqModel["_linear_layer_src.weight"])
 marianModel["linear_layer_src_bias"] = as_rowmajor( dqModel["_linear_layer_src.bias"])
 
+# Source attention
+marianModel["context_weights_src"] = as_rowmajor( dqModel["context_weights_src"])
+
+
 numpy.savez(args.output, **marianModel)

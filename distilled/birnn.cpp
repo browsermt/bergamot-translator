@@ -20,14 +20,17 @@ Exprs forward(Ptr<ExpressionGraph>& graph, const std::vector<WordIndex>& tokens_
   auto encoded_text_src = seq2seq_encoder_src(graph, embedded_text_src, dim_emb, mask_src );
 
   auto encoded_text_src_linear_op =  linear_layer_src(graph, encoded_text_src);
-  
+
+  auto attention_dist_src = attention(graph->get("context_weights_src"), encoded_text_src_linear_op);
+
   std::cout << graph->graphviz() << std::endl;  
-  
+
   graph->forward();
 
   return {{"embedded_text_src", embedded_text_src},
           {"encoded_text_src", encoded_text_src},
-          {"encoded_text_src_linear_op", encoded_text_src_linear_op}};
+          {"encoded_text_src_linear_op", encoded_text_src_linear_op},
+          {"attention_dist_src", attention_dist_src } };
 }
    
 Expr text_field_embedder_src(Ptr<ExpressionGraph>& graph, const std::vector<WordIndex>& tokens_src, const int dim_batch,
@@ -60,6 +63,11 @@ Expr seq2seq_encoder_src(Ptr<ExpressionGraph>& graph, const Expr& embedded_text_
 
 Expr linear_layer_src(Ptr<ExpressionGraph>& graph, const Expr& encoded_text_src) {
   return linear(encoded_text_src, graph->get("linear_layer_src_weight"), graph->get("linear_layer_src_bias"));
+}
+
+Expr attention( const Expr& context_weights, const Expr& encoded_text )
+{
+  return softmax(squeeze(bdot(encoded_text, unsqueeze(repeat(context_weights, encoded_text->shape()[0], 0 ), -1)), -1));
 }
 
 }  // namespace distilled::birnn

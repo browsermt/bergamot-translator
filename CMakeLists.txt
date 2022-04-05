@@ -112,9 +112,59 @@ message(STATUS "Project name: ${PROJECT_NAME}")
 message(STATUS "Project version: ${PROJECT_VERSION_STRING_FULL}")
 
 if(COMPILE_WASM)
+  # See https://github.com/emscripten-core/emscripten/blob/main/src/settings.js
   set(WORMHOLE ON CACHE BOOL "Use WASM wormhole in intgemm https://bugzilla.mozilla.org/show_bug.cgi?id=1672160")
-  list(APPEND WASM_COMPILE_FLAGS -O3 -g2 -fPIC -mssse3 -msimd128)
-  list(APPEND WASM_COMPILE_FLAGS "SHELL:-s WASM=1" "SHELL:-s ASSERTIONS=0" "SHELL:-s DISABLE_EXCEPTION_CATCHING=1" "SHELL:-s LLD_REPORT_UNDEFINED" "SHELL:-s FORCE_FILESYSTEM=1" "SHELL:-s ALLOW_MEMORY_GROWTH=1")
+  list(APPEND WASM_COMPILE_FLAGS
+    -O3
+    -g2
+    -fPIC
+    -mssse3
+    -msimd128
+    # -fno-exceptions # Can't do that because spdlog uses exceptions
+    -sDISABLE_EXCEPTION_CATCHING=1
+    -sSTRICT=1
+  )
+  list(APPEND WASM_LINK_FLAGS
+    --bind # TODO: I thought it was an alias for -lembind, but maybe not yet in this version of emscripten
+    -g2
+    
+    # Save some code, and some speed
+    -sASSERTIONS=0
+    -sDISABLE_EXCEPTION_CATCHING=1
+    
+    # the intgemm functions we call will be undefined since these are linked at
+    # runtime by our own javascript.
+    -sLLD_REPORT_UNDEFINED
+    -sERROR_ON_UNDEFINED_SYMBOLS=0
+    
+    # Cause we can!
+    -sSTRICT=1
+    
+    # You know we need it
+    -sALLOW_MEMORY_GROWTH=1
+    -sENVIRONMENT=web,worker
+    
+    # No need to call main(), there's nothing there.
+    -sINVOKE_RUN=0
+    
+    # No need for filesystem code in the generated Javascript
+    -sFILESYSTEM=0
+    
+    # If you turn this on, it will mangle names which makes the dynamic linking hard.
+    -sDECLARE_ASM_MODULE_EXPORTS=0
+
+    # Export all of the intgemm functions in case we need to fall back to using the embedded intgemm
+    -sEXPORTED_FUNCTIONS=_int8PrepareAFallback,_int8PrepareBFallback,_int8PrepareBFromTransposedFallback,_int8PrepareBFromQuantizedTransposedFallback,_int8PrepareBiasFallback,_int8MultiplyAndAddBiasFallback,_int8SelectColumnsOfBFallback
+
+    # Necessary for mozintgemm linking. This prepares the `wasmMemory` variable ahead of time as
+    # opposed to delegating that task to the wasm binary itself. This way we can link MozIntGEMM
+    # module to the same memory as the main bergamot-translator module.
+    -sIMPORTED_MEMORY=1
+    
+    # Dynamic execution is either frowned upon or blocked inside browser extensions
+    -sNO_DYNAMIC_EXECUTION=1
+    -sDYNAMIC_EXECUTION=0
+  )
 endif(COMPILE_WASM)
 
 # Needs to be enabled before including the folder containing tests (src/tests)

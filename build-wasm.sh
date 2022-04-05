@@ -51,8 +51,8 @@ if [ "$EMSDK" == "" ]; then
   fi
   if [ "$EMSDK_UPDATE_REQUIRED" == "1" ]; then
     cd emsdk
-    ./emsdk install 2.0.9
-    ./emsdk activate 2.0.9
+    ./emsdk install 3.0.0
+    ./emsdk activate 3.0.0
     cd -
   fi
   source ./emsdk/emsdk_env.sh
@@ -77,9 +77,6 @@ emmake make -j2
 if [ "$WORMHOLE" = true ]; then
   bash ../wasm/patch-artifacts-enable-wormhole.sh
 fi
-
-#     3. Import GEMM library from a separate wasm module
-bash ../wasm/patch-artifacts-import-gemm-module.sh
 
 # The artifacts (.js and .wasm files) will be available in the build directory
 exit 0

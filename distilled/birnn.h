@@ -19,4 +19,6 @@ Expr linear_layer_src(Ptr<ExpressionGraph>& graph, const Expr& encoded_text_src)
 
 Expr attention(const Expr& context_weights, const Expr& encoded_text);
 
+Expr weighted_sum(const Expr& matrix, const Expr& attention);
+
 }  // namespace distilled::birnn

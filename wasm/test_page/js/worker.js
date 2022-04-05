@@ -23,6 +23,56 @@ const fileInfo = [
 const encoder = new TextEncoder(); // string to utf-8 converter
 const decoder = new TextDecoder(); // utf-8 to string converter
 
+const OPTIMIZED_GEMM = "mozIntGemm";
+
+const FALLBACK_GEMM = "asm";
+  
+const GEMM_TO_FALLBACK_FUNCTIONS_MAP = {
+    "int8_prepare_a": "int8PrepareAFallback",
+    "int8_prepare_b": "int8PrepareBFallback",
+    "int8_prepare_b_from_transposed": "int8PrepareBFromTransposedFallback",
+    "int8_prepare_b_from_quantized_transposed": "int8PrepareBFromQuantizedTransposedFallback",
+    "int8_prepare_bias": "int8PrepareBiasFallback",
+    "int8_multiply_and_add_bias": "int8MultiplyAndAddBiasFallback",
+    "int8_select_columns_of_b": "int8SelectColumnsOfBFallback"
+};
+
+function createOptimizedGemm(Module, {env}) {
+  const instance = new WebAssembly.Instance(WebAssembly[OPTIMIZED_GEMM](), {"": env});
+  for (const key of Object.keys(GEMM_TO_FALLBACK_FUNCTIONS_MAP)) {
+    if (!instance.exports[key])
+      throw new Error(`Missing ${key} in ${OPTIMIZED_GEMM}`);
+  }
+  return instance.exports;
+}
+
+function createFallbackGemm(Module) {
+  const exports = {};
+  // Map function pointers to other functions that will be available once
+  // the module is loaded.
+  for (const [key, fallback] of Object.entries(GEMM_TO_FALLBACK_FUNCTIONS_MAP)) {
+    exports[key] = (...args) => Module[FALLBACK_GEMM][fallback](...args);
+  }
+  return exports;
+}
+
+function createWasmInstance(Module, info) {
+  const response = await fetch("bergamot-translator-worker.wasm");
+  const wasmBinary = await response.arrayBuffer();
+  try {
+    info['wasm_gemm'] = this.createExternalGemm(Module, info);
+    console.info(`Using gemm from ${OPTIMIZED_GEMM}`);
+  } catch (e) {
+    info['wasm_gemm'] = this.createFallbackGemm(Module, info);
+    console.info(`Using gemm from ${FALLBACK_GEMM} because`, e);
+  }
+
+  const binary = new Uint8Array(wasmBinary);
+  const {instance} = await WebAssembly.instantiate(binary, info);
+  
+  return instance;
+}
+
 const start = Date.now();
 let moduleLoadStart;
 var Module = {
@@ -30,6 +80,11 @@ var Module = {
     log(`Time until Module.preRun: ${(Date.now() - start) / 1000} secs`);
     moduleLoadStart = Date.now();
   }],
+  instantiateWasm: function(info, accept) {
+    // Implements: https://emscripten.org/docs/api_reference/module.html#Module.instantiateWasm
+    createWasmInstance(Module, info).then(accept);
+    return {};
+  },
   onRuntimeInitialized: async function() {
     log(`Wasm Runtime initialized Successfully (preRun -> onRuntimeInitialized) in ${(Date.now() - moduleLoadStart) / 1000} secs`);
     const response = await fetch(MODEL_REGISTRY);

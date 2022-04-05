@@ -5,6 +5,7 @@ add_subdirectory(marian-dev EXCLUDE_FROM_ALL)
 if(COMPILE_WASM)
   # This is a bad way of adding compilation flags. Will be improved soon.
   add_compile_options(${WASM_COMPILE_FLAGS})
+  add_link_options(${WASM_LINK_FLAGS})
 endif(COMPILE_WASM)
 
 add_subdirectory(ssplit-cpp EXCLUDE_FROM_ALL)

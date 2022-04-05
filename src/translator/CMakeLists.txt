@@ -31,6 +31,7 @@ if(COMPILE_WASM)
   # Enable code that is required for generating JS bindings
   target_compile_definitions(bergamot-translator PRIVATE WASM_BINDINGS)
   target_compile_options(bergamot-translator PRIVATE ${WASM_COMPILE_FLAGS})
+  target_link_options(bergamot-translator PRIVATE ${WASM_LINK_FLAGS})
 endif(COMPILE_WASM)
 
 if(ENABLE_CACHE_STATS)

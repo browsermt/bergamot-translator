@@ -21,215 +21,143 @@ env:
   ccache_cmake: -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_C_COMPILER_LAUNCHER=ccache
 
 jobs:
-    python-ubuntu:
+    build-wheels:
       strategy:
-        fail-fast: false
         matrix:
-          include:
-              - name: "Ubuntu 18.04 / py3.6"
-                os: "ubuntu-18.04"
-                python-version: "3.6"
-              - name: "Ubuntu 18.04 / py3.7"
-                os: "ubuntu-18.04"
-                python-version: "3.7"
-              - name: "Ubuntu 20.04 / py3.8"
-                os: "ubuntu-20.04"
-                python-version: "3.8"
-              - name: "Ubuntu 20.04 / py3.9"
-                os: "ubuntu-20.04"
-                python-version: "3.9"
-              - name: "Ubuntu 20.04 / py3.10"
-                os: "ubuntu-20.04"
-                python-version: "3.10"
+          os: [ubuntu-20.04, macos-10.15]
+        fail-fast: false
 
-      name: ${{ matrix.name }}
+      name: "cibuildwheel / ${{ matrix.os }}"
       runs-on: ${{ matrix.os }}
+
       steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-        with:
-          submodules: recursive
+        - uses: actions/checkout@v2
+          with:
+            submodules: recursive
 
-      - name: Set up Python
-        uses: actions/setup-python@v2
-        with:
-          python-version: ${{ matrix.python-version }}
+        - name: Generate ccache_vars for ccache based on machine
+          shell: bash
+          id: ccache_vars
+          run: |-
+            echo "::set-output name=hash::$(echo ${{ env.ccache_compilercheck }})"
+            echo "::set-output name=timestamp::$(date '+%Y-%m-%dT%H.%M.%S')"
 
+        - name: Cache-op for build-cache through ccache
+          uses: actions/cache@v2
+          with:
+            path: ${{ env.ccache_dir }}
+            key: ccache-cibuildwheel-${{ matrix.os }}-${{ steps.ccache_vars.outputs.hash }}-${{ github.ref }}-${{ steps.ccache_vars.outputs.timestamp }}
+            restore-keys: |-
+              ccache-cibuildwheel-${{ matrix.os }}-${{ steps.ccache_vars.outputs.hash }}-${{ github.ref }}
+              ccache-cibuildwheel-${{ matrix.os }}-${{ steps.ccache_vars.outputs.hash }}
+              ccache-cibuildwheel-${{ matrix.os }}
 
-      - name: Install Dependencies
-        run: |-
-          sudo apt-get update
-          sudo apt-get install -y \
-            ccache  libprotobuf-dev protobuf-compiler \
-            python3-setuptools python3-pybind11 
+        - name: ccache environment setup
+          run: |-
+            mkdir -p ${{ env.ccache_dir }}
 
-      - name: Install MKL
-        run: |-
-          wget -qO- "https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS-2019.PUB" | sudo apt-key add -
-          sudo sh -c "echo deb https://apt.repos.intel.com/mkl all main > /etc/apt/sources.list.d/intel-mkl.list"
-          sudo apt-get update -o Dir::Etc::sourcelist="/etc/apt/sources.list.d/intel-mkl.list"
-          sudo apt-get install -y --no-install-recommends intel-mkl-64bit-2020.0-088
+        - name: Inject local version identifier for non tag builds
+          if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
+          run: |-
+            echo "PYTHON_LOCAL_VERSION_IDENTIFIER=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
 
-      - name: Generate ccache_vars for ccache based on machine
-        shell: bash
-        id: ccache_vars
-        run: |-
-          echo "::set-output name=hash::$(echo ${{ env.ccache_compilercheck }})"
-          echo "::set-output name=timestamp::$(date '+%Y-%m-%dT%H.%M.%S')"
-
-      - name: Cache-op for build-cache through ccache
-        uses: actions/cache@v2
-        with:
-          path: ${{ env.ccache_dir }}
-          key: ccache-${{ matrix.name }}-${{ steps.ccache_vars.outputs.hash }}-${{ github.ref }}-${{ steps.ccache_vars.outputs.timestamp }}
-          restore-keys: |-
-            ccache-${{ matrix.name }}-${{ steps.ccache_vars.outputs.hash }}-${{ github.ref }}
-            ccache-${{ matrix.name }}-${{ steps.ccache_vars.outputs.hash }}
-            ccache-${{ matrix.name }}
-      - name: ccache environment setup
-        run: |-
-          echo "CCACHE_COMPILER_CHECK=${{ env.ccache_compilercheck }}" >> $GITHUB_ENV
-          echo "CCACHE_BASEDIR=${{ env.ccache_basedir }}" >> $GITHUB_ENV
-          echo "CCACHE_COMPRESS=${{ env.ccache_compress }}" >> $GITHUB_ENV
-          echo "CCACHE_COMPRESSLEVEL=${{ env.ccache_compresslevel }}" >> $GITHUB_ENV
-          echo "CCACHE_DIR=${{ env.ccache_dir }}" >> $GITHUB_ENV
-          echo "CCACHE_MAXSIZE=${{ env.ccache_maxsize }}" >> $GITHUB_ENV
-
-      - name: ccache prolog
-        run: |-
-          ccache -s # Print current cache stats
-          ccache -z # Zero cache entry
-
-      - name: Inject local version identifier for non tag builds
-        if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
-        run: |-
-          echo "PYTHON_LOCAL_VERSION_IDENTIFIER=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
-
-      - name: setup.py 
-        run: |-
-          python3 -m pip install wheel
-          BUILD_ARCH=core-avx-i python3 setup.py bdist_wheel --universal
-
-      # We're happy with just compile for the moment, so cache gets some seeding.
-      - name: Install onto root python lib
-        run: |-
-          python3 -m pip install --ignore-installed dist/bergamot-*.whl 
-
-      - name: Fetch models from translateLocally repository.
-        run: |-
-          python3 -m bergamot download -m en-de-tiny
-          python3 -m bergamot download -m de-en-tiny
-          python3 -m bergamot ls
-
-      - name: Fetch models from opus repository.
-        run: |-
-          python3 -m bergamot download -m eng-fin-tiny -r opus
-          python3 -m bergamot ls -r opus
-
-      - name: Run the sample python script shipped with module
-        run: |-
-          python3 -m bergamot translate --model en-de-tiny <<< "Hello World"
-          python3 -m bergamot translate --model en-de-tiny de-en-tiny <<< "Hello World"
-          python3 -m bergamot translate --model eng-fin-tiny --repository opus <<< "Hello World"
-
-      - name: ccache epilog
-        run: 'ccache -s # Print current cache stats'
-
-      - uses: actions/upload-artifact@v2
-        with:
-            path: ${{github.workspace}}/dist/bergamot-*.whl
-
-
-    python-macos:
-      name: "MacOS 10.15 / py3.10"
-      runs-on: "macos-10.15"
-      steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-        with:
-          submodules: recursive
-      - name: Install Dependencies
-        run: |-
-          brew update
-          brew install openblas protobuf ccache boost pybind11 
-          brew install coreutils findutils libarchive 
-
-      - name: Generate ccache_vars for ccache based on machine
-        shell: bash
-        id: ccache_vars
-        run: |-
-          echo "::set-output name=hash::$(echo ${{ env.ccache_compilercheck }})"
-          echo "::set-output name=timestamp::$(date '+%Y-%m-%dT%H.%M.%S')"
-      - name: Cache-op for build-cache through ccache
-        uses: actions/cache@v2
-        with:
-          path: ${{ env.ccache_dir }}
-          key: ccache-${{ job.id }}-${{ steps.ccache_vars.outputs.hash }}-${{ github.ref }}-${{ steps.ccache_vars.outputs.timestamp }}
-          restore-keys: |-
-            ccache-${{ job.id }}-${{ steps.ccache_vars.outputs.hash }}-${{ github.ref }}
-            ccache-${{ job.id }}-${{ steps.ccache_vars.outputs.hash }}
-            ccache-${{ job.id }}
-
-      - name: ccache environment setup
-        run: |-
-          echo "CCACHE_COMPILER_CHECK=${{ env.ccache_compilercheck }}" >> $GITHUB_ENV
-          echo "CCACHE_BASEDIR=${{ env.ccache_basedir }}" >> $GITHUB_ENV
-          echo "CCACHE_COMPRESS=${{ env.ccache_compress }}" >> $GITHUB_ENV
-          echo "CCACHE_COMPRESSLEVEL=${{ env.ccache_compresslevel }}" >> $GITHUB_ENV
-          echo "CCACHE_DIR=${{ env.ccache_dir }}" >> $GITHUB_ENV
-          echo "CCACHE_MAXSIZE=${{ env.ccache_maxsize }}" >> $GITHUB_ENV
-
-      - name: ccache prolog
-        run: |-
-          ccache -s # Print current cache stats
-          ccache -z # Zero cache entry
-
-      - name: Apply required patches
-        run: |-
+        - name: Apply MacOS patch
+          if: ${{ startsWith(runner.os, 'mac') }}
+          run: |
             patch -p1 < patches/01-marian-fstream-for-macos.patch
 
-      # Appears to be required per GitHub CI; 
-      - name: Set MACOSX DEPLOYMENT TARGET via environment variable
-        run: |-
-            echo "MACOSX_DEPLOYMENT_TARGET=10.15" >> $GITHUB_ENV
+        - name: Build wheels
+          uses: pypa/cibuildwheel@v2.6.1
+          # to supply options, put them in 'env', like:
+          env:
+            CIBW_ENVIRONMENT_LINUX:
+              BUILD_ARCH=core-avx-i
+              USE_CCACHE=1
+              CCACHE_COMPILER_CHECK=${{ env.ccache_compilercheck }}
+              CCACHE_COMPRESS=${{ env.ccache_compress }}
+              CCACHE_COMPRESSLEVEL=${{ env.ccache_compresslevel }}
+              CCACHE_MAXSIZE=${{ env.ccache_maxsize }}
+              PYTHON_LOCAL_VERSION_IDENTIFIER=${{ env.PYTHON_LOCAL_VERSION_IDENTIFIER }}
+              CCACHE_DIR=/host/${{ env.ccache_dir }}
+              CCACHE_BASEDIR=/host/${{ env.ccache_basedir }}
 
-      - name: Inject local version identifier for non tag builds
-        if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
-        run: |-
-          echo "PYTHON_LOCAL_VERSION_IDENTIFIER=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+            CIBW_ENVIRONMENT_MACOS:
+              BUILD_ARCH=core-avx-i
+              USE_CCACHE=1
+              CCACHE_COMPILER_CHECK=${{ env.ccache_compilercheck }}
+              CCACHE_COMPRESS=${{ env.ccache_compress }}
+              CCACHE_COMPRESSLEVEL=${{ env.ccache_compresslevel }}
+              CCACHE_MAXSIZE=${{ env.ccache_maxsize }}
+              PYTHON_LOCAL_VERSION_IDENTIFIER=${{ env.PYTHON_LOCAL_VERSION_IDENTIFIER }}
+              CCACHE_DIR=${{ env.ccache_dir }}
+              CCACHE_BASEDIR=${{ env.ccache_basedir }}
+              MACOSX_DEPLOYMENT_TARGET=10.15
 
-      - name: setup.py 
-        run: |-
-          python3 -m pip install --upgrade packaging wheel
-          BUILD_ARCH=core-avx-i python3 setup.py bdist_wheel --universal
+            CIBW_BEFORE_BUILD_LINUX: |
+              yum install -y ccache
 
-      # We're happy with just compile for the moment, so cache gets some seeding.
-      - name: Install onto root python lib
-        run: |-
-          python3 -m pip install dist/bergamot-*.whl 
+              # Install Intel MKL. 
+              yum-config-manager -y --add-repo https://yum.repos.intel.com/mkl/setup/intel-mkl.repo
+              yum install -y intel-mkl
 
-      - name: Fetch models from translateLocally repository.
-        run: |-
-          python3 -m bergamot download -m en-de-tiny
-          python3 -m bergamot download -m de-en-tiny
+              chmod -R a+rwx /host/${{ env.ccache_dir }}
 
-      - name: Fetch models from opus repository.
-        run: |-
-          python3 -m bergamot download -m eng-fin-tiny -r opus
-          python3 -m bergamot ls -r opus
+              ccache -s # Print current cache stats
+              ccache -z # Zero cache entry
 
-      - name: Run the sample python script shipped with module
-        run: |-
-          python3 -m bergamot translate --model en-de-tiny <<< "Hello World"
-          python3 -m bergamot translate --model en-de-tiny de-en-tiny <<< "Hello World"
-          python3 -m bergamot translate --model eng-fin-tiny --repository opus <<< "Hello World"
+            CIBW_BEFORE_BUILD_MACOS: |
+              brew install openblas protobuf ccache boost pybind11 
+              chmod -R a+rwx ${{ env.ccache_dir }}
+              ccache -s # Print current cache stats
+              ccache -z # Zero cache entry
 
-      - name: ccache epilog
-        run: 'ccache -s # Print current cache stats'
+            CIBW_BUILD: "cp{36,37,38,39,310}-*manylinux_x86_64 cp310-macosx_x86_64"
 
-      - uses: actions/upload-artifact@v2
+            CIBW_BEFORE_TEST: |
+              ccache -s # Print current ccache stats
+
+            CIBW_TEST_COMMAND: |
+              # The wheels are installed automatically and available.
+              
+              # Fetch models from translateLocally repository.
+              python3 -m bergamot download -m en-de-tiny
+              python3 -m bergamot download -m de-en-tiny
+              python3 -m bergamot ls
+
+              # Fetch models from opus repository.
+              python3 -m bergamot download -m eng-fin-tiny -r opus
+              python3 -m bergamot ls -r opus
+
+              # Run the sample python script shipped with module
+              python3 -m bergamot translate --model en-de-tiny <<< "Hello World"
+              python3 -m bergamot translate --model en-de-tiny de-en-tiny <<< "Hello World"
+              python3 -m bergamot translate --model eng-fin-tiny --repository opus <<< "Hello World"
+
+
+        - uses: actions/upload-artifact@v2
+          with:
+            name: wheels
+            path: ./wheelhouse/*.whl
+
+    upload-wheels:
+      name: "Upload wheels to PyPI"
+      runs-on: ubuntu-latest
+      if: ${{ startsWith(github.ref, 'refs/tags/v') }}
+      needs: [build-wheels]
+      steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v2
         with:
-            path: ${{github.workspace}}/dist/bergamot-*.whl
+          name: wheels
+
+      - name: Publish wheels to PyPI
+        env:
+          TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
+          TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
+        run: |
+          python3 -m pip install twine
+          twine upload *.whl
+
 
     build-wasm:
       name: "emscripten"
@@ -380,7 +308,7 @@ jobs:
     release-latest:
       name: Release Latest Build
       runs-on: ubuntu-latest
-      needs: [python-ubuntu, python-macos, build-wasm]
+      needs: [build-wheels, build-wasm]
       if: github.ref == 'refs/heads/main'
       steps:
        - name: Download artifacts
@@ -394,16 +322,14 @@ jobs:
            prerelease: true
            title: "Latest Build"
            files: |
-                artifact/*.whl
-                wasm-artefacts/build-wasm-without-wormhole/bergamot-translator-worker.js
-                wasm-artefacts/build-wasm-without-wormhole/bergamot-translator-worker.wasm
-                wasm-artefacts/build-wasm-with-wormhole/bergamot-translator-worker-with-wormhole.js
-                wasm-artefacts/build-wasm-with-wormhole/bergamot-translator-worker-with-wormhole.wasm
+                wheels/*.whl
+                wasm-artefacts/bergamot-translator-worker.js
+                wasm-artefacts/bergamot-translator-worker.wasm
   
     release-version:
       name: Release version 
       runs-on: ubuntu-latest
-      needs: [python-ubuntu, python-macos, build-wasm]
+      needs: [build-wheels, build-wasm]
       permissions:
         contents: "write"
         packages: "write"
@@ -421,11 +347,9 @@ jobs:
            prerelease: false
            title: "${{ github.ref_name }}"
            files: |
-                artifact/*.whl
-                wasm-artefacts/build-wasm-without-wormhole/bergamot-translator-worker.js
-                wasm-artefacts/build-wasm-without-wormhole/bergamot-translator-worker.wasm
-                wasm-artefacts/build-wasm-with-wormhole/bergamot-translator-worker-with-wormhole.js
-                wasm-artefacts/build-wasm-with-wormhole/bergamot-translator-worker-with-wormhole.wasm
+                wheels/*.whl
+                wasm-artefacts/bergamot-translator-worker.js
+                wasm-artefacts/bergamot-translator-worker.wasm
 
   
     python-checks:
@@ -449,7 +373,7 @@ jobs:
 
     docs:
       runs-on: ubuntu-18.04
-      needs: [python-ubuntu]
+      needs: [build-wheels]
       steps:
         - name: Checkout
           uses: actions/checkout@v2
@@ -502,7 +426,7 @@ jobs:
           working-directory: ./doc
           run: |
             python3 -m pip install -r requirements.txt
-            python3 -m pip install ${{github.workspace}}/artifact/bergamot-*-cp37*.whl
+            python3 -m pip install ${{github.workspace}}/wheels/bergamot-*-cp37*.whl
 
         - name: Build documentation
           working-directory: ./doc

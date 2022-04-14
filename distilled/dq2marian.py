@@ -38,7 +38,6 @@ def seq2seq_weights_conversion(
             dqModel, dqParam, marianModel, marianParam, dimEmb
         )
 
-
 parser = argparse.ArgumentParser(
     description="Convert distilled model weights to Marian weight file."
 )
@@ -50,36 +49,36 @@ dqModel = torch.load(args.model, map_location=torch.device("cpu"))
 
 marianModel = {}
 
-# Source Embedding
-marianModel["embeddings_txt_src"] = as_rowmajor(
-    dqModel["_text_field_embedder_src.token_embedder_tokens.weight"]
-)
+for posfix in [ "src", "tgt"]:
+    # Embedding
+    marianModel[f"embeddings_txt_{posfix}"] = as_rowmajor(
+        dqModel[f"_text_field_embedder_{posfix}.token_embedder_tokens.weight"]
+    )
 
-dimEmb = marianModel["embeddings_txt_src"].shape[1]
+    dimEmb = marianModel[f"embeddings_txt_{posfix}"].shape[1]
 
-# Source Seq2Seq Encoder
-seq2seq_weights_conversion(
-    dqModel,
-    marianModel,
-    [
-      ("seq2seq_encoder_src._module.weight_ih_l0", "encoder_s2s_text_src_bi_W"),
-      ("seq2seq_encoder_src._module.weight_hh_l0", "encoder_s2s_text_src_bi_U"),
-      ("seq2seq_encoder_src._module.bias_ih_l0", "encoder_s2s_text_src_bi_b"),
-      ("seq2seq_encoder_src._module.bias_hh_l0", "encoder_s2s_text_src_bi_bu"),
-      ("seq2seq_encoder_src._module.weight_ih_l0_reverse", "encoder_s2s_text_src_bi_r_W"),
-      ("seq2seq_encoder_src._module.weight_hh_l0_reverse", "encoder_s2s_text_src_bi_r_U"),
-      ("seq2seq_encoder_src._module.bias_ih_l0_reverse", "encoder_s2s_text_src_bi_r_b"),
-      ("seq2seq_encoder_src._module.bias_hh_l0_reverse", "encoder_s2s_text_src_bi_r_bu"),
-    ],
-    dimEmb,
-)
+    # Seq2Seq Encoder
+    seq2seq_weights_conversion(
+        dqModel,
+        marianModel,
+        [
+        (f"seq2seq_encoder_{posfix}._module.weight_ih_l0", f"encoder_s2s_text_{posfix}_bi_W"),
+        (f"seq2seq_encoder_{posfix}._module.weight_hh_l0", f"encoder_s2s_text_{posfix}_bi_U"),
+        (f"seq2seq_encoder_{posfix}._module.bias_ih_l0", f"encoder_s2s_text_{posfix}_bi_b"),
+        (f"seq2seq_encoder_{posfix}._module.bias_hh_l0", f"encoder_s2s_text_{posfix}_bi_bu"),
+        (f"seq2seq_encoder_{posfix}._module.weight_ih_l0_reverse", f"encoder_s2s_text_{posfix}_bi_r_W"),
+        (f"seq2seq_encoder_{posfix}._module.weight_hh_l0_reverse", f"encoder_s2s_text_{posfix}_bi_r_U"),
+        (f"seq2seq_encoder_{posfix}._module.bias_ih_l0_reverse", f"encoder_s2s_text_{posfix}_bi_r_b"),
+        (f"seq2seq_encoder_{posfix}._module.bias_hh_l0_reverse", f"encoder_s2s_text_{posfix}_bi_r_bu"),
+        ],
+        dimEmb,
+    )
 
-# Source Linear Layer
-marianModel["linear_layer_src_weight"] = as_rowmajor( dqModel["_linear_layer_src.weight"])
-marianModel["linear_layer_src_bias"] = as_rowmajor( dqModel["_linear_layer_src.bias"])
+    # Linear Layer
+    marianModel[f"linear_layer_{posfix}_weight"] = as_rowmajor( dqModel[f"_linear_layer_{posfix}.weight"])
+    marianModel[f"linear_layer_{posfix}_bias"] = as_rowmajor( dqModel[f"_linear_layer_{posfix}.bias"])
 
-# Source attention
-marianModel["context_weights_src"] = as_rowmajor( dqModel["context_weights_src"])
-
+    # Attention
+    marianModel[f"context_weights_{posfix}"] = as_rowmajor( dqModel[f"context_weights_{posfix}"])
 
 numpy.savez(args.output, **marianModel)

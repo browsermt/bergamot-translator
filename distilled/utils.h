@@ -6,7 +6,7 @@
 
 using namespace marian;
 
-using Exprs = std::vector<std::pair<std::string, Expr> >;
+using Exprs = std::map<std::string, Expr >;
 
 namespace distilled {
 

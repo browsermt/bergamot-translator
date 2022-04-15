@@ -77,36 +77,50 @@ jobs:
         echo "MKLROOT=${{ github.workspace }}\mkl" | Out-File -FilePath $env:GITHUB_ENV  -Encoding utf8 -Append
       shell: powershell
 
-    - name: Prepare vcpkg
-      uses: lukka/run-vcpkg@v7.4
-      with:
-        vcpkgArguments: protobuf pcre2 --overlay-ports="${{ github.workspace }}\vcpkg-override\ports\pcre2"
-        vcpkgGitCommitId: 8dddc6c899ce6fdbeab38b525a31e7f23cb2d5bb
-        vcpkgDirectory: ${{ github.workspace }}/vcpkg/
-        vcpkgTriplet: x64-windows-static
+    - name: Disable debug vcpkg build
+      shell: powershell
+      working-directory: C:\vcpkg\triplets
+      run: |
+         $PSDefaultParameterValues['Out-File:Encoding'] = 'utf8' # Powershell murders me.
+         echo "set(VCPKG_BUILD_TYPE release)" | Tee-Object -FilePath x64-windows-static.cmake -Append
+         echo "set(VCPKG_BUILD_TYPE release)" | Tee-Object -FilePath x64-windows.cmake -Append
+         cat x64-windows-static.cmake
+         cat x64-windows.cmake
 
-    # Windows CPU only minimal build
-    - name: Build Release # @TODO this is actually a debug build until the ninja generator gets fixed
-      uses: lukka/run-cmake@v3
-      with:
-        buildDirectory: ${{ github.workspace }}/build
-        cmakeAppendedArgs: '-G Ninja
-          -DCMAKE_BUILD_TYPE="Release"
-          -DUSE_WASM_COMPATIBLE_SOURCE="OFF"
-          -DUSE_STATIC_LIBS="TRUE" 
-          -DCMAKE_CXX_COMPILER_LAUNCHER=${{github.workspace}}\ccache.exe
-          -DCMAKE_C_COMPILER_LAUNCHER=${{github.workspace}}\ccache.exe
-        '
-        cmakeListsOrSettingsJson: CMakeListsTxtAdvanced
-        cmakeListsTxtPath: ${{ github.workspace }}/CMakeLists.txt
-        useVcpkgToolchainFile: true
-        cmakeBuildType: Release
+    - name: Install dependencies with vcpkg
+      working-directory: C:\vcpkg
+      run: |
+        $Env:VCPKG_BUILD_TYPE = 'release'
+        $Env:VCPKG_DEFAULT_TRIPLET = 'x64-windows-static' # QT6 version, linguist tools not working yet: qtbase:x64-windows-static qttools:x64-windows-static qtsvg:x64-windows-static
+        .\vcpkg install protobuf:x64-windows-static pcre2:x64-windows-static 
+        .\vcpkg upgrade --no-dry-run # In case there are new builds available after cache restoration
+      shell: powershell
+        
+    - name: Create Build Environment
+      # Some projects don't allow in-source building, so create a separate build directory
+      # We'll use this as our working directory for all subsequent commands
+      run: cmake -E make_directory ${{github.workspace}}/build
+      
+    - name: Configure
+      working-directory: ${{github.workspace}}/build #@TODO figure out how variables are accessed from power shell, as they seem to not be read.
+      run: |
+          cmake .. -DCMAKE_BUILD_TYPE=Release -DUSE_STATIC_LIBS=ON  -DVCPKG_TARGET_TRIPLET='x64-windows-static' `
+                -DCMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsystems/vcpkg.cmake"  `
+                -DCMAKE_CXX_COMPILER_LAUNCHER=${{github.workspace}}\ccache.exe `
+                -DCMAKE_C_COMPILER_LAUNCHER=${{github.workspace}}\ccache.exe
+      shell: powershell
+
+    - name: Build
+      working-directory: ${{github.workspace}}/build
+      run: cmake --build . --config Release -j3
+      shell: powershell
 
 
     - name: Print versions
-      working-directory: build
+      working-directory: ${{github.workspace}}/build
       run: |
-        .\app\bergamot.exe --version
+        .\app\Release\bergamot.exe --version
+
       shell: cmd
 
     - name: ccache epilog

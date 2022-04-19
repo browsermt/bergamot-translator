@@ -153,7 +153,7 @@ if(COMPILE_WASM)
     # If you turn this on, it will mangle names which makes the dynamic linking hard.
     -sDECLARE_ASM_MODULE_EXPORTS=0
     # Export all of the intgemm functions in case we need to fall back to using the embedded intgemm
-    -sEXPORTED_FUNCTIONS=_int8PrepareAFallback,_int8PrepareBFallback,_int8PrepareBFromTransposedFallback,_int8PrepareBFromQuantizedTransposedFallback,_int8PrepareBiasFallback,_int8MultiplyAndAddBiasFallback,_int8SelectColumnsOfBFallback
+    -sEXPORTED_FUNCTIONS=[_int8PrepareAFallback,_int8PrepareBFallback,_int8PrepareBFromTransposedFallback,_int8PrepareBFromQuantizedTransposedFallback,_int8PrepareBiasFallback,_int8MultiplyAndAddBiasFallback,_int8SelectColumnsOfBFallback]
     # Necessary for mozintgemm linking. This prepares the `wasmMemory` variable ahead of time as
     # opposed to delegating that task to the wasm binary itself. This way we can link MozIntGEMM
     # module to the same memory as the main bergamot-translator module.

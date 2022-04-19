@@ -23,8 +23,8 @@ Building on wasm requires Emscripten toolchain. It can be downloaded and install
 
 * Get the latest sdk: `git clone https://github.com/emscripten-core/emsdk.git`
 * Enter the cloned directory: `cd emsdk`
-* Install the lastest sdk tools: `./emsdk install 2.0.9`
-* Activate the latest sdk tools: `./emsdk activate 2.0.9`
+* Install the sdk: `./emsdk install 3.1.8`
+* Activate the sdk: `./emsdk activate 3.1.8`
 * Activate path variables: `source ./emsdk_env.sh`
 
 #### <a name="Compile"></a> Compile

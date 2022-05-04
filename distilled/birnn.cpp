@@ -16,11 +16,19 @@ Exprs forward(Ptr<ExpressionGraph>& graph, const int dim_emb, const std::vector<
   auto exprs_src = forward_input(graph, "src", tokens_src, dim_emb, mask_src);
   auto exprs_tgt = forward_input(graph, "tgt", tokens_tgt, dim_emb, mask_tgt);
 
+  auto encoded_text_src = exprs_src["encoded_text_src_weighted_sum"];
+  auto encoded_text_tgt = exprs_tgt["encoded_text_tgt_weighted_sum"];
+
+  auto encoded_text = concatenate({encoded_text_src,encoded_text_tgt},-1);
+  auto scores = squeeze(sigmoid(linear_layer(graph, "", encoded_text )), -1);
+
   std::cout << graph->graphviz() << std::endl;
 
   graph->forward();
 
   exprs_src.merge(exprs_tgt);
+  exprs_src["encoded_text"] = encoded_text;
+  exprs_src["scores"] = scores;
 
   return exprs_src;
 }
@@ -34,7 +42,7 @@ Exprs forward_input(Ptr<ExpressionGraph>& graph, const std::string& posfix, cons
 
   auto encoded_text = seq2seq_encoder(graph, posfix, embedded_text, dim_emb, mask);
 
-  auto encoded_text_linear_op = linear_layer(graph, posfix, encoded_text);
+  auto encoded_text_linear_op = linear_layer(graph, "_" + posfix, encoded_text);
 
   auto attention_dist = attention(graph->get("context_weights_" + posfix), encoded_text_linear_op);
 
@@ -71,8 +79,8 @@ Expr seq2seq_encoder(Ptr<ExpressionGraph>& graph, const std::string& posfix, con
 }
 
 Expr linear_layer(Ptr<ExpressionGraph>& graph, const std::string& posfix, const Expr& encoded_text) {
-  return linear(encoded_text, graph->get("linear_layer_" + posfix + "_weight"),
-                graph->get("linear_layer_" + posfix + "_bias"));
+  return linear(encoded_text, graph->get("linear_layer" + posfix + "_weight"),
+                graph->get("linear_layer" + posfix + "_bias"));
 }
 
 Expr attention(const Expr& context_weights, const Expr& encoded_text) {

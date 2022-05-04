@@ -33,4 +33,7 @@ assert numpy.allclose(marian_results['encoded_text_tgt_linear_op'],
 assert numpy.allclose(marian_results['encoded_text_tgt_weighted_sum'],
                       deep_quest_results['encoded_text_tgt_weighted_sum'], atol=1e-6)
 
+assert numpy.allclose(marian_results['encoded_text'],
+                      deep_quest_results['encoded_text'], atol=1e-6)
+
 print("Success")

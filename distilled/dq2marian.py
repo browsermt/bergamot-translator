@@ -81,4 +81,7 @@ for posfix in [ "src", "tgt"]:
     # Attention
     marianModel[f"context_weights_{posfix}"] = as_rowmajor( dqModel[f"context_weights_{posfix}"])
 
+marianModel[f"linear_layer_weight"] = as_rowmajor( dqModel[f"_linear_layer.weight"])
+marianModel[f"linear_layer_bias"] = as_rowmajor( dqModel[f"_linear_layer.bias"])
+
 numpy.savez(args.output, **marianModel)

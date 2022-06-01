@@ -2,7 +2,6 @@
 #include <vector>
 
 #include "CLI/CLI.hpp"
-
 #include "birnn.h"
 
 int main(const int argc, const char* argv[]) {
@@ -37,7 +36,6 @@ int main(const int argc, const char* argv[]) {
 
   auto dim_vocab = static_cast<int>(vocab.size());
   auto tokens_src = toWordIndexVector(tokens_word_src);
-  std::vector<float> mask_src(tokens_src.size(), 1.0);
 
   // Load converted python model
   graph->load(modelPath);
@@ -47,10 +45,14 @@ int main(const int argc, const char* argv[]) {
   tokens_src = {1, 1, 1, 1, 118, 1, 1, 3061, 1,    1, 1, 1, 2, 1,    1, 1, 1, 1, 1,
                 1, 1, 1, 1, 3,   1, 1, 1,    1542, 1, 1, 1, 1, 1542, 1, 2, 1, 1};
 
-  mask_src = {1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
-              1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0};
+  std::vector<float> mask_src(tokens_src.size(), 1.0);
 
-  const auto results = distilled::birnn::forward(graph, tokens_src, dim_emb, mask_src);
+  std::vector<WordIndex> tokens_tgt = {1, 1, 1, 1, 1, 1,  1, 1, 1, 1,    1, 1, 1, 1, 3, 1, 1, 1, 1, 1, 1, 1,
+                                       1, 1, 1, 3, 1, 81, 1, 3, 1, 1091, 1, 1, 1, 9, 1, 1, 1, 1, 4, 1, 1};
+
+  std::vector<float> mask_tgt(tokens_tgt.size(), 1.0);
+
+  const auto results = distilled::birnn::forward(graph, dim_emb, tokens_src, mask_src, tokens_tgt, mask_tgt);
 
   if (!outputPath.empty()) {
     distilled::saveResults(outputPath, results);

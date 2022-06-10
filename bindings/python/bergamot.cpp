@@ -38,8 +38,9 @@ class ServicePyAdapter {
     marian::setThrowExceptionOnAbort(true);
   }
 
-  std::shared_ptr<_Model> modelFromConfig(const std::string &config) {
-    auto parsedConfig = marian::bergamot::parseOptionsFromString(config);
+  std::shared_ptr<_Model> modelFromConfig(const std::string &config, bool validate = true,
+                                          const std::string &base_dir = "") {
+    auto parsedConfig = marian::bergamot::parseOptionsFromString(config, validate, base_dir);
     return service_.createCompatibleModel(parsedConfig);
   }
 

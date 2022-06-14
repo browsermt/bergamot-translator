@@ -3,7 +3,6 @@ import sys
 from collections import Counter, defaultdict
 
 from . import REPOSITORY, ResponseOptions, Service, ServiceConfig, VectorString
-from .utils import patched_platform_from_config_path
 
 CMDS = {}
 
@@ -75,11 +74,12 @@ class Translate:
         config = ServiceConfig(numWorkers=args.num_workers, logLevel=args.log_level)
         service = Service(config)
 
-        models = []
-        for model in args.model:
-            configPath = REPOSITORY.modelConfigPath(args.repository, model)
-            config = patched_platform_from_config_path(configPath)
-            models.append(service.modelFromConfig(config, True, configPath))
+        models = [
+            service.modelFromConfigPath(
+                REPOSITORY.modelConfigPath(args.repository, model)
+            )
+            for model in args.model
+        ]
 
         # Configure a few options which require how a Response is constructed
         options = ResponseOptions(

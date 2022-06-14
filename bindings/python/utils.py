@@ -1,5 +1,4 @@
 import os
-import platform
 
 import requests
 import yaml
@@ -51,17 +50,3 @@ def patch_marian_for_bergamot(
     # Write-out.
     with open(bergamot_config_path, "w") as output_file:
         print(yaml.dump(data, sort_keys=False), file=output_file)
-
-
-def patched_platform_from_config_path(bergamot_config_path: PathLike) -> str:
-    data = None
-    with open(bergamot_config_path) as bergamot_config_file:
-        data = yaml.load(bergamot_config_file, Loader=yaml.FullLoader)
-        if "int8" in data["gemm-precision"]:
-            processor = platform.processor()
-            if processor in ["arm64", "aarch64"]:
-                # Remove shift, because the path available only on intel.
-                data["gemm-precision"] = data["gemm-precision"].replace("shift", "")
-                data["gemm-precision"] = data["gemm-precision"].replace("All", "")
-
-    return yaml.dump(data, sort_keys=False)

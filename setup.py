@@ -48,12 +48,11 @@ class CMakeBuild(build_ext):
             f"-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={extdir}",
             f"-DPYTHON_EXECUTABLE={sys.executable}",
             f"-DCMAKE_BUILD_TYPE={cfg}",  # not used on MSVC, but no harm
-            f"-DCMAKE_CXX_COMPILER_LAUNCHER=ccache",
-            f"-DCMAKE_C_COMPILER_LAUNCHER=ccache",
             f"-DCOMPILE_PYTHON=ON",
             f"-DSSPLIT_USE_INTERNAL_PCRE2=ON",
             f"-DBUILD_ARCH={build_arch}",
         ]
+
         build_args = ["-t", "_bergamot"]
         # Adding CMake arguments set as environment variable
         # (needed e.g. to build for ARM OSx on conda-forge)
@@ -62,6 +61,13 @@ class CMakeBuild(build_ext):
 
         # In this example, we pass in the version to C++. You might not need to.
         cmake_args += [f"-DEXAMPLE_VERSION_INFO={self.distribution.get_version()}"]
+
+        use_ccache = os.environ.get("USE_CCACHE", "0") == "1"
+        if use_ccache:
+            cmake_args += [
+                f"-DCMAKE_CXX_COMPILER_LAUNCHER=ccache",
+                f"-DCMAKE_C_COMPILER_LAUNCHER=ccache",
+            ]
 
         if self.compiler.compiler_type != "msvc":
             # Using Ninja-build since it a) is available as a wheel and b)
@@ -130,14 +136,15 @@ here = os.path.abspath(os.path.dirname(__file__))
 
 # Import the README and use it as the long-description.
 # Note: this will only work if 'README.md' is present in your MANIFEST.in file!
-with io.open(os.path.join(here, "README.md"), encoding="utf-8") as f:
+long_description = ""
+with io.open(os.path.join(here, "bindings/python/README.md"), encoding="utf-8") as f:
     long_description = "\n" + f.read()
 
 version = None
 with open(os.path.join(here, "BERGAMOT_VERSION")) as f:
     version = f.read().strip()
     suffix = os.environ.get("PYTHON_LOCAL_VERSION_IDENTIFIER", None)
-    if suffix is not None:
+    if suffix:
         version = "{}+{}".format(version, suffix)
 
 
@@ -191,8 +198,9 @@ setup(
     author="Jerin Philip",
     author_email="jerinphilip@live.in",
     url="https://github.com/browsermt/bergamot-translator/",
-    description="Bergamot translator python binding.",
-    long_description="",
+    description="Translate text-content locally in your machine across langauges.",
+    long_description=long_description,
+    long_description_content_type="text/markdown",
     ext_modules=[CMakeExtension("bergamot/_bergamot")],
     cmdclass={"build_py": build_py, "build_ext": CMakeBuild},
     zip_safe=False,
@@ -206,5 +214,35 @@ setup(
         "console_scripts": [
             "bergamot = bergamot.__main__:main",
         ],
+    },
+    # Classifiers help users find your project by categorizing it.
+    #
+    # For a list of valid classifiers, see https://pypi.org/classifiers/
+    classifiers=[  # Optional
+        # How mature is this project? Common values are
+        #   3 - Alpha
+        #   4 - Beta
+        #   5 - Production/Stable
+        "Development Status :: 3 - Alpha",
+        # Indicate who your project is intended for
+        "Intended Audience :: Developers",
+        "Topic :: Software Development :: Build Tools",
+        # Pick your license as you wish
+        "License :: OSI Approved :: Mozilla Public License 2.0 (MPL 2.0)",
+        # Specify the Python versions you support here. In particular, ensure
+        # that you indicate you support Python 3. These classifiers are *not*
+        # checked by 'pip install'. See instead 'python_requires' below.
+        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3 :: Only",
+    ],
+    project_urls={
+        "Bug Reports": "https://github.com/browsermt/bergamot-transator/issues",
+        "Source": "https://github.com/browsermt/bergamot-translator/",
+        "Documentation": "https://browser.mt/docs/main/python.html",
     },
 )

@@ -266,7 +266,7 @@ jobs:
             cp ../build-wasm/bergamot-translator-worker.{js,wasm} ./
             npm install jsdom
 
-            node --unhandled-rejections=strict ../wasm/node-test.js
+            node --unhandled-rejections=strict node-test.js
 
         # Upload both together.
         - name: Upload wasm artifact

@@ -1,6 +1,8 @@
 const {Blob} = require('buffer');
 const fs = require('fs');
 const https = require('https');
+const {JSDOM} = require('jsdom');
+
 
 const wasmBinary = fs.readFileSync('./bergamot-translator-worker.wasm');
 global.Module = {
@@ -65,6 +67,7 @@ async function onRuntimeInitialized() {
     'beam-size: 1',
     'normalize: 1.0',
     'word-penalty: 0',
+    'alignment: soft',
     'max-length-break: 128',
     'mini-batch-words: 1024',
     'workspace: 128',
@@ -88,17 +91,32 @@ async function onRuntimeInitialized() {
 
   // Construct std::vector<std::string> inputs;
   const input = new Module.VectorString();
-  input.push_back('Hello world!');
+  input.push_back('<p> Hello world! </p> <p> Goodbye World! </p>');
 
   // Construct std::vector<ResponseOptions>
   const options = new Module.VectorResponseOptions();
-  options.push_back({qualityScores: false, alignment: false, html: false});
+  options.push_back({qualityScores: false, alignment: true, html: true});
 
   // Translate our batch (of 1)
   const output = service.translate(model, input, options);
 
   // Get output from std::vector<Response>
-  console.log(output.get(0).getTranslatedText());
+  // The following works as a simple black-box test of the API, based on
+  // properties of HTML.
+  const translation = output.get(0).getTranslatedText()
+
+  // Print raw translation for inspection.
+  console.log(translation)
+
+  const fragment = JSDOM.fragment(translation)
+
+  // Print two expected tags.
+  console.log(fragment.firstElementChild.outerHTML)
+  console.log(fragment.lastElementChild.outerHTML)
+
+  // Assertion that there are two children at the output.
+  assert(fragment.childElementCount === 1);
+
 
   // Clean-up
   input.delete();

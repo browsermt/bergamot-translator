@@ -261,11 +261,11 @@ jobs:
         - name: Test run
           working-directory: wasm
           run: |
-            # --unhandled-rejections make the script exit with a non-zero code (at least on node-14).
-            # So leaving this here. 
             cp ../build-wasm/bergamot-translator-worker.{js,wasm} ./
             npm install jsdom
 
+            # --unhandled-rejections make the script exit with a non-zero code (at least on node-14).
+            # So leaving this here. 
             node --unhandled-rejections=strict node-test.js
 
         # Upload both together.

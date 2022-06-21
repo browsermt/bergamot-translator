@@ -115,7 +115,7 @@ async function onRuntimeInitialized() {
   console.log(fragment.lastElementChild.outerHTML)
 
   // Assertion that there are two children at the output.
-  assert(fragment.childElementCount === 1);
+  assert(fragment.childElementCount === 2);
 
 
   // Clean-up

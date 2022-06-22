@@ -209,7 +209,7 @@ setup(
     python_requires=">=3.6",
     packages=["bergamot"],
     package_dir={"bergamot": "bindings/python"},
-    install_requires=["requests", "pyyaml", "appdirs"],
+    install_requires=["requests", "pyyaml>=5.1", "appdirs"],
     entry_points={
         "console_scripts": [
             "bergamot = bergamot.__main__:main",
@@ -241,7 +241,7 @@ setup(
         "Programming Language :: Python :: 3 :: Only",
     ],
     project_urls={
-        "Bug Reports": "https://github.com/browsermt/bergamot-transator/issues",
+        "Bug Reports": "https://github.com/browsermt/bergamot-translator/issues",
         "Source": "https://github.com/browsermt/bergamot-translator/",
         "Documentation": "https://browser.mt/docs/main/python.html",
     },

@@ -75,22 +75,38 @@ class TranslateLocallyLike(Repository):
             os.makedirs(directory, exist_ok=True)
 
         self.models_file_path = os.path.join(self.dirs["config"], "models.json")
-        self.update()
-
-    @property
-    def name(self) -> str:
-        return self._name
-
-    def update(self) -> None:
-        inventory = requests.get(self.url).text
-        with open(self.models_file_path, "w+") as models_file:
-            models_file.write(inventory)
-        self.data = json.loads(inventory)
+        self.data = self._load_data(self.models_file_path)
 
         # Update inverse lookup.
         self.data_by_code = {}
         for model in self.data["models"]:
             self.data_by_code[model["code"]] = model
+
+    @property
+    def name(self) -> str:
+        return self._name
+
+    def _load_data(self, models_file_path):
+        """
+        Load model data from existing file. If file does not exist, download from the web.
+        """
+        if os.path.exists(models_file_path):
+            # File already exists, prefer to work with this.
+            # A user is expected to update manually if model's already
+            # downloaded and setup.
+            with open(models_file_path) as model_file:
+                return json.load(model_file)
+        else:
+            # We are running for the first time.
+            # Try to fetch this file from the internet.
+            self.update()
+            with open(models_file_path) as model_file:
+                return json.load(model_file)
+
+    def update(self) -> None:
+        inventory = requests.get(self.url).text
+        with open(self.models_file_path, "w+") as models_file:
+            models_file.write(inventory)
 
     def models(self, filter_downloaded: bool = True) -> t.List[str]:
         codes = []

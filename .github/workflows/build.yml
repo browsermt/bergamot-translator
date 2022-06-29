@@ -413,7 +413,7 @@ jobs:
           working-directory: ./doc
           run: |
             python3 -m pip install -r requirements.txt
-            python3 -m pip install --no-index --find-links=${{github.workspace}}/wheels bergamot
+            python3 -m pip install --find-links=${{github.workspace}}/wheels bergamot
 
         - name: Build documentation
           working-directory: ./doc

@@ -252,11 +252,12 @@ jobs:
           working-directory: build-wasm
           run: bash ../wasm/patch-artifacts-import-gemm-module.sh
 
-        # Setup nodejs-16, as nodejs-14 provided by emsdk fails when running.
+        # Setup nodejs-18, as nodejs-14 provided by emsdk fails when running
+        # and newer version of node allows us to use fetch().
         - name: Setup nodejs
           uses: actions/setup-node@v3
           with:
-            node-version: 16
+            node-version: 18
 
         - name: Test run
           working-directory: wasm

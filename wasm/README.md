@@ -4,7 +4,9 @@ All the instructions below are meant to run from the current directory.
 
 ## Using JS APIs
 
-Please refer to the file `test_page/js/worker.js` that demonstrates how to use the bergamot translator in JavaScript via a `<script>` tag.
+See [node-test.js](./node-test.js) for an annotated example of how to use the WASM module. Most of the code from it can also be used in a browser context.
+
+Alternatively refer to the file `test_page/js/worker.js` that demonstrates how to use the bergamot translator in JavaScript via a `<script>` tag.
 
 ## Demo
 

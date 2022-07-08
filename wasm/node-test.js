@@ -1,92 +1,85 @@
 #!/usr/bin/env node
+
+/**
+ * A note upfront: the bergamot-translator API is pretty low level, and
+ * embedding it successfully requires some knowledge about the WebWorkers and
+ * WebAssembly APIs. This script tries to demonstrate the bergamot-translator
+ * API with as little of that boiler plate code as possible.
+ * See the wasm/test_page code for a fully fleshed out demo in a web context.
+ */
+
+// For node we use the fs module to read local files. In a web context you can
+// use `fetch()` for everything.
 const fs = require('fs');
 
 // Read wasm binary into a blob, which will be loaded by
-// bergamot-translator-worker.js in a minute.
+// bergamot-translator-worker.js in a minute. In a web context, you'd be using
+// `fetch(...).then(response => response.blob())` for this, but Node does not
+// implement `fetch("file://...")` yet.
 const wasmBinary = fs.readFileSync('./bergamot-translator-worker.wasm');
 
-// Initialise the `Module` object for bergamot-translation-worker.js`. See that
-// generated file, and the general Emscripten documentation for what kinds of
-// properties can be defined here, and how they affect execution.
+// Read wasm runtime code that bridges the bergmot-translator binary with JS.
+const wasmRuntime = fs.readFileSync('./bergamot-translator-worker.js', {encoding: 'utf8'});
+
+// Initialise the `Module` object. By adding methods and options to this, we can
+// affect how bergamot-translator interacts with JavaScript. See 
+// https://emscripten.org/docs/api_reference/module.html for all available
+// options. It is important that this object is initialised in the same scope
+// but before `bergamot-translation-worker.js` is executed. Once that script
+// executes, it defines the exported methods as properties of this Module
+// object.
 global.Module = {
   wasmBinary,
   onRuntimeInitialized
 };
 
-// Execute bergamot-translation-worker.js in this scope
-const js = fs.readFileSync('./bergamot-translator-worker.js', {encoding: 'utf8'});
-eval.call(global, js);
-
-// At this point, `Module` will contain all the classes that are exported by
-// the WASM binary.
-
-/**
- * Helper to download file into ArrayBuffer.
- * @arg {String} url to binary blob
- * @return {Promise<ArrayBuffer>}
- */
-async function download(url) {
-  const response = await fetch(url);
-  const blob = await response.blob();
-  return blob.arrayBuffer();
-}
-
-/**
- * Loads ArrayBuffer into AlignedMemory. Bergamot translator uses instructions
- * that benefit from aligned memory for speed. This means we have to carefully
- * allocate blobs of memory inside the WASM vm that match that alignment
- * requirement, and then copy the binary data into that allocated blob.
- * @arg {ArrayBuffer} buffer with raw model data
- * @arg {Number} alignment (multiple of 64)
- * @return {Module.AlignedMemory}
- */
-function load(buffer, alignment) {
-  const bytes = new Int8Array(buffer);
-  const memory = new Module.AlignedMemory(bytes.byteLength, alignment);
-  memory.getByteArrayView().set(bytes);
-  return memory;
-}
+// Execute bergamot-translation-worker.js in this scope. This will also,
+// indirectly, call the onRuntimeInitialized function defined below and
+// referenced in the `Module` object above.
+eval.call(global, wasmRuntime);
 
 /**
  * Called from inside the bergamot-translation-worker.js script once the wasm
- * module is loaded and all the Emscripten magic and linking has been done.
+ * module is initialized. At this point that `Module` object that was
+ * initialised above will have all the classes defined in the
+ * bergamot-translator API available on it.
  */
 async function onRuntimeInitialized() {
   // Root url for our models for now.
   const root = 'https://storage.googleapis.com/bergamot-models-sandbox/0.3.1';
 
-  // Urls of all data files necessary to create a translation model for
-  // English -> German. Note: list is in order of TranslationMemory's arguments.
+  // Urls of data files necessary to create a translation model for
+  // English -> German. Note: list is in order of TranslationModel's arguments.
+  // The `alignment` value is used later on to load each part of the model with
+  // the correct alignment.
   const files = [
+    // Neural network and weights:
     {url: `${root}/ende/model.ende.intgemm.alphas.bin`, alignment: 256},
+    
+    // Lexical shortlist which is mainly a speed improvement method, not
+    // strictly necessary:
     {url: `${root}/ende/lex.50.50.ende.s2t.bin`, alignment: 64},
-    {url: `${root}/ende/vocab.deen.spm`, alignment: 64}, // "deen" may look the wrong way around but vocab is the same between de->en and en->de models.
+    
+    // Vocabulary, maps the input and output nodes of the neural network to
+    // strings. Note: "deen" may look the wrong way around but vocab is the same
+    // between de->en and en->de models.
+    {url: `${root}/ende/vocab.deen.spm`, alignment: 64},
   ];
 
   // Download model data and load it into aligned memory. AlignedMemory is a
-  // necessary wrapper around allocated memory inside the WASM vm. This is
-  // allocated at specific offsets, which is necessary for the performance of
-  // some of the instructions inside bergamot-translator.
+  // necessary wrapper around allocated memory inside the WASM environment.
+  // The value of `alignment` is specific for which part of the model we're
+  // loading. See https://en.wikipedia.org/wiki/Data_structure_alignment for a
+  // more general explanation.
   const [modelMem, shortlistMem, vocabMem] = await Promise.all(files.map(async (file) => {
-    return load(await download(file.url), file.alignment);
+    const response = await fetch(file.url);
+    const blob = await response.blob();
+    const buffer = await blob.arrayBuffer();
+    const bytes = new Int8Array(buffer);
+    const memory = new Module.AlignedMemory(bytes.byteLength, file.alignment);
+    memory.getByteArrayView().set(bytes);
+    return memory;
   }));
-
-  // Config yaml (split as array to allow for indentation without adding tabs
-  // or spaces to the strings themselves.)
-  // See https://marian-nmt.github.io/docs/cmd/marian-decoder/ for the meaning
-  // of most of these options and what other options might be available.
-  const config = [
-    'beam-size: 1',
-    'normalize: 1.0',
-    'word-penalty: 0',
-    'alignment: soft', // is necessary if you want to use HTML at any point
-    'max-length-break: 128',
-    'mini-batch-words: 1024',
-    'workspace: 128',
-    'max-length-factor: 2.0',
-    'skip-cost: true',
-    'gemm-precision: int8shiftAll', // is necessary for speed and compatibility with Mozilla's models.
-  ].join('\n');
 
   // Set up translation service. This service translates a batch of text per
   // call. The larger the batch, the faster the translation (in words per
@@ -106,26 +99,43 @@ async function onRuntimeInitialized() {
   const vocabs = new Module.AlignedMemoryList();
   vocabs.push_back(vocabMem);
 
+  // Config yaml (split as array to allow for indentation without adding tabs
+  // or spaces to the strings themselves.)
+  // See https://marian-nmt.github.io/docs/cmd/marian-decoder/ for the meaning
+  // of most of these options and what other options might be available.
+  const config = [
+    'beam-size: 1',
+    'normalize: 1.0',
+    'word-penalty: 0',
+    'alignment: soft', // is necessary if you want to use HTML at any point
+    'max-length-break: 128',
+    'mini-batch-words: 1024',
+    'workspace: 128',
+    'max-length-factor: 2.0',
+    'skip-cost: true',
+    'gemm-precision: int8shiftAll', // is necessary for speed and compatibility with Mozilla's models.
+  ].join('\n');
+
   // Setup up model with config yaml and AlignedMemory objects. Optionally a
   // quality estimation model can also be loaded but this is not demonstrated
-  // here. Generally you don't need it.
+  // here. Generally you don't need it, and many models don't include the data
+  // file necessary to use it anyway.
   const model = new Module.TranslationModel(config, modelMem, shortlistMem, vocabs, /*qualityModel=*/ null);
 
   // Construct std::vector<std::string> inputs; This is our batch!
   const input = new Module.VectorString();
-  input.push_back('<p>Hello world! Let us write a second sentence.</p> <p>Goodbye World!</p>');
+  input.push_back('<p>Hello world! Let us write a second sentence.</p> &amp; <p>Goodbye World!</p>');
+  input.push_back('This is a second example without HTML & entities.');
 
   // Construct std::vector<ResponseOptions>, one entry per input. Note that
-  // all these three options need to be specified for each entry:
-  // `qualityScores`: do we want to compute quality scores for the translation
-  //   of each word? If true, each word will be wrapped in a <font> tag with
-  //   a quality score attribute. Requires the qualityModel to be passed in
-  //   when the `TranslationModel` is constructed. Slows down translation.
+  // all these three properties of your ResponseOptions object need to be
+  // specified for each entry.
+  // `qualityScores`: related to quality models not explained here. Set this
+  //   to `false`.
   // `alignment`: computes alignment scores that maps parts of the input text
   //   to parts of the output text. There is currently no way to get these
-  //   mappings out anyway so passing in anything other than `false` makes no
-  //   sense. If `html` is `true`, it will internally be enabled as alignments
-  //   are necessary for the transfer of markup to the translated HTML.
+  //   mappings out through the JavaScript API so I suggest you set this to
+  //   `false` as well.
   // `html`: is the input HTML? If so, the HTML will be parsed and the markup
   //   will be copied back into the translated output. Note: HTML has to be
   //   valid HTML5, with proper closing tags and everything since the HTML
@@ -133,6 +143,7 @@ async function onRuntimeInitialized() {
   //   of e.g. `Element.innerHTML` meets this criteria.
   const options = new Module.VectorResponseOptions();
   options.push_back({qualityScores: false, alignment: false, html: true});
+  options.push_back({qualityScores: false, alignment: false, html: false});
 
   // Size of `input` and `options` has to match.
   assert(input.size() === options.size());
@@ -144,52 +155,19 @@ async function onRuntimeInitialized() {
   // Number of outputs is number of inputs.
   assert(input.size() === output.size());
 
-  // Get output from std::vector<Response>.
-  const translation = output.get(0).getTranslatedText();
+  for (let i = 0; i < output.size(); ++i) {
+    // Get output from std::vector<Response>.
+    const translation = output.get(i).getTranslatedText();
 
-  // Print raw translation for inspection.
-  console.log(translation)
+    // Print raw translation for inspection.
+    console.log(translation)
+  }
 
-  // Response has more methods, but you generally don't need them. So those are
-  // explained in a separate function.
-  printSentences(output.get(0));
-
-  // Clean-up
+  // Clean-up: unlike the objects in JavaScript, the objects in the WASM
+  // environment are not automatically cleaned up when they're no longer
+  // referenced. That is why we manually have to call `delete()` on them
+  // when we're done with them.
   input.delete();
   options.delete();
   output.delete();
-}
-
-/**
- * Demonstration of the other methods exposed by `Response`.
- * @arg {Module.Response} a single response from the translated batch.
- */
-function printSentences(response) {
-  // `Response` exposes more methods, such as `size()` to get the number of
-  // sentences in a response, and `getSourceSentence()` and
-  // `getTargetSentence()`. These return a `ByteRange` object that has a
-  // `begin` and `end` field giving you the byte offset in
-  // the string of `getOriginalText()` and `getTranslatedText()`.
-
-  const encoder = new TextEncoder();
-  const decoder = new TextDecoder();
-
-  // Since sentence ranges are in byte offset (not characters!) we need to
-  // convert our text back into byte arrays. bergamot-translator itself is
-  // encoding agnostic, but the translation models are trained on UTF-8.
-  const originalAsBytes = encoder.encode(response.getOriginalText());
-  const translatedAsBytes = encoder.encode(response.getTranslatedText());
-
-  // Note that if HTML is used, these slices will never slice in the middle of
-  // a tag, but they might have an open tag in one sentence, and the
-  // corresponding closing tag in another.
-  for (let i = 0; i < response.size(); ++i) {
-    let range = response.getSourceSentence(i);
-    let slice = originalAsBytes.subarray(range.begin, range.end);
-    console.log('Original sentence', i, ':', decoder.decode(slice));
-
-    range = response.getTranslatedSentence(i);
-    slice = translatedAsBytes.subarray(range.begin, range.end);
-    console.log('Translated sentence', i, ':', decoder.decode(slice));
-  }
 }

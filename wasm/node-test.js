@@ -146,14 +146,16 @@ async function onRuntimeInitialized() {
   options.push_back({qualityScores: false, alignment: false, html: false});
 
   // Size of `input` and `options` has to match.
-  assert(input.size() === options.size());
+  console.assert(input.size() === options.size());
 
   // Translate our batch (of 1). Output will be another vector of type 
   // `std::vector<Response>`.
   const output = service.translate(model, input, options);
 
+  console.assert(false);
+
   // Number of outputs is number of inputs.
-  assert(input.size() === output.size());
+  console.assert(input.size() === output.size());
 
   for (let i = 0; i < output.size(); ++i) {
     // Get output from std::vector<Response>.

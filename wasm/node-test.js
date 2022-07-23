@@ -148,7 +148,7 @@ async function onRuntimeInitialized() {
   // Size of `input` and `options` has to match.
   console.assert(input.size() === options.size());
 
-  // Translate our batch (of 1). Output will be another vector of type 
+  // Translate our batch of 2 requests. Output will be another vector of type 
   // `std::vector<Response>`.
   const output = service.translate(model, input, options);
 

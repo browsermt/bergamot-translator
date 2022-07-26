@@ -37,7 +37,7 @@ class YAML {
             let valstr = '';
             if (Array.isArray(value))
                 valstr = value.map(val => `\n  - ${val}`).join('');
-            else if (typeof value === 'number' || value.match(/^\d*(\.\d+)?$/))
+            else if (typeof value === 'number' || typeof value === 'boolean' || value.match(/^\d*(\.\d+)?$/))
                 valstr = `${value}`;
             else
                 valstr = `${value}`; // Quote?
@@ -228,6 +228,7 @@ class BergamotTranslatorWorker {
             word-penalty: 0
             cpu-threads: 0
             gemm-precision: int8shiftAlphaAll
+            skip-cost: true
         `);
 
         if (buffers.config)
@@ -239,7 +240,6 @@ class BergamotTranslatorWorker {
 
         // Override these
         Object.assign(modelConfig, YAML.parse(`
-            skip-cost: true
             alignment: soft
             quiet: true
             quiet-translation: true

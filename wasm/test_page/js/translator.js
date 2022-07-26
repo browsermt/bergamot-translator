@@ -255,6 +255,11 @@
         if (files.model.name.endsWith('intgemm8.bin'))
             config['gemm-precision'] = 'int8shiftAll';
 
+        // If quality estimation is used, we need to turn off skip-cost. Turning
+        // this off causes quite the slowdown.
+        if (files.qualityModel)
+            config['skip-cost'] = false;
+
         // Translate to generic bergamot-translator format that also supports
         // separate vocabularies for input & output language, and calls 'lex'
         // a more descriptive 'shortlist'.
@@ -701,10 +706,10 @@ class BergamotLatencyOptimisedTranslator extends BergamotTranslator {
                     }
                 }));
 
-                const {text, html} = request;
+                const {text, html, qualityScores} = request;
                 const responses = await client.translate({
                     models: models.map(({from,to}) => ({from, to})),
-                    texts: [{text, html, qualityScores: false}]
+                    texts: [{text, html, qualityScores}]
                 });
 
                 task.accept({request, ...responses[0]});

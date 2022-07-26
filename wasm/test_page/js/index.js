@@ -2,6 +2,10 @@ function $(selector) {
   return document.querySelector(selector);
 }
 
+function $$(selector) {
+  return document.querySelectorAll(selector);
+}
+
 function encodeHTML(text) {
   const div = document.createElement('div');
   div.appendChild(document.createTextNode(text));
@@ -15,14 +19,28 @@ const translator = new BergamotLatencyOptimisedTranslator({
 
 async function translate() {
   try {
+    const from = $('#lang-from').value;
+    const to = $('#lang-to').value;
+    
+    // Querying models to see whether quality estimation is supported by all
+    // of them.
+    const models = await translator.getModels({from, to});
+    const qualityScores = models.every(model => 'qualityModel' in model.files);
+
     const response = await translator.translate({
-      from: $('#lang-from').value,
-      to: $('#lang-to').value,
+      from,
+      to,
       text: $('#input').innerHTML,
-      html: true
+      html: true,
+      qualityScores
     });
 
     $('#output').innerHTML = response.target.text;
+    $('#output').classList.toggle('has-quality-scores', qualityScores);
+
+    if (qualityScores)
+      addQualityIndicators();
+
   } catch (error) {
     if (error.constructor === SupersededError)
       return;
@@ -47,8 +65,8 @@ translator.registry.then(models => {
     })
   });
 
-  $('#lang-from').value = 'de';
-  $('#lang-to').value = 'en';
+  $('#lang-from').value = 'en';
+  $('#lang-to').value = 'es';
 });
 
 $('button.swap').addEventListener('click', () => {
@@ -61,3 +79,33 @@ $('button.swap').addEventListener('click', () => {
 $('#input').addEventListener('input', translate);
 $('#lang-from').addEventListener('input', translate);
 $('#lang-to').addEventListener('input', translate);
+
+$('#output').addEventListener('mouseover', (e) => highlightSentence(e.target))
+
+function addQualityIndicators() {
+  $$('#output [x-bergamot-sentence-score]').forEach(el => {
+    // The threshold is ln(0.5) (https://github.com/browsermt/bergamot-translator/pull/370#issuecomment-1058123399)
+    el.classList.toggle('bad', parseFloat(el.getAttribute('x-bergamot-sentence-score')) < Math.log(0.5));
+  });
+
+  $$('#output [x-bergamot-word-score]').forEach(el => {
+    // The threshold is ln(0.5) (https://github.com/browsermt/bergamot-translator/pull/370#issuecomment-1058123399)
+    el.classList.toggle('bad', parseFloat(el.getAttribute('x-bergamot-word-score')) < Math.log(0.5));
+  });
+
+  // Add tooltips to each (sub)word with sentence and word score.
+  $$('#output [x-bergamot-sentence-score] > [x-bergamot-word-score]').forEach(el => {
+    const sentenceScore = parseFloat(el.parentNode.getAttribute('x-bergamot-sentence-score'));
+    const wordScore = parseFloat(el.getAttribute('x-bergamot-word-score'));
+    el.title = `Sentence: ${Math.exp(sentenceScore).toFixed(2)}  Word: ${Math.exp(wordScore).toFixed(2)}`;
+  });
+}
+
+function highlightSentence(element) {
+  const sentence = element.parentNode.hasAttribute('x-bergamot-sentence-index')
+    ? element.parentNode.getAttribute('x-bergamot-sentence-index')
+    : null;
+  $$('#output font[x-bergamot-sentence-index]').forEach(el => {
+    el.classList.toggle('highlight-sentence', el.getAttribute('x-bergamot-sentence-index') === sentence);
+  })
+}

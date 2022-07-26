@@ -96,6 +96,7 @@ button:hover {
 
 #output {
   background-color: #f4f4f4;
+  position: relative;
 }
 
 .output-area [x-bergamot-word-score].bad {
@@ -115,4 +116,11 @@ button:hover {
 
 .output-area [x-bergamot-sentence-index].highlight-sentence {
   background: rgba(255, 255, 128, 0.8);
+}
+
+.app.loading #output::after {
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  content: 'Translating…';
 }

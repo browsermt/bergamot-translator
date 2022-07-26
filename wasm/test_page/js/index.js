@@ -27,6 +27,8 @@ async function translate() {
     const models = await translator.getModels({from, to});
     const qualityScores = models.every(model => 'qualityModel' in model.files);
 
+    $('.app').classList.add('loading');
+
     const response = await translator.translate({
       from,
       to,
@@ -46,6 +48,8 @@ async function translate() {
       return;
 
     alert(error.toString());
+  } finally {
+    $('.app').classList.toggle('loading', translator.worker && !translator.worker.idle);
   }
 }
 

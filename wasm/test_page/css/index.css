@@ -73,7 +73,7 @@ label {
   align-self: center;
 }
 
-textarea, .output-area {
+textarea, [contenteditable], .output-area {
   padding: 1rem;
   font-family: sans-serif;
   font-size: 1rem;

@@ -228,7 +228,7 @@
         // Download all files mentioned in the registry entry.
         const buffers = Object.fromEntries(await Promise.all(Array.from(Object.entries(files), async ([part, file]) => {
             // Special case where qualityModel is not part of the model
-            if (part === 'qualityModel' && file === undefined)
+            if (file === undefined)
                 return [part, null];
 
             try {
@@ -240,16 +240,30 @@
 
         performance.measure('loadTranslationModel', `loadTranslationModule.${JSON.stringify({from, to})}`);
 
+        let vocabs = [];
+
+        if (buffers.vocab)
+            vocabs = [buffers.vocab]
+        else if (buffers.trgvocab && buffers.srcvocab)
+            vocabs = [buffers.srcvocab, buffers.trgvocab]
+        else
+            throw new Error(`Could not identify vocab files for ${from}->${to} model among: ${Array.from(Object.keys(files)).join(' ')}`);
+
+        let config = {};
+
+        // For the Ukrainian models we need to override the gemm-precision
+        if (files.model.name.endsWith('intgemm8.bin'))
+            config['gemm-precision'] = 'int8shiftAll';
+
         // Translate to generic bergamot-translator format that also supports
         // separate vocabularies for input & output language, and calls 'lex'
-        // a more descriptive 'shortlist'. Adding `config` for completeness
-        // sake: this could be a yaml string with overrides.
+        // a more descriptive 'shortlist'.
         return {
             model: buffers.model,
             shortlist: buffers.lex,
-            vocabs: [buffers.vocab],
+            vocabs,
             qualityModel: buffers.qualityModel,
-            config: null
+            config
         };
     }
 

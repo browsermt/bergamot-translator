@@ -76,11 +76,12 @@ class BergamotTranslatorWorker {
     constructor(options) {
         this.options = options || {};
 
-        this.module = this.loadModule();
-
-        this.service = this.loadTranslationService();
-
         this.models = new Map(); // Map<str,Promise<TranslationModel>>
+    }
+
+    async initialize() {
+        this.module = await this.loadModule();
+        this.service = await this.loadTranslationService();
     }
 
     /**
@@ -168,11 +169,12 @@ class BergamotTranslatorWorker {
 
     /**
      * Internal method. Instantiates a BlockingService()
-     * @return {Promise<BergamotTranslator.BlockingService>}
+     * @return {BergamotTranslator.BlockingService}
      */
-    async loadTranslationService() {
-        const Module = await this.module;
-        return new Module.BlockingService({cacheSize: Math.max(this.options.cacheSize || 0, 0)});
+    loadTranslationService() {
+        return new this.module.BlockingService({
+            cacheSize: Math.max(this.options.cacheSize || 0, 0)
+        });
     }
 
     /**
@@ -181,7 +183,7 @@ class BergamotTranslatorWorker {
      * @param {{from:string, to:string}}
      * @return boolean
      */ 
-    async hasTranslationModel({from,to}) {
+    hasTranslationModel({from,to}) {
         const key = JSON.stringify({from,to});
         return this.models.has(key);
     }
@@ -201,24 +203,22 @@ class BergamotTranslatorWorker {
      *   }
      * }} buffers
      */ 
-    async loadTranslationModel({from, to}, buffers) {
-        const Module = await this.module;
-
+    loadTranslationModel({from, to}, buffers) {
         // This because service_bindings.cpp:prepareVocabsSmartMemories :(
         const uniqueVocabs = buffers.vocabs.filter((vocab, index, vocabs) => {
             return !vocabs.slice(0, index).includes(vocab);
         });
 
-        const [modelMemory, shortlistMemory, qualityModel, ...vocabMemory] = await Promise.all([
+        const [modelMemory, shortlistMemory, qualityModel, ...vocabMemory] = [
             this.prepareAlignedMemoryFromBuffer(buffers.model, 256),
             this.prepareAlignedMemoryFromBuffer(buffers.shortlist, 64),
             buffers.qualityModel // optional quality model
                 ? this.prepareAlignedMemoryFromBuffer(buffers.qualityModel, 64)
-                : Promise.resolve(null),
+                : null,
             ...uniqueVocabs.map(vocab => this.prepareAlignedMemoryFromBuffer(vocab, 64))
-        ]);
+        ];
 
-        const vocabs = new Module.AlignedMemoryList();
+        const vocabs = new this.module.AlignedMemoryList();
         vocabMemory.forEach(vocab => vocabs.push_back(vocab));
 
         // Defaults
@@ -250,7 +250,7 @@ class BergamotTranslatorWorker {
         `));
 
         const key = JSON.stringify({from,to});
-        this.models.set(key, new Module.TranslationModel(YAML.stringify(modelConfig), modelMemory, shortlistMemory, vocabs, qualityModel));
+        this.models.set(key, new this.module.TranslationModel(YAML.stringify(modelConfig), modelMemory, shortlistMemory, vocabs, qualityModel));
     }
 
     /**
@@ -258,7 +258,7 @@ class BergamotTranslatorWorker {
      * already deleted.
      * @param {{from:string, to:string}}
      */
-    async freeTranslationModel({from, to}) {
+    freeTranslationModel({from, to}) {
         const key = JSON.stringify({from,to});
         
         if (!this.models.has(key))
@@ -277,10 +277,9 @@ class BergamotTranslatorWorker {
      * @param {number} alignmentSize
      * @return {BergamotTranslator.AlignedMemory}
      */
-    async prepareAlignedMemoryFromBuffer(buffer, alignmentSize) {
-        const Module = await this.module;
+    prepareAlignedMemoryFromBuffer(buffer, alignmentSize) {
         const bytes = new Int8Array(buffer);
-        const memory = new Module.AlignedMemory(bytes.byteLength, alignmentSize);
+        const memory = new this.module.AlignedMemory(bytes.byteLength, alignmentSize);
         memory.getByteArrayView().set(bytes);
         return memory;
     }
@@ -292,16 +291,13 @@ class BergamotTranslatorWorker {
      * @param {{models: {from:string, to:string}[], texts: {text: string, html: boolean}[]}}
      * @return {Promise<{target: {text: string}}[]>}
      */
-    async translate({models, texts}) {
-        const Module = await this.module;
-        const service = await this.service;
-
+    translate({models, texts}) {
         // Convert texts array into a std::vector<std::string>.
-        let input = new Module.VectorString();
+        let input = new this.module.VectorString();
         texts.forEach(({text}) => input.push_back(text));
 
         // Extracts the texts[].html options into ResponseOption objects
-        let options = new Module.VectorResponseOptions();
+        let options = new this.module.VectorResponseOptions();
         texts.forEach(({html, qualityScores}) => options.push_back({alignment: false, html, qualityScores}));
 
         // Turn our model names into a list of TranslationModel pointers
@@ -312,8 +308,8 @@ class BergamotTranslatorWorker {
 
         // translate the input, which is a vector<String>; the result is a vector<Response>
         const responses = models.length > 1
-            ? service.translateViaPivoting(...translationModels, input, options)
-            : service.translate(...translationModels, input, options);
+            ? this.service.translateViaPivoting(...translationModels, input, options)
+            : this.service.translate(...translationModels, input, options);
         
         input.delete();
         options.delete();
@@ -333,16 +329,21 @@ class BergamotTranslatorWorker {
     }
 }
 
-// First wait for an options object that contains all the info we need to 
-// configure the worker. Then replace onmessage with our real receiver.
-onmessage = ({data}) => {
-    if (!data.options){
-        console.warn('Did not receive initial message with options');
-        return;
-    }
+/**
+ * Because you can't put an Error object in a message. But you can post a
+ * generic object!
+ */
+function cloneError(error) {
+    return {
+        name: error.name,
+        message: error.message,
+        fileName: error.fileName,
+        lineNumber: error.lineNumber,
+        columnNumber: error.columnNumber
+    };
+}
 
-    const worker = new BergamotTranslatorWorker(data.options);
-
+function main(worker) {
     self.onmessage = async function({data: {id, name, args}}) {
         if (!id)
             console.error('Received message without id', arguments[0]);
@@ -358,14 +359,33 @@ onmessage = ({data}) => {
         } catch (error) {
             self.postMessage({
                 id,
-                error: {
-                    name: error.name,
-                    message: error.message,
-                    fileName: error.fileName,
-                    lineNumber: error.lineNumber,
-                    columnNumber: error.columnNumber
-                }
+                error: cloneError(error)
             })
         }
     }
 }
+
+// First wait for an options object that contains all the info we need to 
+// configure the worker. Then replace onmessage with our real receiver.
+onmessage = async ({data}) => {
+    if (!data.options){
+        console.warn('Did not receive initial message with options');
+        return;
+    }
+
+    try {
+        const worker = new BergamotTranslatorWorker(data.options);
+        
+        // Wait for worker to properly initialize
+        await worker.initialize();
+
+        // Reply to the options initialisation message with an OK
+        self.postMessage({ok: true});
+
+        // Start running the main loop
+        main(worker);
+    } catch (error) {
+        self.postMessage({ok: false, error: cloneError(error)});
+        // throw error;
+    }
+};

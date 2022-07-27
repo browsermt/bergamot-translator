@@ -95,12 +95,19 @@ if (typeof requestIdleCallback === 'undefined') {
      * being copied into a message. 
      * @return {{worker:Worker, client:Proxy<TranslationWorker>}}
      */
-    loadWorker() {
+    async loadWorker() {
         const worker = new Worker(this.workerUrl);
-        worker.onerror = this.onerror.bind(this);
+
+        const workerLoaded = new Promise((accept, reject) => {
+            worker.onmessage = ({data: {ok, error}}) => ok ? accept() : reject(error);
+            worker.onerror = ({data}) => reject(data);
+        });
 
         // Initialisation options
         worker.postMessage({options: this.options});
+
+        // Wait for the worker to confirm it loaded bergamot-translator
+        await workerLoaded;
 
         /**
          * Map of pending requests
@@ -128,6 +135,9 @@ if (typeof requestIdleCallback === 'undefined') {
             else
                 accept(result);
         }
+
+        // … and general errors
+        worker.onerror = this.onerror.bind(this);
 
         /**
          * Little wrapper around the message passing api of Worker to make it
@@ -671,6 +681,13 @@ class BergamotLatencyOptimisedTranslator extends BergamotTranslator {
         super(options);
     }
 
+    async initialize() {
+        this.worker = {
+            ...await this.loadWorker(),
+            idle: true
+        };
+    }
+
     translate(request) {
         if (this.pending)
             this.pending.reject(new SupersededError());
@@ -687,10 +704,7 @@ class BergamotLatencyOptimisedTranslator extends BergamotTranslator {
                 return;
 
             if (!this.worker)
-                this.worker = {
-                    ...this.loadWorker(),
-                    idle: true
-                };
+                await this.initialize();
 
             if (!this.worker.idle)
                 return;

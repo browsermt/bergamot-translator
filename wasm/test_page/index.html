@@ -27,6 +27,11 @@
         <div id="output" class="output-area"></div>
       </div>
       <div class="footer" id="status"></div>
+      <div id="unsupported-browser" hidden>
+        <p>Your CPU or browser is not able to run Bergamot translator.</p>
+        <p>Try using Firefox or a Chromium based browser with <a href="https://webassembly.org/roadmap/">Fixed-width SIMD support</a>.</p>
+        <p>If you already are, you might be using a CPU that does not have support for SSE4.1 instructions.</p>
+      </div>
     </div>
     <script src="js/translator.js"></script>
     <script src="js/index.js"></script>

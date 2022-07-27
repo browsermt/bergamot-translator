@@ -7,6 +7,13 @@
  * @property {Integer?} priority
  */
 
+// Little work-around for Safari
+if (typeof requestIdleCallback === 'undefined') {
+    function requestIdleCallback(callback, options) {
+        setTimeout(callback, 0);
+    }
+}
+
 /**
  * Wrapper around bergamot-translator and model management. You only need
  * to call translate() which is async, the helper will manage execution by

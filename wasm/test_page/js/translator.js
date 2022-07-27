@@ -7,13 +7,6 @@
  * @property {Integer?} priority
  */
 
-// Little work-around for Safari
-if (typeof requestIdleCallback === 'undefined') {
-    function requestIdleCallback(callback, options) {
-        setTimeout(callback, 0);
-    }
-}
-
 /**
  * Wrapper around bergamot-translator and model management. You only need
  * to call translate() which is async, the helper will manage execution by
@@ -93,21 +86,15 @@ if (typeof requestIdleCallback === 'undefined') {
      * exposes the entire interface of TranslationWorker here, and all calls
      * to it are async. Do note that you can only pass arguments that survive
      * being copied into a message. 
-     * @return {{worker:Worker, client:Proxy<TranslationWorker>}}
+     * @return {{worker:Worker, exports:Proxy<TranslationWorker>}}
      */
     async loadWorker() {
         const worker = new Worker(this.workerUrl);
 
-        const workerLoaded = new Promise((accept, reject) => {
-            worker.onmessage = ({data: {ok, error}}) => ok ? accept() : reject(error);
-            worker.onerror = ({data}) => reject(data);
-        });
-
-        // Initialisation options
-        worker.postMessage({options: this.options});
-
-        // Wait for the worker to confirm it loaded bergamot-translator
-        await workerLoaded;
+        /**
+         * Incremental counter to derive request/response ids from.
+         */
+        let serial = 0;
 
         /**
          * Map of pending requests
@@ -115,12 +102,14 @@ if (typeof requestIdleCallback === 'undefined') {
          */
         const pending = new Map();
 
-        /**
-         * Incremental counter to derive request/response ids from.
-         */
-        let serial = 0;
+        // Function to send requests
+        const call = (name, ...args) => new Promise((accept, reject) => {
+            const id = ++serial;
+            pending.set(id, {accept, reject});
+            worker.postMessage({id, name, args});
+        });
 
-        // Receive responses
+        // … receive responses
         worker.onmessage = function({data: {id, result, error}}) {
             if (!pending.has(id)) {
                 console.debug('Received message with unknown id:', arguments[0]);
@@ -139,6 +128,10 @@ if (typeof requestIdleCallback === 'undefined') {
         // … and general errors
         worker.onerror = this.onerror.bind(this);
 
+        // Await initialisation. This will also nicely error out if the WASM
+        // runtime fails to load.
+        await call('initialize', this.options);
+
         /**
          * Little wrapper around the message passing api of Worker to make it
          * easy to await a response to a sent message. This wraps the worker in
@@ -149,17 +142,11 @@ if (typeof requestIdleCallback === 'undefined') {
          */
         return {
             worker,
-            client: new Proxy({}, {
+            exports: new Proxy({}, {
                 get(target, name, receiver) {
                     // Prevent this object from being marked "then-able"
-                    if (name === 'then')
-                        return undefined;
-
-                    return (...args) => new Promise((accept, reject) => {
-                        const id = ++serial;
-                        pending.set(id, {accept, reject});
-                        worker.postMessage({id, name, args});
-                    });
+                    if (name !== 'then')
+                        return (...args) => call(name, ...args);
                 }
             })
         };
@@ -458,7 +445,7 @@ class BergamotBatchTranslator extends BergamotTranslator {
      * hurt to call it multiple times. This function always returns immediately.
      */
     notify() {
-        requestIdleCallback(async () => {
+        setTimeout(async () => {
             // Is there work to be done?
             if (!this.queue.length)
                 return;
@@ -469,11 +456,16 @@ class BergamotBatchTranslator extends BergamotTranslator {
             // No worker free, but space for more?
             if (!worker && this.workers.length < this.workerLimit) {
                 try {
-                    worker = {
-                        ...this.loadWorker(), // adds `worker` and `client` props
-                        idle: true
-                    };
-                    this.workers.push(worker);
+                    // Claim a place in the workers array (but mark it busy so
+                    // it doesn't get used by any other `notify()` calls).
+                    const placeholder = {idle: false};
+                    this.workers.push(placeholder);
+
+                    // adds `worker` and `exports` props
+                    Object.assign(placeholder, await this.loadWorker());
+
+                    // At this point we know our new worker will be usable.
+                    worker = placeholder;
                 } catch (e) {
                     this.onerror(new Error(`Could not initialise translation worker: ${e.message}`));
                 }
@@ -492,7 +484,7 @@ class BergamotBatchTranslator extends BergamotTranslator {
             // Put this worker to work, marking as busy
             worker.idle = false;
             try {
-                await this.consumeBatch(batch, worker.client);
+                await this.consumeBatch(batch, worker.exports);
             } catch (e) {
                 batch.requests.forEach(({reject}) => reject(e));
             }
@@ -501,7 +493,7 @@ class BergamotBatchTranslator extends BergamotTranslator {
             // Is there more work to be done? Do another idleRequest
             if (this.queue.length)
                 this.notify();
-        }, {timeout: 500});
+        });
     }
 
     /**
@@ -679,13 +671,17 @@ class BergamotLatencyOptimisedTranslator extends BergamotTranslator {
      */
     constructor(options) {
         super(options);
-    }
 
-    async initialize() {
-        this.worker = {
-            ...await this.loadWorker(),
-            idle: true
-        };
+        this.worker = new Promise(async (accept, reject) => {
+            try {
+                accept({
+                    ...await this.loadWorker(),
+                    idle: true
+                });
+            } catch (error) {
+                reject(error)
+            }
+        });
     }
 
     translate(request) {
@@ -699,21 +695,19 @@ class BergamotLatencyOptimisedTranslator extends BergamotTranslator {
     }
     
     notify() {
-        requestIdleCallback(async () => {
+        setTimeout(async () => {
             if (!this.pending)
                 return;
 
-            if (!this.worker)
-                await this.initialize();
+            const worker = await this.worker;
 
-            if (!this.worker.idle)
+            if (!worker.idle)
                 return;
 
             const task = this.pending;
             this.pending = null;
 
-            this.worker.idle = false;
-            const {client} = this.worker;
+            worker.idle = false;
 
             try {
                 const {request} = task;
@@ -721,14 +715,14 @@ class BergamotLatencyOptimisedTranslator extends BergamotTranslator {
                 const models = await this.getModels(request)
 
                 await Promise.all(models.map(async ({from, to}) => {
-                    if (!await client.hasTranslationModel({from, to})) {
+                    if (!await worker.exports.hasTranslationModel({from, to})) {
                         const buffers = await this.getTranslationModel({from, to});
-                        await client.loadTranslationModel({from, to}, buffers);
+                        await worker.exports.loadTranslationModel({from, to}, buffers);
                     }
                 }));
 
                 const {text, html, qualityScores} = request;
-                const responses = await client.translate({
+                const responses = await worker.exports.translate({
                     models: models.map(({from,to}) => ({from, to})),
                     texts: [{text, html, qualityScores}]
                 });
@@ -737,11 +731,11 @@ class BergamotLatencyOptimisedTranslator extends BergamotTranslator {
             } catch (e) {
                 task.reject(e);
             }
-            this.worker.idle = true;
+            worker.idle = true;
 
             // Is there more work to be done? Do another idleRequest
             if (this.pending)
                 this.notify();
-        }, {timeout: 500});
+        });
     }
 }

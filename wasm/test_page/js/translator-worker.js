@@ -61,7 +61,15 @@ class BergamotTranslatorWorker {
     static NATIVE_INT_GEMM = 'mozIntGemm';
 
     /**
+     * Empty because we can't do async constructors yet. It is the
+     * responsibility of whoever owns this WebWorker to call `initialize()`.
+     */
+    constructor(options) {}
+
+    /**
      * Instantiates a new translation worker with optional options object.
+     * If this call succeeds, the WASM runtime is loaded and ready.
+     * 
      * Available options are:
      *   useNativeIntGemm: {true | false} defaults to false. If true, it will
      *                     attempt to link to the intgemm module available in
@@ -73,13 +81,9 @@ class BergamotTranslatorWorker {
      *                     value.
      * @param {{useNativeIntGemm: boolean, cacheSize: number}} options
      */
-    constructor(options) {
+    async initialize(options) {
         this.options = options || {};
-
         this.models = new Map(); // Map<str,Promise<TranslationModel>>
-    }
-
-    async initialize() {
         this.module = await this.loadModule();
         this.service = await this.loadTranslationService();
     }
@@ -343,49 +347,28 @@ function cloneError(error) {
     };
 }
 
-function main(worker) {
-    self.onmessage = async function({data: {id, name, args}}) {
-        if (!id)
-            console.error('Received message without id', arguments[0]);
-
-        try {
-            if (typeof worker[name] !== 'function')
-                throw TypeError(`worker[${name}] is not a function`);
-
-            // Using `Promise.resolve` to await any promises that worker[name]
-            // possibly returns.
-            const result = await Promise.resolve(Reflect.apply(worker[name], worker, args));
-            self.postMessage({id, result});
-        } catch (error) {
-            self.postMessage({
-                id,
-                error: cloneError(error)
-            })
-        }
-    }
-}
+// (Constructor doesn't really do anything, we need to call `initialize()`
+// first before using it. That happens from outside.)
+const worker = new BergamotTranslatorWorker();
 
 // First wait for an options object that contains all the info we need to 
 // configure the worker. Then replace onmessage with our real receiver.
-onmessage = async ({data}) => {
-    if (!data.options){
-        console.warn('Did not receive initial message with options');
-        return;
-    }
+onmessage = async function({data: {id, name, args}}) {
+    if (!id)
+        console.error('Received message without id', arguments[0]);
 
     try {
-        const worker = new BergamotTranslatorWorker(data.options);
-        
-        // Wait for worker to properly initialize
-        await worker.initialize();
+        if (typeof worker[name] !== 'function')
+            throw TypeError(`worker[${name}] is not a function`);
 
-        // Reply to the options initialisation message with an OK
-        self.postMessage({ok: true});
-
-        // Start running the main loop
-        main(worker);
+        // Using `Promise.resolve` to await any promises that worker[name]
+        // possibly returns.
+        const result = await Promise.resolve(Reflect.apply(worker[name], worker, args));
+        self.postMessage({id, result});
     } catch (error) {
-        self.postMessage({ok: false, error: cloneError(error)});
-        // throw error;
+        self.postMessage({
+            id,
+            error: cloneError(error)
+        })
     }
 };

@@ -47,8 +47,9 @@ async function main() {
       workerUrl: 'js/translator-worker.js'
     });
 
-    // Not strictly necessary, but useful for early error detection
-    await translator.initialize();
+    // Not strictly necessary, but useful for early error detection. Not really
+    // part of the public API, so don't mess with that return value plz!
+    const worker_ = await translator.worker;
 
     const translate = async () => {
       try {
@@ -82,7 +83,7 @@ async function main() {
         
         alert(`Error during translation: ${error}\n${error.stack}`);
       } finally {
-        $('.app').classList.toggle('loading', translator.worker && !translator.worker.idle);
+        $('.app').classList.toggle('loading', !worker_.idle);
       }
     }
 

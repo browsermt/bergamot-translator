@@ -8,6 +8,12 @@
  */
 
 /**
+ * @typedef {Object} TranslationResponse
+ * @property {TranslationRequest} request
+ * @property {{text: string}} target
+ */
+
+/**
  * Wrapper around bergamot-translator and model management. You only need
  * to call translate() which is async, the helper will manage execution by
  * itself.
@@ -650,14 +656,14 @@ class SupersededError extends Error {}
  */
 class BergamotLatencyOptimisedTranslator extends BergamotTranslator {
     /**
-     * @type {{idle:boolean, worker:Worker, client:Proxy<TranslationWorker>} | null}
+     * @type {Promise<{idle:boolean, worker:Worker, exports:Proxy<TranslationWorker>}>}
      */
-    worker = null;
+    worker;
 
     /**
-     * @type {TranslationRequest | null}
+     * @type {{request: TranslationRequest, accept:(TranslationResponse), reject:(Error)} | null}
      */
-    pending = null;
+    pending;
 
     /**
      * @param {{
@@ -672,10 +678,13 @@ class BergamotLatencyOptimisedTranslator extends BergamotTranslator {
     constructor(options) {
         super(options);
 
+        // Exposing the this.loadWorker() returned promise through this.worker
+        // so that you can use that to catch any errors that happened during
+        // loading.
         this.worker = new Promise(async (accept, reject) => {
             try {
                 accept({
-                    ...await this.loadWorker(),
+                    ...await this.loadWorker(), // adds 'worker' and 'exports' properties
                     idle: true
                 });
             } catch (error) {
@@ -684,6 +693,13 @@ class BergamotLatencyOptimisedTranslator extends BergamotTranslator {
         });
     }
 
+    /**
+     * Sets `request` as the next translation to process. If there was already
+     * a translation waiting to be processed, their promise is rejected with a
+     * SupersededError.
+     * @param {TranslationRequest} request
+     * @return {Promise<TranslationResponse>}
+     */
     translate(request) {
         if (this.pending)
             this.pending.reject(new SupersededError());
@@ -699,14 +715,19 @@ class BergamotLatencyOptimisedTranslator extends BergamotTranslator {
             if (!this.pending)
                 return;
 
+            // Possibly wait for the worker to finish loading. After it loaded
+            // these calls are pretty much instantaneous.
             const worker = await this.worker;
 
+            // Is another notify() call hogging the worker? Then stop.
             if (!worker.idle)
                 return;
 
+            // Claim the pending translation request.
             const task = this.pending;
             this.pending = null;
 
+            // Mark the worker as occupied
             worker.idle = false;
 
             try {
@@ -731,6 +752,7 @@ class BergamotLatencyOptimisedTranslator extends BergamotTranslator {
             } catch (e) {
                 task.reject(e);
             }
+
             worker.idle = true;
 
             // Is there more work to be done? Do another idleRequest

@@ -87,6 +87,8 @@ async function main() {
       }
     }
 
+    // Wait for the language model registry to load. Once it is loaded, use
+    // it to fill the "from" and "to" language selection dropdowns.
     translator.registry.then(models => {
       const names = new Intl.DisplayNames(['en'], {type: 'language'});
 
@@ -114,12 +116,15 @@ async function main() {
       translate();
     })
 
+    // Translate on any change
     $('#input').addEventListener('input', translate);
     $('#lang-from').addEventListener('input', translate);
     $('#lang-to').addEventListener('input', translate);
 
+    // Hook up sentence boundary highlighting if that information is available.
     $('#output').addEventListener('mouseover', (e) => highlightSentence(e.target))
   } catch (error) {
+    // Catch CompileErrors because for those we know what to do.
     if (error.name === 'CompileError')
       $('#unsupported-browser').hidden = false;
     else

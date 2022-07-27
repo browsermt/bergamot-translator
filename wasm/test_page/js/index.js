@@ -40,6 +40,36 @@ function highlightSentence(element) {
   })
 }
 
+/**
+ * Very minimal WISYWIG editor. Just keyboard shortcuts for the IYKYK crowd.
+ */
+class Editor {
+  constructor(root) {
+    this.isApple = window.navigator.platform.startsWith('Mac');
+
+    this.root = root;
+    this.root.addEventListener('keydown', this.onkeydown.bind(this));
+
+    this.mapping = {
+      "b": "bold",
+      "i": "italic",
+      "u": "underline",
+    };
+  }
+
+  onkeydown(event) {
+    if (!(this.isApple ? event.metaKey : event.ctrlKey))
+      return;
+
+    if (!(event.key in this.mapping))
+      return;
+
+    document.execCommand(this.mapping[event.key], false, null);
+
+    event.preventDefault();
+  }
+}
+
 async function main() {
   try {
     const translator = new BergamotLatencyOptimisedTranslator({
@@ -115,6 +145,9 @@ async function main() {
       $('#lang-to').value = tmp;
       translate();
     })
+
+    // Simple WYSIWYG controls
+    const editor = new Editor($('#input'));
 
     // Translate on any change
     $('#input').addEventListener('input', translate);

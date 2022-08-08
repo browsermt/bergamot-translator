@@ -14,6 +14,19 @@
  */
 
 /**
+ * Thrown when a pending translation is replaced by another newer pending
+ * translation.
+ */
+class SupersededError extends Error {}
+
+
+/**
+ * Thrown when a translation was removed from the queue.
+ */
+class CancelledError extends Error {}
+
+
+/**
  * Wrapper around bergamot-translator and model management. You only need
  * to call translate() which is async, the helper will manage execution by
  * itself.
@@ -71,20 +84,6 @@
          * @type {(error: Error)}
          */
         this.onerror = err => console.error('WASM Translation Worker error:', err);
-    }
-
-    /**
-     * Destructor that stops and cleans up.
-     */
-    delete() {
-        // Empty the queue
-        this.remove(() => true);
-
-        // Terminate the workers
-        this.workers.forEach(({worker}) => worker.terminate());
-
-        // Remove any references to data we hold
-        this.buffers.clear();
     }
 
     /**
@@ -444,6 +443,18 @@ class BergamotBatchTranslator extends BergamotTranslator {
 
         this.onerror = err => console.error('WASM Translation Worker error:', err);
     }
+    
+    /**
+     * Destructor that stops and cleans up.
+     */
+    async delete() {
+        // Empty the queue
+        this.remove(() => true);
+
+        // Terminate the workers
+        this.workers.forEach(({worker}) => worker.terminate());
+    }
+
     /**
      * Makes sure queued work gets send to a worker. Will delay it till `idle`
      * to make sure the batches have been filled to some degree. Will keep
@@ -557,7 +568,7 @@ class BergamotBatchTranslator extends BergamotTranslator {
                     // Add error.request property to match response.request for
                     // a resolve() callback. Pretty useful if you don't want to
                     // do all kinds of Funcion.bind() dances.
-                    reject(Object.assign(new Error('removed by filter'), {request}));
+                    reject(Object.assign(new CancelledError('removed by filter'), {request}));
                     return;
                 }
 
@@ -606,7 +617,7 @@ class BergamotBatchTranslator extends BergamotTranslator {
      * then reuse the worker otherwise you'll just clog up its message queue.
      */
     async consumeBatch(batch, worker) {
-        performance.mark('BTConsumeBatch.start');
+        performance.mark('BergamotBatchTranslator.start');
 
         // Make sure the worker has all necessary models loaded. If not, tell it
         // first to load them.
@@ -641,15 +652,10 @@ class BergamotBatchTranslator extends BergamotTranslator {
             });
         });
         
-        performance.measure('BTConsumeBatch', 'BTConsumeBatch.start');
+        performance.measure('BergamotBatchTranslator', 'BergamotBatchTranslator.start');
     }
 }
 
-/**
- * Thrown when a pending translation is replaced by another newer pending
- * translation.
- */
-class SupersededError extends Error {}
 
 /**
  * Translator optimised for interactive use.
@@ -693,6 +699,21 @@ class BergamotLatencyOptimisedTranslator extends BergamotTranslator {
         });
     }
 
+    /**
+     * Destructor that stops and cleans up.
+     */
+    async delete() {
+        if (this.pending) {
+            this.pending.reject(new CancelledError('translator got deleted'));
+            this.pending = null;
+        }
+
+        // Terminate the workers
+        const {worker} = await this.worker;
+        worker.terminate();
+        this.worker = null;
+    }
+    
     /**
      * Sets `request` as the next translation to process. If there was already
      * a translation waiting to be processed, their promise is rejected with a

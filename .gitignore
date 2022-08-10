@@ -20,6 +20,7 @@ wasm/test_page/node_modules
 build-wasm
 models
 wasm/module/bergamot-translator-worker.*
+wasm/module/browsermt-bergamot-translator-*.tgz
 
 # VSCode
 .vscode

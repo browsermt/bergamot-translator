@@ -5,7 +5,86 @@
 // Global because importScripts is global.
 var Module = {};
 
+/**
+ * node.js compatibility: Fake GlobalWorkerScope that emulates being inside a
+ * WebWorker
+ */
+if (typeof self === 'undefined') {
+    global.Module = Module;
+
+    global.self = new class GlobalWorkerScope {
+        /** @type {import("node:worker_threads").MessagePort} */
+        #port;
+
+        constructor() {
+            this.#port = new Promise((accept) => {
+                import('node:worker_threads').then(({parentPort}) => accept(parentPort));
+            });
+        }
+
+        /**
+         * Add event listener to listen for messages posted to the worker.
+         * @param {string} eventName
+         * @param {(object)} callback
+         */
+        addEventListener(eventName, callback) {
+            this.#port.then(port => port.on(eventName, (data) => callback({data})));
+        }
+
+        /**
+         * Post message outside, to the owner of the Worker.
+         * @param {any} message
+         */
+        postMessage(message) {
+            this.#port.then(port => port.postMessage(message));
+        }
+
+        /**
+         * Unfaithful version of importScripts because the original is not
+         * async but for our purposes good enough.
+         * @param {...string} scripts - Paths to scripts to import in that order
+         */
+        async importScripts(...scripts) {
+            const {readFile} = await import('node:fs/promises');
+            const buffers = await Promise.all(scripts.map(pathname => readFile(pathname, {encoding: 'utf8'})));
+            buffers.forEach(code => eval.call(global, code));
+        }
+
+        /**
+         * Adds support for local file urls. Assumes anything that doesn't start
+         * with "http" to be a local path.
+         * @param {string} url - path or url
+         * @param {object?} options - See `fetch()` options
+         * @return {Promise<Response>}
+         */
+        async fetch(url, options) {
+            if (!url.startsWith('http')) {
+                const {readFile} = await import('node:fs/promises');
+                const buffer = await readFile(url);
+                const blob = new Blob([buffer]);
+                return new Response(blob, {
+                    status: 200,
+                    statusText: 'OK',
+                    headers: {
+                        'Content-Type': 'application/wasm',
+                        'Content-Length': blob.size.toString()
+                    }
+                });
+            }
+
+            return await fetch(url, options);
+        }
+    }
+}
+
 class YAML {
+    /**
+     * Parses YAML into dictionary. Does not interpret types, all values are a
+     * string or a list of strings. No support for objects other than the top
+     * level.
+     * @param {string} yaml
+     * @return {{[string]: string | string[]}}
+     */
     static parse(yaml) {
         const out = {};
 
@@ -32,6 +111,12 @@ class YAML {
         return out;
     }
 
+    /**
+     * Turns an object into a YAML string. No support for objects, only simple
+     * types and lists of simple types.
+     * @param {{[string]: string | number | boolean | string[]}} data
+     * @return {string}
+     */
     static stringify(data) {
         return Object.entries(data).reduce((str, [key, value]) => {
             let valstr = '';
@@ -47,7 +132,16 @@ class YAML {
     }
 }
 
+/**
+ * Wrapper around the bergamot-translator exported module that hides the need
+ * of working with C++ style data structures and does model management.
+ */
 class BergamotTranslatorWorker {
+    /**
+     * Map of expected symbol -> name of fallback symbol for functions that can
+     * be swizzled for a faster implementation. Firefox Nightly makes use of
+     * this.
+     */
     static GEMM_TO_FALLBACK_FUNCTIONS_MAP = {
         'int8_prepare_a': 'int8PrepareAFallback',
         'int8_prepare_b': 'int8PrepareBFallback',
@@ -58,6 +152,10 @@ class BergamotTranslatorWorker {
         'int8_select_columns_of_b': 'int8SelectColumnsOfBFallback'
     };
 
+    /**
+     * Name of module exported by Firefox Nightly that exports an optimised
+     * implementation of the symbols mentioned above.
+     */
     static NATIVE_INT_GEMM = 'mozIntGemm';
 
     /**
@@ -111,8 +209,6 @@ class BergamotTranslatorWorker {
             return this.linkFallbackIntGemm(info);
         }
 
-        console.info('Using native gemm');
-
         return instance.exports;
     }
 
@@ -128,8 +224,6 @@ class BergamotTranslatorWorker {
             return [key, (...args) => Module['asm'][name](...args)]
         });
 
-        console.info('Using fallback gemm');
-
         return Object.fromEntries(mapping);
     }
 
@@ -142,7 +236,7 @@ class BergamotTranslatorWorker {
     loadModule() {
         return new Promise(async (resolve, reject) => {
             try {
-                const response = await fetch('bergamot-translator-worker.wasm');
+                const response = await self.fetch('./bergamot-translator-worker.wasm');
 
                 Object.assign(Module, {
                     instantiateWasm: (info, accept) => {
@@ -164,7 +258,7 @@ class BergamotTranslatorWorker {
                 });
 
                 // Emscripten glue code
-                importScripts('bergamot-translator-worker.js');
+                self.importScripts('bergamot-translator-worker.js');
             } catch (err) {
                 reject(err);
             }
@@ -336,6 +430,14 @@ class BergamotTranslatorWorker {
 /**
  * Because you can't put an Error object in a message. But you can post a
  * generic object!
+ * @param {Error} error
+ * @return {{
+ *  name: string?,
+ *  message: string?,
+ *  fileName: string?,
+ *  lineNumber: number?,
+ *  columnNumber: number?
+ * }}
  */
 function cloneError(error) {
     return {
@@ -348,12 +450,10 @@ function cloneError(error) {
 }
 
 // (Constructor doesn't really do anything, we need to call `initialize()`
-// first before using it. That happens from outside.)
+// first before using it. That happens from outside the worker.)
 const worker = new BergamotTranslatorWorker();
 
-// First wait for an options object that contains all the info we need to 
-// configure the worker. Then replace onmessage with our real receiver.
-onmessage = async function({data: {id, name, args}}) {
+self.addEventListener('message', async function({data: {id, name, args}}) {
     if (!id)
         console.error('Received message without id', arguments[0]);
 
@@ -371,4 +471,4 @@ onmessage = async function({data: {id, name, args}}) {
             error: cloneError(error)
         })
     }
-};
+});

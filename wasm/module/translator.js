@@ -13,6 +13,30 @@
  * @property {{text: string}} target
  */
 
+if (!(typeof window !== 'undefined' && window.Worker)) {
+    globalThis.Worker = class {
+        #worker;
+
+        constructor(url) {
+            this.#worker = new Promise((accept) => {
+                import('node:worker_threads').then(({Worker}) => accept(new Worker(url)));
+            });
+        }
+
+        addEventListener(eventName, callback) {
+            this.#worker.then(worker => worker.on(eventName, (data) => callback({data})));
+        }
+
+        postMessage(message) {
+            this.#worker.then(worker => worker.postMessage(message));
+        }
+
+        terminate() {
+            this.#worker.then(worker => worker.terminate());
+        }
+    }
+}
+
 /**
  * Thrown when a pending translation is replaced by another newer pending
  * translation.
@@ -39,14 +63,15 @@ export class CancelledError extends Error {}
      *  workerUrl?: string,
      *  registryUrl?: string
      *  pivotLanguage?: string?
+     *  onerror?: (err: Error)
      * }} options
      */
     constructor(options) {
         this.options = options || {};
 
-        this.registryUrl = options.registryUrl || 'https://storage.googleapis.com/bergamot-models-sandbox/0.3.3/registry.json';
+        this.registryUrl = this.options.registryUrl || 'https://storage.googleapis.com/bergamot-models-sandbox/0.3.3/registry.json';
 
-        this.downloadTimeout = options.downloadTimeout || 60000;
+        this.downloadTimeout = this.options.downloadTimeout || 60000;
 
         /**
          * registry of all available models and their urls
@@ -63,7 +88,7 @@ export class CancelledError extends Error {}
         /**
          * @type {string?}
          */
-        this.pivotLanguage = 'pivotLanguage' in options ? options.pivotLanguage : 'en';
+        this.pivotLanguage = 'pivotLanguage' in this.options ? options.pivotLanguage : 'en';
         
         /**
          * A map of language-pairs to a list of models you need for it.
@@ -72,16 +97,16 @@ export class CancelledError extends Error {}
         this.models = new Map();
 
         /**
-         * @type {string} URL for Web worker
+         * @type {string | URL} URL for Web worker
          */
-        this.workerUrl = options.workerUrl || new URL('./translator-worker.js', import.meta.url);
+        this.workerUrl = this.options.workerUrl || new URL('./translator-worker.js', import.meta.url);
 
         /**
          * Error handler for all errors that are async, not tied to a specific
          * call and that are unrecoverable.
          * @type {(error: Error)}
          */
-        this.onerror = err => console.error('WASM Translation Worker error:', err);
+        this.onerror = this.options.onerror || (err => console.error('WASM Translation Worker error:', err));
     }
 
     /**
@@ -113,7 +138,7 @@ export class CancelledError extends Error {}
         });
 
         // … receive responses
-        worker.onmessage = function({data: {id, result, error}}) {
+        worker.addEventListener('message', function({data: {id, result, error}}) {
             if (!pending.has(id)) {
                 console.debug('Received message with unknown id:', arguments[0]);
                 throw new Error(`BergamotTranslator received response from worker to unknown call '${id}'`);
@@ -126,10 +151,10 @@ export class CancelledError extends Error {}
                 reject(Object.assign(new Error(), error));
             else
                 accept(result);
-        }
+        });
 
         // … and general errors
-        worker.onerror = this.onerror.bind(this);
+        worker.addEventListener('error', this.onerror.bind(this));
 
         // Await initialisation. This will also nicely error out if the WASM
         // runtime fails to load.
@@ -295,7 +320,7 @@ export class CancelledError extends Error {}
         // Start downloading the url, using the hex checksum to ask
         // `fetch()` to verify the download using subresource integrity 
         const response = await fetch(url, {
-            integrity: `sha256-${this.hexToBase64(checksum)}`,
+            // integrity: `sha256-${this.hexToBase64(checksum)}`,
             signal: abort.signal
         });
 
@@ -409,7 +434,7 @@ export class BatchTranslator {
          * Maximum number of workers
          * @type {number} 
          */
-        this.workerLimit = Math.max(options.workers || 0, 1);
+        this.workerLimit = Math.max(options?.workers || 0, 1);
 
         /**
          * List of batches we push() to & shift() from using `enqueue`.
@@ -440,9 +465,9 @@ export class BatchTranslator {
          * to be translated.
          * @type {Number}
          */
-        this.batchSize = Math.max(options.batchSize || 8, 1);
+        this.batchSize = Math.max(options?.batchSize || 8, 1);
 
-        this.onerror = err => console.error('WASM Translation Worker error:', err);
+        this.onerror = options?.onerror || (err => console.error('WASM Translation Worker error:', err));
     }
     
     /**

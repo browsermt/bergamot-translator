@@ -2,14 +2,7 @@
   "name": "@browsermt/bergamot-translator",
   "version": "0.4.5",
   "description": "Cross platform C++ library focusing on optimized machine translation on the consumer-grade device.",
-  "main": "translator.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "files": [
-    "*.js",
-    "*.wasm"
-  ],
+  "homepage": "https://github.com/browsermt/bergamot-translator#readme",
   "repository": {
     "type": "git",
     "url": "git+ssh://git@github.com/browsermt/bergamot-translator.git"
@@ -23,5 +16,20 @@
   "bugs": {
     "url": "https://github.com/browsermt/bergamot-translator/issues"
   },
-  "homepage": "https://github.com/browsermt/bergamot-translator#readme"
+  "type": "module",
+  "main": "translator.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "files": [
+    "bergamot-translator-worker.js",
+    "bergamot-translator-worker.wasm",
+    "translator-worker.js",
+    "translator.js",
+    "main.js"
+  ],
+  "scripts": {
+    "build": "cd ../../ && ./build-wasm-docker.sh",
+    "test": "echo \"Hello world!\" | node main.js"
+  }
 }

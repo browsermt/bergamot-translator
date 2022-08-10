@@ -1,3 +1,5 @@
+import {LatencyOptimisedTranslator, TranslatorBacking, SupersededError} from '../node_modules/@browsermt/bergamot-translator/translator.js';
+
 function $(selector) {
   return document.querySelector(selector);
 }
@@ -72,10 +74,13 @@ class Editor {
 
 async function main() {
   try {
-    const translator = new BergamotLatencyOptimisedTranslator({
-      cacheSize: 2^13,
-      workerUrl: 'js/translator-worker.js'
-    });
+    const options = {
+      cacheSize: 2^13
+    };
+    
+    const backing = new TranslatorBacking(options);
+
+    const translator = new LatencyOptimisedTranslator(options, backing);
 
     // Not strictly necessary, but useful for early error detection. Not really
     // part of the public API, so don't mess with that return value plz!
@@ -88,7 +93,7 @@ async function main() {
         
         // Querying models to see whether quality estimation is supported by all
         // of them.
-        const models = await translator.getModels({from, to});
+        const models = await backing.getModels({from, to});
         const qualityScores = models.every(model => 'qualityModel' in model.files);
 
         $('.app').classList.add('loading');
@@ -119,7 +124,7 @@ async function main() {
 
     // Wait for the language model registry to load. Once it is loaded, use
     // it to fill the "from" and "to" language selection dropdowns.
-    translator.registry.then(models => {
+    backing.registry.then(models => {
       const names = new Intl.DisplayNames(['en'], {type: 'language'});
 
       ['from', 'to'].forEach(field => {

@@ -17,21 +17,19 @@
  * Thrown when a pending translation is replaced by another newer pending
  * translation.
  */
-class SupersededError extends Error {}
+export class SupersededError extends Error {}
 
 
 /**
  * Thrown when a translation was removed from the queue.
  */
-class CancelledError extends Error {}
+export class CancelledError extends Error {}
 
 
 /**
- * Wrapper around bergamot-translator and model management. You only need
- * to call translate() which is async, the helper will manage execution by
- * itself.
+ * Wrapper around bergamot-translator loading and model management.
  */
- class BergamotTranslator {
+ export class TranslatorBacking {
     
     /**
      * @param {{
@@ -76,7 +74,7 @@ class CancelledError extends Error {}
         /**
          * @type {string} URL for Web worker
          */
-        this.workerUrl = options.workerUrl || 'translation-worker.js';
+        this.workerUrl = options.workerUrl || new URL('./translator-worker.js', import.meta.url);
 
         /**
          * Error handler for all errors that are async, not tied to a specific
@@ -382,7 +380,7 @@ class CancelledError extends Error {}
  * Translator balancing between throughput and latency. Can use multiple worker
  * threads.
  */
-class BergamotBatchTranslator extends BergamotTranslator {
+export class BatchTranslator {
     /**
      * @param {{
      *  cacheSize?: number,
@@ -395,8 +393,11 @@ class BergamotBatchTranslator extends BergamotTranslator {
      *  pivotLanguage?: string?
      * }} options
      */
-    constructor(options) {
-        super(options);
+    constructor(options, backing) {
+        if (!backing)
+            backing = new TranslatorBacking(options);
+
+        this.backing = backing;
 
         /**
          * @type {Array<{idle:Boolean, worker:Proxy}>} List of active workers
@@ -408,7 +409,7 @@ class BergamotBatchTranslator extends BergamotTranslator {
          * Maximum number of workers
          * @type {number} 
          */
-        this.workerLimit = Math.max(this.options.workers || 0, 1);
+        this.workerLimit = Math.max(options.workers || 0, 1);
 
         /**
          * List of batches we push() to & shift() from using `enqueue`.
@@ -439,7 +440,7 @@ class BergamotBatchTranslator extends BergamotTranslator {
          * to be translated.
          * @type {Number}
          */
-        this.batchSize = Math.max(this.options.batchSize || 8, 1);
+        this.batchSize = Math.max(options.batchSize || 8, 1);
 
         this.onerror = err => console.error('WASM Translation Worker error:', err);
     }
@@ -479,7 +480,7 @@ class BergamotBatchTranslator extends BergamotTranslator {
                     this.workers.push(placeholder);
 
                     // adds `worker` and `exports` props
-                    Object.assign(placeholder, await this.loadWorker());
+                    Object.assign(placeholder, await this.backing.loadWorker());
 
                     // At this point we know our new worker will be usable.
                     worker = placeholder;
@@ -538,7 +539,7 @@ class BergamotBatchTranslator extends BergamotTranslator {
 
                 // (Fetching models first because if we would do it between looking
                 // for a batch and making a new one, we end up with a race condition.)
-                const models = await this.getModels(request);
+                const models = await this.backing.getModels(request);
                 
                 // Put the request and its callbacks into a fitting batch
                 this.enqueue({key, models, request, resolve, reject, priority});
@@ -623,7 +624,7 @@ class BergamotBatchTranslator extends BergamotTranslator {
         // first to load them.
         await Promise.all(batch.models.map(async ({from, to}) => {
             if (!await worker.hasTranslationModel({from, to})) {
-                const buffers = await this.getTranslationModel({from, to});
+                const buffers = await this.backing.getTranslationModel({from, to});
                 await worker.loadTranslationModel({from, to}, buffers);
             }
         }));
@@ -660,7 +661,12 @@ class BergamotBatchTranslator extends BergamotTranslator {
 /**
  * Translator optimised for interactive use.
  */
-class BergamotLatencyOptimisedTranslator extends BergamotTranslator {
+export class LatencyOptimisedTranslator {
+    /**
+     * @type {TranslatorBacking}
+     */
+    backing;
+
     /**
      * @type {Promise<{idle:boolean, worker:Worker, exports:Proxy<TranslationWorker>}>}
      */
@@ -681,8 +687,11 @@ class BergamotLatencyOptimisedTranslator extends BergamotTranslator {
      *  pivotLanguage?: string?
      * }} options
      */
-    constructor(options) {
-        super(options);
+    constructor(options, backing) {
+        if (!backing)
+            backing = new TranslatorBacking(options);
+
+        this.backing = backing;
 
         // Exposing the this.loadWorker() returned promise through this.worker
         // so that you can use that to catch any errors that happened during
@@ -690,7 +699,7 @@ class BergamotLatencyOptimisedTranslator extends BergamotTranslator {
         this.worker = new Promise(async (accept, reject) => {
             try {
                 accept({
-                    ...await this.loadWorker(), // adds 'worker' and 'exports' properties
+                    ...await this.backing.loadWorker(), // adds 'worker' and 'exports' properties
                     idle: true
                 });
             } catch (error) {
@@ -754,11 +763,11 @@ class BergamotLatencyOptimisedTranslator extends BergamotTranslator {
             try {
                 const {request} = task;
                 
-                const models = await this.getModels(request)
+                const models = await this.backing.getModels(request)
 
                 await Promise.all(models.map(async ({from, to}) => {
                     if (!await worker.exports.hasTranslationModel({from, to})) {
-                        const buffers = await this.getTranslationModel({from, to});
+                        const buffers = await this.backing.getTranslationModel({from, to});
                         await worker.exports.loadTranslationModel({from, to}, buffers);
                     }
                 }));

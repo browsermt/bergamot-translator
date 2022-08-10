@@ -19,7 +19,7 @@ _deps
 wasm/test_page/node_modules
 build-wasm
 models
-wasm/test_page/js/bergamot-translator-worker.*
+wasm/module/bergamot-translator-worker.*
 
 # VSCode
 .vscode

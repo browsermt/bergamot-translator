@@ -26,6 +26,7 @@ body {
   overflow: hidden;
   min-height: 400px;
   max-width: 1024px;
+  max-height: 100%;
   margin: 1em auto;
 }
 
@@ -39,6 +40,8 @@ body {
   display: grid;
   grid-template-rows: auto 1fr;
   grid-gap: 1rem;
+  max-height: 100%;
+  overflow: hidden;
 }
 
 label {
@@ -84,6 +87,8 @@ textarea, [contenteditable], .output-area {
   resize: none;
   border-radius: 2px;
   border: 1px solid #ccc;
+  max-height: 100%;
+  overflow: auto;
 }
 
 button {

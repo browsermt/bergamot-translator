@@ -317,12 +317,19 @@ export class CancelledError extends Error {}
         const abort = new AbortController();
         const timeout = setTimeout(() => abort.abort(), this.downloadTimeout);
 
+        const options = {
+            integrity: `sha256-${this.hexToBase64(checksum)}`,
+            signal: abort.signal
+        };
+
+        // Disable the integrity check for NodeJS because of
+        // https://github.com/nodejs/undici/issues/1594
+        if (typeof window === 'undefined')
+            delete options['integrity'];
+
         // Start downloading the url, using the hex checksum to ask
         // `fetch()` to verify the download using subresource integrity 
-        const response = await fetch(url, {
-            // integrity: `sha256-${this.hexToBase64(checksum)}`,
-            signal: abort.signal
-        });
+        const response = await fetch(url, options);
 
         // Finish downloading (or crash due to timeout)
         const buffer = await response.arrayBuffer();

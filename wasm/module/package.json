@@ -32,7 +32,8 @@
     "emscripten_version": "3.1.8"
   },
   "scripts": {
-    "build": "mkdir -p ../../build-wasm && docker run --rm -v $(realpath ../../):/src -v $(realpath ../../build-wasm):/build -v $(pwd):/dst -w /build emscripten/emsdk:$npm_package_config_emscripten_version sh -c \"emcmake cmake -DCOMPILE_WASM=on -DWORMHOLE=off /src && emmake make -j2 && cp bergamot-translator-worker.{js,wasm} /dst\"",
+    "prepare": "test -f bergamot-translator-worker.wasm || npm run build",
+    "build": "mkdir -p ../../build-wasm && docker run --rm -v $(realpath ../../):/src -v $(realpath ../../build-wasm):/build -v $(pwd):/dst -w /build emscripten/emsdk:$npm_package_config_emscripten_version sh -c \"emcmake cmake -DCOMPILE_WASM=on -DWORMHOLE=off /src && emmake make -j2 && cp bergamot-translator-worker.wasm bergamot-translator-worker.js /dst\"",
     "test": "echo \"Hello world!\" | node main.js"
   }
 }

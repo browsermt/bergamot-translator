@@ -17,9 +17,8 @@ if (typeof self === 'undefined') {
         #port;
 
         constructor() {
-            this.#port = new Promise((accept) => {
-                import('node:worker_threads').then(({parentPort}) => accept(parentPort));
-            });
+            const {parentPort} = require('node:worker_threads');
+            this.#port = parentPort;
         }
 
         /**
@@ -28,7 +27,7 @@ if (typeof self === 'undefined') {
          * @param {(object)} callback
          */
         addEventListener(eventName, callback) {
-            this.#port.then(port => port.on(eventName, (data) => callback({data})));
+            this.#port.on(eventName, (data) => callback({data}));
         }
 
         /**
@@ -36,18 +35,19 @@ if (typeof self === 'undefined') {
          * @param {any} message
          */
         postMessage(message) {
-            this.#port.then(port => port.postMessage(message));
+            this.#port.postMessage(message);
         }
 
         /**
-         * Unfaithful version of importScripts because the original is not
-         * async but for our purposes good enough.
          * @param {...string} scripts - Paths to scripts to import in that order
          */
-        async importScripts(...scripts) {
-            const {readFile} = await import('node:fs/promises');
-            const buffers = await Promise.all(scripts.map(pathname => readFile(pathname, {encoding: 'utf8'})));
-            buffers.forEach(code => eval.call(global, code));
+        importScripts(...scripts) {
+            const {readFileSync} = require('node:fs');
+            const {join} = require('node:path');
+            for (let pathname of scripts) {
+                const script = readFileSync(join(__dirname, pathname), {encoding: 'utf-8'});
+                eval.call(global, script);
+            }
         }
 
         /**
@@ -58,9 +58,9 @@ if (typeof self === 'undefined') {
          * @return {Promise<Response>}
          */
         async fetch(url, options) {
-            if (!url.startsWith('http')) {
-                const {readFile} = await import('node:fs/promises');
-                const buffer = await readFile(url);
+            if (url.protocol === 'file:') {
+                const {readFile} = require('node:fs/promises');
+                const buffer = await readFile(url.pathname);
                 const blob = new Blob([buffer]);
                 return new Response(blob, {
                     status: 200,
@@ -73,6 +73,10 @@ if (typeof self === 'undefined') {
             }
 
             return await fetch(url, options);
+        }
+
+        get location() {
+            return new URL(`file://${__filename}`);
         }
     }
 }
@@ -236,7 +240,7 @@ class BergamotTranslatorWorker {
     loadModule() {
         return new Promise(async (resolve, reject) => {
             try {
-                const response = await self.fetch('./bergamot-translator-worker.wasm');
+                const response = await self.fetch(new URL('./bergamot-translator-worker.wasm', self.location));
 
                 Object.assign(Module, {
                     instantiateWasm: (info, accept) => {
@@ -434,18 +438,14 @@ class BergamotTranslatorWorker {
  * @return {{
  *  name: string?,
  *  message: string?,
- *  fileName: string?,
- *  lineNumber: number?,
- *  columnNumber: number?
+ *  stack: string?
  * }}
  */
 function cloneError(error) {
     return {
         name: error.name,
         message: error.message,
-        fileName: error.fileName,
-        lineNumber: error.lineNumber,
-        columnNumber: error.columnNumber
+        stack: error.stack
     };
 }
 

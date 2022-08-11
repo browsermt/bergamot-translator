@@ -18,8 +18,9 @@ if (!(typeof window !== 'undefined' && window.Worker)) {
         #worker;
 
         constructor(url) {
-            this.#worker = new Promise((accept) => {
-                import('node:worker_threads').then(({Worker}) => accept(new Worker(url)));
+            this.#worker = new Promise(async (accept) => {
+                const {Worker} = await import('node:worker_threads');
+                accept(new Worker(url));
             });
         }
 
@@ -99,7 +100,7 @@ export class CancelledError extends Error {}
         /**
          * @type {string | URL} URL for Web worker
          */
-        this.workerUrl = this.options.workerUrl || new URL('./translator-worker.js', import.meta.url);
+        this.workerUrl = this.options.workerUrl || new URL('./worker/translator-worker.js', import.meta.url);
 
         /**
          * Error handler for all errors that are async, not tied to a specific

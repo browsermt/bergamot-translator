@@ -22,9 +22,9 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "files": [
-    "bergamot-translator-worker.js",
-    "bergamot-translator-worker.wasm",
-    "translator-worker.js",
+    "worker/bergamot-translator-worker.js",
+    "worker/bergamot-translator-worker.wasm",
+    "worker/translator-worker.js",
     "translator.js",
     "main.js"
   ],

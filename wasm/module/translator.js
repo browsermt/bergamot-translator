@@ -72,7 +72,7 @@ export class CancelledError extends Error {}
 
         this.registryUrl = this.options.registryUrl || 'https://storage.googleapis.com/bergamot-models-sandbox/0.3.3/registry.json';
 
-        this.downloadTimeout = this.options.downloadTimeout || 60000;
+        this.downloadTimeout = 'downloadTimeout' in this.options ? parseInt(this.options.downloadTimeout) : 60000;
 
         /**
          * registry of all available models and their urls
@@ -306,8 +306,7 @@ export class CancelledError extends Error {}
     }
 
     /**
-     * Helper to download file from the web (and store it in the cache if that
-     * is passed in as well). Verifies the checksum.
+     * Helper to download file from the web. Verifies the checksum.
      * @param {string} url
      * @param {string} checksum sha256 checksum as hexadecimal string
      * @param {Cache?} cache optional cache to save response into
@@ -316,7 +315,7 @@ export class CancelledError extends Error {}
     async fetch(url, checksum) {
         // Rig up a timeout cancel signal for our fetch
         const abort = new AbortController();
-        const timeout = setTimeout(() => abort.abort(), this.downloadTimeout);
+        const timeout = this.downloadTimeout ? setTimeout(() => abort.abort(), this.downloadTimeout) : null;
 
         const options = {
             integrity: `sha256-${this.hexToBase64(checksum)}`,

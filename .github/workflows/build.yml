@@ -280,6 +280,29 @@ jobs:
                 ${{github.workspace}}/build-wasm/bergamot-translator-worker.wasm
                 ${{github.workspace}}/build-wasm/bergamot-translator-worker.js.bak
 
+    
+    upload-wasm:
+      name: "Upload node package to NPM"
+      runs-on: ubuntu-latest
+      if: ${{ startsWith(github.ref, 'refs/tags/v') }}
+      needs: [build-wasm]
+      steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: wasm-artefacts
+          path: wasm/module/worker
+
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '18.x'
+          registry-url: 'https://registry.npmjs.org'
+      - run: npm ci
+      - run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+
 
   # Try to upload a release using https://github.com/marvinpinto/actions/issues/177#issuecomment-917605585 as a model
     release-latest:

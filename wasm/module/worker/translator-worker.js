@@ -17,7 +17,7 @@ if (typeof self === 'undefined') {
         #port;
 
         constructor() {
-            const {parentPort} = require('node:worker_threads');
+            const {parentPort} = require(/* webpackIgnore: true */ 'node:worker_threads');
             this.#port = parentPort;
         }
 
@@ -42,8 +42,8 @@ if (typeof self === 'undefined') {
          * @param {...string} scripts - Paths to scripts to import in that order
          */
         importScripts(...scripts) {
-            const {readFileSync} = require('node:fs');
-            const {join} = require('node:path');
+            const {readFileSync} = require(/* webpackIgnore: true */ 'node:fs');
+            const {join} = require(/* webpackIgnore: true */ 'node:path');
             for (let pathname of scripts) {
                 const script = readFileSync(join(__dirname, pathname), {encoding: 'utf-8'});
                 eval.call(global, script);
@@ -59,7 +59,7 @@ if (typeof self === 'undefined') {
          */
         async fetch(url, options) {
             if (url.protocol === 'file:') {
-                const {readFile} = require('node:fs/promises');
+                const {readFile} = require(/* webpackIgnore: true */ 'node:fs/promises');
                 const buffer = await readFile(url.pathname);
                 const blob = new Blob([buffer]);
                 return new Response(blob, {

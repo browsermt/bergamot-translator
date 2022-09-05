@@ -13,13 +13,16 @@
  * @property {{text: string}} target
  */
 
+/**
+ * NodeJS compatibility, a thin WebWorker layer around node:worker_threads.
+ */
 if (!(typeof window !== 'undefined' && window.Worker)) {
     globalThis.Worker = class {
         #worker;
 
         constructor(url) {
             this.#worker = new Promise(async (accept) => {
-                const {Worker} = await import('node:worker_threads');
+                const {Worker} = await import(/* webpackIgnore: true */ 'node:worker_threads');
                 accept(new Worker(url));
             });
         }

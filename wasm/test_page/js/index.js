@@ -75,10 +75,23 @@ class Editor {
 async function main() {
   try {
     const options = {
-      cacheSize: 2^13
+      cacheSize: 2^13,
+      downloadTimeout: null // Disable timeout
     };
     
     const backing = new TranslatorBacking(options);
+
+    let pending = 0; // Number of pending requests
+
+    // Patch the fetch() function to track number of pending requests
+    backing.fetch = async function(url, hash) {
+      try {
+        $('.app').classList.toggle('loading', ++pending > 0);
+        return await TranslatorBacking.prototype.fetch.call(backing, url, hash);
+      } finally {
+        $('.app').classList.toggle('loading', --pending > 0);
+      }
+    };
 
     const translator = new LatencyOptimisedTranslator(options, backing);
 
@@ -96,7 +109,7 @@ async function main() {
         const models = await backing.getModels({from, to});
         const qualityScores = models.every(model => 'qualityModel' in model.files);
 
-        $('.app').classList.add('loading');
+        $('.app').classList.add('translating');
 
         const response = await translator.translate({
           from,
@@ -118,7 +131,7 @@ async function main() {
         
         alert(`Error during translation: ${error}\n${error.stack}`);
       } finally {
-        $('.app').classList.toggle('loading', !worker_.idle);
+        $('.app').classList.toggle('translating', !worker_.idle);
       }
     }
 

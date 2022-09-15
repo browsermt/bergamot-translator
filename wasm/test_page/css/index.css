@@ -127,11 +127,19 @@ button:hover {
   background: rgba(255, 255, 128, 0.8);
 }
 
-.app.loading #output::after {
+.app.translating #output::after {
   position: absolute;
   bottom: 4px;
   right: 4px;
   content: 'Translating…';
+}
+
+/* Loading indicator takes priority, so below the .translating selector */
+.app.loading #output::after {
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  content: 'Loading translation model…';
 }
 
 .app {

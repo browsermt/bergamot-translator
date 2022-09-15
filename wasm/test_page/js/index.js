@@ -95,10 +95,6 @@ async function main() {
 
     const translator = new LatencyOptimisedTranslator(options, backing);
 
-    // Not strictly necessary, but useful for early error detection. Not really
-    // part of the public API, so don't mess with that return value plz!
-    const worker_ = await translator.worker;
-
     const translate = async () => {
       try {
         const from = $('#lang-from').value;
@@ -131,7 +127,8 @@ async function main() {
         
         alert(`Error during translation: ${error}\n${error.stack}`);
       } finally {
-        $('.app').classList.toggle('translating', !worker_.idle);
+        const worker = await Promise.race([translator.worker, Promise.resolve(null)]);
+        $('.app').classList.toggle('translating', worker === null || !worker.idle);
       }
     }
 

@@ -73,7 +73,7 @@ export class CancelledError extends Error {}
     constructor(options) {
         this.options = options || {};
 
-        this.registryUrl = this.options.registryUrl || 'https://storage.googleapis.com/bergamot-models-sandbox/0.3.3/registry.json';
+        this.registryUrl = this.options.registryUrl || 'https://bergamot.s3.amazonaws.com/models/index.json';
 
         this.downloadTimeout = 'downloadTimeout' in this.options ? parseInt(this.options.downloadTimeout) : 60000;
 
@@ -201,7 +201,7 @@ export class CancelledError extends Error {}
      * }>}
      */
     async loadModelRegistery() {
-        const response = await fetch(this.registryUrl);
+        const response = await fetch(this.registryUrl, {credentials: 'omit'});
         const registry = await response.json();
 
         // Add 'from' and 'to' keys for each model.
@@ -250,9 +250,6 @@ export class CancelledError extends Error {}
     async loadTranslationModel({from, to}) {
         performance.mark(`loadTranslationModule.${JSON.stringify({from, to})}`);
 
-        // Subdirectory where all model files reside
-        const baseUrl = this.registryUrl.substring(0, this.registryUrl.lastIndexOf('/'));
-
         // Find that model in the registry which will tell us about its files
         const entries = (await this.registry).filter(model => model.from == from && model.to == to);
 
@@ -263,12 +260,13 @@ export class CancelledError extends Error {}
 
         // Download all files mentioned in the registry entry.
         const buffers = Object.fromEntries(await Promise.all(Array.from(Object.entries(files), async ([part, file]) => {
-            // Special case where qualityModel is not part of the model
-            if (file === undefined)
+            // Special case where qualityModel is not part of the model, and this
+            // should also catch the `config` case.
+            if (file === undefined || file.name === undefined)
                 return [part, null];
 
             try {
-                return [part, await this.fetch(`${baseUrl}/${from}${to}/${file.name}`, file.expectedSha256Hash)];
+                return [part, await this.fetch(file.name, file.expectedSha256Hash)];
             } catch (cause) {
                 throw new Error(`Could not fetch ${file.name} for ${from}->${to} model`, {cause});
             }
@@ -296,6 +294,10 @@ export class CancelledError extends Error {}
         if (files.qualityModel)
             config['skip-cost'] = false;
 
+        // Allow the registry to also specify marian configuration parameters
+        if (files.config)
+            Object.assign(config, files.config);
+
         // Translate to generic bergamot-translator format that also supports
         // separate vocabularies for input & output language, and calls 'lex'
         // a more descriptive 'shortlist'.
@@ -311,7 +313,7 @@ export class CancelledError extends Error {}
     /**
      * Helper to download file from the web. Verifies the checksum.
      * @param {string} url
-     * @param {string} checksum sha256 checksum as hexadecimal string
+     * @param {string?} checksum sha256 checksum as hexadecimal string
      * @param {Cache?} cache optional cache to save response into
      * @returns {Promise<ArrayBuffer>}
      */
@@ -321,9 +323,12 @@ export class CancelledError extends Error {}
         const timeout = this.downloadTimeout ? setTimeout(() => abort.abort(), this.downloadTimeout) : null;
 
         const options = {
-            integrity: `sha256-${this.hexToBase64(checksum)}`,
-            signal: abort.signal
+            credentials:  'omit',
+            signal: abort.signal,
         };
+
+        if (checksum)
+            options['integrity'] = `sha256-${this.hexToBase64(checksum)}`;
 
         // Disable the integrity check for NodeJS because of
         // https://github.com/nodejs/undici/issues/1594

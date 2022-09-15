@@ -1,6 +1,6 @@
 {
   "name": "@browsermt/bergamot-translator",
-  "version": "0.4.6",
+  "version": "0.4.7",
   "description": "Cross platform C++ library focusing on optimized machine translation on the consumer-grade device.",
   "homepage": "https://github.com/browsermt/bergamot-translator#readme",
   "repository": {

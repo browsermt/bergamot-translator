@@ -225,11 +225,18 @@ export class CancelledError extends Error {}
      *   qualityModel: ArrayBuffer?
      * }>}
      */
-    getTranslationModel({from, to}) {
+    getTranslationModel({from, to}, options) {
         const key = JSON.stringify({from, to});
 
-        if (!this.buffers.has(key))
-            this.buffers.set(key, this.loadTranslationModel({from, to}));
+        if (!this.buffers.has(key)) {
+            const promise = this.loadTranslationModel({from, to}, options);
+
+            // set the promise so we return the same promise when its still pending
+            this.buffers.set(key, promise);
+
+            // But if loading fails, remove the promise again so we can try again later
+            promise.catch(err => this.buffers.delete(key))
+        }
 
         return this.buffers.get(key);
     }
@@ -239,6 +246,7 @@ export class CancelledError extends Error {}
      * ArrayBuffers. These can then be passed to a TranslationWorker thread
      * to instantiate a TranslationModel inside the WASM vm.
      * @param {{from:string, to:string}}
+     * @param {{signal:AbortSignal?}?}
      * @return {Promise<{
      *   model: ArrayBuffer,
      *   vocab: ArrayBuffer,
@@ -247,7 +255,7 @@ export class CancelledError extends Error {}
      *   config: string?
      * }>}
      */
-    async loadTranslationModel({from, to}) {
+    async loadTranslationModel({from, to}, options) {
         performance.mark(`loadTranslationModule.${JSON.stringify({from, to})}`);
 
         // Find that model in the registry which will tell us about its files
@@ -258,19 +266,32 @@ export class CancelledError extends Error {}
 
         const files = entries[0].files;
 
-        // Download all files mentioned in the registry entry.
-        const buffers = Object.fromEntries(await Promise.all(Array.from(Object.entries(files), async ([part, file]) => {
-            // Special case where qualityModel is not part of the model, and this
-            // should also catch the `config` case.
-            if (file === undefined || file.name === undefined)
-                return [part, null];
+        // Promise that resolves (or rejects really) when the abort signal hits
+        const abort = new Promise((accept, reject) => {
+            if (options?.signal)
+                options.signal.addEventListener('abort', () => {
+                    console.log('loadTranslationModel aborted', {from,to});
+                    reject(new CancelledError('abort signal'))
+                });
+        });
 
-            try {
-                return [part, await this.fetch(file.name, file.expectedSha256Hash)];
-            } catch (cause) {
-                throw new Error(`Could not fetch ${file.name} for ${from}->${to} model`, {cause});
-            }
-        })));
+        // Download all files mentioned in the registry entry. Race the promise
+        // of all fetch requests, and a promise that rejects on the abort signal
+        const buffers = Object.fromEntries(await Promise.race([
+            Promise.all(Object.entries(files).map(async ([part, file]) => {
+                // Special case where qualityModel is not part of the model, and this
+                // should also catch the `config` case.
+                if (file === undefined || file.name === undefined)
+                    return [part, null];
+
+                try {
+                    return [part, await this.fetch(file.name, file.expectedSha256Hash, options)];
+                } catch (cause) {
+                    throw new Error(`Could not fetch ${file.name} for ${from}->${to} model`, {cause});
+                }
+            })),
+            abort
+        ]));
 
         performance.measure('loadTranslationModel', `loadTranslationModule.${JSON.stringify({from, to})}`);
 
@@ -314,42 +335,52 @@ export class CancelledError extends Error {}
      * Helper to download file from the web. Verifies the checksum.
      * @param {string} url
      * @param {string?} checksum sha256 checksum as hexadecimal string
-     * @param {Cache?} cache optional cache to save response into
+     * @param {{signal:AbortSignal}?} extra fetch options
      * @returns {Promise<ArrayBuffer>}
      */
-    async fetch(url, checksum) {
+    async fetch(url, checksum, extra) {
         // Rig up a timeout cancel signal for our fetch
-        const abort = new AbortController();
-        const timeout = this.downloadTimeout ? setTimeout(() => abort.abort(), this.downloadTimeout) : null;
+        const controller = new AbortController();
+        const abort = () => controller.abort();
 
-        const options = {
-            credentials:  'omit',
-            signal: abort.signal,
-        };
+        const timeout = this.downloadTimeout ? setTimeout(abort, this.downloadTimeout) : null;
 
-        if (checksum)
-            options['integrity'] = `sha256-${this.hexToBase64(checksum)}`;
+        try {
+            // Also maintain the original abort signal
+            if (extra?.signal)
+                extra.signal.addEventListener('abort', abort);
 
-        // Disable the integrity check for NodeJS because of
-        // https://github.com/nodejs/undici/issues/1594
-        if (typeof window === 'undefined')
-            delete options['integrity'];
+            const options = {
+                credentials: 'omit',
+                signal: controller.signal,
+            };
 
-        // Start downloading the url, using the hex checksum to ask
-        // `fetch()` to verify the download using subresource integrity 
-        const response = await fetch(url, options);
+            if (checksum)
+                options['integrity'] = `sha256-${this.hexToBase64(checksum)}`;
 
-        // Finish downloading (or crash due to timeout)
-        const buffer = await response.arrayBuffer();
+            // Disable the integrity check for NodeJS because of
+            // https://github.com/nodejs/undici/issues/1594
+            if (typeof window === 'undefined')
+                delete options['integrity'];
 
-        // Download finished, remove the abort timer
-        clearTimeout(timeout);
+            // Start downloading the url, using the hex checksum to ask
+            // `fetch()` to verify the download using subresource integrity 
+            const response = await fetch(url, options);
 
-        return buffer;
+            // Finish downloading (or crash due to timeout)
+            return await response.arrayBuffer();
+
+        } finally {
+            if (timeout)
+                clearTimeout(timeout);
+
+            if (extra?.signal)
+                extra.signal.removeEventListener('abort', abort);
+        }
     }
 
     /**
-     * Conv erts the hexadecimal hashes from the registry to something we can use with
+     * Converts the hexadecimal hashes from the registry to something we can use with
      * the fetch() method.
      */
     hexToBase64(hexstring) {
@@ -752,6 +783,7 @@ export class LatencyOptimisedTranslator {
      * Destructor that stops and cleans up.
      */
     async delete() {
+        // Cancel pending translation
         if (this.pending) {
             this.pending.reject(new CancelledError('translator got deleted'));
             this.pending = null;
@@ -770,12 +802,22 @@ export class LatencyOptimisedTranslator {
      * @param {TranslationRequest} request
      * @return {Promise<TranslationResponse>}
      */
-    translate(request) {
+    translate(request, options) {
         if (this.pending)
             this.pending.reject(new SupersededError());
         
         return new Promise((accept, reject) => {
-            this.pending = {request, accept, reject};
+            const pending = {request, accept, reject, options};
+
+            if (options?.signal) {
+                options.signal.addEventListener('abort', e => {
+                    reject(new CancelledError('abort signal'));
+                    if (this.pending === pending)
+                        this.pending = null;
+                });
+            }
+
+            this.pending = pending;
             this.notify();
         });
     }
@@ -794,20 +836,18 @@ export class LatencyOptimisedTranslator {
                 return;
 
             // Claim the pending translation request.
-            const task = this.pending;
+            const {request, accept, reject, options} = this.pending;
             this.pending = null;
 
             // Mark the worker as occupied
             worker.idle = false;
-
-            try {
-                const {request} = task;
                 
+            try {
                 const models = await this.backing.getModels(request)
 
                 await Promise.all(models.map(async ({from, to}) => {
                     if (!await worker.exports.hasTranslationModel({from, to})) {
-                        const buffers = await this.backing.getTranslationModel({from, to});
+                        const buffers = await this.backing.getTranslationModel({from, to}, {signal: options?.signal});
                         await worker.exports.loadTranslationModel({from, to}, buffers);
                     }
                 }));
@@ -818,9 +858,9 @@ export class LatencyOptimisedTranslator {
                     texts: [{text, html, qualityScores}]
                 });
 
-                task.accept({request, ...responses[0]});
+                accept({request, ...responses[0]});
             } catch (e) {
-                task.reject(e);
+                reject(e);
             }
 
             worker.idle = true;

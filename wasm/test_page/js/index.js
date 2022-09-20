@@ -73,141 +73,143 @@ class Editor {
 }
 
 async function main() {
-  try {
-    const options = {
-      cacheSize: 2^13,
-      downloadTimeout: null // Disable timeout
-    };
-    
-    const backing = new TranslatorBacking(options);
+  const options = {
+    cacheSize: 2^13,
+    downloadTimeout: null // Disable timeout
+  };
+  
+  const backing = new TranslatorBacking(options);
 
-    let pending = 0; // Number of pending requests
+  let pending = 0; // Number of pending requests
 
-    // Patch the fetch() function to track number of pending requests
-    backing.fetch = async function(...args) {
-      try {
-        $('.app').classList.toggle('loading', ++pending > 0);
-        return await TranslatorBacking.prototype.fetch.call(backing, ...args);
-      } finally {
-        $('.app').classList.toggle('loading', --pending > 0);
-      }
-    };
+  // Patch the fetch() function to track number of pending requests
+  backing.fetch = async function(...args) {
+    try {
+      $('.app').classList.toggle('loading', ++pending > 0);
+      return await TranslatorBacking.prototype.fetch.call(backing, ...args);
+    } finally {
+      $('.app').classList.toggle('loading', --pending > 0);
+    }
+  };
 
-    // Wait for the language model registry to load. Once it is loaded, use
-    // it to fill the "from" and "to" language selection dropdowns.
-    await backing.registry.then(models => {
-      const names = new Intl.DisplayNames(['en'], {type: 'language'});
+  // Wait for the language model registry to load. Once it is loaded, use
+  // it to fill the "from" and "to" language selection dropdowns.
+  await backing.registry.then(models => {
+    const names = new Intl.DisplayNames(['en'], {type: 'language'});
 
-      ['from', 'to'].forEach(field => {
-        const languages = new Set(models.map(model => model[field]));
-        const select = $(`#lang-${field}`);
+    ['from', 'to'].forEach(field => {
+      const languages = new Set(models.map(model => model[field]));
+      const select = $(`#lang-${field}`);
 
-        const pairs = Array.from(languages, code => ({code, name: names.of(code)}));
-        
-        pairs.sort(({name: a}, {name: b}) => a.localeCompare(b));
+      const pairs = Array.from(languages, code => ({code, name: names.of(code)}));
+      
+      pairs.sort(({name: a}, {name: b}) => a.localeCompare(b));
 
-        pairs.forEach(({name, code}) => {
-          select.add(new Option(name, code));
-        })
-      });
-
-      $('#lang-from').value = 'en';
-      $('#lang-to').value = 'es';
+      pairs.forEach(({name, code}) => {
+        select.add(new Option(name, code));
+      })
     });
 
-    // Intentionally do this after querying backing.registry to make sure that
-    // that request is fired off first. Now we can start thinking about loading
-    // the WASM binary etc.
-    const translator = new LatencyOptimisedTranslator(options, backing);
+    $('#lang-from').value = 'en';
+    $('#lang-to').value = 'es';
+  });
 
-    let abortController = new AbortController();
+  // Intentionally do this after querying backing.registry to make sure that
+  // that request is fired off first. Now we can start thinking about loading
+  // the WASM binary etc.
+  const translator = new LatencyOptimisedTranslator(options, backing);
 
-    const translate = async () => {
-      try {
-        const from = $('#lang-from').value;
-        const to = $('#lang-to').value;
-        
-        // Querying models to see whether quality estimation is supported by all
-        // of them.
-        const models = await backing.getModels({from, to});
-        const qualityScores = models.every(model => 'qualityModel' in model.files);
+  let abortController = new AbortController();
 
-        $('.app').classList.add('translating');
+  const translate = async () => {
+    try {
+      const from = $('#lang-from').value;
+      const to = $('#lang-to').value;
+      
+      // Querying models to see whether quality estimation is supported by all
+      // of them.
+      const models = await backing.getModels({from, to});
+      const qualityScores = models.every(model => 'qualityModel' in model.files);
 
-        const response = await translator.translate({
-          from,
-          to,
-          text: $('#input').innerHTML,
-          html: true,
-          qualityScores
-        }, {signal: abortController.signal});
+      $('.app').classList.add('translating');
 
-        $('#output').innerHTML = response.target.text;
-        $('#output').classList.toggle('has-quality-scores', qualityScores);
+      const response = await translator.translate({
+        from,
+        to,
+        text: $('#input').innerHTML,
+        html: true,
+        qualityScores
+      }, {signal: abortController.signal});
 
-        if (qualityScores)
-          addQualityIndicators();
+      $('#output').innerHTML = response.target.text;
+      $('#output').classList.toggle('has-quality-scores', qualityScores);
 
-      } catch (error) {
-        // Ignore errors caused by changing the language pair (which triggers abort())
-        if (error.constructor === CancelledError) {
-          return;
-        }
-        
-        // Ignore 'errors' caused by typing too fast or by changing the language
-        // pair while a translation was still in progress (or being loaded)
-        if (error.constructor === SupersededError || error.constructor === CancelledError)
-          return;
+      if (qualityScores)
+        addQualityIndicators();
 
-        // Ignore errors caused by selecting a bad pair (e.g. en -> en)
-        if (error.message.startsWith('No model available to translate from'))
-          return;
-
-        alert(`Error during translation: ${error}\n\n${error.stack}`);
-      } finally {
-        const worker = await Promise.race([translator.worker, Promise.resolve(null)]);
-        $('.app').classList.toggle('translating', worker === null || !worker.idle);
+    } catch (error) {
+      // Ignore errors caused by changing the language pair (which triggers abort())
+      if (error.constructor === CancelledError) {
+        return;
       }
+      
+      // Ignore 'errors' caused by typing too fast or by changing the language
+      // pair while a translation was still in progress (or being loaded)
+      if (error.constructor === SupersededError || error.constructor === CancelledError)
+        return;
+
+      // Ignore errors caused by selecting a bad pair (e.g. en -> en)
+      if (error.message.startsWith('No model available to translate from'))
+        return;
+
+      alert(`Error during translation: ${error}\n\n${error.stack}`);
+    } finally {
+      const worker = await Promise.race([translator.worker, Promise.resolve(null)]);
+      $('.app').classList.toggle('translating', worker === null || !worker.idle);
     }
+  }
 
-    const reset = async () => {
-      // Cancel any pending loading/translation
-      abortController.abort();
+  const reset = async () => {
+    // Cancel any pending loading/translation
+    abortController.abort();
 
-      // Reset abort controller to a fresh un-aborted one
-      abortController = new AbortController();
+    // Reset abort controller to a fresh un-aborted one
+    abortController = new AbortController();
 
-      // Clear output to make it more clear something is happening
-      $('#output').innerHTML = '';
+    // Clear output to make it more clear something is happening
+    $('#output').innerHTML = '';
 
-      // Immediately start loading the new selection
-      translate();
-    }
+    // Immediately start loading the new selection
+    translate();
+  }
 
-    $('button.swap').addEventListener('click', () => {
-      const tmp = $('#lang-from').value;
-      $('#lang-from').value = $('#lang-to').value;
-      $('#lang-to').value = tmp;
-      translate();
-    })
+  $('button.swap').addEventListener('click', () => {
+    const tmp = $('#lang-from').value;
+    $('#lang-from').value = $('#lang-to').value;
+    $('#lang-to').value = tmp;
+    translate();
+  })
 
-    // Simple WYSIWYG controls
-    const editor = new Editor($('#input'));
+  // Simple WYSIWYG controls
+  const editor = new Editor($('#input'));
 
-    // Translate on any change
-    $('#input').addEventListener('input', translate);
-    $('#lang-from').addEventListener('input', reset);
-    $('#lang-to').addEventListener('input', reset);
+  // Translate on any change
+  $('#input').addEventListener('input', translate);
+  $('#lang-from').addEventListener('input', reset);
+  $('#lang-to').addEventListener('input', reset);
 
-    // Hook up sentence boundary highlighting if that information is available.
-    $('#output').addEventListener('mouseover', (e) => highlightSentence(e.target))
-  } catch (error) {
+  // Hook up sentence boundary highlighting if that information is available.
+  $('#output').addEventListener('mouseover', (e) => highlightSentence(e.target))
+
+  // Wait for bergamot-translator to load. This could throw a CompileError
+  // which we want to catch so we can show "oh noes browser not supported!"
+  translator.worker.catch(error => {
     // Catch CompileErrors because for those we know what to do.
     if (error.name === 'CompileError')
       $('#unsupported-browser').hidden = false;
     else
       throw error;
-  }
+  });
 }
 
 main();

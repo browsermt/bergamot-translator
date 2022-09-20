@@ -118,7 +118,7 @@ export class CancelledError extends Error {}
      * exposes the entire interface of TranslationWorker here, and all calls
      * to it are async. Do note that you can only pass arguments that survive
      * being copied into a message. 
-     * @return {{worker:Worker, exports:Proxy<TranslationWorker>}}
+     * @return {Promise<{worker:Worker, exports:Proxy<TranslationWorker>}>}
      */
     async loadWorker() {
         const worker = new Worker(this.workerUrl);
@@ -137,7 +137,14 @@ export class CancelledError extends Error {}
         // Function to send requests
         const call = (name, ...args) => new Promise((accept, reject) => {
             const id = ++serial;
-            pending.set(id, {accept, reject});
+            pending.set(id, {
+                accept,
+                reject,
+                callsite: { // for debugging which call caused the error
+                    message: `${name}(${args.map(arg => String(arg)).join(', ')})`,
+                    stack: new Error().stack
+                }
+            });
             worker.postMessage({id, name, args});
         });
 
@@ -148,11 +155,14 @@ export class CancelledError extends Error {}
                 throw new Error(`BergamotTranslator received response from worker to unknown call '${id}'`);
             }
 
-            const {accept, reject} = pending.get(id);
+            const {accept, reject, callsite} = pending.get(id);
             pending.delete(id);
 
             if (error !== undefined)
-                reject(Object.assign(new Error(), error));
+                reject(Object.assign(new Error(), error, {
+                    message: error.message + ` (response to ${callsite.message})`,
+                    stack: error.stack ? `${error.stack}\n${callsite.stack}` : callsite.stack
+                }));
             else
                 accept(result);
         });

@@ -777,16 +777,7 @@ export class LatencyOptimisedTranslator {
         // Exposing the this.loadWorker() returned promise through this.worker
         // so that you can use that to catch any errors that happened during
         // loading.
-        this.worker = new Promise(async (accept, reject) => {
-            try {
-                accept({
-                    ...await this.backing.loadWorker(), // adds 'worker' and 'exports' properties
-                    idle: true
-                });
-            } catch (error) {
-                reject(error)
-            }
-        });
+        this.worker = this.backing.loadWorker().then(worker => ({...worker, idle:true}));
     }
 
     /**
@@ -840,47 +831,52 @@ export class LatencyOptimisedTranslator {
             if (!this.pending)
                 return;
 
-            // Possibly wait for the worker to finish loading. After it loaded
-            // these calls are pretty much instantaneous.
-            const worker = await this.worker;
-
-            // Is another notify() call hogging the worker? Then stop.
-            if (!worker.idle)
-                return;
-
-            // Claim the pending translation request.
-            const {request, accept, reject, options} = this.pending;
-            this.pending = null;
-
-            // Mark the worker as occupied
-            worker.idle = false;
-                
+            // Catch errors such as the worker not working
             try {
-                const models = await this.backing.getModels(request)
+                // Possibly wait for the worker to finish loading. After it loaded
+                // these calls are pretty much instantaneous.
+                const worker = await this.worker;
 
-                await Promise.all(models.map(async ({from, to}) => {
-                    if (!await worker.exports.hasTranslationModel({from, to})) {
-                        const buffers = await this.backing.getTranslationModel({from, to}, {signal: options?.signal});
-                        await worker.exports.loadTranslationModel({from, to}, buffers);
-                    }
-                }));
+                // Is another notify() call hogging the worker? Then stop.
+                if (!worker.idle)
+                    return;
 
-                const {text, html, qualityScores} = request;
-                const responses = await worker.exports.translate({
-                    models: models.map(({from,to}) => ({from, to})),
-                    texts: [{text, html, qualityScores}]
-                });
+                // Claim the pending translation request.
+                const {request, accept, reject, options} = this.pending;
+                this.pending = null;
 
-                accept({request, ...responses[0]});
+                // Mark the worker as occupied
+                worker.idle = false;
+                    
+                try {
+                    const models = await this.backing.getModels(request)
+
+                    await Promise.all(models.map(async ({from, to}) => {
+                        if (!await worker.exports.hasTranslationModel({from, to})) {
+                            const buffers = await this.backing.getTranslationModel({from, to}, {signal: options?.signal});
+                            await worker.exports.loadTranslationModel({from, to}, buffers);
+                        }
+                    }));
+
+                    const {text, html, qualityScores} = request;
+                    const responses = await worker.exports.translate({
+                        models: models.map(({from,to}) => ({from, to})),
+                        texts: [{text, html, qualityScores}]
+                    });
+
+                    accept({request, ...responses[0]});
+                } catch (e) {
+                    reject(e);
+                }
+
+                worker.idle = true;
+
+                // Is there more work to be done? Do another idleRequest
+                if (this.pending)
+                    this.notify();
             } catch (e) {
-                reject(e);
+                this.backing.onerror(e);
             }
-
-            worker.idle = true;
-
-            // Is there more work to be done? Do another idleRequest
-            if (this.pending)
-                this.notify();
         });
     }
 }

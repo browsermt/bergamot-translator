@@ -276,13 +276,12 @@ export class CancelledError extends Error {}
 
         const files = entries[0].files;
 
+        const abort = () => reject(new CancelledError('abort signal'));
+
         // Promise that resolves (or rejects really) when the abort signal hits
-        const abort = new Promise((accept, reject) => {
+        const escape = new Promise((accept, reject) => {
             if (options?.signal)
-                options.signal.addEventListener('abort', () => {
-                    console.log('loadTranslationModel aborted', {from,to});
-                    reject(new CancelledError('abort signal'))
-                });
+                options.signal.addEventListener('abort', abort);
         });
 
         // Download all files mentioned in the registry entry. Race the promise
@@ -300,8 +299,12 @@ export class CancelledError extends Error {}
                     throw new Error(`Could not fetch ${file.name} for ${from}->${to} model`, {cause});
                 }
             })),
-            abort
+            escape
         ]));
+
+        // Nothing to abort now, clean up abort promise
+        if (options?.signal)
+            options.signal.removeEventListener('abort', abort);
 
         performance.measure('loadTranslationModel', `loadTranslationModule.${JSON.stringify({from, to})}`);
 

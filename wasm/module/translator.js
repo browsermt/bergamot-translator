@@ -799,10 +799,13 @@ export class LatencyOptimisedTranslator {
             this.pending = null;
         }
 
-        // Terminate the workers
-        const {worker} = await this.worker;
-        worker.terminate();
-        this.worker = null;
+        // Terminate the worker (I don't care if this fails)
+        try {
+            const {worker} = await this.worker;
+            worker.terminate();
+        } finally {
+            this.worker = null;
+        }
     }
     
     /**

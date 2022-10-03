@@ -64,7 +64,6 @@ export class CancelledError extends Error {}
      *  cacheSize?: number,
      *  useNativeIntGemm?: boolean,
      *  downloadTimeout?: number,
-     *  workerUrl?: string,
      *  registryUrl?: string
      *  pivotLanguage?: string?
      *  onerror?: (err: Error)
@@ -101,11 +100,6 @@ export class CancelledError extends Error {}
         this.models = new Map();
 
         /**
-         * @type {string | URL} URL for Web worker
-         */
-        this.workerUrl = this.options.workerUrl || new URL('./worker/translator-worker.js', import.meta.url);
-
-        /**
          * Error handler for all errors that are async, not tied to a specific
          * call and that are unrecoverable.
          * @type {(error: Error)}
@@ -121,7 +115,7 @@ export class CancelledError extends Error {}
      * @return {Promise<{worker:Worker, exports:Proxy<TranslationWorker>}>}
      */
     async loadWorker() {
-        const worker = new Worker(this.workerUrl);
+        const worker = new Worker(new URL('./worker/translator-worker.js', import.meta.url));
 
         /**
          * Incremental counter to derive request/response ids from.

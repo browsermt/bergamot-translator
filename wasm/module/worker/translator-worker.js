@@ -261,7 +261,8 @@ class BergamotTranslatorWorker {
                     }
                 });
 
-                // Emscripten glue code
+                // Emscripten glue code. Webpack et al. should not mangle the `Module` property name!
+                self.Module = Module;
                 self.importScripts('bergamot-translator-worker.js');
             } catch (err) {
                 reject(err);

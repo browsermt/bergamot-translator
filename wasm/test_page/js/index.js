@@ -1,156 +1,215 @@
-let worker;
-let modelRegistry;
+import {LatencyOptimisedTranslator, TranslatorBacking, CancelledError, SupersededError} from '../node_modules/@browsermt/bergamot-translator/translator.js';
 
-const $ = selector => document.querySelector(selector);
-const status = message => ($("#status").innerText = message);
-
-const langFrom = $("#lang-from");
-const langTo = $("#lang-to");
-
-if (window.Worker) {
-  worker = new Worker("js/worker.js");
-  worker.postMessage(["import"]);
+function $(selector) {
+  return document.querySelector(selector);
 }
 
-document.querySelector("#input").addEventListener("keyup", function (event) {
-  translateCall();
-});
+function $$(selector) {
+  return document.querySelectorAll(selector);
+}
 
-const _prepareTranslateOptions = (paragraphs) => {
-  const translateOptions = [];
-  paragraphs.forEach(paragraph => {
-    // Each option object can be different for each entry. But to keep the test page simple,
-    // we just keep all the options same (specifically avoiding parsing the input to determine
-    // html/non-html text)
-    translateOptions.push({"isQualityScores": true, "isHtml": true});
-  });
-  return translateOptions;
-};
-
-const textToHTML = (text) => {
+function encodeHTML(text) {
   const div = document.createElement('div');
   div.appendChild(document.createTextNode(text));
   return div.innerHTML;
-};
+}
 
-const translateCall = () => {
-  const text = document.querySelector("#input").value;
-  if (!text.trim().length) return;
-
-  const paragraphs = text.split(/\n+/).map(textToHTML); // escape HTML 
-  const translateOptions = _prepareTranslateOptions(paragraphs);
-  const lngFrom = langFrom.value;
-  const lngTo = langTo.value;
-  worker.postMessage(["translate", lngFrom, lngTo, paragraphs, translateOptions]);
-};
-
-const addQualityClasses = (root) => {
-  // You can do this wit CSS variables, calc() and min/max, but JS is just easier
-
-  root.querySelectorAll('[x-bergamot-sentence-score]').forEach(el => {
+function addQualityIndicators() {
+  $$('#output [x-bergamot-sentence-score]').forEach(el => {
     // The threshold is ln(0.5) (https://github.com/browsermt/bergamot-translator/pull/370#issuecomment-1058123399)
-    el.classList.toggle('bad', parseFloat(el.getAttribute('x-bergamot-sentence-score')) < -0.6931);
+    el.classList.toggle('bad', parseFloat(el.getAttribute('x-bergamot-sentence-score')) < Math.log(0.5));
   });
 
-  root.querySelectorAll('[x-bergamot-word-score]').forEach(el => {
+  $$('#output [x-bergamot-word-score]').forEach(el => {
     // The threshold is ln(0.5) (https://github.com/browsermt/bergamot-translator/pull/370#issuecomment-1058123399)
-    el.classList.toggle('bad', parseFloat(el.getAttribute('x-bergamot-word-score')) < -0.6931);
+    el.classList.toggle('bad', parseFloat(el.getAttribute('x-bergamot-word-score')) < Math.log(0.5));
   });
 
   // Add tooltips to each (sub)word with sentence and word score.
-  root.querySelectorAll('[x-bergamot-sentence-score] > [x-bergamot-word-score]').forEach(el => {
+  $$('#output [x-bergamot-sentence-score] > [x-bergamot-word-score]').forEach(el => {
     const sentenceScore = parseFloat(el.parentNode.getAttribute('x-bergamot-sentence-score'));
     const wordScore = parseFloat(el.getAttribute('x-bergamot-word-score'));
-    el.title = `Sentence: ${sentenceScore}  Word: ${wordScore}`;
+    el.title = `Sentence: ${Math.exp(sentenceScore).toFixed(2)}  Word: ${Math.exp(wordScore).toFixed(2)}`;
   });
 }
 
-worker.onmessage = function (e) {
-  if (e.data[0] === "translate_reply" && e.data[1]) {
-    // Clear output of previous translation
-    document.querySelector("#output").innerHTML = '';
-
-    // Add each translation in its own div to have a known root in which the
-    // sentence ids are unique. Used for highlighting sentences.
-    e.data[1].forEach(translatedHTML => {
-      const translation = document.createElement('div');
-      translation.classList.add('translation');
-      translation.innerHTML = translatedHTML;
-      addQualityClasses(translation);
-      document.querySelector("#output").appendChild(translation);
-    });
-  } else if (e.data[0] === "load_model_reply" && e.data[1]) {
-    status(e.data[1]);
-    translateCall();
-  } else if (e.data[0] === "import_reply" && e.data[1]) {
-    modelRegistry = e.data[1];
-    init();
-  }
-};
-
-const loadModel = () => {
-  const lngFrom = langFrom.value;
-  const lngTo = langTo.value;
-  if (lngFrom !== lngTo) {
-    status(`Installing model...`);
-    console.log(`Loading model '${lngFrom}${lngTo}'`);
-    worker.postMessage(["load_model", lngFrom, lngTo]);
-  } else {
-    const input = textToHTML(document.querySelector("#input").value);
-    document.querySelector("#output").innerHTML = input;
-  }
-};
-
-langFrom.addEventListener("change", e => {
-  loadModel();
-});
-
-langTo.addEventListener("change", e => {
-  loadModel();
-});
-
-$(".swap").addEventListener("click", e => {
-  [langFrom.value, langTo.value] = [langTo.value, langFrom.value];
-  $("#input").value = $("#output").innerText;
-  loadModel();
-});
-
-$('#output').addEventListener('mouseover', e => {
-  const root = e.target.closest('.translation');
-  const sentence = e.target.parentNode.hasAttribute('x-bergamot-sentence-index') ? e.target.parentNode.getAttribute('x-bergamot-sentence-index') : null;  
-  document.querySelectorAll('#output font[x-bergamot-sentence-index]').forEach(el => {
-    el.classList.toggle('highlight-sentence', el.getAttribute('x-bergamot-sentence-index') === sentence && el.closest('.translation') === root);
+function highlightSentence(element) {
+  const sentence = element.parentNode.hasAttribute('x-bergamot-sentence-index')
+    ? element.parentNode.getAttribute('x-bergamot-sentence-index')
+    : null;
+  $$('#output font[x-bergamot-sentence-index]').forEach(el => {
+    el.classList.toggle('highlight-sentence', el.getAttribute('x-bergamot-sentence-index') === sentence);
   })
-})
+}
 
-function init() {
-  // Populate langs
-  const langs = Array.from(new Set(Object.keys(modelRegistry).reduce((acc, key) => acc.concat([key.substr(0, 2), key.substr(2, 2)]), [])));
-  const langNames = new Intl.DisplayNames(undefined, {type: "language"});
+/**
+ * Very minimal WISYWIG editor. Just keyboard shortcuts for the IYKYK crowd.
+ */
+class Editor {
+  constructor(root) {
+    this.isApple = window.navigator.platform.startsWith('Mac');
 
-  // Sort languages by display name
-  langs.sort((a, b) => langNames.of(a).localeCompare(langNames.of(b)));
+    this.root = root;
+    this.root.addEventListener('keydown', this.onkeydown.bind(this));
 
-  // Populate the dropdowns 
-  langs.forEach(code => {
-    const name = langNames.of(code);
-    langFrom.innerHTML += `<option value="${code}">${name}</option>`;
-    langTo.innerHTML += `<option value="${code}">${name}</option>`;
+    this.mapping = {
+      "b": "bold",
+      "i": "italic",
+      "u": "underline",
+    };
+  }
+
+  onkeydown(event) {
+    if (!(this.isApple ? event.metaKey : event.ctrlKey))
+      return;
+
+    if (!(event.key in this.mapping))
+      return;
+
+    document.execCommand(this.mapping[event.key], false, null);
+
+    event.preventDefault();
+  }
+}
+
+async function main() {
+  const options = {
+    cacheSize: 2^13,
+    downloadTimeout: null // Disable timeout
+  };
+  
+  const backing = new TranslatorBacking(options);
+
+  let pending = 0; // Number of pending requests
+
+  // Patch the fetch() function to track number of pending requests
+  backing.fetch = async function(...args) {
+    try {
+      $('.app').classList.toggle('loading', ++pending > 0);
+      return await TranslatorBacking.prototype.fetch.call(backing, ...args);
+    } finally {
+      $('.app').classList.toggle('loading', --pending > 0);
+    }
+  };
+
+  // Wait for the language model registry to load. Once it is loaded, use
+  // it to fill the "from" and "to" language selection dropdowns.
+  await backing.registry.then(models => {
+    const names = new Intl.DisplayNames(['en'], {type: 'language'});
+
+    ['from', 'to'].forEach(field => {
+      const languages = new Set(models.map(model => model[field]));
+      const select = $(`#lang-${field}`);
+
+      const pairs = Array.from(languages, code => ({code, name: names.of(code)}));
+      
+      pairs.sort(({name: a}, {name: b}) => a.localeCompare(b));
+
+      pairs.forEach(({name, code}) => {
+        select.add(new Option(name, code));
+      })
+    });
+
+    $('#lang-from').value = 'en';
+    $('#lang-to').value = 'es';
   });
 
-  // try to guess input language from user agent
-  let myLang = navigator.language;
-  if (myLang) {
-    myLang = myLang.split("-")[0];
-    let langIndex = langs.indexOf(myLang);
-    if (langIndex > -1) {
-      console.log("guessing input language is", myLang);
-      langFrom.value = myLang;
+  // Intentionally do this after querying backing.registry to make sure that
+  // that request is fired off first. Now we can start thinking about loading
+  // the WASM binary etc.
+  const translator = new LatencyOptimisedTranslator(options, backing);
+
+  let abortController = new AbortController();
+
+  const translate = async () => {
+    try {
+      const from = $('#lang-from').value;
+      const to = $('#lang-to').value;
+      
+      // Querying models to see whether quality estimation is supported by all
+      // of them.
+      const models = await backing.getModels({from, to});
+      const qualityScores = models.every(model => 'qualityModel' in model.files);
+
+      $('.app').classList.add('translating');
+
+      const response = await translator.translate({
+        from,
+        to,
+        text: $('#input').innerHTML,
+        html: true,
+        qualityScores
+      }, {signal: abortController.signal});
+
+      $('#output').innerHTML = response.target.text;
+      $('#output').classList.toggle('has-quality-scores', qualityScores);
+
+      if (qualityScores)
+        addQualityIndicators();
+
+    } catch (error) {
+      // Ignore errors caused by changing the language pair (which triggers abort())
+      if (error.constructor === CancelledError) {
+        return;
+      }
+      
+      // Ignore 'errors' caused by typing too fast or by changing the language
+      // pair while a translation was still in progress (or being loaded)
+      if (error.constructor === SupersededError || error.constructor === CancelledError)
+        return;
+
+      // Ignore errors caused by selecting a bad pair (e.g. en -> en)
+      if (error.message.startsWith('No model available to translate from'))
+        return;
+
+      alert(`Error during translation: ${error}\n\n${error.stack}`);
+    } finally {
+      const worker = await Promise.race([translator.worker, Promise.resolve(null)]);
+      $('.app').classList.toggle('translating', worker === null || !worker.idle);
     }
   }
 
-  // find first output lang that *isn't* input language
-  langTo.value = langs.find(code => code !== langFrom.value);
-  // load this model
-  loadModel();
+  const reset = async () => {
+    // Cancel any pending loading/translation
+    abortController.abort();
+
+    // Reset abort controller to a fresh un-aborted one
+    abortController = new AbortController();
+
+    // Clear output to make it more clear something is happening
+    $('#output').innerHTML = '';
+
+    // Immediately start loading the new selection
+    translate();
+  }
+
+  $('button.swap').addEventListener('click', () => {
+    const tmp = $('#lang-from').value;
+    $('#lang-from').value = $('#lang-to').value;
+    $('#lang-to').value = tmp;
+    translate();
+  })
+
+  // Simple WYSIWYG controls
+  const editor = new Editor($('#input'));
+
+  // Translate on any change
+  $('#input').addEventListener('input', translate);
+  $('#lang-from').addEventListener('input', reset);
+  $('#lang-to').addEventListener('input', reset);
+
+  // Hook up sentence boundary highlighting if that information is available.
+  $('#output').addEventListener('mouseover', (e) => highlightSentence(e.target))
+
+  // Wait for bergamot-translator to load. This could throw a CompileError
+  // which we want to catch so we can show "oh noes browser not supported!"
+  translator.worker.catch(error => {
+    // Catch CompileErrors because for those we know what to do.
+    if (error.name === 'CompileError')
+      $('#unsupported-browser').hidden = false;
+    else
+      throw error;
+  });
 }
+
+main();

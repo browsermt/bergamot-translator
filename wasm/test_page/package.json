@@ -1,7 +1,14 @@
 {
   "dependencies": {
+    "@browsermt/bergamot-translator": "file:../module",
     "cors": "^2.8.5",
     "express": "^4.18.2",
     "nocache": "^2.1.0"
+  },
+  "config": {
+    "port": 80
+  },
+  "scripts": {
+    "start": "node ./bergamot-httpserver.js $npm_package_config_port 1 0"
   }
 }

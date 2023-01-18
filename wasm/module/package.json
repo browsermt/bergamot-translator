@@ -1,0 +1,39 @@
+{
+  "name": "@browsermt/bergamot-translator",
+  "version": "0.4.9",
+  "description": "Cross platform C++ library focusing on optimized machine translation on the consumer-grade device.",
+  "homepage": "https://github.com/browsermt/bergamot-translator#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/browsermt/bergamot-translator.git"
+  },
+  "keywords": [
+    "machine",
+    "translation"
+  ],
+  "author": "",
+  "license": "MPL-2.0",
+  "bugs": {
+    "url": "https://github.com/browsermt/bergamot-translator/issues"
+  },
+  "type": "module",
+  "main": "translator.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "files": [
+    "worker/bergamot-translator-worker.js",
+    "worker/bergamot-translator-worker.wasm",
+    "worker/translator-worker.js",
+    "translator.js",
+    "main.js"
+  ],
+  "config": {
+    "emscripten_version": "3.1.8"
+  },
+  "scripts": {
+    "prepare": "test -f worker/bergamot-translator-worker.wasm || npm run build",
+    "build": "mkdir -p ../../build-wasm && docker run --rm -v $(realpath ../../):/src -v $(realpath ../../build-wasm):/build -v $(pwd)/worker:/dst -w /build emscripten/emsdk:$npm_package_config_emscripten_version sh -c \"emcmake cmake -DCOMPILE_WASM=on -DWORMHOLE=off /src && emmake make -j2 && cp bergamot-translator-worker.wasm bergamot-translator-worker.js /dst\"",
+    "test": "echo \"Hello world!\" | node main.js"
+  }
+}

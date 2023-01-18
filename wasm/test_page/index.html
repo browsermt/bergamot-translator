@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>Mozilla Translations</title>
+    <title>Bergamot Translations</title>
     <link rel="stylesheet" href="css/index.css" />
     <meta http-equiv="Content-Type" content="text/html;charset=UTF-8" />
     <meta
@@ -16,9 +16,9 @@
           From
           <select id="lang-from" name="from" class="lang-select"></select>
         </label>
-        <textarea id="input" name="input"></textarea>
+        <div id="input" contenteditable="true"></div>
       </div>
-      <button class="swap" title="swap">↔️</button>
+      <button class="swap" title="swap"></button>
       <div class="panel panel--to">
         <label>
           To
@@ -26,8 +26,16 @@
         </label>
         <div id="output" class="output-area"></div>
       </div>
-      <div class="footer" id="status"></div>
+      <div id="unsupported-browser" hidden>
+        <p>Your CPU or browser is not able to run Bergamot translator.</p>
+        <p>Try using Firefox or a Chromium based browser with <a href="https://webassembly.org/roadmap/">Fixed-width SIMD support</a>.</p>
+        <p>If you already are, you might be using a CPU that does not have support for SSE4.1 instructions.</p>
+      </div>
+      <footer class="credits">
+        <img src="logos.png" alt="Logos of the OPUS project, the Bergamot project and the European Union.">
+        <p>This project has received funding from the European Union’s Horizon 2020 research and innovation programme under grant agreement No 825303.</p>
+      </footer>
     </div>
-    <script src="js/index.js"></script>
+    <script type="module" src="js/index.js"></script>
   </body>
 </html>

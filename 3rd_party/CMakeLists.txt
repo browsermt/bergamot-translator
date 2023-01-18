@@ -19,6 +19,12 @@ target_include_directories(marian PUBLIC ${INCDIRS})
 get_property(INCLUDE_DIRECTORIES DIRECTORY ssplit-cpp/src PROPERTY INCLUDE_DIRECTORIES)
 target_include_directories(ssplit PUBLIC ${INCLUDE_DIRECTORIES})
 
+get_property(COMPILE_DEFINITIONS DIRECTORY marian-dev PROPERTY COMPILE_DEFINITIONS) 
+target_compile_definitions(marian PUBLIC ${COMPILE_DEFINITIONS})
+
+get_property(COMPILE_OPTIONS DIRECTORY marian-dev PROPERTY COMPILE_OPTIONS) 
+target_compile_options(marian PUBLIC ${COMPILE_OPTIONS})
+
 # Compilation flags 
 get_directory_property(CMAKE_C_FLAGS DIRECTORY marian-dev DEFINITION CMAKE_C_FLAGS) 
 get_directory_property(CMAKE_CXX_FLAGS DIRECTORY marian-dev DEFINITION CMAKE_CXX_FLAGS) 

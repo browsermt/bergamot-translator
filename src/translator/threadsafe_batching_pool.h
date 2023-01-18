@@ -34,14 +34,14 @@ template <class BatchingPoolType>
 class ThreadsafeBatchingPool {
  public:
   template <class... Args>
-  ThreadsafeBatchingPool(Args &&... args);
+  ThreadsafeBatchingPool(Args &&...args);
   ~ThreadsafeBatchingPool();
 
   template <class... Args>
-  void enqueueRequest(Args &&... args);
+  void enqueueRequest(Args &&...args);
 
   template <class... Args>
-  size_t generateBatch(Args &&... args);
+  size_t generateBatch(Args &&...args);
 
   // Removes any pending requests from the batching pool.
   void clear();

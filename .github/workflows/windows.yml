@@ -7,7 +7,7 @@ on:
     branches: [ '**' ]
 
 env:
-  MKL_URL: "https://romang.blob.core.windows.net/mariandev/ci/mkl-2020.1-windows-static.zip"
+  MKL_URL: "https://data.statmt.org/romang/marian-regression-tests/ci/mkl-2020.1-windows-static.zip"
   CCACHE_BASEDIR: "${{ github.workspace }}"
   CCACHE_DIR: "${{ github.workspace }}\\ccache"
   CCACHE_COMPILERCHECK: content

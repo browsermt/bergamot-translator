@@ -80,7 +80,7 @@ git submodule update --init --recursive
 ### Using Native version
 
 The builds generate library that can be integrated to any project. All the public header files are specified in `src` folder.\
-A short example of how to use the APIs is provided in `app/main.cpp` file.
+A short example of how to use the APIs is provided in `app/bergamot.cpp` file.
 
 ### Using WASM version
 

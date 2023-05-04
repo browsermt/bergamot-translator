@@ -21,9 +21,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-        - name: Ubuntu 18.04 full
-          os: ubuntu-18.04
-          identifier: ubuntu_1804_full
+        - name: Ubuntu 22.04 full
+          os: ubuntu-22.04
+          identifier: ubuntu_2204_full
           cmake: -DCOMPILE_TESTS=on
           brt_tags: ""
           unittests: 'true'
@@ -55,9 +55,7 @@ jobs:
     - name: Install Dependencies
       run: |-
         sudo apt-get update
-        sudo apt-get install -y \
-          libgoogle-perftools-dev libprotobuf-dev protobuf-compiler \
-          libboost-all-dev ccache
+        sudo apt-get install -y libprotobuf-dev protobuf-compiler libboost-all-dev ccache libunwind-dev libgoogle-perftools-dev
     - name: Install MKL
       run: |-
         wget -qO- "https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS-2019.PUB" | sudo apt-key add -

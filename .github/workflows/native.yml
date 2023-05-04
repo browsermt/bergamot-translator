@@ -27,9 +27,9 @@ jobs:
           cmake: -DCOMPILE_TESTS=on
           brt_tags: ""
           unittests: 'true'
-        - name: Ubuntu 18.04 minimal
-          os: ubuntu-18.04
-          identifier: ubuntu_1804_minimal
+        - name: Ubuntu 22.04 minimal
+          os: ubuntu-22.04
+          identifier: ubuntu_2204_minimal
           cmake: -DCOMPILE_TESTS=on -DUSE_WASM_COMPATIBLE_SOURCE=on
           brt_tags: "'#wasm'"
           unittests: 'false'
@@ -140,15 +140,15 @@ jobs:
       fail-fast: false
       matrix:
         include:
-        - name: MacOS 10.15 full
-          os: macos-10.15
-          identifier: mac_1015_full
+        - name: MacOS 12 full
+          os: macos-12
+          identifier: mac_12_full
           cmake: -DCOMPILE_TESTS=on -DUSE_APPLE_ACCELERATE=off -DUSE_FBGEMM=off -DUSE_STATIC_LIBS=off
           brt_tags: ""
           unittests: 'true'
-        - name: MacOS 10.15 minimal
-          os: macos-10.15
-          identifier: mac_1015_minimal
+        - name: MacOS 12 minimal
+          os: macos-12
+          identifier: mac_12_minimal
           cmake: -DCOMPILE_TESTS=on -DUSE_APPLE_ACCELERATE=off -DUSE_FBGEMM=off -DUSE_STATIC_LIBS=on -DUSE_WASM_COMPATIBLE_SOURCE=on
           brt_tags: "'#wasm'"
           unittests: 'false'

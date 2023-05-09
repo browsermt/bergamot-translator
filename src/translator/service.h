@@ -111,12 +111,16 @@ class AsyncService {
     size_t numWorkers{1};   ///< How many worker translation threads to spawn.
     size_t cacheSize{0};    ///< Size in History items to be stored in the cache. Loosely corresponds to sentences to
                             /// cache in the real world. A value of 0 means no caching.
+    std::string terminologyFile{""};
+    bool terminologyForce{false};
     Logger::Config logger;  // Configurations for logging
 
     template <class App>
     static void addOptions(App &app, Config &config) {
       app.add_option("--cpu-threads", config.numWorkers, "Workers to form translation backend");
       app.add_option("--cache-size", config.cacheSize, "Number of entries to store in cache.");
+      app.add_option("--terminology-file", config.terminologyFile, "tsv, one term at a time terminology file.");
+      app.add_option("--force-terminology", config.terminologyForce, "Force the terminology to appear on the target side. May degrade translation quality. Not recommended.");
       Logger::Config::addOptions(app, config.logger);
     }
   };
@@ -186,6 +190,9 @@ class AsyncService {
   /// requests compiled from  batching-pools of multiple translation models. The batching pool is wrapped around one
   /// object for thread-safety.
   ThreadsafeBatchingPool<AggregateBatchingPool> safeBatchingPool_;
+
+  // Using an unordered map to read in terminology
+  std::unordered_map<std::string, std::string> terminologyMap_;
 
   // Logger which shuts down cleanly with service.
   Logger logger_;

@@ -6,11 +6,84 @@
 #include "batch.h"
 #include "byte_array_util.h"
 #include "definitions.h"
+#include <regex>
 
 namespace marian {
 namespace bergamot {
 
 namespace {
+
+  // Replacement_fn
+  size_t CountOccurrences(std::string_view s, std::string_view needle) {
+    size_t res = 0;
+    size_t pos = 0;
+    while ((pos = s.find(needle, pos)) != std::string_view::npos) {
+        ++res;
+        pos += needle.size();
+    }
+    return res;
+}
+
+std::string ReplaceNotLonger(std::string s, std::string_view what, std::string_view with) {
+    assert(what.size() >= with.size());
+    std::string_view::size_type wpos = 0;
+    std::string_view::size_type rpos = 0;
+    while (true) {
+        auto new_rpos = s.find(what, rpos);
+        if (new_rpos == std::string::npos) {
+            new_rpos = s.size();
+        }
+        auto n = new_rpos - rpos;
+        std::copy(s.begin() + rpos, s.begin() + new_rpos, s.begin() + wpos);
+        wpos += n;
+        rpos = new_rpos;
+        if (rpos == s.size()) {
+            break;
+        }
+        std::copy(with.begin(), with.end(), s.begin() + wpos);
+        wpos += with.size();
+        rpos += what.size();
+    }
+    s.resize(wpos);
+    return s;
+}
+
+std::string ReplaceLonger(std::string s, std::string_view what, std::string_view with) {
+    assert(what.size() < with.size());
+    auto occurrences = CountOccurrences(s, what);
+    auto rpos = s.size();
+    auto wpos = rpos + occurrences * (with.size() - what.size());
+    s.resize(wpos);
+
+    while (wpos != rpos) {
+        auto new_rpos = s.rfind(what, rpos - what.size());
+        if (new_rpos == std::string::npos) {
+            new_rpos = 0;
+        } else {
+            new_rpos += what.size();
+        }
+        auto n = rpos - new_rpos;
+        std::copy_backward(s.begin() + new_rpos, s.begin() + rpos, s.begin() + wpos);
+        wpos -= n;
+        rpos = new_rpos;
+        if (wpos == rpos) {
+            break;
+        }
+        std::copy_backward(with.begin(), with.end(), s.begin() + wpos);
+        wpos -= with.size();
+        rpos -= what.size();
+    }
+    return s;
+}
+
+std::string Replace(std::string s, std::string_view what, std::string_view with) {
+    assert(!what.empty());
+    if (what.size() >= with.size()) {
+        return ReplaceNotLonger(std::move(s), what, with);
+    }
+    return ReplaceLonger(std::move(s), what, with);
+}
+
 
 // Combines two responses with first.target == second.source mapping alignments etc accordingly.
 // There are several constraints which are matched by only the pivoting workflow in <>Service source, therefore this
@@ -137,6 +210,43 @@ AsyncService::AsyncService(const AsyncService::Config &config)
       logger_(config.logger) {
   ABORT_IF(config_.numWorkers == 0, "Number of workers should be at least 1 in a threaded workflow");
   workers_.reserve(config_.numWorkers);
+  // Initiate terminology map if present
+  if (!config_.terminologyFile.empty()) {
+    // Create an input filestream
+    std::ifstream myFile(config_.terminologyFile);
+
+    // Make sure the file is open
+    if(!myFile.is_open()) throw std::runtime_error("Could not open file: " + config_.terminologyFile);
+    std::string line;
+    while(std::getline(myFile, line)) {
+        // Create a stringstream of the current line
+        std::stringstream ss(line);
+
+        std::string srcword;
+        std::string replacementword;
+        getline(ss, srcword, '\t');
+        getline(ss, replacementword, '\n');
+        // @TODO it seems like removing the tags forces the model to copy which is
+        // I guess just as good and more reliable. In that case we just don't tell the model
+        // what the original source is and it just has no choice BUT to generate the target.
+        if (!config_.terminologyForce) {
+          replacementword = srcword + " <tag0> " + replacementword + " </tag0> ";
+        }
+        this->terminologyMap_.insert({srcword, replacementword});
+    }
+
+    // Close file
+    myFile.close();
+
+    //Testing
+    if (config.logger.level == "debug") {
+      std::cerr << "Printing out terminology...:" << std::endl;
+      for (auto&& item : terminologyMap_) {
+        std::cerr << item.first << " " << item.second << std::endl;
+      }
+    }
+  }
+
   for (size_t cpuId = 0; cpuId < config_.numWorkers; cpuId++) {
     workers_.emplace_back([cpuId, this] {
       // Consumer thread main-loop. Note that this is an infinite-loop unless the monitor is explicitly told to
@@ -202,6 +312,11 @@ void AsyncService::pivot(std::shared_ptr<TranslationModel> first, std::shared_pt
 void AsyncService::translate(std::shared_ptr<TranslationModel> translationModel, std::string &&source,
                              CallbackType callback, const ResponseOptions &responseOptions) {
   // Producer thread, a call to this function adds new work items. If batches are available, notifies workers waiting.
+  // Tagging
+  for (auto&& teminologyPair : terminologyMap_) {
+    source = Replace(source, teminologyPair.first, teminologyPair.second);
+  }
+
   Ptr<HTML> html = std::make_shared<HTML>(std::move(source), responseOptions.HTML);
   auto internalCallback = [html, callback](Response &&response) {
     html->restore(response);

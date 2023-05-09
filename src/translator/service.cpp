@@ -13,7 +13,8 @@ namespace bergamot {
 
 namespace {
 
-  // Replacement_fn
+  // Replacement_fn taken from https://stackoverflow.com/questions/3418231/replace-part-of-a-string-with-another-string
+  // Sue me.
   size_t CountOccurrences(std::string_view s, std::string_view needle) {
     size_t res = 0;
     size_t pos = 0;

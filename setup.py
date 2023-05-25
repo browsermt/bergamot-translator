@@ -195,8 +195,8 @@ class build_py(_build_py):
 setup(
     name="bergamot",
     version=version,
-    author="Jerin Philip",
-    author_email="jerinphilip@live.in",
+    author=["Jerin Philip", "Nikolay Bogoychev"],
+    author_email=["jerinphilip@live.in", "nheart@gmail.com"],
     url="https://github.com/browsermt/bergamot-translator/",
     description="Translate text-content locally in your machine across langauges.",
     long_description=long_description,
@@ -209,7 +209,7 @@ setup(
     python_requires=">=3.6",
     packages=["bergamot"],
     package_dir={"bergamot": "bindings/python"},
-    install_requires=["requests", "pyyaml>=5.1", "appdirs"],
+    install_requires=["requests", "pyyaml>=5.1", "appdirs", "pybind11"],
     entry_points={
         "console_scripts": [
             "bergamot = bergamot.__main__:main",

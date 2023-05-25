@@ -198,16 +198,22 @@ PYBIND11_MODULE(_bergamot, m) {
       .def("pivot", &ServicePyAdapter::pivot);
 
   py::class_<Service::Config>(m, "ServiceConfig")
-      .def(py::init<>([](size_t numWorkers, size_t cacheSize, std::string logging) {
+      .def(py::init<>([](size_t numWorkers, size_t cacheSize, std::string logging,
+      std::string pathToTerminologyFile, bool terminologyForce) {
              Service::Config config;
              config.numWorkers = numWorkers;
              config.cacheSize = cacheSize;
              config.logger.level = logging;
+             config.terminologyFile = pathToTerminologyFile;
+             config.terminologyForce = terminologyForce;
              return config;
            }),
-           py::arg("numWorkers") = 1, py::arg("cacheSize") = 0, py::arg("logLevel") = "off")
+           py::arg("numWorkers") = 1, py::arg("cacheSize") = 0, py::arg("logLevel") = "off",
+           py::arg("pathToTerminologyFile") = "", py::arg("terminologyForce") = false)
       .def_readwrite("numWorkers", &Service::Config::numWorkers)
-      .def_readwrite("cacheSize", &Service::Config::cacheSize);
+      .def_readwrite("cacheSize", &Service::Config::cacheSize)
+      .def_readwrite("pathToTerminologyFile", &Service::Config::terminologyFile)
+      .def_readwrite("terminologyForce", &Service::Config::terminologyForce);
 
   py::class_<_Model, std::shared_ptr<_Model>>(m, "TranslationModel");
 }

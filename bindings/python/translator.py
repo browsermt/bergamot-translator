@@ -59,9 +59,7 @@ class Translator:
         return ret
     #@TODO add async translate with futures
 
-
-
-if __name__ == '__main__':
+def main():
     parser = argparse.ArgumentParser(description="bergamot-translator interfance")
     parser.add_argument("--config", '-c', required=True, type=str, help='Model YML configuration input.')
     parser.add_argument("--num-workers", '-n', type=int, default=1, help='Number of CPU workers.')
@@ -82,3 +80,5 @@ if __name__ == '__main__':
         for line in stdin:
             print(translator.translate(line))
 
+if __name__ == '__main__':
+    main()

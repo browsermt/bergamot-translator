@@ -213,7 +213,7 @@ setup(
     entry_points={
         "console_scripts": [
             "bergamot = bergamot.__main__:main",
-            "bergamot-translator = bergamot_translator.__main__:main"
+            "bergamot-translator = bergamot.translator:main"
         ],
     },
     # Classifiers help users find your project by categorizing it.

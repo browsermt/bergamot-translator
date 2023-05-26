@@ -8,11 +8,11 @@ class Translator:
     """Bergamot translator interfacing with the C++ code.
     
     Attributes:
-        num_workers        Number of parallel CPU workers.
-        cache:             Cache size. 0 to disable cache.
-        logging:           Log level: trace, debug, info, warn, err(or), critical, off. Default is off
-        terminology:       Path to a TSV terminology file
-        force_terminology  Force the terminology to appear on the target side. May affect translation quality negatively.
+        _num_workers        Number of parallel CPU workers.
+        _cache:             Cache size. 0 to disable cache.
+        _logging:           Log level: trace, debug, info, warn, err(or), critical, off. Default is off
+        _terminology:       Path to a TSV terminology file
+        _force_terminology  Force the terminology to appear on the target side. May affect translation quality negatively.
         
         _config            Translation model config
         _model:            Translation model
@@ -52,7 +52,7 @@ class Translator:
         self._responseOpts = bergamot.ResponseOptions() # Default false for all, if we want to enable HTML later, from here
         self._model = self._service.modelFromConfigPath(model_conifg_path)
 
-    def resetTerminology(self, terminology: str="", force_terminology: bool=False) -> None:
+    def reset_terminology(self, terminology: str="", force_terminology: bool=False) -> None:
         """Resets the terminology of the model
         :param terminology: path to the terminology file.
         :param force_terminology: force terminology
@@ -63,7 +63,7 @@ class Translator:
         self._config = bergamot.ServiceConfig(self._num_workers, self._cache, self._logging, self._terminology, self._force_terminology)
         self._service = bergamot.Service(self._config)
 
-    def resetTerminology(self, terminology: Dict[str,str], force_terminology: bool=False) -> None:
+    def reset_terminology(self, terminology: Dict[str,str], force_terminology: bool=False) -> None:
         """Resets the terminology of the model
         :param terminology: Dictionary that maps source words to their target side terminology
         :param force_terminology: force terminology
@@ -71,7 +71,7 @@ class Translator:
         """
         self._service.setTerminology(terminology, force_terminology);
 
-    def resetNumWorkers(self, num_workers) -> None:
+    def reset_num_workers(self, num_workers) -> None:
         """Resets the number of workers
         :param num_workers: number of parallel CPU threads.
         :return: None

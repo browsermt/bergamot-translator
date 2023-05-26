@@ -119,21 +119,12 @@ Using the python interface
 ```python
 from bergamot.translator import Translator
 print(Translator.__doc__)
-Bergamot translator interfacing with the C++ code.
-    
-    Attributes:
-        num_workers        Number of parallel CPU workers.
-        cache:             Cache size. 0 to disable cache.
-        logging:           Log level: trace, debug, info, warn, err(or), critical, off. Default is off
-        terminology:       Path to a TSV terminology file
-        force_terminology  Force the terminology to appear on the target side. May affect translation quality negatively.
-        
-        _config            Translation model config
-        _model:            Translation model
-        _responseOpts      What to include in the response (alignment, html restoration, etc..)
-        _service           The translation service
-
 translator = Translator("/path/to/model.npz.best-bleu.npz.decoder.brg.yml", terminology="/path/to/terminology.tsv")
 translator.translate(["text"])
 [output]
+new_terminology = {}
+new_terminology['srcwrd'] = "trgwrd"
+translator.reset_terminology(new_terminology)
+translator.translate(["text"])
+[output_with_terminology]
 ```

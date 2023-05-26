@@ -135,5 +135,5 @@ Bergamot translator interfacing with the C++ code.
 
 translator = Translator("/path/to/model.npz.best-bleu.npz.decoder.brg.yml", terminology="/path/to/terminology.tsv")
 translator.translate(["text"])
-output
+[output]
 ```

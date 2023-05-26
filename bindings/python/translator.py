@@ -19,11 +19,11 @@ class Translator:
         _responseOpts      What to include in the response (alignment, html restoration, etc..)
         _service           The translation service
     """
-    num_workers: int
-    cache: int
-    logging: str
-    terminology: str
-    force_terminology: bool
+    _num_workers: int
+    _cache: int
+    _logging: str
+    _terminology: str
+    _force_terminology: bool
 
     _config: bergamot.ServiceConfig
     _model: bergamot.TranslationModel
@@ -41,13 +41,13 @@ class Translator:
         :param terminology: Path to terminology file, TSV format
         :param force_terminology: Force terminology to appear on the target side. May impact translation quality.
         """
-        self.num_workers = num_workers
-        self.cache = cache
-        self.logging = logging
-        self.terminology = terminology
-        self.force_terminology = force_terminology
+        self._num_workers = num_workers
+        self._cache = cache
+        self._logging = logging
+        self._terminology = terminology
+        self._force_terminology = force_terminology
 
-        self._config = bergamot.ServiceConfig(self.num_workers, self.cache, self.logging, self.terminology, self.force_terminology)
+        self._config = bergamot.ServiceConfig(self._num_workers, self._cache, self._logging, self._terminology, self._force_terminology)
         self._service = bergamot.Service(self._config)
         self._responseOpts = bergamot.ResponseOptions() # Default false for all, if we want to enable HTML later, from here
         self._model = self._service.modelFromConfigPath(model_conifg_path)
@@ -58,9 +58,9 @@ class Translator:
         :param force_terminology: force terminology
         :return: None
         """
-        self.terminology = terminology
-        self.force_terminology = force_terminology
-        self._config = bergamot.ServiceConfig(self.num_workers, self.cache, self.logging, self.terminology, self.force_terminology)
+        self._terminology = terminology
+        self._force_terminology = force_terminology
+        self._config = bergamot.ServiceConfig(self._num_workers, self._cache, self._logging, self._terminology, self._force_terminology)
         self._service = bergamot.Service(self._config)
 
     def resetNumWorkers(self, num_workers) -> None:
@@ -68,24 +68,21 @@ class Translator:
         :param num_workers: number of parallel CPU threads.
         :return: None
         """
-        self.num_workers = num_workers
-        self._config = bergamot.ServiceConfig(self.num_workers, self.cache, self.logging, self.terminology, self.force_terminology)
+        self._num_workers = num_workers
+        self._config = bergamot.ServiceConfig(self._num_workers, self._cache, self._logging, self._terminology, self._force_terminology)
         self._service = bergamot.Service(self._config)
     
-    def translate(self, sentences: List[str]) -> str:
+    def translate(self, sentences: List[str]) -> List[str]:
         """Translates a list of strings
         :param sentences: A List of strings to be translated.
-        :return: Translation output.
+        :return: A list of translation outputs.
         """
         responses = self._service.translate(self._model, bergamot.VectorString(sentences), self._responseOpts)
-        ret = ""
-        for response in responses:
-            ret = ret + response.target.text
-        return ret
+        return [response.target.text for response in responses]
     #@TODO add async translate with futures
 
 def main():
-    parser = argparse.ArgumentParser(description="bergamot-translator interfance")
+    parser = argparse.ArgumentParser(description="bergamot-translator interface")
     parser.add_argument("--config", '-c', required=True, type=str, help='Model YML configuration input.')
     parser.add_argument("--num-workers", '-n', type=int, default=1, help='Number of CPU workers.')
     parser.add_argument("--logging", '-l', type=str, default="off", help='Set verbosity level of logging: trace, debug, info, warn, err(or), critical, off. Default is off')
@@ -100,10 +97,10 @@ def main():
     if args.path_to_input is not None:
         with open(args.path_to_input, 'r', encoding='utf-8') as infile:
             lines = infile.readlines()
-            print(translator.translate(lines))
+            print("".join(translator.translate(lines)))
     else:
         for line in stdin:
-            print(translator.translate([line.strip()]))
+            print("".join(translator.translate([line.strip()])))
 
 if __name__ == '__main__':
     main()

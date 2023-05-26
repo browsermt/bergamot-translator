@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import bergamot
 import argparse
+from sys import stdin
 from typing import List
 
 class Translator:
@@ -44,12 +45,18 @@ class Translator:
     def translate(self, sentences: str) -> str:
         "Translates a strings"
         responses = self.service.translate(self.translationModel, bergamot.VectorString([sentences]), self.responseOpts)
-        return responses.target.text
+        ret = ""
+        for response in responses:
+            ret = ret + response.target.text
+        return ret
     
     def translate(self, sentences: List[str]) -> str:
         "Translates a list of strings"
         responses = self.service.translate(self.translationModel, bergamot.VectorString(sentences), self.responseOpts)
-        return responses.target.text
+        ret = ""
+        for response in responses:
+            ret = ret + response.target.text
+        return ret
     #@TODO add async translate with futures
 
 
@@ -65,6 +72,13 @@ if __name__ == '__main__':
     parser.add_argument("--path-to-input", '-i', default=None, type=str, help="Path to input file. Uses stdin if empty")
     args = parser.parse_args()
     
-    translator = Translator(args.config, args.num_workers, args.cache, args.logging, args.terminology_tsv, args.force_terminology)
+    translator = Translator(args.config, args.num_workers, args.cache_size, args.logging, args.terminology_tsv, args.force_terminology)
 
+    if args.path_to_input is not None:
+        with open(args.path_to_input, 'r', encoding='utf-8') as infile:
+            lines = infile.readlines()
+            print(translator.translate(lines))
+    else:
+        for line in stdin:
+            print(translator.translate(line))
 

@@ -94,7 +94,7 @@ jobs:
               MACOSX_DEPLOYMENT_TARGET=10.9
 
             CIBW_BEFORE_BUILD_LINUX: |
-              yum install -y ccache
+              yum install -y ccache pybind11 pybind11-devel
 
               # Install Intel MKL.
               yum-config-manager -y --add-repo https://yum.repos.intel.com/mkl/setup/intel-mkl.repo

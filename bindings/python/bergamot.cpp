@@ -118,8 +118,16 @@ class ServicePyAdapter {
     return responses;
   }
 
-  void setTerminology(std::unordered_map<std::string, std::string> terminology, bool forceTerminology=false) {
-    service_.setTerminology(terminology, forceTerminology);
+  void setTerminology(py::dict terminology, bool forceTerminology=false) {
+    // It seems copying is not too bad for performance. Also this should happen rarely and with small objects
+    // https://github.com/pybind/pybind11/issues/3033
+    std::unordered_map<std::string, std::string> cppTerminology;
+    for (std::pair<py::handle, py::handle> item : terminology) {
+        auto key = item.first.cast<std::string>();
+        auto value = item.second.cast<std::string>();
+        cppTerminology[key] = value;
+    }
+    service_.setTerminology(cppTerminology, forceTerminology);
   }
 
   private /*functions*/:

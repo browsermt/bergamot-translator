@@ -162,6 +162,14 @@ class AsyncService {
   void pivot(std::shared_ptr<TranslationModel> first, std::shared_ptr<TranslationModel> second, std::string &&source,
              CallbackType clientCallback, const ResponseOptions &options = ResponseOptions());
 
+  /// Sets the terminology to be used for translation.
+  ///
+  /// @param[in] terminology: Unordered_map with all the terminology pairs. This map is just key-value pairs form of TSV
+  /// @TODO We should think whether we want to parse the format of the terminology that our model expects here.
+  /// @param[in] forceTerminology: Force the terminology to appear at the target side. May impact translation
+  /// quality negatively
+  void setTerminology(std::unordered_map<std::string, std::string>& terminology, bool forceTerminology=false);
+
   /// Clears all pending requests.
   void clear();
 

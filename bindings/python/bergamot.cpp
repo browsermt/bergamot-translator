@@ -13,6 +13,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <unordered_map>
 
 namespace py = pybind11;
 
@@ -29,6 +30,7 @@ using Alignments = std::vector<Alignment>;
 
 PYBIND11_MAKE_OPAQUE(std::vector<Response>);
 PYBIND11_MAKE_OPAQUE(std::vector<std::string>);
+PYBIND11_MAKE_OPAQUE(std::unordered_map<std::string, std::string>);
 PYBIND11_MAKE_OPAQUE(Alignments);
 
 class ServicePyAdapter {
@@ -116,6 +118,10 @@ class ServicePyAdapter {
     return responses;
   }
 
+  void setTerminology(std::unordered_map<std::string, std::string> terminology, bool forceTerminology=false) {
+    service_.setTerminology(terminology, forceTerminology);
+  }
+
   private /*functions*/:
   static Service make_service(const Service::Config &config) {
     py::scoped_ostream_redirect outstream(std::cout,                                 // std::ostream&
@@ -195,7 +201,8 @@ PYBIND11_MODULE(_bergamot, m) {
       .def("modelFromConfig", &ServicePyAdapter::modelFromConfig)
       .def("modelFromConfigPath", &ServicePyAdapter::modelFromConfigPath)
       .def("translate", &ServicePyAdapter::translate)
-      .def("pivot", &ServicePyAdapter::pivot);
+      .def("pivot", &ServicePyAdapter::pivot)
+      .def("setTerminology", &ServicePyAdapter::setTerminology);
 
   py::class_<Service::Config>(m, "ServiceConfig")
       .def(py::init<>([](size_t numWorkers, size_t cacheSize, std::string logging,

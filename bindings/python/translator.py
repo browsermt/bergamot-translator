@@ -2,7 +2,7 @@
 import bergamot
 import argparse
 from sys import stdin
-from typing import List
+from typing import List, Dict
 
 class Translator:
     """Bergamot translator interfacing with the C++ code.
@@ -62,6 +62,14 @@ class Translator:
         self._force_terminology = force_terminology
         self._config = bergamot.ServiceConfig(self._num_workers, self._cache, self._logging, self._terminology, self._force_terminology)
         self._service = bergamot.Service(self._config)
+
+    def resetTerminology(self, terminology: Dict[str,str], force_terminology: bool=False) -> None:
+        """Resets the terminology of the model
+        :param terminology: Dictionary that maps source words to their target side terminology
+        :param force_terminology: force terminology
+        :return: None
+        """
+        self._service.setTerminology(terminology, force_terminology);
 
     def resetNumWorkers(self, num_workers) -> None:
         """Resets the number of workers

@@ -219,6 +219,7 @@ AsyncService::AsyncService(const AsyncService::Config &config)
     // Make sure the file is open
     if(!myFile.is_open()) throw std::runtime_error("Could not open file: " + config_.terminologyFile);
     std::string line;
+    std::unordered_map<std::string, std::string> tempmap; // Read in the TSV to here
     while(std::getline(myFile, line)) {
         // Create a stringstream of the current line
         std::stringstream ss(line);
@@ -226,18 +227,15 @@ AsyncService::AsyncService(const AsyncService::Config &config)
         std::string srcword;
         std::string replacementword;
         getline(ss, srcword, '\t');
-        getline(ss, replacementword, '\n');
-        // @TODO it seems like removing the tags forces the model to copy which is
-        // I guess just as good and more reliable. In that case we just don't tell the model
-        // what the original source is and it just has no choice BUT to generate the target.
-        if (!config_.terminologyForce) {
-          replacementword = srcword + " <tag0> " + replacementword + " </tag0> ";
-        }
-        this->terminologyMap_.insert({srcword, replacementword});
+        getline(ss, replacementword, '\n'); // BEWARE of windows file ndings
+        tempmap.insert({srcword, replacementword});
     }
 
     // Close file
     myFile.close();
+
+    // Load the terminology
+    setTerminology(tempmap, config.terminologyForce);
 
     //Testing
     if (config.logger.level == "debug") {
@@ -258,6 +256,21 @@ AsyncService::AsyncService(const AsyncService::Config &config)
         translationModel->translateBatch(cpuId, batch);
       }
     });
+  }
+}
+
+void AsyncService::setTerminology(std::unordered_map<std::string, std::string>& terminology, bool forceTerminology) {
+  terminologyMap_.clear(); // Clear old terminology map
+  // Copy the map. Since we might be coming from python space anyways. Also take care of force here
+  for (auto const& [key, val] : terminology) {
+    if (!forceTerminology) {
+      terminologyMap_[key] = " <tag0> " + val + " </tag0> ";
+    } else {
+      // @TODO it seems like removing the tags forces the model to copy which is
+      // I guess just as good and more reliable. In that case we just don't tell the model
+      // what the original source is and it just has no choice BUT to generate the target.
+      terminologyMap_[key] = val;
+    }
   }
 }
 

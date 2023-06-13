@@ -114,6 +114,7 @@ class AsyncService {
     std::string terminologyFile{""};
     bool terminologyForce{false};
     Logger::Config logger;  // Configurations for logging
+    std::string format{"%s <tag0> %s </tag0> "};
 
     template <class App>
     static void addOptions(App &app, Config &config) {
@@ -121,6 +122,7 @@ class AsyncService {
       app.add_option("--cache-size", config.cacheSize, "Number of entries to store in cache.");
       app.add_option("--terminology-file", config.terminologyFile, "tsv, one term at a time terminology file.");
       app.add_option("--force-terminology", config.terminologyForce, "Force the terminology to appear on the target side. May degrade translation quality. Not recommended.");
+      app.add_option("--terminology-form", config.format, "Form for technology. Default is \"%s <tag0> %s </tag0> \". Change depending on the model.");
       Logger::Config::addOptions(app, config.logger);
     }
   };

@@ -13,6 +13,7 @@ class Translator:
         _logging:           Log level: trace, debug, info, warn, err(or), critical, off. Default is off
         _terminology:       Path to a TSV terminology file
         _force_terminology  Force the terminology to appear on the target side. May affect translation quality negatively.
+        _format             Format of the terminology string
         
         _config            Translation model config
         _model:            Translation model
@@ -24,6 +25,7 @@ class Translator:
     _logging: str
     _terminology: str
     _force_terminology: bool
+    _terminology_form: str
 
     _config: bergamot.ServiceConfig
     _model: bergamot.TranslationModel
@@ -31,7 +33,8 @@ class Translator:
     _service: bergamot.Service
 
     def __init__(self, model_conifg_path: str, num_workers: int=1, cache: int=0, \
-                 logging="off", terminology: str="", force_terminology: bool=False):
+                 logging="off", terminology: str="", force_terminology: bool=False,\
+                      terminology_form: str="%s <tag0> %s </tag0> "):
         """Initialises the translator class
 
         :param model_conifg_path: Path to the configuration file for the translation model.
@@ -46,8 +49,9 @@ class Translator:
         self._logging = logging
         self._terminology = terminology
         self._force_terminology = force_terminology
+        self._terminology_form = terminology_form
 
-        self._config = bergamot.ServiceConfig(self._num_workers, self._cache, self._logging, self._terminology, self._force_terminology)
+        self._config = bergamot.ServiceConfig(self._num_workers, self._cache, self._logging, self._terminology, self._force_terminology, self._terminology_form)
         self._service = bergamot.Service(self._config)
         self._responseOpts = bergamot.ResponseOptions() # Default false for all, if we want to enable HTML later, from here
         self._model = self._service.modelFromConfigPath(model_conifg_path)
@@ -60,7 +64,7 @@ class Translator:
         """
         self._terminology = terminology
         self._force_terminology = force_terminology
-        self._config = bergamot.ServiceConfig(self._num_workers, self._cache, self._logging, self._terminology, self._force_terminology)
+        self._config = bergamot.ServiceConfig(self._num_workers, self._cache, self._logging, self._terminology, self._force_terminology, self._terminology_form)
         self._service = bergamot.Service(self._config)
 
     def reset_terminology(self, terminology: Dict[str,str], force_terminology: bool=False) -> None:
@@ -77,7 +81,7 @@ class Translator:
         :return: None
         """
         self._num_workers = num_workers
-        self._config = bergamot.ServiceConfig(self._num_workers, self._cache, self._logging, self._terminology, self._force_terminology)
+        self._config = bergamot.ServiceConfig(self._num_workers, self._cache, self._logging, self._terminology, self._force_terminology, self._terminology_form)
         self._service = bergamot.Service(self._config)
     
     def translate(self, sentences: List[str]) -> List[str]:
@@ -97,6 +101,7 @@ def main():
     parser.add_argument("--cache-size", type=int, default=0, help='Cache size. 0 for caching is disabled')
     parser.add_argument("--terminology-tsv", '-t', default="", type=str, help='Path to a terminology file TSV')
     parser.add_argument("--force-terminology", '-f', action="store_true", help='Force terminology to appear on the target side.')
+    parser.add_argument("--terminology-form", '-', type=str, default="%s <tag0> %s </tag0> ", help='"Form for technology. Default is "%s <tag0> %s </tag0> "')
     parser.add_argument("--path-to-input", '-i', default=None, type=str, help="Path to input file. Uses stdin if empty")
     args = parser.parse_args()
     

@@ -108,6 +108,16 @@ std::optional<TranslationCache> makeOptionalCache(size_t size, size_t mutexBucke
   return size > 0 ? std::make_optional<TranslationCache>(size, mutexBuckets) : std::nullopt;
 }
 
+// https://stackoverflow.com/questions/2342162/stdstring-formatting-like-sprintf
+// No string std::format/ std::vformat until c++20 :( so we use snprintf based solution
+std::string string_format(const std::string& format, const std::string& src, const std::string& trg) {
+    // Extra space for '\0'
+    size_t size = static_cast<size_t>(std::snprintf( nullptr, 0, format.c_str(), src.c_str(), trg.c_str()) + 1);
+    auto buf = std::make_unique<char[]>( size );
+    std::snprintf( buf.get(), size, format.c_str(), src.c_str(), trg.c_str());
+    return std::string( buf.get(), buf.get() + size - 1 ); // We don't want the '\0' inside
+}
+
 }  // namespace
 
 BlockingService::BlockingService(const BlockingService::Config &config)
@@ -237,13 +247,6 @@ AsyncService::AsyncService(const AsyncService::Config &config)
     // Load the terminology
     setTerminology(tempmap, config.terminologyForce);
 
-    //Testing
-    if (config.logger.level == "debug") {
-      std::cerr << "Printing out terminology...:" << std::endl;
-      for (auto&& item : terminologyMap_) {
-        std::cerr << item.first << " " << item.second << std::endl;
-      }
-    }
   }
 
   for (size_t cpuId = 0; cpuId < config_.numWorkers; cpuId++) {
@@ -264,12 +267,20 @@ void AsyncService::setTerminology(std::unordered_map<std::string, std::string>& 
   // Copy the map. Since we might be coming from python space anyways. Also take care of force here
   for (auto const& [key, val] : terminology) {
     if (!forceTerminology) {
-      terminologyMap_[key] = " <tag0> " + val + " </tag0> ";
+      terminologyMap_[key] = string_format(config_.format, key, val);
     } else {
       // @TODO it seems like removing the tags forces the model to copy which is
       // I guess just as good and more reliable. In that case we just don't tell the model
       // what the original source is and it just has no choice BUT to generate the target.
       terminologyMap_[key] = val;
+    }
+  }
+
+  //Testing
+  if (config_.logger.level == "debug") {
+    std::cerr << "Printing out terminology...:" << std::endl;
+    for (auto&& item : terminologyMap_) {
+      std::cerr << item.first << " " << item.second << std::endl;
     }
   }
 }

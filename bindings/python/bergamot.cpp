@@ -214,21 +214,24 @@ PYBIND11_MODULE(_bergamot, m) {
 
   py::class_<Service::Config>(m, "ServiceConfig")
       .def(py::init<>([](size_t numWorkers, size_t cacheSize, std::string logging,
-      std::string pathToTerminologyFile, bool terminologyForce) {
+      std::string pathToTerminologyFile, bool terminologyForce, std::string terminologyForm ) {
              Service::Config config;
              config.numWorkers = numWorkers;
              config.cacheSize = cacheSize;
              config.logger.level = logging;
              config.terminologyFile = pathToTerminologyFile;
              config.terminologyForce = terminologyForce;
+             config.format = terminologyForm;
              return config;
            }),
            py::arg("numWorkers") = 1, py::arg("cacheSize") = 0, py::arg("logLevel") = "off",
-           py::arg("pathToTerminologyFile") = "", py::arg("terminologyForce") = false)
+           py::arg("pathToTerminologyFile") = "", py::arg("terminologyForce") = false,
+           py::arg("terminologyForm") = "%s <tag0> %s </tag0> ")
       .def_readwrite("numWorkers", &Service::Config::numWorkers)
       .def_readwrite("cacheSize", &Service::Config::cacheSize)
       .def_readwrite("pathToTerminologyFile", &Service::Config::terminologyFile)
-      .def_readwrite("terminologyForce", &Service::Config::terminologyForce);
+      .def_readwrite("terminologyForce", &Service::Config::terminologyForce)
+      .def_readwrite("terminologyForm", &Service::Config::format);
 
   py::class_<_Model, std::shared_ptr<_Model>>(m, "TranslationModel");
 }

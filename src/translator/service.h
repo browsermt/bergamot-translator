@@ -15,6 +15,7 @@
 #include "threadsafe_batching_pool.h"
 #include "translation_model.h"
 #include "translator/parser.h"
+#include "translator/terminology.h"
 #include "vocabs.h"
 
 namespace marian {
@@ -108,9 +109,9 @@ class BlockingService {
 class AsyncService {
  public:
   struct Config {
-    size_t numWorkers{1};   ///< How many worker translation threads to spawn.
-    size_t cacheSize{0};    ///< Size in History items to be stored in the cache. Loosely corresponds to sentences to
-                            /// cache in the real world. A value of 0 means no caching.
+    size_t numWorkers{1};  ///< How many worker translation threads to spawn.
+    size_t cacheSize{0};   ///< Size in History items to be stored in the cache. Loosely corresponds to sentences to
+                           /// cache in the real world. A value of 0 means no caching.
     std::string terminologyFile{""};
     bool terminologyForce{false};
     Logger::Config logger;  // Configurations for logging
@@ -121,8 +122,11 @@ class AsyncService {
       app.add_option("--cpu-threads", config.numWorkers, "Workers to form translation backend");
       app.add_option("--cache-size", config.cacheSize, "Number of entries to store in cache.");
       app.add_option("--terminology-file", config.terminologyFile, "tsv, one term at a time terminology file.");
-      app.add_option("--force-terminology", config.terminologyForce, "Force the terminology to appear on the target side. May degrade translation quality. Not recommended.");
-      app.add_option("--terminology-form", config.format, "Form for technology. Default is \"%s <tag0> %s </tag0> \". Change depending on the model.");
+      app.add_option(
+          "--force-terminology", config.terminologyForce,
+          "Force the terminology to appear on the target side. May degrade translation quality. Not recommended.");
+      app.add_option("--terminology-form", config.format,
+                     "Form for technology. Default is \"%s <tag0> %s </tag0> \". Change depending on the model.");
       Logger::Config::addOptions(app, config.logger);
     }
   };
@@ -170,7 +174,7 @@ class AsyncService {
   /// @TODO We should think whether we want to parse the format of the terminology that our model expects here.
   /// @param[in] forceTerminology: Force the terminology to appear at the target side. May impact translation
   /// quality negatively
-  void setTerminology(std::unordered_map<std::string, std::string>& terminology, bool forceTerminology=false);
+  void setTerminology(TerminologyMap &terminology, bool forceTerminology = false);
 
   /// Clears all pending requests.
   void clear();
@@ -202,7 +206,7 @@ class AsyncService {
   ThreadsafeBatchingPool<AggregateBatchingPool> safeBatchingPool_;
 
   // Using an unordered map to read in terminology
-  std::unordered_map<std::string, std::string> terminologyMap_;
+  TerminologyMap terminologyMap_;
 
   // Logger which shuts down cleanly with service.
   Logger logger_;

@@ -1,90 +1,29 @@
 #include "service.h"
 
+#include <regex>
 #include <string>
 #include <utility>
 
 #include "batch.h"
 #include "byte_array_util.h"
 #include "definitions.h"
-#include <regex>
 
 namespace marian {
 namespace bergamot {
 
 namespace {
 
-  // Replacement_fn taken from https://stackoverflow.com/questions/3418231/replace-part-of-a-string-with-another-string
-  // Sue me.
-  size_t CountOccurrences(std::string_view s, std::string_view needle) {
-    size_t res = 0;
-    size_t pos = 0;
-    while ((pos = s.find(needle, pos)) != std::string_view::npos) {
-        ++res;
-        pos += needle.size();
-    }
-    return res;
+// Replacement_fn taken from https://stackoverflow.com/questions/3418231/replace-part-of-a-string-with-another-string
+// Sue me.
+size_t CountOccurrences(std::string_view s, std::string_view needle) {
+  size_t res = 0;
+  size_t pos = 0;
+  while ((pos = s.find(needle, pos)) != std::string_view::npos) {
+    ++res;
+    pos += needle.size();
+  }
+  return res;
 }
-
-std::string ReplaceNotLonger(std::string s, std::string_view what, std::string_view with) {
-    assert(what.size() >= with.size());
-    std::string_view::size_type wpos = 0;
-    std::string_view::size_type rpos = 0;
-    while (true) {
-        auto new_rpos = s.find(what, rpos);
-        if (new_rpos == std::string::npos) {
-            new_rpos = s.size();
-        }
-        auto n = new_rpos - rpos;
-        std::copy(s.begin() + rpos, s.begin() + new_rpos, s.begin() + wpos);
-        wpos += n;
-        rpos = new_rpos;
-        if (rpos == s.size()) {
-            break;
-        }
-        std::copy(with.begin(), with.end(), s.begin() + wpos);
-        wpos += with.size();
-        rpos += what.size();
-    }
-    s.resize(wpos);
-    return s;
-}
-
-std::string ReplaceLonger(std::string s, std::string_view what, std::string_view with) {
-    assert(what.size() < with.size());
-    auto occurrences = CountOccurrences(s, what);
-    auto rpos = s.size();
-    auto wpos = rpos + occurrences * (with.size() - what.size());
-    s.resize(wpos);
-
-    while (wpos != rpos) {
-        auto new_rpos = s.rfind(what, rpos - what.size());
-        if (new_rpos == std::string::npos) {
-            new_rpos = 0;
-        } else {
-            new_rpos += what.size();
-        }
-        auto n = rpos - new_rpos;
-        std::copy_backward(s.begin() + new_rpos, s.begin() + rpos, s.begin() + wpos);
-        wpos -= n;
-        rpos = new_rpos;
-        if (wpos == rpos) {
-            break;
-        }
-        std::copy_backward(with.begin(), with.end(), s.begin() + wpos);
-        wpos -= with.size();
-        rpos -= what.size();
-    }
-    return s;
-}
-
-std::string Replace(std::string s, std::string_view what, std::string_view with) {
-    assert(!what.empty());
-    if (what.size() >= with.size()) {
-        return ReplaceNotLonger(std::move(s), what, with);
-    }
-    return ReplaceLonger(std::move(s), what, with);
-}
-
 
 // Combines two responses with first.target == second.source mapping alignments etc accordingly.
 // There are several constraints which are matched by only the pivoting workflow in <>Service source, therefore this
@@ -110,12 +49,12 @@ std::optional<TranslationCache> makeOptionalCache(size_t size, size_t mutexBucke
 
 // https://stackoverflow.com/questions/2342162/stdstring-formatting-like-sprintf
 // No string std::format/ std::vformat until c++20 :( so we use snprintf based solution
-std::string string_format(const std::string& format, const std::string& src, const std::string& trg) {
-    // Extra space for '\0'
-    size_t size = static_cast<size_t>(std::snprintf( nullptr, 0, format.c_str(), src.c_str(), trg.c_str()) + 1);
-    auto buf = std::make_unique<char[]>( size );
-    std::snprintf( buf.get(), size, format.c_str(), src.c_str(), trg.c_str());
-    return std::string( buf.get(), buf.get() + size - 1 ); // We don't want the '\0' inside
+std::string string_format(const std::string &format, const std::string &src, const std::string &trg) {
+  // Extra space for '\0'
+  size_t size = static_cast<size_t>(std::snprintf(nullptr, 0, format.c_str(), src.c_str(), trg.c_str()) + 1);
+  auto buf = std::make_unique<char[]>(size);
+  std::snprintf(buf.get(), size, format.c_str(), src.c_str(), trg.c_str());
+  return std::string(buf.get(), buf.get() + size - 1);  // We don't want the '\0' inside
 }
 
 }  // namespace
@@ -227,18 +166,18 @@ AsyncService::AsyncService(const AsyncService::Config &config)
     std::ifstream myFile(config_.terminologyFile);
 
     // Make sure the file is open
-    if(!myFile.is_open()) throw std::runtime_error("Could not open file: " + config_.terminologyFile);
+    if (!myFile.is_open()) throw std::runtime_error("Could not open file: " + config_.terminologyFile);
     std::string line;
-    std::unordered_map<std::string, std::string> tempmap; // Read in the TSV to here
-    while(std::getline(myFile, line)) {
-        // Create a stringstream of the current line
-        std::stringstream ss(line);
+    std::unordered_map<std::string, std::string> tempmap;  // Read in the TSV to here
+    while (std::getline(myFile, line)) {
+      // Create a stringstream of the current line
+      std::stringstream ss(line);
 
-        std::string srcword;
-        std::string replacementword;
-        getline(ss, srcword, '\t');
-        getline(ss, replacementword, '\n'); // BEWARE of windows file ndings
-        tempmap.insert({srcword, replacementword});
+      std::string srcword;
+      std::string replacementword;
+      getline(ss, srcword, '\t');
+      getline(ss, replacementword, '\n');  // BEWARE of windows file ndings
+      tempmap.insert({srcword, replacementword});
     }
 
     // Close file
@@ -246,7 +185,6 @@ AsyncService::AsyncService(const AsyncService::Config &config)
 
     // Load the terminology
     setTerminology(tempmap, config.terminologyForce);
-
   }
 
   for (size_t cpuId = 0; cpuId < config_.numWorkers; cpuId++) {
@@ -262,10 +200,10 @@ AsyncService::AsyncService(const AsyncService::Config &config)
   }
 }
 
-void AsyncService::setTerminology(std::unordered_map<std::string, std::string>& terminology, bool forceTerminology) {
-  terminologyMap_.clear(); // Clear old terminology map
+void AsyncService::setTerminology(std::unordered_map<std::string, std::string> &terminology, bool forceTerminology) {
+  terminologyMap_.clear();  // Clear old terminology map
   // Copy the map. Since we might be coming from python space anyways. Also take care of force here
-  for (auto const& [key, val] : terminology) {
+  for (auto const &[key, val] : terminology) {
     if (!forceTerminology) {
       terminologyMap_[key] = string_format(config_.format, key, val);
     } else {
@@ -276,10 +214,10 @@ void AsyncService::setTerminology(std::unordered_map<std::string, std::string>& 
     }
   }
 
-  //Testing
+  // Testing
   if (config_.logger.level == "debug") {
     std::cerr << "Printing out terminology...:" << std::endl;
-    for (auto&& item : terminologyMap_) {
+    for (auto &&item : terminologyMap_) {
       std::cerr << item.first << " " << item.second << std::endl;
     }
   }
@@ -338,9 +276,7 @@ void AsyncService::translate(std::shared_ptr<TranslationModel> translationModel,
                              CallbackType callback, const ResponseOptions &responseOptions) {
   // Producer thread, a call to this function adds new work items. If batches are available, notifies workers waiting.
   // Tagging
-  for (auto&& teminologyPair : terminologyMap_) {
-    source = Replace(source, teminologyPair.first, teminologyPair.second);
-  }
+  if (!terminologyMap_.empty()) source = ReplaceTerminology(std::move(source), terminologyMap_);
 
   Ptr<HTML> html = std::make_shared<HTML>(std::move(source), responseOptions.HTML);
   auto internalCallback = [html, callback](Response &&response) {

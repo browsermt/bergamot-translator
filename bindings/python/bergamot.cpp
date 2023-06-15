@@ -12,8 +12,8 @@
 
 #include <iostream>
 #include <string>
-#include <vector>
 #include <unordered_map>
+#include <vector>
 
 namespace py = pybind11;
 
@@ -118,14 +118,14 @@ class ServicePyAdapter {
     return responses;
   }
 
-  void setTerminology(py::dict terminology, bool forceTerminology=false) {
+  void setTerminology(py::dict terminology, bool forceTerminology = false) {
     // It seems copying is not too bad for performance. Also this should happen rarely and with small objects
     // https://github.com/pybind/pybind11/issues/3033
     std::unordered_map<std::string, std::string> cppTerminology;
     for (std::pair<py::handle, py::handle> item : terminology) {
-        auto key = item.first.cast<std::string>();
-        auto value = item.second.cast<std::string>();
-        cppTerminology[key] = value;
+      auto key = item.first.cast<std::string>();
+      auto value = item.second.cast<std::string>();
+      cppTerminology[key] = value;
     }
     service_.setTerminology(cppTerminology, forceTerminology);
   }
@@ -213,8 +213,8 @@ PYBIND11_MODULE(_bergamot, m) {
       .def("setTerminology", &ServicePyAdapter::setTerminology);
 
   py::class_<Service::Config>(m, "ServiceConfig")
-      .def(py::init<>([](size_t numWorkers, size_t cacheSize, std::string logging,
-      std::string pathToTerminologyFile, bool terminologyForce, std::string terminologyForm ) {
+      .def(py::init<>([](size_t numWorkers, size_t cacheSize, std::string logging, std::string pathToTerminologyFile,
+                         bool terminologyForce, std::string terminologyForm) {
              Service::Config config;
              config.numWorkers = numWorkers;
              config.cacheSize = cacheSize;

@@ -93,6 +93,7 @@ class Translator:
         return [response.target.text for response in responses]
     #@TODO add async translate with futures
 
+
 def main():
     parser = argparse.ArgumentParser(description="bergamot-translator interface")
     parser.add_argument("--config", '-c', required=True, type=str, help='Model YML configuration input.')
@@ -103,17 +104,37 @@ def main():
     parser.add_argument("--force-terminology", '-f', action="store_true", help='Force terminology to appear on the target side.')
     parser.add_argument("--terminology-form", '-', type=str, default="%s <tag0> %s </tag0> ", help='"Form for terminology. Default is "%%s <tag0> %%s </tag0> "')
     parser.add_argument("--path-to-input", '-i', default=None, type=str, help="Path to input file. Uses stdin if empty")
+    parser.add_argument("--batch", '-b', default=32, type=int, help="Number of lines to process in a batch")
     args = parser.parse_args()
     
     translator = Translator(args.config, args.num_workers, args.cache_size, args.logging, args.terminology_tsv, args.force_terminology)
 
-    if args.path_to_input is not None:
-        with open(args.path_to_input, 'r', encoding='utf-8') as infile:
-            lines = infile.readlines()
-            print("".join(translator.translate(lines)))
+    if args.path_to_input is None:
+        infile = stdin
     else:
-        for line in stdin:
-            print("".join(translator.translate([line.strip()])))
+        infile = open(args.path_to_input, 'r', encoding='utf-8')
+
+    # In this example, each block of input text (i.e. a document) is a line.
+    # If you're using the API directly, feel free to include newlines in the
+    # block of text.  We aim to preserve whitespace at sentence boundaries.
+
+    # Buffer input text to allow the backend to parallelize.  We recommend
+    # there be about 16 sentences per worker (thread).  Note that blocks of
+    # text are internally split into sentences, so the number of sentences is
+    # typically larger than the length of the list of blocks provided.
+    buffer = []
+    for line in infile:
+        buffer.append(line.strip())
+        if len(buffer) >= args.batch:
+            print("\n".join(translator.translate(buffer)))
+            buffer = []
+
+    # Flush buffer
+    if len(buffer) > 0:
+        print("\n".join(translator.translate(buffer)))
+            
+    if args.path_to_input is not None:
+        infile.close()
 
 if __name__ == '__main__':
     main()

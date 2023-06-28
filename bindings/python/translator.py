@@ -101,7 +101,7 @@ def main():
     parser.add_argument("--cache-size", type=int, default=0, help='Cache size. 0 for caching is disabled')
     parser.add_argument("--terminology-tsv", '-t', default="", type=str, help='Path to a terminology file TSV')
     parser.add_argument("--force-terminology", '-f', action="store_true", help='Force terminology to appear on the target side.')
-    parser.add_argument("--terminology-form", '-', type=str, default="%s <tag0> %s </tag0> ", help='"Form for technology. Default is "%%s <tag0> %%s </tag0> "')
+    parser.add_argument("--terminology-form", '-', type=str, default="%s <tag0> %s </tag0> ", help='"Form for terminology. Default is "%%s <tag0> %%s </tag0> "')
     parser.add_argument("--path-to-input", '-i', default=None, type=str, help="Path to input file. Uses stdin if empty")
     args = parser.parse_args()
     

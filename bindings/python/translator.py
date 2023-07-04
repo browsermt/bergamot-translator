@@ -106,8 +106,8 @@ def main():
     parser.add_argument("--path-to-input", '-i', default=None, type=str, help="Path to input file. Uses stdin if empty")
     parser.add_argument("--batch", '-b', default=32, type=int, help="Number of lines to process in a batch")
     args = parser.parse_args()
-    
-    translator = Translator(args.config, args.num_workers, args.cache_size, args.logging, args.terminology_tsv, args.force_terminology)
+
+    translator = Translator(args.config, args.num_workers, args.cache_size, args.logging, args.terminology_tsv, args.force_terminology, args.terminology_form)
 
     if args.path_to_input is None:
         infile = stdin

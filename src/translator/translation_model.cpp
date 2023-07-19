@@ -61,24 +61,35 @@ void TranslationModel::loadBackend(size_t idx) {
   graph->getBackend()->configureDevice(options_);
   graph->reserveWorkspaceMB(options_->get<size_t>("workspace"));
 
-  // Marian Model: Load from memoryBundle or shortList
-  if (memory_.model.size() > 0 &&
-      memory_.model.begin() !=
-          nullptr) {  // If we have provided a byte array that contains the model memory, we can initialise the
-                      // model from there, as opposed to from reading in the config file
-    ABORT_IF((uintptr_t)memory_.model.begin() % 256 != 0,
-             "The provided memory is not aligned to 256 bytes and will crash when vector instructions are used on it.");
-    if (options_->get<bool>("check-bytearray", false)) {
-      ABORT_IF(!validateBinaryModel(memory_.model, memory_.model.size()),
+  // if memory_.models is populated, then all models were of binary format
+  if(memory_.models.size() >= 1) {
+    const std::vector<const void *> container = std::invoke([&](){
+      std::vector<const void *> model_ptrs(memory_.models.size());
+      for(size_t i = 0; i < memory_.models.size(); ++i){
+        const AlignedMemory &model = *memory_.models[i];
+
+        ABORT_IF(model.size() == 0 || model.begin() == nullptr,
+              "The provided memory is empty. Cannot load the model.");
+        ABORT_IF((uintptr_t)model.begin() % 256 != 0,
+              "The provided memory is not aligned to 256 bytes and will crash when vector instructions are used on it.");
+        if (options_->get<bool>("check-bytearray", false)) {
+          ABORT_IF(!validateBinaryModel(model, model.size()),
                "The binary file is invalid. Incomplete or corrupted download?");
-    }
-    const std::vector<const void *> container = {
-        memory_.model.begin()};  // Marian supports multiple models initialised in this manner hence std::vector.
-                                 // However we will only ever use 1 during decoding.
+        }
+
+        model_ptrs[i] = model.begin();
+        LOG(debug, "Loaded model {} of {} from memory", (i+1), model_ptrs.size());
+      }
+      return model_ptrs;
+    });
+
     scorerEnsemble = createScorers(options_, container);
   } else {
+    // load npz format models, or a mixture of binary/npz formats
     scorerEnsemble = createScorers(options_);
+    LOG(debug, "Loaded {} model(s) from file", scorerEnsemble.size());
   }
+
   for (auto scorer : scorerEnsemble) {
     scorer->init(graph);
     if (shortlistGenerator_) {

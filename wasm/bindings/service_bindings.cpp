@@ -48,7 +48,7 @@ MemoryBundle prepareMemoryBundle(AlignedMemory* modelMemory, AlignedMemory* shor
                                  std::vector<AlignedMemory*> uniqueVocabsMemories,
                                  AlignedMemory* qualityEstimatorMemory) {
   MemoryBundle memoryBundle;
-  memoryBundle.model = std::move(*modelMemory);
+  memoryBundle.models.emplace_back(std::make_shared<AlignedMemory>(std::move(*modelMemory)));
   memoryBundle.shortlist = std::move(*shortlistMemory);
   memoryBundle.vocabs = std::move(prepareVocabsSmartMemories(uniqueVocabsMemories));
   if (qualityEstimatorMemory != nullptr) {

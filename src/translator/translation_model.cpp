@@ -62,23 +62,23 @@ void TranslationModel::loadBackend(size_t idx) {
   graph->reserveWorkspaceMB(options_->get<size_t>("workspace"));
 
   // if memory_.models is populated, then all models were of binary format
-  if(memory_.models.size() >= 1) {
-    const std::vector<const void *> container = std::invoke([&](){
+  if (memory_.models.size() >= 1) {
+    const std::vector<const void *> container = std::invoke([&]() {
       std::vector<const void *> model_ptrs(memory_.models.size());
-      for(size_t i = 0; i < memory_.models.size(); ++i){
+      for (size_t i = 0; i < memory_.models.size(); ++i) {
         const AlignedMemory &model = *memory_.models[i];
 
-        ABORT_IF(model.size() == 0 || model.begin() == nullptr,
-              "The provided memory is empty. Cannot load the model.");
-        ABORT_IF((uintptr_t)model.begin() % 256 != 0,
-              "The provided memory is not aligned to 256 bytes and will crash when vector instructions are used on it.");
+        ABORT_IF(model.size() == 0 || model.begin() == nullptr, "The provided memory is empty. Cannot load the model.");
+        ABORT_IF(
+            (uintptr_t)model.begin() % 256 != 0,
+            "The provided memory is not aligned to 256 bytes and will crash when vector instructions are used on it.");
         if (options_->get<bool>("check-bytearray", false)) {
           ABORT_IF(!validateBinaryModel(model, model.size()),
-               "The binary file is invalid. Incomplete or corrupted download?");
+                   "The binary file is invalid. Incomplete or corrupted download?");
         }
 
         model_ptrs[i] = model.begin();
-        LOG(debug, "Loaded model {} of {} from memory", (i+1), model_ptrs.size());
+        LOG(debug, "Loaded model {} of {} from memory", (i + 1), model_ptrs.size());
       }
       return model_ptrs;
     });

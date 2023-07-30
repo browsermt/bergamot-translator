@@ -66,7 +66,7 @@ void TranslationModel::loadBackend(size_t idx) {
     const std::vector<const void *> container = std::invoke([&]() {
       std::vector<const void *> model_ptrs(memory_.models.size());
       for (size_t i = 0; i < memory_.models.size(); ++i) {
-        const AlignedMemory &model = *memory_.models[i];
+        const AlignedMemory &model = memory_.models[i];
 
         ABORT_IF(model.size() == 0 || model.begin() == nullptr, "The provided memory is empty. Cannot load the model.");
         ABORT_IF(

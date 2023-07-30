@@ -91,14 +91,14 @@ AlignedMemory loadFileToMemory(const std::string& path, size_t alignment) {
   return alignedMemory;
 }
 
-std::vector<std::shared_ptr<AlignedMemory>> getModelMemoryFromConfig(marian::Ptr<marian::Options> options) {
+std::vector<AlignedMemory> getModelMemoryFromConfig(marian::Ptr<marian::Options> options) {
   auto models = options->get<std::vector<std::string>>("models");
 
-  std::vector<std::shared_ptr<AlignedMemory>> modelMemories(models.size());
+  std::vector<AlignedMemory> modelMemories(models.size());
   for (size_t i = 0; i < models.size(); ++i) {
     const auto model = models[i];
     if (marian::io::isBin(model)) {
-      modelMemories[i] = std::make_shared<AlignedMemory>(loadFileToMemory(model, 256));
+      modelMemories[i] = loadFileToMemory(model, 256);
     } else if (marian::io::isNpz(model)) {
       // if any of the models are npz format, we revert to loading from file for all models.
       LOG(debug, "Encountered an npz file {}; will use file loading for {} models", model, models.size());

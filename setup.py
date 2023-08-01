@@ -40,6 +40,7 @@ class CMakeBuild(build_ext):
         # Can be set with Conda-Build, for example.
         cmake_generator = os.environ.get("CMAKE_GENERATOR", "")
         build_arch = os.environ.get("BUILD_ARCH", "native")
+        cuda = os.environ.get("COMPILE_CUDA", "OFF")
 
         # Set Python_EXECUTABLE instead if you use PYBIND11_FINDPYTHON
         # EXAMPLE_VERSION_INFO shows you how to pass a value into the C++ code
@@ -50,6 +51,8 @@ class CMakeBuild(build_ext):
             f"-DCMAKE_BUILD_TYPE={cfg}",  # not used on MSVC, but no harm
             f"-DCOMPILE_PYTHON=ON",
             f"-DSSPLIT_USE_INTERNAL_PCRE2=ON",
+            f"-DSPM_ENABLE_TCMALLOC=OFF",
+            f"-DCOMPILE_CUDA={cuda}",
             f"-DBUILD_ARCH={build_arch}",
         ]
 

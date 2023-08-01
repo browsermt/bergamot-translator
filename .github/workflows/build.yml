@@ -281,7 +281,7 @@ jobs:
                 ${{github.workspace}}/build-wasm/bergamot-translator-worker.wasm
                 ${{github.workspace}}/build-wasm/bergamot-translator-worker.js.bak
 
-    
+
     upload-wasm:
       name: "Upload node package to NPM"
       runs-on: ubuntu-latest

@@ -19,8 +19,8 @@ typedef AlignedVector<char> AlignedMemory;
 /// Memory bundle for all byte-arrays.
 /// Can be a set/subset of model, shortlist, vocabs and ssplitPrefixFile bytes.
 struct MemoryBundle {
-  AlignedMemory model{};      ///< Byte-array of model (aligned to 256)
-  AlignedMemory shortlist{};  ///< Byte-array of shortlist (aligned to 64)
+  std::vector<AlignedMemory> models{};  ///< Byte-array of model (each element is aligned to 256)
+  AlignedMemory shortlist{};            ///< Byte-array of shortlist (aligned to 64)
 
   /// Vector of vocabulary memories (aligned to 64).
   /// If two vocabularies are the same (based on the filenames), two entries (shared

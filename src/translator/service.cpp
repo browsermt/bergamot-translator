@@ -162,8 +162,7 @@ AsyncService::AsyncService(const AsyncService::Config &config)
     ABORT_IF(config_.numWorkers == 0, "Number of workers should be at least 1 in a threaded workflow");
     workers_.reserve(config_.numWorkers);
   } else {
-    if (config_.numWorkers != 0)
-      LOG(info, "Unable to mix GPU and CPU workers, using GPU workers only...");
+    if (config_.numWorkers != 0) LOG(info, "Unable to mix GPU and CPU workers, using GPU workers only...");
     workers_.reserve(config_.gpuWorkers.size());
     // VERY VERY HACKY. EVERYTHING USES NUM_WORKERS AS A REFERENCE FOR THE NUMBER OF WORKERS,
     // REFACTOR TO USE gpuWorkers directly...

@@ -216,8 +216,8 @@ PYBIND11_MODULE(_bergamot, m) {
 
   py::bind_vector<std::vector<size_t>>(m, "VectorSizeT");
   py::class_<Service::Config>(m, "ServiceConfig")
-      .def(py::init<>([](size_t numWorkers, std::vector<size_t> gpuWorkers, size_t cacheSize, std::string logging, std::string pathToTerminologyFile,
-                         bool terminologyForce, std::string terminologyForm) {
+      .def(py::init<>([](size_t numWorkers, std::vector<size_t> gpuWorkers, size_t cacheSize, std::string logging,
+                         std::string pathToTerminologyFile, bool terminologyForce, std::string terminologyForm) {
              Service::Config config;
              config.numWorkers = numWorkers;
              config.gpuWorkers = gpuWorkers;
@@ -228,9 +228,8 @@ PYBIND11_MODULE(_bergamot, m) {
              config.format = terminologyForm;
              return config;
            }),
-           py::arg("numWorkers") = 1, py::arg("gpuWorkers") = std::vector<size_t>{0},
-           py::arg("cacheSize") = 0, py::arg("logLevel") = "off",
-           py::arg("pathToTerminologyFile") = "", py::arg("terminologyForce") = false,
+           py::arg("numWorkers") = 1, py::arg("gpuWorkers") = std::vector<size_t>{0}, py::arg("cacheSize") = 0,
+           py::arg("logLevel") = "off", py::arg("pathToTerminologyFile") = "", py::arg("terminologyForce") = false,
            py::arg("terminologyForm") = "%s <tag0> %s </tag0> ")
       .def_readwrite("numWorkers", &Service::Config::numWorkers)
       .def_readwrite("gpuWorkers", &Service::Config::gpuWorkers)

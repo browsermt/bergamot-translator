@@ -109,10 +109,10 @@ class BlockingService {
 class AsyncService {
  public:
   struct Config {
-    std::vector<size_t> gpuWorkers; ///< GPU workers array. If not-empty use CPU workers instead.
-    size_t numWorkers{1};  ///< How many worker translation threads to spawn.
-    size_t cacheSize{0};   ///< Size in History items to be stored in the cache. Loosely corresponds to sentences to
-                           /// cache in the real world. A value of 0 means no caching.
+    std::vector<size_t> gpuWorkers;  ///< GPU workers array. If not-empty use CPU workers instead.
+    size_t numWorkers{1};            ///< How many worker translation threads to spawn.
+    size_t cacheSize{0};  ///< Size in History items to be stored in the cache. Loosely corresponds to sentences to
+                          /// cache in the real world. A value of 0 means no caching.
     std::string terminologyFile{""};
     bool terminologyForce{false};
     Logger::Config logger;  // Configurations for logging

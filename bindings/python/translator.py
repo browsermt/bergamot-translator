@@ -9,6 +9,7 @@ class Translator:
     
     Attributes:
         _num_workers        Number of parallel CPU workers.
+        _gpu_workers        Indices of the GPU devices used. _num_workers must be set to zero!
         _cache:             Cache size. 0 to disable cache.
         _logging:           Log level: trace, debug, info, warn, err(or), critical, off. Default is off
         _terminology:       Path to a TSV terminology file
@@ -21,6 +22,7 @@ class Translator:
         _service           The translation service
     """
     _num_workers: int
+    _gpu_workers: List[int]
     _cache: int
     _logging: str
     _terminology: str
@@ -32,26 +34,28 @@ class Translator:
     _responseOpts: bergamot.ResponseOptions
     _service: bergamot.Service
 
-    def __init__(self, model_conifg_path: str, num_workers: int=1, cache: int=0, \
+    def __init__(self, model_conifg_path: str, num_workers: int=1, gpu_workers: List[int]=[],  cache: int=0, \
                  logging="off", terminology: str="", force_terminology: bool=False,\
                       terminology_form: str="%s <tag0> %s </tag0> "):
         """Initialises the translator class
 
         :param model_conifg_path: Path to the configuration file for the translation model.
         :param num_workers: Number of CPU workers.
+        :param gpu_workers: Indices of the GPU devices. num_workers must be zero if this is non-empty
         :param cache: cache size. 0 means no cache.
         :param logging: Log level: trace, debug, info, warn, err(or), critical, off.
         :param terminology: Path to terminology file, TSV format
         :param force_terminology: Force terminology to appear on the target side. May impact translation quality.
         """
         self._num_workers = num_workers
+        self._gpu_workers = gpu_workers
         self._cache = cache
         self._logging = logging
         self._terminology = terminology
         self._force_terminology = force_terminology
         self._terminology_form = terminology_form
 
-        self._config = bergamot.ServiceConfig(self._num_workers, self._cache, self._logging, self._terminology, self._force_terminology, self._terminology_form)
+        self._config = bergamot.ServiceConfig(self._num_workers, bergamot.VectorSizeT(self._gpu_workers), self._cache, self._logging, self._terminology, self._force_terminology, self._terminology_form)
         self._service = bergamot.Service(self._config)
         self._responseOpts = bergamot.ResponseOptions() # Default false for all, if we want to enable HTML later, from here
         self._model = self._service.modelFromConfigPath(model_conifg_path)
@@ -64,7 +68,7 @@ class Translator:
         """
         self._terminology = terminology
         self._force_terminology = force_terminology
-        self._config = bergamot.ServiceConfig(self._num_workers, self._cache, self._logging, self._terminology, self._force_terminology, self._terminology_form)
+        self._config = bergamot.ServiceConfig(self._num_workers, bergamot.VectorSizeT(self._gpu_workers), self._cache, self._logging, self._terminology, self._force_terminology, self._terminology_form)
         self._service = bergamot.Service(self._config)
 
     def reset_terminology(self, terminology: Dict[str,str], force_terminology: bool=False) -> None:
@@ -81,7 +85,16 @@ class Translator:
         :return: None
         """
         self._num_workers = num_workers
-        self._config = bergamot.ServiceConfig(self._num_workers, self._cache, self._logging, self._terminology, self._force_terminology, self._terminology_form)
+        self._config = bergamot.ServiceConfig(self._num_workers, bergamot.VectorSizeT(self._gpu_workers), self._cache, self._logging, self._terminology, self._force_terminology, self._terminology_form)
+        self._service = bergamot.Service(self._config)
+
+    def reset_gpu_workers(self, gpu_workers: List[int]) -> None:
+        """Resets the number of GPU workers
+        :param gpu_workers: Indices of the GPU devices to be used.
+        :return: None
+        """
+        self._gpu_workers = gpu_workers
+        self._config = bergamot.ServiceConfig(self._num_workers, bergamot.VectorSizeT(self._gpu_workers), self._cache, self._logging, self._terminology, self._force_terminology, self._terminology_form)
         self._service = bergamot.Service(self._config)
     
     def translate(self, sentences: List[str]) -> List[str]:
@@ -98,6 +111,7 @@ def main():
     parser = argparse.ArgumentParser(description="bergamot-translator interface")
     parser.add_argument("--config", '-c', required=True, type=str, help='Model YML configuration input.')
     parser.add_argument("--num-workers", '-n', type=int, default=1, help='Number of CPU workers.')
+    parser.add_argument("--num-gpus", "-g", type=int, action='append', nargs='+', default=None, help='List of GPUs to use.')
     parser.add_argument("--logging", '-l', type=str, default="off", help='Set verbosity level of logging: trace, debug, info, warn, err(or), critical, off. Default is off')
     parser.add_argument("--cache-size", type=int, default=0, help='Cache size. 0 for caching is disabled')
     parser.add_argument("--terminology-tsv", '-t', default="", type=str, help='Path to a terminology file TSV')
@@ -107,7 +121,14 @@ def main():
     parser.add_argument("--batch", '-b', default=32, type=int, help="Number of lines to process in a batch")
     args = parser.parse_args()
 
-    translator = Translator(args.config, args.num_workers, args.cache_size, args.logging, args.terminology_tsv, args.force_terminology, args.terminology_form)
+    if args.num_gpus is None:
+        num_gpus = []
+    else:
+        num_gpus = args.num_gpus[0]
+        print(num_gpus)
+        print(type(num_gpus))
+        print(args.num_workers)
+    translator = Translator(args.config, args.num_workers, num_gpus, args.cache_size, args.logging, args.terminology_tsv, args.force_terminology, args.terminology_form)
 
     if args.path_to_input is None:
         infile = stdin

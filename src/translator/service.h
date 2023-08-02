@@ -109,6 +109,7 @@ class BlockingService {
 class AsyncService {
  public:
   struct Config {
+    std::vector<size_t> gpuWorkers; ///< GPU workers array. If not-empty use CPU workers instead.
     size_t numWorkers{1};  ///< How many worker translation threads to spawn.
     size_t cacheSize{0};   ///< Size in History items to be stored in the cache. Loosely corresponds to sentences to
                            /// cache in the real world. A value of 0 means no caching.
@@ -120,6 +121,7 @@ class AsyncService {
     template <class App>
     static void addOptions(App &app, Config &config) {
       app.add_option("--cpu-threads", config.numWorkers, "Workers to form translation backend");
+      app.add_option("--gpu-workers", config.gpuWorkers, "GPU workers for the translation backend.");
       app.add_option("--cache-size", config.cacheSize, "Number of entries to store in cache.");
       app.add_option("--terminology-file", config.terminologyFile, "tsv, one term at a time terminology file.");
       app.add_option(
@@ -138,7 +140,7 @@ class AsyncService {
   /// backend needed based on worker threads set. See TranslationModel for documentation on other params.
   Ptr<TranslationModel> createCompatibleModel(const TranslationModel::Config &config) {
     // @TODO: Remove this remove this dependency/coupling.
-    return New<TranslationModel>(config, /*replicas=*/config_.numWorkers);
+    return New<TranslationModel>(config, /*replicas=*/config_.numWorkers, config_.gpuWorkers);
   }
 
   /// With the supplied TranslationModel, translate an input. A Response is constructed with optional items set/unset

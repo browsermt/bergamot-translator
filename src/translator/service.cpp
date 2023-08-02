@@ -158,8 +158,16 @@ AsyncService::AsyncService(const AsyncService::Config &config)
       safeBatchingPool_(),
       cache_(makeOptionalCache(config_.cacheSize, /*mutexBuckets=*/config_.numWorkers)),
       logger_(config.logger) {
-  ABORT_IF(config_.numWorkers == 0, "Number of workers should be at least 1 in a threaded workflow");
-  workers_.reserve(config_.numWorkers);
+  if (config_.gpuWorkers.size() != 0) {
+    ABORT_IF(config_.numWorkers != 0, "Unable to mix GPU and CPU workers.");
+    workers_.reserve(config_.gpuWorkers.size());
+    // VERY VERY HACKY. EVERYTHING USES NUM_WORKERS AS A REFERENCE FOR THE NUMBER OF WORKERS,
+    // REFACTOR TO USE gpuWorkers directly...
+    config_.numWorkers = config_.gpuWorkers.size();
+  } else {
+    ABORT_IF(config_.numWorkers == 0, "Number of workers should be at least 1 in a threaded workflow");
+    workers_.reserve(config_.numWorkers);
+  }
   // Initiate terminology map if present
   if (!config_.terminologyFile.empty()) {
     // Create an input filestream
@@ -283,7 +291,6 @@ void AsyncService::translate(std::shared_ptr<TranslationModel> translationModel,
     html->restore(response);
     callback(std::move(response));
   };
-
   translateRaw(translationModel, std::move(source), internalCallback, responseOptions);
 }
 

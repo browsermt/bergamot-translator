@@ -125,9 +125,6 @@ def main():
         num_gpus = []
     else:
         num_gpus = args.num_gpus[0]
-        print(num_gpus)
-        print(type(num_gpus))
-        print(args.num_workers)
     translator = Translator(args.config, args.num_workers, num_gpus, args.cache_size, args.logging, args.terminology_tsv, args.force_terminology, args.terminology_form)
 
     if args.path_to_input is None:

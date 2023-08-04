@@ -116,7 +116,7 @@ class AsyncService {
     std::string terminologyFile{""};
     bool terminologyForce{false};
     Logger::Config logger;  // Configurations for logging
-    std::string format{"%s <tag0> %s </tag0> "};
+    std::string format{"%s __target__ %s __done__ "};
 
     template <class App>
     static void addOptions(App &app, Config &config) {
@@ -128,7 +128,7 @@ class AsyncService {
           "--force-terminology", config.terminologyForce,
           "Force the terminology to appear on the target side. May degrade translation quality. Not recommended.");
       app.add_option("--terminology-form", config.format,
-                     "Form for technology. Default is \"%s <tag0> %s </tag0> \". Change depending on the model.");
+                     "Form for technology. Default is \"%s __target__ %s __done__ \". Change depending on the model.");
       Logger::Config::addOptions(app, config.logger);
     }
   };

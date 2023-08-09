@@ -94,7 +94,7 @@ jobs:
               MACOSX_DEPLOYMENT_TARGET=10.9
 
             CIBW_BEFORE_BUILD_LINUX: |
-              yum install -y ccache pybind11-devel
+              yum install -y ccache
 
               # Install Intel MKL.
               yum-config-manager -y --add-repo https://yum.repos.intel.com/mkl/setup/intel-mkl.repo
@@ -104,6 +104,9 @@ jobs:
 
               ccache -s # Print current cache stats
               ccache -z # Zero cache entry
+
+              python -m pip install --upgrade pip
+              pip install pybind11 pybind11-global
 
             CIBW_BEFORE_BUILD_MACOS: |
               brew install openblas protobuf ccache boost pybind11
@@ -377,8 +380,7 @@ jobs:
       - name: "Formatting checks: black, isort"
         run: |
             python3 -m black --diff --check bindings/python/ setup.py doc/conf.py --exclude bindings/python/translator.py
-            python3 -m isort --profile black --diff --check bindings/python setup.py doc/conf.py --exclude bindings/python/translator.py
-      - name: "Static typing checks: pytype"
+            python3 -m isort --profile black --diff --check bindings/python setup.py doc/conf.py
         run: |-
             python3 -m pytype bindings/python
 

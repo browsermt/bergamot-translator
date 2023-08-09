@@ -3,7 +3,7 @@ import argparse
 from sys import stdin
 from typing import Dict, List
 
-import bergamot
+import bergamot  # type: ignore
 
 
 class Translator:

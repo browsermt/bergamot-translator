@@ -381,7 +381,6 @@ jobs:
         run: |
             python3 -m black --diff --check bindings/python/ setup.py doc/conf.py --exclude bindings/python/translator.py
             python3 -m isort --profile black --diff --check bindings/python setup.py doc/conf.py
-        run: |-
             python3 -m pytype bindings/python
 
     docs:

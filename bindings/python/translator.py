@@ -5,6 +5,7 @@ from typing import Dict, List
 
 import bergamot
 
+
 class Translator:
     """Bergamot translator interfacing with the C++ code.
 

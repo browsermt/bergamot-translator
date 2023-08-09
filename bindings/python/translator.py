@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-import bergamot
 import argparse
 from sys import stdin
-from typing import List, Dict
+from typing import Dict, List
 
+import bergamot
 
 class Translator:
     """Bergamot translator interfacing with the C++ code.

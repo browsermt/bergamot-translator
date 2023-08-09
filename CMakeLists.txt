@@ -14,6 +14,10 @@ project(bergamot_translator CXX C)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Generate a compile_commands.json in the build directory. The compile commands allow
+# code editors to understand the build process and provide static analysis of the code.
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 # Note that with CMake MSVC build, the option CMAKE_BUILD_TYPE is automatically derived from the key
 # 'configurationType' in CMakeSettings.json configurations
 if(NOT CMAKE_BUILD_TYPE)

@@ -228,7 +228,7 @@ PYBIND11_MODULE(_bergamot, m) {
              config.format = terminologyForm;
              return config;
            }),
-           py::arg("numWorkers") = 1, py::arg("gpuWorkers") = std::vector<size_t>{0}, py::arg("cacheSize") = 0,
+           py::arg("numWorkers") = 1, py::arg("gpuWorkers") = std::vector<size_t>{}, py::arg("cacheSize") = 0,
            py::arg("logLevel") = "off", py::arg("pathToTerminologyFile") = "", py::arg("terminologyForce") = false,
            py::arg("terminologyForm") = "%s <tag0> %s </tag0> ")
       .def_readwrite("numWorkers", &Service::Config::numWorkers)

@@ -212,13 +212,13 @@ void AsyncService::setTerminology(std::unordered_map<std::string, std::string> &
   terminologyMap_.clear();  // Clear old terminology map
   // Copy the map. Since we might be coming from python space anyways. Also take care of force here
   for (auto const &[key, val] : terminology) {
-    if (!forceTerminology) {
-      terminologyMap_[key] = string_format(config_.format, key, val);
-    } else {
+    if (forceTerminology) {
       // @TODO it seems like removing the tags forces the model to copy which is
       // I guess just as good and more reliable. In that case we just don't tell the model
       // what the original source is and it just has no choice BUT to generate the target.
       terminologyMap_[key] = val;
+    } else {
+      terminologyMap_[key] = string_format(config_.format, key, val);
     }
   }
 

@@ -39,7 +39,7 @@ class Translator:
 
     def __init__(
         self,
-        model_conifg_path: str,
+        model_config_path: str,
         num_workers: int = 1,
         gpu_workers: List[int] = [],
         cache: int = 0,
@@ -50,7 +50,7 @@ class Translator:
     ):
         """Initialises the translator class
 
-        :param model_conifg_path: Path to the configuration file for the translation model.
+        :param model_config_path: Path to the configuration file for the translation model.
         :param num_workers: Number of CPU workers.
         :param gpu_workers: Indices of the GPU devices. num_workers must be zero if this is non-empty
         :param cache: cache size. 0 means no cache.
@@ -79,7 +79,7 @@ class Translator:
         self._responseOpts = (
             bergamot.ResponseOptions()
         )  # Default false for all, if we want to enable HTML later, from here
-        self._model = self._service.modelFromConfigPath(model_conifg_path)
+        self._model = self._service.modelFromConfigPath(model_config_path)
 
     def reset_terminology(
         self, terminology: str = "", force_terminology: bool = False

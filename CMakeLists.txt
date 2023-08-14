@@ -113,7 +113,6 @@ message(STATUS "Project version: ${PROJECT_VERSION_STRING_FULL}")
 
 if(COMPILE_WASM)
   # See https://github.com/emscripten-core/emscripten/blob/main/src/settings.js
-  set(WORMHOLE ON CACHE BOOL "Use WASM wormhole in intgemm https://bugzilla.mozilla.org/show_bug.cgi?id=1672160")
   list(APPEND WASM_COMPILE_FLAGS
     -O3
     # Preserve whitespaces in JS even for release builds; this doesn't increase wasm binary size

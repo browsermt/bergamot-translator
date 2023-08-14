@@ -2,34 +2,6 @@
 set -e
 set -x
 
-# Usage
-Usage="Build translator to wasm (with/without wormhole).
-
-Usage: $(basename "$0") [WORMHOLE]
-
-    where:
-    WORMHOLE      An optional string argument
-                  - when specified on command line, builds wasm artifacts with wormhole
-                  - when not specified (the default behaviour), builds wasm artifacts without wormhole."
-
-if [ "$#" -gt 1 ]; then
-  echo "Illegal number of parameters passed"
-  echo "$Usage"
-  exit
-fi
-
-WORMHOLE=false
-
-if [ "$#" -eq 1 ]; then
-  if [ "$1" = "WORMHOLE" ]; then
-    WORMHOLE=true
-  else
-    echo "Illegal parameter passed"
-    echo "$Usage"
-    exit
-  fi
-fi
-
 # Run script from the context of the script-containing directory
 cd "$(dirname $0)"
 
@@ -66,19 +38,10 @@ if [ ! -d ${BUILD_DIRECTORY} ]; then
 fi
 cd ${BUILD_DIRECTORY}
 
-if [ "$WORMHOLE" = true ]; then
-  emcmake cmake -DCOMPILE_WASM=on ../
-else
-  emcmake cmake -DCOMPILE_WASM=on -DWORMHOLE=off ../
-fi
+emcmake cmake -DCOMPILE_WASM=on ../
 emmake make -j2
 
-#     2. Enable SIMD Wormhole via Wasm instantiation API in generated artifacts
-if [ "$WORMHOLE" = true ]; then
-  bash ../wasm/patch-artifacts-enable-wormhole.sh
-fi
-
-#     3. Import GEMM library from a separate wasm module
+#     2. Import GEMM library from a separate wasm module
 bash ../wasm/patch-artifacts-import-gemm-module.sh
 
 # The artifacts (.js and .wasm files) will be available in the build directory

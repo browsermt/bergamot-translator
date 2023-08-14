@@ -52,7 +52,7 @@ To build a version that runs on all browsers (including Firefox Nightly) but tra
       ```bash
       mkdir build-wasm
       cd build-wasm
-      emcmake cmake -DCOMPILE_WASM=on -DWORMHOLE=off ../
+      emcmake cmake -DCOMPILE_WASM=on ../
       emmake make -j2
       ```
 

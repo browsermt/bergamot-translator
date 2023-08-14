@@ -1,52 +1,6 @@
 version: 2.1
 jobs:
-  build-with-wormhole:
-    docker:
-      - image: 'emscripten/emsdk:3.1.8'
-    resource_class: medium
-
-    working_directory: ~/checkout
-
-    steps:
-      - checkout
-
-      - run:
-          name: Build WASM WORMHOLE
-          command: |
-            bash build-wasm.sh WORMHOLE
-
-      - run:
-          name: Check artifacts
-          working_directory: build-wasm
-          command: |
-            ARTIFACT_BASE="bergamot-translator-worker"
-            ARTIFACT_SUFFIX="with-wormhole"
-            ARTIFACT_FINAL=$ARTIFACT_BASE-$ARTIFACT_SUFFIX
-
-            if [[ -f "$ARTIFACT_BASE.js" && -f "$ARTIFACT_BASE.wasm" ]]; then
-              echo "Artifacts Successfully Generated"
-              mkdir ../artifacts
-              cp $ARTIFACT_BASE.wasm ../artifacts/$ARTIFACT_FINAL.wasm
-              cp $ARTIFACT_BASE.js ../artifacts/$ARTIFACT_FINAL.js
-              cd ../artifacts
-              shasum -a 256 $ARTIFACT_FINAL.wasm $ARTIFACT_FINAL.js >> sha256-filesize-$ARTIFACT_SUFFIX
-              ls -lsa $ARTIFACT_FINAL.wasm $ARTIFACT_FINAL.js >> sha256-filesize-$ARTIFACT_SUFFIX
-              cp ../BERGAMOT_VERSION .
-            else
-              echo "Failure: Artifacts Not Present"
-              exit 1
-            fi
-
-      - persist_to_workspace:
-          root: .
-          paths:
-            - artifacts/*
-
-      - store_artifacts:
-          path: "artifacts"
-          destination: "wasm-wormhole"
-
-  build-without-wormhole:
+  build:
     docker:
       - image: 'emscripten/emsdk:3.1.8'
     resource_class: medium
@@ -66,8 +20,7 @@ jobs:
           working_directory: build-wasm
           command: |
             ARTIFACT_BASE="bergamot-translator-worker"
-            ARTIFACT_SUFFIX="without-wormhole"
-            ARTIFACT_FINAL=$ARTIFACT_BASE-$ARTIFACT_SUFFIX
+            ARTIFACT_FINAL=$ARTIFACT_BASE
 
             if [[ -f "$ARTIFACT_BASE.js" && -f "$ARTIFACT_BASE.wasm" ]]; then
               echo "Artifacts Successfully Generated"
@@ -75,8 +28,8 @@ jobs:
               cp $ARTIFACT_BASE.wasm ../artifacts/$ARTIFACT_FINAL.wasm
               cp $ARTIFACT_BASE.js ../artifacts/$ARTIFACT_FINAL.js
               cd ../artifacts
-              shasum -a 256 $ARTIFACT_FINAL.wasm $ARTIFACT_FINAL.js >> sha256-filesize-$ARTIFACT_SUFFIX
-              ls -lsa $ARTIFACT_FINAL.wasm $ARTIFACT_FINAL.js >> sha256-filesize-$ARTIFACT_SUFFIX
+              shasum -a 256 $ARTIFACT_FINAL.wasm $ARTIFACT_FINAL.js >> sha256-filesize
+              ls -lsa $ARTIFACT_FINAL.wasm $ARTIFACT_FINAL.js >> sha256-filesize
             else
               echo "Failure: Artifacts Not Present"
               exit 1
@@ -89,7 +42,7 @@ jobs:
 
       - store_artifacts:
           path: "artifacts"
-          destination: "wasm-without-wormhole"
+          destination: "wasm"
 
   publish_to_github:
     docker:
@@ -106,18 +59,13 @@ jobs:
                 name: "Publish Release on GitHub"
                 command: |
                   export TAG_VERSION=$(cat ./artifacts/BERGAMOT_VERSION)
-                  cat ./artifacts/sha256-filesize-without-wormhole ./artifacts/sha256-filesize-with-wormhole >> ./artifacts/sha256-filesize
-                  rm ./artifacts/sha256-filesize-without-wormhole ./artifacts/sha256-filesize-with-wormhole ./artifacts/BERGAMOT_VERSION
+                  rm ./artifacts/BERGAMOT_VERSION
                   ghr -t ${GHTOKEN} -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} -delete ${TAG_VERSION} ./artifacts/
 
 workflows:
   build:
       jobs:
-          - build-with-wormhole:
-              filters:
-                tags:
-                  only: /^v.*/
-          - build-without-wormhole:
+          - build:
               filters:
                 tags:
                   only: /^v.*/
@@ -128,7 +76,6 @@ workflows:
                 branches:
                   ignore: /.*/
               requires:
-                - build-without-wormhole
-                - build-with-wormhole
+                - build
 
 

@@ -236,7 +236,7 @@ jobs:
           run: |
             mkdir -p build-wasm
             cd build-wasm
-            emcmake cmake -DCOMPILE_WASM=on -DWORMHOLE=off ..
+            emcmake cmake -DCOMPILE_WASM=on ..
 
 
         - name: "Compile"
@@ -276,7 +276,6 @@ jobs:
             name: wasm-artefacts
             if-no-files-found: error
             path: |
-                # Without wormhole
                 ${{github.workspace}}/build-wasm/bergamot-translator-worker.js
                 ${{github.workspace}}/build-wasm/bergamot-translator-worker.wasm
                 ${{github.workspace}}/build-wasm/bergamot-translator-worker.js.bak

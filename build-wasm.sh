@@ -41,7 +41,7 @@ cd ${BUILD_DIRECTORY}
 emcmake cmake -DCOMPILE_WASM=on ../
 emmake make -j2
 
-#     2. Import GEMM library from a separate wasm module
+#     2. Import GEMM library from a separate Wasm module
 bash ../wasm/patch-artifacts-import-gemm-module.sh
 
 # The artifacts (.js and .wasm files) will be available in the build directory

@@ -23,7 +23,7 @@ endif()
 
 if(NOT COMPILE_WASM)
   # Setting BUILD_ARCH to native invokes CPU intrinsic detection logic below.
-  # Prevent invoking that logic for WASM builds.
+  # Prevent invoking that logic for Wasm builds.
   set(BUILD_ARCH native CACHE STRING "Compile for this CPU architecture.")
 
   # Unfortunately MSVC supports a limited subset of BUILD_ARCH flags. Instead try to guess
@@ -68,10 +68,10 @@ endif(MSVC)
 include(CMakeDependentOption)
 
 # Project specific cmake options
-option(COMPILE_WASM "Compile for WASM" OFF)
-cmake_dependent_option(USE_WASM_COMPATIBLE_SOURCE "Use wasm compatible sources" OFF "NOT COMPILE_WASM" ON)
+option(COMPILE_WASM "Compile for Wasm" OFF)
+cmake_dependent_option(USE_WASM_COMPATIBLE_SOURCE "Use Wasm compatible sources" OFF "NOT COMPILE_WASM" ON)
 
-# WASM disables a million libraries, which also includes the unit test-library.
+# Wasm disables a million libraries, which also includes the unit test-library.
 cmake_dependent_option(COMPILE_UNIT_TESTS "Compile unit tests" OFF "USE_WASM_COMPATIBLE_SOURCE" ON)
 option(COMPILE_TESTS "Compile bergamot-tests" OFF)
 cmake_dependent_option(ENABLE_CACHE_STATS "Enable stats on cache" ON "COMPILE_TESTS" OFF)
@@ -85,7 +85,7 @@ SET(SSPLIT_COMPILE_LIBRARY_ONLY ON CACHE BOOL "Do not compile ssplit tests")
 if (USE_WASM_COMPATIBLE_SOURCE)
   SET(COMPILE_LIBRARY_ONLY ON CACHE BOOL "Build only the Marian library and exclude all executables.")
   SET(USE_MKL OFF CACHE BOOL "Compile with MKL support")
-  # # Setting the ssplit-cpp submodule specific cmake options for wasm
+  # # Setting the ssplit-cpp submodule specific cmake options for Wasm
   SET(SSPLIT_USE_INTERNAL_PCRE2 ON CACHE BOOL "Use internal PCRE2 instead of system PCRE2")
 endif()
 
@@ -115,9 +115,9 @@ if(COMPILE_WASM)
   # See https://github.com/emscripten-core/emscripten/blob/main/src/settings.js
   list(APPEND WASM_COMPILE_FLAGS
     -O3
-    # Preserve whitespaces in JS even for release builds; this doesn't increase wasm binary size
+    # Preserve whitespaces in JS even for release builds; this doesn't increase Wasm binary size
     $<$<CONFIG:Release>:-g1>
-    # Relevant Debug info only for release with debug builds as this increases wasm binary size
+    # Relevant Debug info only for release with debug builds as this increases Wasm binary size
     $<$<CONFIG:RelWithDebInfo>:-g2>
     -fPIC
     -mssse3
@@ -128,9 +128,9 @@ if(COMPILE_WASM)
   )
   list(APPEND WASM_LINK_FLAGS
     -O3
-    # Preserve whitespaces in JS even for release builds; this doesn't increase wasm binary size
+    # Preserve whitespaces in JS even for release builds; this doesn't increase Wasm binary size
     $<$<CONFIG:Release>:-g1>
-    # Relevant Debug info only for release with debug builds as this increases wasm binary size
+    # Relevant Debug info only for release with debug builds as this increases Wasm binary size
     $<$<CONFIG:RelWithDebInfo>:-g2>
     -lembind
     # Save some code, and some speed
@@ -154,7 +154,7 @@ if(COMPILE_WASM)
     # Export all of the intgemm functions in case we need to fall back to using the embedded intgemm
     -sEXPORTED_FUNCTIONS=[_int8PrepareAFallback,_int8PrepareBFallback,_int8PrepareBFromTransposedFallback,_int8PrepareBFromQuantizedTransposedFallback,_int8PrepareBiasFallback,_int8MultiplyAndAddBiasFallback,_int8SelectColumnsOfBFallback]
     # Necessary for mozintgemm linking. This prepares the `wasmMemory` variable ahead of time as
-    # opposed to delegating that task to the wasm binary itself. This way we can link MozIntGEMM
+    # opposed to delegating that task to the Wasm binary itself. This way we can link MozIntGEMM
     # module to the same memory as the main bergamot-translator module.
     -sIMPORTED_MEMORY=1
     # Dynamic execution is either frowned upon or blocked inside browser extensions
@@ -180,4 +180,3 @@ option(COMPILE_PYTHON "Compile python bindings. Intended to be activated with se
 if(COMPILE_PYTHON)
   add_subdirectory(bindings/python)
 endif(COMPILE_PYTHON)
-

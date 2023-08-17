@@ -44,5 +44,22 @@ emmake make -j2
 #     2. Import GEMM library from a separate wasm module
 bash ../wasm/patch-artifacts-import-gemm-module.sh
 
+set +x
+echo ""
+echo "Build complete"
+echo ""
+echo "  ./build-wasm/bergamot-translator-worker.js"
+echo "  ./build-wasm/bergamot-translator-worker.wasm"
+
+WASM_SIZE=$(wc -c bergamot-translator-worker.wasm | awk '{print $1}')
+GZIP_SIZE=$(gzip -c bergamot-translator-worker.wasm | wc -c | xargs) # xargs trims the whitespace
+
+# Convert it to human readable.
+WASM_SIZE="$(awk 'BEGIN {printf "%.2f",'$WASM_SIZE'/1048576}')M ($WASM_SIZE bytes)"
+GZIP_SIZE="$(awk 'BEGIN {printf "%.2f",'$GZIP_SIZE'/1048576}')M ($GZIP_SIZE bytes)"
+
+echo "  Uncompressed wasm size: $WASM_SIZE"
+echo "  Compressed wasm size: $GZIP_SIZE"
+
 # The artifacts (.js and .wasm files) will be available in the build directory
 exit 0

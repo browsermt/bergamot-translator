@@ -17,7 +17,10 @@ _deps
 
 
 wasm/test_page/node_modules
-build-wasm
+/build
+/build-native
+/build-wasm
+/emsdk
 models
 wasm/module/worker/bergamot-translator-worker.*
 wasm/module/browsermt-bergamot-translator-*.tgz

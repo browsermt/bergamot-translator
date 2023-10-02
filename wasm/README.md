@@ -32,18 +32,8 @@ Alternatively refer to the file `test_page/js/worker.js` that demonstrates how t
 
     Provide the folder containing the wasm artifacts as the first argument of `start_server.sh` script (`../../build-wasm` in this case).
 
-* Open any of the browsers below
-    * Firefox Nightly +87: make sure the following prefs are on (about:config)
-        ```
-        dom.postMessage.sharedArrayBuffer.bypassCOOP_COEP.insecure.enabled = true
-        javascript.options.wasm_simd = true
-        javascript.options.wasm_simd_wormhole = true
-        ```
+* Open any browser (tested with latest Chrome/Firefox/Safari)
 
-    * Chrome Canary +90: start with the following argument
-        ```
-        --js-flags="--experimental-wasm-simd"
-        ```
 
 * Browse to the following page:
     ```

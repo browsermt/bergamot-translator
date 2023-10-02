@@ -41,12 +41,7 @@ To build a version that translates with higher speeds on Firefox Nightly browser
 
        The wasm artifacts (.js and .wasm files) will be available in the build directory ("build-wasm" in this case).
 
-   2. Enable SIMD Wormhole via Wasm instantiation API in generated artifacts
-       ```bash
-       bash ../wasm/patch-artifacts-enable-wormhole.sh
-       ```
-
-   3. Patch generated artifacts to import GEMM library from a separate wasm module
+   2. Patch generated artifacts to import GEMM library from a separate wasm module
        ```bash
        bash ../wasm/patch-artifacts-import-gemm-module.sh
        ```
@@ -57,7 +52,7 @@ To build a version that runs on all browsers (including Firefox Nightly) but tra
       ```bash
       mkdir build-wasm
       cd build-wasm
-      emcmake cmake -DCOMPILE_WASM=on -DWORMHOLE=off ../
+      emcmake cmake -DCOMPILE_WASM=on ../
       emmake make -j2
       ```
 

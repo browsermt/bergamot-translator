@@ -51,7 +51,7 @@ const translator = new LatencyOptimisedTranslator({
 - `workerUrl` - url to `translator-worker.js`. Defaults to `"worker/translator-worker.js"` relative to the path of `translator.js`.
 - `downloadTimeout` - Maximum time we're attempting to download model files before failing. Defaults to `60000` or 60 seconds. Set to `0` to disable.
 - `cacheSize` - Maximum number of sentences in kept translation cache (per worker, workers do not share their cache). This is an ideal maximum as it is a hash-map, in practice about 1/3th is occupied. If set to `0`, translation cache is disabled (the default).
-- `useNativeIntGemm` - Try to link to native IntGEMM implementation when loading the WASM binary. This is only implemented in the privileged extension context of Firefox Nightly. If it fails, it will always fall back to the included implementation. Defaults to `false`.
+- `useNativeIntGemm` - Try to link to native IntGEMM implementation when loading the Wasm binary. This is only implemented in the privileged extension context of Firefox Nightly. If it fails, it will always fall back to the included implementation. Defaults to `false`.
 
 ### translate()
 

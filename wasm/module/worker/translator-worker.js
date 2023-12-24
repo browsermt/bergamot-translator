@@ -1,5 +1,5 @@
 /**
- * Wrapper around the dirty bits of Bergamot's WASM bindings.
+ * Wrapper around the dirty bits of Bergamot's Wasm bindings.
  */
 
 // Global because importScripts is global.
@@ -170,7 +170,7 @@ class BergamotTranslatorWorker {
 
     /**
      * Instantiates a new translation worker with optional options object.
-     * If this call succeeds, the WASM runtime is loaded and ready.
+     * If this call succeeds, the Wasm runtime is loaded and ready.
      * 
      * Available options are:
      *   useNativeIntGemm: {true | false} defaults to false. If true, it will
@@ -193,7 +193,7 @@ class BergamotTranslatorWorker {
     /**
      * Tries to load native IntGEMM module for bergamot-translator. If that
      * fails because it or any of the expected functions is not available, it
-     * falls back to using the naive implementations that come with the wasm
+     * falls back to using the naive implementations that come with the Wasm
      * binary itself through `linkFallbackIntGemm()`.
      * @param {{env: {memory: WebAssembly.Memory}}} info
      * @return {{[method:string]: (...any) => any}}
@@ -217,7 +217,7 @@ class BergamotTranslatorWorker {
     }
 
     /**
-     * Links intgemm functions that are already available in the wasm binary,
+     * Links intgemm functions that are already available in the Wasm binary,
      * but just exports them under the name that is expected by
      * bergamot-translator.
      * @param {{env: {memory: WebAssembly.Memory}}} info
@@ -232,7 +232,7 @@ class BergamotTranslatorWorker {
     }
 
     /**
-     * Internal method. Reads and instantiates the WASM binary. Returns a
+     * Internal method. Reads and instantiates the Wasm binary. Returns a
      * promise for the exported Module object that contains all the classes
      * and functions exported by bergamot-translator.
      * @return {Promise<BergamotTranslator>}
@@ -337,7 +337,7 @@ class BergamotTranslatorWorker {
         if (buffers.config)
             Object.assign(modelConfig, buffers.config);
 
-        // WASM marian is only compiled with support for shiftedAll.
+        // Wasm marian is only compiled with support for shiftedAll.
         if (modelConfig['gemm-precision'] === 'int8')
             modelConfig['gemm-precision'] = 'int8shiftAll';
 
@@ -375,7 +375,7 @@ class BergamotTranslatorWorker {
 
     /**
      * Internal function. Copies the data from an ArrayBuffer into memory that
-     * can be used inside the WASM vm by Marian.
+     * can be used inside the Wasm vm by Marian.
      * @param {{ArrayBuffer}} buffer
      * @param {number} alignmentSize
      * @return {BergamotTranslator.AlignedMemory}
@@ -417,7 +417,7 @@ class BergamotTranslatorWorker {
         input.delete();
         options.delete();
 
-        // Convert the Response WASM wrappers into native JavaScript types we
+        // Convert the Response Wasm wrappers into native JavaScript types we
         // can send over the 'wire' (message passing) in the same format as we
         // use in bergamot-translator.
         const translations = texts.map((_, i) => ({

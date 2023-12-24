@@ -38,7 +38,7 @@ MKL/OpenBLAS.
 Building bergamot-translator
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Web Assembly (WASM) reduces building to only using a subset of
+Web Assembly (Wasm) reduces building to only using a subset of
 functionalities of marian, the translation library powering
 bergamot-translator. When developing bergamot-translator it is important
 that the sources added be compatible with marian. Therefore, it is

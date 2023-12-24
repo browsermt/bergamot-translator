@@ -18,7 +18,7 @@ const fs = require('fs');
 // implement `fetch("file://...")` yet.
 const wasmBinary = fs.readFileSync('./bergamot-translator-worker.wasm');
 
-// Read wasm runtime code that bridges the bergmot-translator binary with JS.
+// Read Wasm runtime code that bridges the bergmot-translator binary with JS.
 const wasmRuntime = fs.readFileSync('./bergamot-translator-worker.js', {encoding: 'utf8'});
 
 // Initialise the `Module` object. By adding methods and options to this, we can
@@ -39,7 +39,7 @@ global.Module = {
 eval.call(global, wasmRuntime);
 
 /**
- * Called from inside the bergamot-translation-worker.js script once the wasm
+ * Called from inside the bergamot-translation-worker.js script once the Wasm
  * module is initialized. At this point that `Module` object that was
  * initialised above will have all the classes defined in the
  * bergamot-translator API available on it.
@@ -67,7 +67,7 @@ async function onRuntimeInitialized() {
   ];
 
   // Download model data and load it into aligned memory. AlignedMemory is a
-  // necessary wrapper around allocated memory inside the WASM environment.
+  // necessary wrapper around allocated memory inside the Wasm environment.
   // The value of `alignment` is specific for which part of the model we're
   // loading. See https://en.wikipedia.org/wiki/Data_structure_alignment for a
   // more general explanation.

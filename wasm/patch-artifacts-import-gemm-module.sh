@@ -1,10 +1,10 @@
 #!/bin/bash
-usage="Patch wasm artifacts to import gemm implementation for wasm.
+usage="Patch Wasm artifacts to import gemm implementation for Wasm.
 
 Usage: $(basename "$0") [ARTIFACTS_FOLDER]
 
     where:
-    ARTIFACTS_FOLDER    Folder containing wasm artifacts
+    ARTIFACTS_FOLDER    Folder containing Wasm artifacts
                              (An optional argument, if unspecified the default is: current folder)"
 
 if [ "$#" -gt 1 ]; then
@@ -13,7 +13,7 @@ if [ "$#" -gt 1 ]; then
     exit
 fi
 
-# Parse wasm artifacts folder if provided via script argument or set it to default
+# Parse Wasm artifacts folder if provided via script argument or set it to default
 ARTIFACTS_FOLDER=$PWD
 if [ "$#" -eq 1 ]; then
     if [ ! -e "$1" ]; then

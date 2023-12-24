@@ -1,11 +1,11 @@
 #!/bin/bash
 
-usage="Copy wasm artifacts from the given folder and start httpserver
+usage="Copy Wasm artifacts from the given folder and start httpserver
 
 Usage: $(basename "$0") [ARTIFACTS_SOURCE_FOLDER]
 
     where:
-    ARTIFACTS_SOURCE_FOLDER    Directory containing pre-built wasm artifacts"
+    ARTIFACTS_SOURCE_FOLDER    Directory containing pre-built Wasm artifacts"
 
 SCRIPT_ABSOLUTE_PATH="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 
@@ -21,7 +21,7 @@ if [ ! -e "$1" ]; then
     exit
 fi
 
-# Prepare a list all wasm artifacts to be copied and copy them to the destination folder
+# Prepare a list all Wasm artifacts to be copied and copy them to the destination folder
 ARTIFACTS_BASE_NAME="bergamot-translator-worker"
 ARTIFACTS="$1/$ARTIFACTS_BASE_NAME.js $1/$ARTIFACTS_BASE_NAME.wasm"
 ARTIFACTS_DESTINATION_FOLDER=$SCRIPT_ABSOLUTE_PATH/../module/worker

@@ -4,7 +4,7 @@ All the instructions below are meant to run from the current directory.
 
 ## Using JS APIs
 
-See [node-test.js](./node-test.js) for an annotated example of how to use the WASM module. Most of the code from it can also be used in a browser context.
+See [node-test.js](./node-test.js) for an annotated example of how to use the Wasm module. Most of the code from it can also be used in a browser context.
 
 Alternatively refer to the file `test_page/js/worker.js` that demonstrates how to use the bergamot translator in JavaScript via a `<script>` tag.
 
@@ -30,7 +30,7 @@ Alternatively refer to the file `test_page/js/worker.js` that demonstrates how t
     bash start_server.sh ../../build-wasm
     ```
 
-    Provide the folder containing the wasm artifacts as the first argument of `start_server.sh` script (`../../build-wasm` in this case).
+    Provide the folder containing the Wasm artifacts as the first argument of `start_server.sh` script (`../../build-wasm` in this case).
 
 * Open any browser (tested with latest Chrome/Firefox/Safari)
 

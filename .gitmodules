@@ -7,6 +7,3 @@
 [submodule "bergamot-translator-tests"]
 	path = bergamot-translator-tests
 	url = https://github.com/browsermt/bergamot-translator-tests
-[submodule "3rd_party/pybind11"]
-	path = 3rd_party/pybind11
-	url = https://github.com/pybind/pybind11.git

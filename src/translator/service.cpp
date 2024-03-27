@@ -1,5 +1,6 @@
 #include "service.h"
 
+#include <regex>
 #include <string>
 #include <utility>
 
@@ -11,6 +12,18 @@ namespace marian {
 namespace bergamot {
 
 namespace {
+
+// Replacement_fn taken from https://stackoverflow.com/questions/3418231/replace-part-of-a-string-with-another-string
+// Sue me.
+size_t CountOccurrences(std::string_view s, std::string_view needle) {
+  size_t res = 0;
+  size_t pos = 0;
+  while ((pos = s.find(needle, pos)) != std::string_view::npos) {
+    ++res;
+    pos += needle.size();
+  }
+  return res;
+}
 
 // Combines two responses with first.target == second.source mapping alignments etc accordingly.
 // There are several constraints which are matched by only the pivoting workflow in <>Service source, therefore this
@@ -32,6 +45,16 @@ Response combine(Response &&first, Response &&second) {
 
 std::optional<TranslationCache> makeOptionalCache(size_t size, size_t mutexBuckets) {
   return size > 0 ? std::make_optional<TranslationCache>(size, mutexBuckets) : std::nullopt;
+}
+
+// https://stackoverflow.com/questions/2342162/stdstring-formatting-like-sprintf
+// No string std::format/ std::vformat until c++20 :( so we use snprintf based solution
+std::string string_format(const std::string &format, const std::string &src, const std::string &trg) {
+  // Extra space for '\0'
+  size_t size = static_cast<size_t>(std::snprintf(nullptr, 0, format.c_str(), src.c_str(), trg.c_str()) + 1);
+  auto buf = std::make_unique<char[]>(size);
+  std::snprintf(buf.get(), size, format.c_str(), src.c_str(), trg.c_str());
+  return std::string(buf.get(), buf.get() + size - 1);  // We don't want the '\0' inside
 }
 
 }  // namespace
@@ -135,8 +158,43 @@ AsyncService::AsyncService(const AsyncService::Config &config)
       safeBatchingPool_(),
       cache_(makeOptionalCache(config_.cacheSize, /*mutexBuckets=*/config_.numWorkers)),
       logger_(config.logger) {
-  ABORT_IF(config_.numWorkers == 0, "Number of workers should be at least 1 in a threaded workflow");
-  workers_.reserve(config_.numWorkers);
+  if (config_.gpuWorkers.empty()) {
+    ABORT_IF(config_.numWorkers == 0, "Number of workers should be at least 1 in a threaded workflow");
+    workers_.reserve(config_.numWorkers);
+  } else {
+    if (config_.numWorkers != 0) LOG(info, "Unable to mix GPU and CPU workers, using GPU workers only...");
+    workers_.reserve(config_.gpuWorkers.size());
+    // VERY VERY HACKY. EVERYTHING USES NUM_WORKERS AS A REFERENCE FOR THE NUMBER OF WORKERS,
+    // REFACTOR TO USE gpuWorkers directly...
+    config_.numWorkers = config_.gpuWorkers.size();
+  }
+  // Initiate terminology map if present
+  if (!config_.terminologyFile.empty()) {
+    // Create an input filestream
+    std::ifstream myFile(config_.terminologyFile);
+
+    // Make sure the file is open
+    if (!myFile.is_open()) throw std::runtime_error("Could not open file: " + config_.terminologyFile);
+    std::string line;
+    std::unordered_map<std::string, std::string> tempmap;  // Read in the TSV to here
+    while (std::getline(myFile, line)) {
+      // Create a stringstream of the current line
+      std::stringstream ss(line);
+
+      std::string srcword;
+      std::string replacementword;
+      getline(ss, srcword, '\t');
+      getline(ss, replacementword, '\n');  // BEWARE of windows file ndings
+      tempmap.insert({srcword, replacementword});
+    }
+
+    // Close file
+    myFile.close();
+
+    // Load the terminology
+    setTerminology(tempmap, config.terminologyForce);
+  }
+
   for (size_t cpuId = 0; cpuId < config_.numWorkers; cpuId++) {
     workers_.emplace_back([cpuId, this] {
       // Consumer thread main-loop. Note that this is an infinite-loop unless the monitor is explicitly told to
@@ -147,6 +205,29 @@ AsyncService::AsyncService(const AsyncService::Config &config)
         translationModel->translateBatch(cpuId, batch);
       }
     });
+  }
+}
+
+void AsyncService::setTerminology(std::unordered_map<std::string, std::string> &terminology, bool forceTerminology) {
+  terminologyMap_.clear();  // Clear old terminology map
+  // Copy the map. Since we might be coming from python space anyways. Also take care of force here
+  for (auto const &[key, val] : terminology) {
+    if (forceTerminology) {
+      // @TODO it seems like removing the tags forces the model to copy which is
+      // I guess just as good and more reliable. In that case we just don't tell the model
+      // what the original source is and it just has no choice BUT to generate the target.
+      terminologyMap_[key] = val;
+    } else {
+      terminologyMap_[key] = string_format(config_.format, key, val);
+    }
+  }
+
+  // Testing
+  if (config_.logger.level == "debug") {
+    std::cerr << "Printing out terminology...:" << std::endl;
+    for (auto &&item : terminologyMap_) {
+      std::cerr << item.first << " " << item.second << std::endl;
+    }
   }
 }
 
@@ -202,12 +283,14 @@ void AsyncService::pivot(std::shared_ptr<TranslationModel> first, std::shared_pt
 void AsyncService::translate(std::shared_ptr<TranslationModel> translationModel, std::string &&source,
                              CallbackType callback, const ResponseOptions &responseOptions) {
   // Producer thread, a call to this function adds new work items. If batches are available, notifies workers waiting.
+  // Tagging
+  if (!terminologyMap_.empty()) source = ReplaceTerminology(std::move(source), terminologyMap_);
+
   Ptr<HTML> html = std::make_shared<HTML>(std::move(source), responseOptions.HTML);
   auto internalCallback = [html, callback](Response &&response) {
     html->restore(response);
     callback(std::move(response));
   };
-
   translateRaw(translationModel, std::move(source), internalCallback, responseOptions);
 }
 

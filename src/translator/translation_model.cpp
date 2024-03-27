@@ -16,13 +16,14 @@ namespace bergamot {
 std::atomic<size_t> TranslationModel::modelCounter_ = 0;
 
 TranslationModel::TranslationModel(const Config &options, MemoryBundle &&memory /*=MemoryBundle{}*/,
-                                   size_t replicas /*=1*/)
+                                   size_t replicas /*=1*/, std::vector<size_t> gpus /*={}*/)
     : modelId_(modelCounter_++),
       options_(options),
       memory_(std::move(memory)),
       vocabs_(options, std::move(memory_.vocabs)),
       textProcessor_(options, vocabs_, std::move(memory_.ssplitPrefixFile)),
       batchingPool_(options),
+      gpus_{gpus},
       qualityEstimator_(createQualityEstimator(getQualityEstimatorModel(memory, options))) {
   ABORT_IF(replicas == 0, "At least one replica needs to be created.");
   backend_.resize(replicas);
@@ -53,7 +54,13 @@ void TranslationModel::loadBackend(size_t idx) {
   auto &graph = backend_[idx].graph;
   auto &scorerEnsemble = backend_[idx].scorerEnsemble;
 
-  marian::DeviceId device_(idx, DeviceType::cpu);
+  marian::DeviceId device_;
+
+  if (gpus_.empty()) {
+    device_ = marian::DeviceId(idx, DeviceType::cpu);
+  } else {
+    device_ = marian::DeviceId(gpus_[idx], DeviceType::gpu);
+  }
   graph = New<ExpressionGraph>(/*inference=*/true);  // set the graph to be inference only
   auto prec = options_->get<std::vector<std::string>>("precision", {"float32"});
   graph->setDefaultElementType(typeFromString(prec[0]));

@@ -14,6 +14,7 @@ add_library(bergamot-translator STATIC
     batch.cpp
     annotation.cpp
     service.cpp
+    terminology.cpp
     parser.cpp
     response.cpp
     html.cpp
@@ -38,7 +39,11 @@ if(ENABLE_CACHE_STATS)
     target_compile_definitions(bergamot-translator PUBLIC ENABLE_CACHE_STATS)
 endif(ENABLE_CACHE_STATS)
 
-target_link_libraries(bergamot-translator marian ssplit)
+if(COMPILE_CUDA)
+  target_link_libraries(bergamot-translator PUBLIC marian_cuda marian ssplit)
+else(COMPILE_CUDA)
+  target_link_libraries(bergamot-translator marian ssplit)
+endif(COMPILE_CUDA)
 
 target_include_directories(bergamot-translator
     PUBLIC ${PROJECT_SOURCE_DIR}

@@ -180,7 +180,7 @@ class TranslateLocallyLike(Repository):
     def _archive_name_without_extension(self, url: URL):
         o = urlparse(url)
         fname = os.path.basename(o.path)  # something tar.gz.
-        fname_without_extension = fname.replace(".tar.gz", "")
+        fname_without_extension = ".".join(fname.split(".")[:3])
         return fname_without_extension
 
 

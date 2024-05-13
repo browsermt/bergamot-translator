@@ -5,7 +5,7 @@ void wasm(BlockingService &service, std::shared_ptr<TranslationModel> &model) {
   std::vector<ResponseOptions> responseOptions;
   std::vector<std::string> texts;
 
-  // WASM always requires HTML and alignment.
+  // Wasm always requires HTML and alignment.
   // TODO(jerinphilip): Fix this, bring in actual tests.
   // responseOptions.HTML = true;
   // responseOptions.alignment = true;  // Necessary for HTML
@@ -35,14 +35,14 @@ int main(int argc, char *argv[]) {
 
   for (auto &modelConfigPath : config.modelConfigPaths) {
     TranslationModel::Config modelConfig = parseOptionsFromFilePath(modelConfigPath);
-    // Anything WASM is expected to use the byte-array-loads. So we hard-code grabbing MemoryBundle from FS and use the
+    // Anything Wasm is expected to use the byte-array-loads. So we hard-code grabbing MemoryBundle from FS and use the
     // MemoryBundle capable constructor.
     MemoryBundle memoryBundle = getMemoryBundleFromConfig(modelConfig);
     std::shared_ptr<TranslationModel> model = std::make_shared<TranslationModel>(modelConfig, std::move(memoryBundle));
     models.push_back(model);
   }
 
-  /// WASM is one special case where WASM path is being checked, involving translateMultiple and a multi-line feed.
+  /// Wasm is one special case where Wasm path is being checked, involving translateMultiple and a multi-line feed.
   /// Hence we do not bind it at a single input-blob single Response constraint imposed by the TestSuite.
   if (config.opMode == "wasm") {
     wasm(service, models.front());

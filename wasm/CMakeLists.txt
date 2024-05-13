@@ -4,7 +4,7 @@ add_executable(bergamot-translator-worker
     bindings/response_bindings.cpp
 )
 
-# Generate version file that can be included in the wasm artifacts
+# Generate version file that can be included in the Wasm artifacts
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/project_version.js.in
                ${CMAKE_CURRENT_BINARY_DIR}/project_version.js @ONLY)
 

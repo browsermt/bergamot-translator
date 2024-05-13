@@ -248,7 +248,7 @@ jobs:
           run: |
             ccache -s # Print current cache stats
 
-        - name: Import GEMM library from a separate wasm module
+        - name: Import GEMM library from a separate Wasm module
           working-directory: build-wasm
           run: bash ../wasm/patch-artifacts-import-gemm-module.sh
 

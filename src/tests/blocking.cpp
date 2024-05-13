@@ -17,7 +17,7 @@ int main(int argc, char *argv[]) {
     models.push_back(model);
   }
 
-  /// WASM is one special case where WASM path is being checked, involving translateMultiple and a multi-line feed.
+  /// Wasm is one special case where Wasm path is being checked, involving translateMultiple and a multi-line feed.
   /// Hence we do not bind it at a single input-blob single Response constraint imposed by the TestSuite.
   testSuite.run(config.opMode, models);
 

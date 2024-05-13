@@ -116,7 +116,7 @@ async function main() {
 
   // Intentionally do this after querying backing.registry to make sure that
   // that request is fired off first. Now we can start thinking about loading
-  // the WASM binary etc.
+  // the Wasm binary etc.
   const translator = new LatencyOptimisedTranslator(options, backing);
 
   let abortController = new AbortController();

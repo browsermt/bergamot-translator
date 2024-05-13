@@ -104,7 +104,7 @@ export class CancelledError extends Error {}
          * call and that are unrecoverable.
          * @type {(error: Error)}
          */
-        this.onerror = this.options.onerror || (err => console.error('WASM Translation Worker error:', err));
+        this.onerror = this.options.onerror || (err => console.error('Wasm Translation Worker error:', err));
     }
 
     /**
@@ -164,7 +164,7 @@ export class CancelledError extends Error {}
         // … and general errors
         worker.addEventListener('error', this.onerror.bind(this));
 
-        // Await initialisation. This will also nicely error out if the WASM
+        // Await initialisation. This will also nicely error out if the Wasm
         // runtime fails to load.
         await call('initialize', this.options);
 
@@ -248,7 +248,7 @@ export class CancelledError extends Error {}
     /**
      * Downloads a translation model and returns a set of
      * ArrayBuffers. These can then be passed to a TranslationWorker thread
-     * to instantiate a TranslationModel inside the WASM vm.
+     * to instantiate a TranslationModel inside the Wasm vm.
      * @param {{from:string, to:string}}
      * @param {{signal:AbortSignal?}?}
      * @return {Promise<{
@@ -520,7 +520,7 @@ export class BatchTranslator {
          */
         this.batchSize = Math.max(options?.batchSize || 8, 1);
 
-        this.onerror = options?.onerror || (err => console.error('WASM Translation Worker error:', err));
+        this.onerror = options?.onerror || (err => console.error('Wasm Translation Worker error:', err));
     }
     
     /**

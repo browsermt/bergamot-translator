@@ -4,6 +4,7 @@ set(UNIT_TESTS
     cache_tests
     quality_estimator_tests
     html_tests
+    terminology_tests
     xh_scanner_tests)
 
 foreach(test ${UNIT_TESTS})

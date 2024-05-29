@@ -41,6 +41,7 @@ class CMakeBuild(build_ext):
         # Can be set with Conda-Build, for example.
         cmake_generator = os.environ.get("CMAKE_GENERATOR", "")
         build_arch = os.environ.get("BUILD_ARCH", "native")
+        cuda = os.environ.get("COMPILE_CUDA", "OFF")
 
         # Set Python_EXECUTABLE instead if you use PYBIND11_FINDPYTHON
         # EXAMPLE_VERSION_INFO shows you how to pass a value into the C++ code
@@ -51,6 +52,8 @@ class CMakeBuild(build_ext):
             f"-DCMAKE_BUILD_TYPE={cfg}",  # not used on MSVC, but no harm
             f"-DCOMPILE_PYTHON=ON",
             f"-DSSPLIT_USE_INTERNAL_PCRE2=ON",
+            f"-DSPM_ENABLE_TCMALLOC=OFF",
+            f"-DCOMPILE_CUDA={cuda}",
             f"-DBUILD_ARCH={build_arch}",
         ]
 
@@ -195,8 +198,8 @@ class build_py(_build_py):
 setup(
     name="bergamot",
     version=version,
-    author="Jerin Philip",
-    author_email="jerinphilip@live.in",
+    author=["Jerin Philip", "Nikolay Bogoychev"],
+    author_email=["jerinphilip@live.in", "nheart@gmail.com"],
     url="https://github.com/browsermt/bergamot-translator/",
     description="Translate text-content locally in your machine across langauges.",
     long_description=long_description,
@@ -209,10 +212,11 @@ setup(
     python_requires=">=3.6",
     packages=["bergamot"],
     package_dir={"bergamot": "bindings/python"},
-    install_requires=["requests", "pyyaml>=5.1", "appdirs"],
+    install_requires=["requests", "pyyaml>=5.1", "appdirs", "pybind11"],
     entry_points={
         "console_scripts": [
             "bergamot = bergamot.__main__:main",
+            "bergamot-translator = bergamot.translator:main",
         ],
     },
     # Classifiers help users find your project by categorizing it.

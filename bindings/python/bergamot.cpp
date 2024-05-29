@@ -1,3 +1,4 @@
+// #define PYBIND11_DETAILED_ERROR_MESSAGES // Enables debugging
 #include <pybind11/iostream.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
@@ -12,6 +13,7 @@
 
 #include <iostream>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 namespace py = pybind11;
@@ -28,7 +30,9 @@ using Alignment = std::vector<std::vector<float>>;
 using Alignments = std::vector<Alignment>;
 
 PYBIND11_MAKE_OPAQUE(std::vector<Response>);
+PYBIND11_MAKE_OPAQUE(std::vector<size_t>);
 PYBIND11_MAKE_OPAQUE(std::vector<std::string>);
+PYBIND11_MAKE_OPAQUE(std::unordered_map<std::string, std::string>);
 PYBIND11_MAKE_OPAQUE(Alignments);
 
 class ServicePyAdapter {
@@ -116,6 +120,18 @@ class ServicePyAdapter {
     return responses;
   }
 
+  void setTerminology(py::dict terminology, bool forceTerminology = false) {
+    // It seems copying is not too bad for performance. Also this should happen rarely and with small objects
+    // https://github.com/pybind/pybind11/issues/3033
+    std::unordered_map<std::string, std::string> cppTerminology;
+    for (std::pair<py::handle, py::handle> item : terminology) {
+      auto key = item.first.cast<std::string>();
+      auto value = item.second.cast<std::string>();
+      cppTerminology[key] = value;
+    }
+    service_.setTerminology(cppTerminology, forceTerminology);
+  }
+
   private /*functions*/:
   static Service make_service(const Service::Config &config) {
     py::scoped_ostream_redirect outstream(std::cout,                                 // std::ostream&
@@ -195,19 +211,32 @@ PYBIND11_MODULE(_bergamot, m) {
       .def("modelFromConfig", &ServicePyAdapter::modelFromConfig)
       .def("modelFromConfigPath", &ServicePyAdapter::modelFromConfigPath)
       .def("translate", &ServicePyAdapter::translate)
-      .def("pivot", &ServicePyAdapter::pivot);
+      .def("pivot", &ServicePyAdapter::pivot)
+      .def("setTerminology", &ServicePyAdapter::setTerminology);
 
+  py::bind_vector<std::vector<size_t>>(m, "VectorSizeT");
   py::class_<Service::Config>(m, "ServiceConfig")
-      .def(py::init<>([](size_t numWorkers, size_t cacheSize, std::string logging) {
+      .def(py::init<>([](size_t numWorkers, std::vector<size_t> gpuWorkers, size_t cacheSize, std::string logging,
+                         std::string pathToTerminologyFile, bool terminologyForce, std::string terminologyForm) {
              Service::Config config;
              config.numWorkers = numWorkers;
+             config.gpuWorkers = gpuWorkers;
              config.cacheSize = cacheSize;
              config.logger.level = logging;
+             config.terminologyFile = pathToTerminologyFile;
+             config.terminologyForce = terminologyForce;
+             config.format = terminologyForm;
              return config;
            }),
-           py::arg("numWorkers") = 1, py::arg("cacheSize") = 0, py::arg("logLevel") = "off")
+           py::arg("numWorkers") = 1, py::arg("gpuWorkers") = std::vector<size_t>{}, py::arg("cacheSize") = 0,
+           py::arg("logLevel") = "off", py::arg("pathToTerminologyFile") = "", py::arg("terminologyForce") = false,
+           py::arg("terminologyForm") = "%s <tag0> %s </tag0> ")
       .def_readwrite("numWorkers", &Service::Config::numWorkers)
-      .def_readwrite("cacheSize", &Service::Config::cacheSize);
+      .def_readwrite("gpuWorkers", &Service::Config::gpuWorkers)
+      .def_readwrite("cacheSize", &Service::Config::cacheSize)
+      .def_readwrite("pathToTerminologyFile", &Service::Config::terminologyFile)
+      .def_readwrite("terminologyForce", &Service::Config::terminologyForce)
+      .def_readwrite("terminologyForm", &Service::Config::format);
 
   py::class_<_Model, std::shared_ptr<_Model>>(m, "TranslationModel");
 }

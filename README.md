@@ -80,3 +80,46 @@ A short example of how to use the APIs is provided in `app/bergamot.cpp` file.
 ### Using WASM version
 
 Please follow the `README` inside the `wasm` folder of this repository that demonstrates how to use the translator in JavaScript.
+
+### Using python API
+
+Compile and install:
+```
+export CMAKE_BUILD_PARALLEL_LEVEL=8 # Use 8 cores to compile
+pip install wheel
+pip install .
+
+# Desktop app
+% bergamot-translator --help
+bergamot-translator interfance
+
+options:
+  -h, --help            show this help message and exit
+  --config CONFIG, -c CONFIG
+                        Model YML configuration input.
+  --num-workers NUM_WORKERS, -n NUM_WORKERS
+                        Number of CPU workers.
+  --logging LOGGING, -l LOGGING
+                        Set verbosity level of logging: trace, debug, info, warn, err(or), critical, off. Default is off
+  --cache-size CACHE_SIZE
+                        Cache size. 0 for caching is disabled
+  --terminology-tsv TERMINOLOGY_TSV, -t TERMINOLOGY_TSV
+                        Path to a terminology file TSV
+  --force-terminology, -f
+                        Force terminology to appear on the target side.
+  --path-to-input PATH_TO_INPUT, -i PATH_TO_INPUT
+                        Path to input file. Uses stdin if empty
+```
+Using the python interface
+```python
+from bergamot.translator import Translator
+print(Translator.__doc__)
+translator = Translator("/path/to/model.npz.best-bleu.npz.decoder.brg.yml", terminology="/path/to/terminology.tsv")
+translator.translate(["text"])
+[output]
+new_terminology = {}
+new_terminology['srcwrd'] = "trgwrd"
+translator.reset_terminology(new_terminology)
+translator.translate(["text"])
+[output_with_terminology]
+```

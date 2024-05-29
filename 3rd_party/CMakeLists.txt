@@ -30,7 +30,3 @@ get_directory_property(CMAKE_C_FLAGS DIRECTORY marian-dev DEFINITION CMAKE_C_FLA
 get_directory_property(CMAKE_CXX_FLAGS DIRECTORY marian-dev DEFINITION CMAKE_CXX_FLAGS) 
 set(CMAKE_C_FLAGS ${CMAKE_C_FLAGS} PARENT_SCOPE)    
 set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} PARENT_SCOPE)    
-
-if(COMPILE_PYTHON)
-  add_subdirectory(pybind11)
-endif(COMPILE_PYTHON)

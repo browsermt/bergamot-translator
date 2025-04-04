@@ -64,6 +64,7 @@ export class CancelledError extends Error {}
      *  cacheSize?: number,
      *  useNativeIntGemm?: boolean,
      *  downloadTimeout?: number,
+     *  workerUrl?: string,
      *  registryUrl?: string
      *  pivotLanguage?: string?
      *  onerror?: (err: Error)
@@ -73,6 +74,7 @@ export class CancelledError extends Error {}
         this.options = options || {};
 
         this.registryUrl = this.options.registryUrl || 'https://bergamot.s3.amazonaws.com/models/index.json';
+        this.workerUrl = this.options.workerUrl || './worker/translator-worker.js';
 
         this.downloadTimeout = 'downloadTimeout' in this.options ? parseInt(this.options.downloadTimeout) : 60000;
 
@@ -115,7 +117,7 @@ export class CancelledError extends Error {}
      * @return {Promise<{worker:Worker, exports:Proxy<TranslationWorker>}>}
      */
     async loadWorker() {
-        const worker = new Worker(new URL('./worker/translator-worker.js', import.meta.url));
+        const worker = new Worker(new URL(this.workerUrl, import.meta.url));
 
         /**
          * Incremental counter to derive request/response ids from.

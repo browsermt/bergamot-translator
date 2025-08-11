@@ -115,7 +115,10 @@ export class CancelledError extends Error {}
      * @return {Promise<{worker:Worker, exports:Proxy<TranslationWorker>}>}
      */
     async loadWorker() {
-        const worker = new Worker(new URL('./worker/translator-worker.js', import.meta.url));
+        const worker = (
+            this.options.workerUrl ? new Worker(this.options.workerUrl) :
+            new Worker(new URL('./worker/translator-worker.js', import.meta.url))
+        );
 
         /**
          * Incremental counter to derive request/response ids from.
@@ -466,7 +469,7 @@ export class BatchTranslator {
      *  workers?: number,
      *  batchSize?: number,
      *  downloadTimeout?: number,
-     *  workerUrl?: string,
+     *  workerUrl?: string | URL,
      *  registryUrl?: string
      *  pivotLanguage?: string?
      * }} options
@@ -760,7 +763,7 @@ export class LatencyOptimisedTranslator {
      *  cacheSize?: number,
      *  useNativeIntGemm?: boolean,
      *  downloadTimeout?: number,
-     *  workerUrl?: string,
+     *  workerUrl?: string | URL,
      *  registryUrl?: string
      *  pivotLanguage?: string?
      * }} options

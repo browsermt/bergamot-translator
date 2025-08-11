@@ -1,6 +1,7 @@
-# Bergamot Translator
+# Bergamot Translator (fork)
 
-[![CircleCI badge](https://img.shields.io/circleci/project/github/browsermt/bergamot-translator/main.svg?label=CircleCI)](https://circleci.com/gh/browsermt/bergamot-translator/)
+> [!NOTE]
+> This is a fork of the original Bergamot Translator project, with some small modification to the npm package to work in BookReader.
 
 Bergamot translator provides a unified API for ([Marian NMT](https://marian-nmt.github.io/) framework based) neural machine translation functionality in accordance with the [Bergamot](https://browser.mt/) project that focuses on improving client-side machine translation in a web browser.
 
